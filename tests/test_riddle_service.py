@@ -104,7 +104,7 @@ class ServiceTests(unittest.TestCase):
             "route_kind": "network",
             "source_ref": "koyeb:bs0:0",
             "target_ref": "bootstrap:point0:head0",
-            "target_head": {"universe_id": "bootstrap-0", "node_point": 0,
+            "target_head": {"namespace": 0, "universe_id": "bootstrap-0", "node_point": 0,
                             "head_index": 0, "permanence": "permanent",
                             "head_ref": "bootstrap:point0:head0"},
             "path": [{"namespace": "BS", "id": 0}],
