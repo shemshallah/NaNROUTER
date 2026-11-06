@@ -128,6 +128,23 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(result["packet"]["schema"], "nanrouter.micro-route.v1")
         self.assertFalse(result["live_route_commit"])
 
+    def test_intake_returns_429_when_pending_queue_is_full(self):
+        self.service.inbox.max_pending_events = 1
+        base = {
+            "universe_id": "training-universe-0",
+            "node_point": 9,
+            "head_index": 17,
+            "source_kind": "nan-source",
+            "acl_digest": "b" * 64,
+            "nanclock_tick": 12,
+        }
+        first = dict(base, payload_hex=b"first".hex())
+        second = dict(base, payload_hex=b"second".hex())
+        self.request("/v1/riddle/intake", first, "i" * 40)
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/intake", second, "i" * 40)
+        self.assertEqual(err.exception.code, 429)
+
     def test_candidate_feedback_returns_to_bootstrap_in_durable_queue(self):
         _, accepted = self.request("/v1/riddle/feedback", {
             "universe_id": "overbootstrap-mc0",
