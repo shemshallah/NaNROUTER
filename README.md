@@ -68,7 +68,7 @@ nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:2::hyperedge1337
 
 The parser keeps node, head, and object namespaces distinct. The durable SQLite inbox deduplicates source bytes, leases work to supervised workers, recovers expired leases, and stores provenance-bound traces. The macro planner reserves six explicitly bound BSR control heads and assigns the remaining 250 heads to Boolean learning before ten-layer routing; all work is restricted to signed allocator ranges and candidate bins. Resolution uses
 only committed cache entries and the cache-resident head/object association tables; callers cannot substitute an external map.
-Micro-route packets are digest-bound and HMAC-signed. Candidate learning never
+The master cache stores head associations and typed object associations alongside routes; permanent head identities cannot be overwritten, and ephemeral head entries require a live lease tick. Micro-route packets are digest-bound and HMAC-signed. Candidate learning never
 writes the master cache; committing requires the route-commit capability and
 an exact generation compare-and-swap. Trace mining emits pattern candidates,
 not executable routes.
