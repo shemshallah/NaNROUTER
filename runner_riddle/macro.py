@@ -117,6 +117,14 @@ class BootstrapMacroPlanner:
 
     def next_job(self, state: CurriculumState,
                  manifest: SignedRangeManifest) -> MacroJob:
+        if state.boolean_gate_passed and (
+            state.boolean_heads_verified != 250 or state.distinct_boolean_rules != 16
+        ):
+            raise PolicyError("Boolean promotion requires all 250 heads and all 16 rules")
+        if state.routing_gate_passed and (
+            set(state.mapped_layers) != set(range(10)) or state.permanent_heads_mapped < 1
+        ):
+            raise PolicyError("routing promotion requires all ten layers and permanent-head evidence")
         training_ranges = manifest.grant("BOOTSTRAP_BOOLEAN_TRAINING_BIN",
                                          "bootstrap.boolean.read")
         training_candidates = manifest.grant("BOOTSTRAP_BOOLEAN_TRAINING_BIN",
