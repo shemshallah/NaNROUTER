@@ -94,7 +94,7 @@ class CacheTests(unittest.TestCase):
                 "route_kind": "network",
                 "source_ref": "koyeb:bs0:0",
                 "target_ref": "universe-0:point-0:head-0",
-                "target_head": {"universe_id": "bootstrap-universe-0",
+                "target_head": {"namespace": 0, "universe_id": "bootstrap-universe-0",
                                 "node_point": 0, "head_index": 0,
                                 "permanence": "permanent",
                                 "head_ref": "universe-0:point-0:head-0"},
