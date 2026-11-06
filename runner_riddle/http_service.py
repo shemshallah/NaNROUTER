@@ -88,6 +88,12 @@ def make_handler(service: RiddleService):
                     "live_route_commit": False,
                 })
                 return
+            if self.path == "/v1/riddle/feedback":
+                if not self._authorized(service.worker_token):
+                    self._json(401, {"error": "worker authorization required"})
+                    return
+                self._json(200, {"pending": service.inbox.list_feedback()})
+                return
             if self.path == "/v1/riddle/queue":
                 if not self._authorized(service.worker_token):
                     self._json(401, {"error": "worker authorization required"})
@@ -165,6 +171,25 @@ def make_handler(service: RiddleService):
                     event = service.inbox.get_leased(str(body["event_id"]), str(body["owner"]))
                     state = service.inbox.retry(event, max_attempts=int(body.get("max_attempts", 8)))
                     self._json(200, {"event_id": event.event_id, "state": state})
+                    return
+
+                if self.path == "/v1/riddle/feedback":
+                    feedback = BootstrapMacroPlanner.feedback_envelope(
+                        universe_id=str(body["universe_id"]),
+                        stage=str(body["stage"]),
+                        base_generation=int(body["base_generation"]),
+                        completed_steps=int(body["completed_steps"]),
+                        candidate_digest=str(body["candidate_digest"]),
+                        acl_digest=str(body["acl_digest"]),
+                    )
+                    feedback["nanclock_tick"] = int(body.get("nanclock_tick", 0))
+                    feedback_id = service.inbox.record_feedback(feedback)
+                    self._json(202, {"feedback_id": feedback_id, "accepted": True})
+                    return
+
+                if self.path == "/v1/riddle/feedback/ack":
+                    ok = service.inbox.ack_feedback(str(body["feedback_id"]))
+                    self._json(200, {"acknowledged": ok, "feedback_id": str(body["feedback_id"])})
                     return
 
                 if self.path == "/v1/riddle/routes/resolve":
