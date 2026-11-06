@@ -90,6 +90,11 @@ class ServiceTests(unittest.TestCase):
         _, queue = self.request("/v1/riddle/queue", token="w" * 40)
         self.assertEqual(queue["queue"]["acked"], 1)
 
+    def test_route_resolution_fails_closed_without_signed_master_cache(self):
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/routes/resolve", {"address": "nan://GM0:SC0:MC0:BS0:0:HW0:0"}, "w" * 40)
+        self.assertEqual(err.exception.code, 503)
+
     def test_macro_plan_fails_closed_without_signed_allocator_manifest(self):
         with self.assertRaises(HTTPError) as err:
             self.request("/v1/riddle/plan", {"state": {}}, "w" * 40)
