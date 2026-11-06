@@ -82,6 +82,8 @@ class InboxTests(unittest.TestCase):
             candidate_digest="c" * 64,
             acl_digest="d" * 64,
         )
+        feedback["nanclock_tick"] = 42
+        feedback["signature"] = "e" * 64
         feedback_id = self.inbox.record_feedback(feedback)
         self.assertEqual(self.inbox.record_feedback(feedback), feedback_id)
         pending = self.inbox.list_feedback()
