@@ -46,6 +46,8 @@ class MasterRouteCache:
             "generation": 0,
             "previous_digest": None,
             "routes": [],
+            "head_associations": [],
+            "object_associations": [],
         }
         return cls({**core, "cache_digest": _digest(core), "signature": _sign(core, key)}, key)
 
@@ -64,6 +66,14 @@ class MasterRouteCache:
             raise RouteError("master cache signature mismatch")
         if not isinstance(doc.get("routes"), list):
             raise RouteError("routes must be an array")
+        if not isinstance(doc.get("head_associations"), list):
+            raise RouteError("head_associations must be an array")
+        if not isinstance(doc.get("object_associations"), list):
+            raise RouteError("object_associations must be an array")
+        head_keys = [r.get("head_key") for r in doc["head_associations"]]
+        object_keys = [str(r.get("kind")) + ":" + str(r.get("object_id")) for r in doc["object_associations"]]
+        if len(head_keys) != len(set(head_keys)) or len(object_keys) != len(set(object_keys)):
+            raise RouteError("duplicate committed address association")
         ids = [r.get("route_id") for r in doc["routes"]]
         if len(ids) != len(set(ids)):
             raise RouteError("duplicate route_id in committed cache")
@@ -128,9 +138,83 @@ class MasterRouteCache:
             "generation": self.generation + 1,
             "previous_digest": self.digest,
             "routes": routes + [committed],
+            "head_associations": list(self.document["head_associations"]),
+            "object_associations": list(self.document["object_associations"]),
         }
         self.document = {**core, "cache_digest": _digest(core), "signature": _sign(core, self.key)}
         self.verify()
+        return committed
+
+    def _publish_associations(self, *, head_associations: list[dict[str, Any]],
+                               object_associations: list[dict[str, Any]]) -> None:
+        core = {
+            "schema": "nanrouter.master-cache.v1",
+            "network_id": self.document["network_id"],
+            "generation": self.generation + 1,
+            "previous_digest": self.digest,
+            "routes": list(self.document["routes"]),
+            "head_associations": head_associations,
+            "object_associations": object_associations,
+        }
+        self.document = {**core, "cache_digest": _digest(core), "signature": _sign(core, self.key)}
+        self.verify()
+
+    def register_head_association(self, record: dict[str, Any], *,
+                                  expected_generation: int,
+                                  capabilities: set[str]) -> dict[str, Any]:
+        if "universe.atlas.commit" not in capabilities:
+            raise RouteError("universe atlas commit capability required")
+        if expected_generation != self.generation or record.get("base_generation") != self.generation:
+            raise RouteError("stale head-association generation")
+        namespace = int(record.get("namespace", -1))
+        head_index = int(record.get("head_index", -1))
+        if not 0 <= namespace <= 255 or not 0 <= head_index <= 255:
+            raise RouteError("head association coordinate outside 0..255")
+        key = f"HW{namespace}:{head_index}"
+        if not record.get("universe_id") or not record.get("head_ref"):
+            raise RouteError("head association requires universe_id and head_ref")
+        if not 0 <= int(record.get("node_point", -1)) <= 255:
+            raise RouteError("head association node point outside 0..255")
+        if record.get("permanence") not in ("permanent", "ephemeral"):
+            raise RouteError("invalid head permanence")
+        for field in ("source_hash", "acl_digest"):
+            if not re.fullmatch(r"[0-9a-f]{64}", str(record.get(field, ""))):
+                raise RouteError(f"head association {field} must be SHA-256 hex")
+        if not record.get("learner_id") or int(record.get("nanclock_tick", -1)) < 0:
+            raise RouteError("head association provenance is incomplete")
+        if any(item.get("head_key") == key for item in self.document["head_associations"]):
+            raise RouteError("head association already committed; permanent identity cannot be overwritten")
+        committed = dict(record, head_key=key, generation=self.generation + 1, state="committed")
+        self._publish_associations(
+            head_associations=list(self.document["head_associations"]) + [committed],
+            object_associations=list(self.document["object_associations"]),
+        )
+        return committed
+
+    def register_object_association(self, record: dict[str, Any], *,
+                                    expected_generation: int,
+                                    capabilities: set[str]) -> dict[str, Any]:
+        if "universe.atlas.commit" not in capabilities:
+            raise RouteError("universe atlas commit capability required")
+        if expected_generation != self.generation or record.get("base_generation") != self.generation:
+            raise RouteError("stale object-association generation")
+        kind, object_id = str(record.get("kind", "")), str(record.get("object_id", ""))
+        if kind not in ("vector", "hyperedge", "rule", "route", "bin", "temporal") or not object_id:
+            raise RouteError("invalid typed object association key")
+        if not record.get("association_ref") or not record.get("learner_id"):
+            raise RouteError("object association reference and learner are required")
+        for field in ("source_hash", "acl_digest"):
+            if not re.fullmatch(r"[0-9a-f]{64}", str(record.get(field, ""))):
+                raise RouteError(f"object association {field} must be SHA-256 hex")
+        key = kind + ":" + object_id
+        if any(str(item.get("kind")) + ":" + str(item.get("object_id")) == key
+               for item in self.document["object_associations"]):
+            raise RouteError("typed object association already committed")
+        committed = dict(record, generation=self.generation + 1, state="committed")
+        self._publish_associations(
+            head_associations=list(self.document["head_associations"]),
+            object_associations=list(self.document["object_associations"]) + [committed],
+        )
         return committed
 
     def save_atomic(self, path: str | Path) -> None:
@@ -174,9 +258,13 @@ class MasterRouteCache:
             fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
             return cache, committed
 
-    def resolve(self, address: str, *, head_refs: dict[str, dict[str, Any]],
-                object_refs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    def resolve(self, address: str) -> dict[str, Any]:
         parsed = parse_address(address)
+        head_refs = {item["head_key"]: item for item in self.document["head_associations"]
+                     if item.get("state") == "committed"}
+        object_refs = {str(item["kind"]) + ":" + str(item["object_id"]): item
+                       for item in self.document["object_associations"]
+                       if item.get("state") == "committed"}
         root = parsed.root
         route = next((r for r in self.document["routes"]
                       if r.get("canonical_address") == root and r.get("state") == "committed"), None)
