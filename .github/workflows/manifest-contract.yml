@@ -1,7 +1,7 @@
 name: manifest-contract
 on:
   push:
-    branches: [main, bootstrap-logic-routing-riddle]
+    branches: [main, bootstrap-logic-routing-riddle, runner-riddle-route-engine]
   pull_request:
   workflow_dispatch:
 permissions:
