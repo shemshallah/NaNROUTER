@@ -2,7 +2,7 @@ import hashlib
 import tempfile
 import unittest
 
-from runner_riddle import InboxError, RunnerRiddleWorker, SQLiteSourceInbox
+from runner_riddle import BootstrapMacroPlanner, InboxError, RunnerRiddleWorker, SQLiteSourceInbox
 
 
 ACL = "b" * 64
@@ -72,6 +72,24 @@ class InboxTests(unittest.TestCase):
         with self.assertRaises(InboxError):
             self.inbox.ack(event, result_digest="e" * 64,
                            result_generation=0, trace=trace)
+
+    def test_candidate_feedback_is_durable_and_acknowledgeable(self):
+        feedback = BootstrapMacroPlanner.feedback_envelope(
+            universe_id="overbootstrap-mc0",
+            stage="LEARN_ROUTING",
+            base_generation=12,
+            completed_steps=256,
+            candidate_digest="c" * 64,
+            acl_digest="d" * 64,
+        )
+        feedback_id = self.inbox.record_feedback(feedback)
+        self.assertEqual(self.inbox.record_feedback(feedback), feedback_id)
+        pending = self.inbox.list_feedback()
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]["feedback"]["macrocluster"], "MC0:0")
+        self.assertFalse(pending[0]["feedback"]["live_map_commit"])
+        self.assertTrue(self.inbox.ack_feedback(feedback_id))
+        self.assertEqual(self.inbox.list_feedback(), [])
 
     def test_payload_and_acl_bounds(self):
         with self.assertRaises(InboxError):
