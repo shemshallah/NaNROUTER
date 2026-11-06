@@ -138,7 +138,7 @@ class VolumeRegistry:
                 raise VolumeRegistryError("placeholder provider volume IDs are forbidden")
             mount_root = item.get("mount_root")
             if (not isinstance(mount_root, str) or not mount_root.startswith("/")
-                    or mount_root == "/" or "\\\\" in mount_root
+                    or mount_root == "/" or chr(92) in mount_root
                     or any(part in ("", ".", "..") for part in mount_root.split("/")[1:])):
                 raise VolumeRegistryError("mount_root must be a normalized absolute Koyeb mount path")
             if item.get("database_file") != expected_db:
