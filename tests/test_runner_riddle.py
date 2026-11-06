@@ -59,7 +59,7 @@ class CacheTests(unittest.TestCase):
         self.assertEqual(self.cache.generation, 1)
         candidate = self.cache.propose({
             "route_id": "runner-route",
-            "canonical_address": ROOT + "::HW0:1",
+            "canonical_address": "nan://GM0:SC0:MC0:BS0:1:HW0:1",
             "route_kind": "runner-ring",
             "source_ref": "bootstrap",
             "target_ref": "runner-1:head-1",
