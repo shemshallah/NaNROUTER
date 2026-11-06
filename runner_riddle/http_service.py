@@ -12,6 +12,9 @@ from typing import Any
 from .inbox import InboxError, InboxFull, SQLiteSourceInbox
 from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRangeManifest
 from .cache import MasterRouteCache, RouteError
+from .volume_registry import VolumeRegistry, VolumeRegistryError
+from .ring import RunnerRing, RunnerRingError
+from urllib.parse import parse_qs, urlsplit
 
 ROOT_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 MAX_REQUEST_BYTES = 2_097_152
@@ -31,6 +34,10 @@ class RiddleService:
         )
         self.range_manifest_path = data_dir / "allocator-range-manifest.json"
         self.route_cache_path = data_dir / "master-network-cache.json"
+        self.volume_registry_path = Path(os.environ.get("RIDDLE_VOLUME_REGISTRY_PATH", str(data_dir / "volume-registry.json")))
+        self.volume_key = os.environ.get("RIDDLE_VOLUME_HMAC_KEY", "").encode()
+        self.runner_ring = RunnerRing(data_dir / "runner-ring.sqlite",
+                                      stale_after_ticks=int(os.environ.get("RIDDLE_RING_STALE_TICKS", "256")))
         self.intake_token = os.environ.get("RIDDLE_INTAKE_TOKEN", "")
         self.worker_token = os.environ.get("RIDDLE_WORKER_TOKEN", "")
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
@@ -40,6 +47,19 @@ class RiddleService:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
         if len(self.feedback_key) < 32:
             raise ServiceConfigError("RIDDLE_FEEDBACK_HMAC_KEY must be 32+ bytes")
+
+    def volume_registry(self):
+        if not self.volume_registry_path.exists() or len(self.volume_key) < 32:
+            return None
+        return VolumeRegistry.load(self.volume_registry_path, self.volume_key)
+
+    def volume_registry_health(self):
+        if not self.volume_registry_path.exists() or len(self.volume_key) < 32:
+            return {"health": "unknown", "configured": False}
+        try:
+            return self.volume_registry().summary()
+        except VolumeRegistryError:
+            return {"health": "degraded", "configured": True, "valid": False}
 
 
 def make_handler(service: RiddleService):
@@ -82,6 +102,21 @@ def make_handler(service: RiddleService):
             expected = "Bearer " + token
             return hmac.compare_digest(supplied, expected)
 
+        def _ring_health(self, service):
+            try:
+                registry = service.volume_registry()
+                if registry is None:
+                    return {"health": "unknown", "configured": False}
+                query = parse_qs(urlsplit(self.path).query)
+                tick = int(query.get("nanclock_tick", [str(service.runner_ring.latest_tick())])[0])
+                return service.runner_ring.snapshot(
+                    expected_generation=registry.document["generation"],
+                    expected_digest=registry.document["registry_digest"],
+                    now_tick=tick,
+                )
+            except (ValueError, VolumeRegistryError, RunnerRingError):
+                return {"health": "degraded", "configured": True, "valid": False}
+
         def do_GET(self):
             if self.path == "/healthz":
                 self._json(200, {
@@ -91,6 +126,8 @@ def make_handler(service: RiddleService):
                     "queue": service.inbox.stats(),
                     "range_manifest_present": service.range_manifest_path.exists(),
                     "route_cache_present": service.route_cache_path.exists(),
+                    "volume_registry": service.volume_registry_health(),
+                    "runner_ring": self._ring_health(service),
                     "live_route_commit": False,
                 })
                 return
@@ -99,6 +136,40 @@ def make_handler(service: RiddleService):
                     self._json(401, {"error": "worker authorization required"})
                     return
                 self._json(200, {"pending": service.inbox.list_feedback()})
+                return
+            if urlsplit(self.path).path == "/v1/riddle/ring":
+                if not self._authorized(service.worker_token):
+                    self._json(401, {"error": "worker authorization required"})
+                    return
+                try:
+                    registry = service.volume_registry()
+                    if registry is None:
+                        self._json(503, {"error": "signed volume registry is not installed"})
+                        return
+                    query = parse_qs(urlsplit(self.path).query)
+                    tick = int(query.get("nanclock_tick", [str(service.runner_ring.latest_tick())])[0])
+                    snapshot = service.runner_ring.snapshot(
+                        expected_generation=registry.document["generation"],
+                        expected_digest=registry.document["registry_digest"],
+                        now_tick=tick,
+                    )
+                    self._json(200, {"volume_registry": registry.summary(), "runner_ring": snapshot})
+                except (ValueError, VolumeRegistryError, RunnerRingError) as exc:
+                    self._json(400, {"error": str(exc)})
+                return
+            if self.path == "/v1/riddle/volumes":
+                if not self._authorized(service.worker_token):
+                    self._json(401, {"error": "worker authorization required"})
+                    return
+                try:
+                    registry = service.volume_registry()
+                except VolumeRegistryError:
+                    self._json(503, {"error": "signed volume registry failed verification"})
+                    return
+                if registry is None:
+                    self._json(503, {"error": "signed volume registry is not installed"})
+                    return
+                self._json(200, {"registry": registry.summary(), "volumes": registry.public_records()})
                 return
             if self.path == "/v1/riddle/queue":
                 if not self._authorized(service.worker_token):
@@ -136,6 +207,23 @@ def make_handler(service: RiddleService):
 
                 if not self._authorized(service.worker_token):
                     self._json(401, {"error": "worker authorization required"})
+                    return
+
+                if self.path == "/v1/riddle/ring/heartbeat":
+                    registry = service.volume_registry()
+                    if registry is None:
+                        self._json(503, {"error": "signed volume registry is not installed"})
+                        return
+                    snapshot = service.runner_ring.heartbeat(
+                        slot=int(body["slot"]),
+                        runner_id=str(body["runner_id"]),
+                        registry_generation=int(body["registry_generation"]),
+                        registry_digest=str(body["registry_digest"]),
+                        nanclock_tick=int(body["nanclock_tick"]),
+                        expected_generation=int(registry.document["generation"]),
+                        expected_digest=str(registry.document["registry_digest"]),
+                    )
+                    self._json(200, {"accepted": True, "runner_ring": snapshot})
                     return
 
                 if self.path == "/v1/riddle/lease":
@@ -232,7 +320,7 @@ def make_handler(service: RiddleService):
                 self._json(404, {"error": "not found"})
             except InboxFull as exc:
                 self._json(429, {"error": str(exc), "retryable": True})
-            except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError) as exc:
+            except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError, VolumeRegistryError, RunnerRingError) as exc:
                 self._json(400, {"error": str(exc)})
             except Exception:
                 self._json(500, {"error": "internal service error"})

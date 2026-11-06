@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/volume-registry.schema.json",
+  "title": "NaNROUTER signed Koyeb volume registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "network_id",
+    "generation",
+    "previous_digest",
+    "volumes",
+    "registry_digest",
+    "signature"
+  ],
+  "properties": {
+    "schema": {
+      "const": "nanrouter.volume-registry.v1"
+    },
+    "network_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "previous_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "registry_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "volumes": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tier",
+          "logical_address",
+          "shard",
+          "provider",
+          "provider_volume_id",
+          "mount_root",
+          "database_file",
+          "region",
+          "health",
+          "mount_verified",
+          "observed_at_tick",
+          "generation"
+        ],
+        "properties": {
+          "tier": {
+            "enum": [
+              "BS0",
+              "MC0",
+              "SC0",
+              "GM0"
+            ]
+          },
+          "logical_address": {
+            "type": "string",
+            "pattern": "^0x7FF1[0-9A-F]{8}F17F$"
+          },
+          "shard": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "provider": {
+            "const": "koyeb"
+          },
+          "provider_volume_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "mount_root": {
+            "type": "string",
+            "pattern": "^/(?!/)(?!.*(?:^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+          },
+          "database_file": {
+            "enum": [
+              "bs0db.sqlite3",
+              "mc0db.sqlite3",
+              "sc0db.sqlite3",
+              "gm0db.sqlite3"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "health": {
+            "enum": [
+              "green",
+              "degraded",
+              "unavailable",
+              "unknown"
+            ]
+          },
+          "mount_verified": {
+            "type": "boolean"
+          },
+          "observed_at_tick": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "generation": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

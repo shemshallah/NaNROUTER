@@ -6,6 +6,7 @@ from .macro import (
     PolicyError, SignedRangeManifest, verify_feedback_signature,
 )
 from .inbox import InboxError, InboxFull, LeasedSource, RunnerRiddleWorker, SQLiteSourceInbox
+from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .http_service import RiddleService, ServiceConfigError
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "AddressRange", "BootstrapMacroPlanner", "CurriculumState",
     "MacroJob", "PolicyError", "SignedRangeManifest", "verify_feedback_signature",
     "InboxError", "InboxFull", "LeasedSource", "RunnerRiddleWorker", "SQLiteSourceInbox",
+    "VolumeRegistry", "VolumeRegistryError",
     "RiddleService", "ServiceConfigError",
 ]
