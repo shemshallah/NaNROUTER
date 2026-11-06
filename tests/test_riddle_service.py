@@ -67,7 +67,7 @@ class ServiceTests(unittest.TestCase):
             volumes.append({
                 "tier": tier, "logical_address": address, "shard": 0,
                 "provider": "koyeb", "provider_volume_id": "koyeb-volume-" + tier.lower(),
-                "mount_root": "/" + address, "database_file": database_file,
+                "mount_root": { "BS0": "/bs0db", "MC0": "/mc0db", "SC0": "/sc0db", "GM0": "/gm0db" }[tier], "database_file": database_file,
                 "region": "was", "health": "green", "mount_verified": True,
                 "observed_at_tick": 25, "generation": 1,
             })
