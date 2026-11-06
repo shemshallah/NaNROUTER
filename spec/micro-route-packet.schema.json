@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/micro-route-packet.schema.json",
+  "title": "NaN micro-routing definition packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "packet_id", "cache_generation", "route_id", "source_address", "resolved_heads", "object_refs", "bridge_profile", "acl_digest", "packet_digest", "signature"],
+  "properties": {
+    "schema": {"const": "nanrouter.micro-route.v1"},
+    "packet_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "cache_generation": {"type": "integer", "minimum": 1},
+    "route_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "source_address": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "resolved_heads": {"type": "array", "maxItems": 256, "items": {"type": "object", "additionalProperties": false, "required": ["universe_id", "node_point", "head_index", "permanence", "head_ref"], "properties": {"universe_id": {"type": "string", "minLength": 1, "maxLength": 128}, "node_point": {"type": "integer", "minimum": 0, "maximum": 255}, "head_index": {"type": "integer", "minimum": 0, "maximum": 255}, "permanence": {"enum": ["permanent", "ephemeral"]}, "head_ref": {"type": "string", "minLength": 1, "maxLength": 256}}}},
+    "object_refs": {"type": "array", "maxItems": 256, "items": {"type": "object", "additionalProperties": false, "required": ["kind", "object_id", "association_ref"], "properties": {"kind": {"enum": ["vector", "hyperedge", "rule", "temporal", "bin"]}, "object_id": {"type": "string", "minLength": 1, "maxLength": 128}, "association_ref": {"type": "string", "minLength": 1, "maxLength": 256}}}},
+    "bridge_profile": {"enum": ["N16B", "N16T", "local-only"]},
+    "acl_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "packet_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "string", "minLength": 32, "maxLength": 512}
+  }
+}

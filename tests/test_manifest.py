@@ -67,6 +67,28 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(self.policy["universe"]["android_limit_bytes"], 8_388_608)
         self.assertFalse(self.policy["universe"]["android_may_map_overbootstrap"])
 
+    def test_koyeb_gateway_and_six_unit_mc0_are_distinct(self):
+        gateway = self.points["network_gateway"]
+        cluster = self.points["macrocluster"]
+        self.assertEqual(gateway["bootstrap_service_class"], 0)
+        self.assertEqual(gateway["bootstrap_node"], 0)
+        self.assertEqual(gateway["hosting"], "Koyeb")
+        self.assertTrue(gateway["availability_role"].startswith("persistent-24x7"))
+        self.assertFalse(gateway["owns_runner_heads"])
+        self.assertFalse(gateway["owns_master_route_cache"])
+        self.assertEqual(cluster["runner_units"], 6)
+        self.assertEqual(cluster["runner_wire_bsr"], [0, 1, 2, 3, 4, 5])
+
+    def test_master_cache_and_micro_route_contracts(self):
+        route = json.loads((ROOT / "spec/route-record.schema.json").read_text())
+        cache = json.loads((ROOT / "spec/master-network-cache.schema.json").read_text())
+        packet = json.loads((ROOT / "spec/micro-route-packet.schema.json").read_text())
+        self.assertIn("generation", cache["required"])
+        self.assertIn("previous_digest", cache["required"])
+        self.assertEqual(route["properties"]["permanence"]["enum"], ["permanent", "ephemeral"])
+        self.assertEqual(packet["properties"]["resolved_heads"]["maxItems"], 256)
+        self.assertIn("acl_digest", packet["required"])
+
     def test_learning_trigger_requires_signature_and_expiry(self):
         schema = json.loads((ROOT / "spec/learning-trigger.schema.json").read_text())
         required = set(schema["required"])

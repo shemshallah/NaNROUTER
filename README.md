@@ -44,6 +44,16 @@ It may not:
 
 Unknown or not-yet-imported ranges are **deny by default**. The machine-readable policies are in `spec/`.
 
+## Network addressing and committed route cache
+
+- Koyeb is the persistent gateway at `nan://GM0:SC0:MC0:BS0:0:HW0:0`.
+- `MC0:0` is the six-unit runner-controlled macrocluster; the six BSR wire identities remain BSR0–BSR5.
+- The `::` selector boundary addresses individual heads and typed objects such as `vector1337` and `hyperedge1337`.
+- Every resolved path is compiled into a signed micro-routing packet and committed into a generation-chained master network cache.
+- The master cache is the authoritative set of committed routes; candidate learning never edits it directly.
+
+See `spec/address-grammar.md`, `spec/master-network-cache.schema.json`, `spec/route-record.schema.json`, and `spec/micro-route-packet.schema.json`.
+
 ## Ten mapping layers
 
 | Layer | Mapping job | Primary representation |
