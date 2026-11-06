@@ -121,7 +121,11 @@ def make_handler(service: RiddleService):
                 if not self._authorized(service.worker_token):
                     self._json(401, {"error": "worker authorization required"})
                     return
-                registry = service.volume_registry()
+                try:
+                    registry = service.volume_registry()
+                except VolumeRegistryError:
+                    self._json(503, {"error": "signed volume registry failed verification"})
+                    return
                 if registry is None:
                     self._json(503, {"error": "signed volume registry is not installed"})
                     return
