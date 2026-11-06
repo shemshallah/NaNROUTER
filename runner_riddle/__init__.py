@@ -3,7 +3,7 @@ from .cache import MasterRouteCache, RouteError
 from .trace import PatternCandidate, TracePatternMiner
 from .macro import (
     AddressRange, BootstrapMacroPlanner, CurriculumState, MacroJob,
-    PolicyError, SignedRangeManifest,
+    PolicyError, SignedRangeManifest, verify_feedback_signature,
 )
 from .inbox import InboxError, LeasedSource, RunnerRiddleWorker, SQLiteSourceInbox
 from .http_service import RiddleService, ServiceConfigError
@@ -13,7 +13,7 @@ __all__ = [
     "MasterRouteCache", "RouteError",
     "PatternCandidate", "TracePatternMiner",
     "AddressRange", "BootstrapMacroPlanner", "CurriculumState",
-    "MacroJob", "PolicyError", "SignedRangeManifest",
+    "MacroJob", "PolicyError", "SignedRangeManifest", "verify_feedback_signature",
     "InboxError", "LeasedSource", "RunnerRiddleWorker", "SQLiteSourceInbox",
     "RiddleService", "ServiceConfigError",
 ]
