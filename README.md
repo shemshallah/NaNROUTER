@@ -54,6 +54,34 @@ Unknown or not-yet-imported ranges are **deny by default**. The machine-readable
 
 See `spec/address-grammar.md`, `spec/master-network-cache.schema.json`, `spec/route-record.schema.json`, and `spec/micro-route-packet.schema.json`.
 
+## Runner Riddle route engine
+
+The `runner_riddle` package provides a typed address parser, a signed
+generation-chained master route cache, a micro-route packet compiler, and a
+read-only trace pattern miner.
+
+```
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1,2,3
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1::vector1337
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:2::hyperedge1337
+```
+
+The parser keeps node, head, and object namespaces distinct. The durable SQLite inbox deduplicates source bytes, leases work to supervised workers, recovers expired leases, and stores provenance-bound traces. The macro planner reserves six explicitly bound BSR control heads and assigns the remaining 250 heads to Boolean learning before ten-layer routing; all work is restricted to signed allocator ranges and candidate bins. Resolution uses
+only committed cache entries and explicit head/object association tables.
+Micro-route packets are digest-bound and HMAC-signed. Candidate learning never
+writes the master cache; committing requires the route-commit capability and
+an exact generation compare-and-swap. Trace mining emits pattern candidates,
+not executable routes.
+
+Run the standard-library tests with:
+
+```
+python -m unittest discover -s tests -v
+```
+
+This is the routing engine, not yet a deployed 24/7 Koyeb listener. N16T intake,
+persistent worker supervision, and live service wiring remain the next stage.
+
 ## Ten mapping layers
 
 | Layer | Mapping job | Primary representation |

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/bootstrap-feedback.schema.json",
+  "title": "Bootstrap MC0 feedback envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "universe_id", "macrocluster", "stage", "completed_steps", "base_generation", "candidate_digest", "acl_digest", "live_map_commit"],
+  "properties": {
+    "schema": {"const": "nanrouter.bootstrap-feedback.v1"},
+    "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "macrocluster": {"const": "MC0:0"},
+    "stage": {"enum": ["LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO"]},
+    "completed_steps": {"type": "integer", "minimum": 0},
+    "base_generation": {"type": "integer", "minimum": 0},
+    "candidate_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "acl_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "live_map_commit": {"const": false}
+  }
+}
