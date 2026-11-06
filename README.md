@@ -66,7 +66,7 @@ nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1::vector1337
 nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:2::hyperedge1337
 ```
 
-The parser keeps node, head, and object namespaces distinct. Resolution uses
+The parser keeps node, head, and object namespaces distinct. The durable SQLite inbox deduplicates source bytes, leases work to supervised workers, recovers expired leases, and stores provenance-bound traces. The macro planner reserves six explicitly bound BSR control heads and assigns the remaining 250 heads to Boolean learning before ten-layer routing; all work is restricted to signed allocator ranges and candidate bins. Resolution uses
 only committed cache entries and explicit head/object association tables.
 Micro-route packets are digest-bound and HMAC-signed. Candidate learning never
 writes the master cache; committing requires the route-commit capability and
