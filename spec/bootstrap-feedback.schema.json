@@ -4,7 +4,7 @@
   "title": "Bootstrap MC0 feedback envelope",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "universe_id", "macrocluster", "stage", "completed_steps", "base_generation", "candidate_digest", "acl_digest", "live_map_commit"],
+  "required": ["schema", "universe_id", "macrocluster", "stage", "completed_steps", "base_generation", "candidate_digest", "acl_digest", "live_map_commit", "signature"],
   "properties": {
     "schema": {"const": "nanrouter.bootstrap-feedback.v1"},
     "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
@@ -14,6 +14,8 @@
     "base_generation": {"type": "integer", "minimum": 0},
     "candidate_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "acl_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "live_map_commit": {"const": false}
+    "live_map_commit": {"const": false},
+    "nanclock_tick": {"type": "integer", "minimum": 0},
+    "signature": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
   }
 }

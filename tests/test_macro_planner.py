@@ -5,6 +5,7 @@ import unittest
 
 from runner_riddle import (
     BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRangeManifest,
+    verify_feedback_signature,
 )
 
 KEY = b"runner-riddle-test-key-32-bytes!!"
@@ -51,9 +52,20 @@ class MacroPlannerTests(unittest.TestCase):
         self.assertEqual(routing.mapping_layers, tuple(range(10)))
         self.assertFalse(routing.writes_live_map)
         feedback = planner.feedback(routing, completed_steps=64,
-                                    candidate_digest="a" * 64, acl_digest="b" * 64)
+                                    candidate_digest="a" * 64, acl_digest="b" * 64, signing_key=KEY)
         self.assertFalse(feedback["live_map_commit"])
         self.assertEqual(feedback["base_generation"], 4)
+
+    def test_feedback_hmac_verifies_and_detects_tampering(self):
+        feedback = BootstrapMacroPlanner.feedback_envelope(
+            universe_id="overbootstrap-mc0", stage="LEARN_BOOLEAN",
+            base_generation=2, completed_steps=16,
+            candidate_digest="a" * 64, acl_digest="b" * 64,
+            signing_key=KEY, nanclock_tick=17,
+        )
+        self.assertTrue(verify_feedback_signature(feedback, KEY))
+        feedback["completed_steps"] = 17
+        self.assertFalse(verify_feedback_signature(feedback, KEY))
 
     def test_language_stage_stays_locked_without_own_bin(self):
         manifest = SignedRangeManifest(signed_manifest(), KEY)

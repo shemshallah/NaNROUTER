@@ -13,6 +13,10 @@ class InboxError(ValueError):
     pass
 
 
+class InboxFull(InboxError):
+    pass
+
+
 @dataclass(frozen=True)
 class LeasedSource:
     event_id: str
@@ -31,9 +35,13 @@ class LeasedSource:
 class SQLiteSourceInbox:
     """WAL-backed idempotent intake with leases, ACKs, retries, and dead letters."""
 
-    def __init__(self, path: str | Path, max_payload_bytes: int = 1_048_576):
+    def __init__(self, path: str | Path, max_payload_bytes: int = 1_048_576,
+                 max_pending_events: int = 4096):
         self.path = str(path)
         self.max_payload_bytes = max_payload_bytes
+        self.max_pending_events = max_pending_events
+        if not 1 <= max_pending_events <= 65536:
+            raise InboxError("pending event limit must be in 1..65536")
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
@@ -65,6 +73,13 @@ class SQLiteSourceInbox:
                     trace_json TEXT NOT NULL,
                     created_tick INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS feedback_event (
+                    feedback_id TEXT PRIMARY KEY,
+                    feedback_json TEXT NOT NULL,
+                    created_tick INTEGER NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'pending'
+                        CHECK(state IN ('pending','acked'))
+                );
             """)
 
     def _connect(self):
@@ -91,6 +106,17 @@ class SQLiteSourceInbox:
         ).hexdigest()
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            exists = db.execute("SELECT 1 FROM source_event WHERE event_id=?",
+                                (event_id,)).fetchone()
+            if exists is not None:
+                db.commit()
+                return event_id
+            pending = db.execute(
+                "SELECT COUNT(*) FROM source_event WHERE state IN ('queued','leased')"
+            ).fetchone()[0]
+            if int(pending) >= self.max_pending_events:
+                db.rollback()
+                raise InboxFull("source inbox is full; retry after worker drain")
             db.execute("""
                 INSERT OR IGNORE INTO source_event
                 (event_id, universe_id, node_point, head_index, source_kind,
@@ -195,6 +221,69 @@ class SQLiteSourceInbox:
             """, (state, event.event_id))
             db.commit()
             return state
+
+    def record_feedback(self, feedback: dict[str, Any]) -> str:
+        required = (
+            "schema", "universe_id", "macrocluster", "stage", "completed_steps",
+            "base_generation", "candidate_digest", "acl_digest", "live_map_commit", "signature",
+        )
+        if any(key not in feedback for key in required):
+            raise InboxError("bootstrap feedback envelope is incomplete")
+        if feedback.get("schema") != "nanrouter.bootstrap-feedback.v1":
+            raise InboxError("unsupported bootstrap feedback schema")
+        if feedback.get("macrocluster") != "MC0:0" or feedback.get("live_map_commit") is not False:
+            raise InboxError("feedback must target MC0:0 and remain candidate-only")
+        if feedback.get("stage") not in ("LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO"):
+            raise InboxError("unsupported feedback stage")
+        if not feedback.get("universe_id") or int(feedback.get("nanclock_tick", 0)) < 0:
+            raise InboxError("feedback universe and NaN clock tick are required")
+        for field in ("candidate_digest", "acl_digest"):
+            value = str(feedback.get(field, ""))
+            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+                raise InboxError(f"feedback {field} must be lowercase SHA-256 hex")
+        if int(feedback.get("completed_steps", -1)) < 0 or int(feedback.get("base_generation", -1)) < 0:
+            raise InboxError("feedback counters must be nonnegative")
+        signature = str(feedback.get("signature", ""))
+        if len(signature) != 64 or any(ch not in "0123456789abcdef" for ch in signature):
+            raise InboxError("feedback signature must be lowercase SHA-256 hex")
+        feedback_json = json.dumps(feedback, sort_keys=True, separators=(",", ":"))
+        feedback_id = hashlib.sha256(feedback_json.encode()).hexdigest()
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("""
+                INSERT OR IGNORE INTO feedback_event
+                (feedback_id, feedback_json, created_tick, state)
+                VALUES (?, ?, ?, 'pending')
+            """, (feedback_id, feedback_json, int(feedback.get("nanclock_tick", 0))))
+            db.commit()
+        return feedback_id
+
+    def list_feedback(self, limit: int = 128) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 1024:
+            raise InboxError("feedback page limit must be in 1..1024")
+        with self._connect() as db:
+            rows = db.execute("""
+                SELECT feedback_id, feedback_json FROM feedback_event
+                WHERE state='pending' ORDER BY created_tick, feedback_id LIMIT ?
+            """, (limit,)).fetchall()
+        return [{"feedback_id": row["feedback_id"],
+                 "feedback": json.loads(row["feedback_json"])} for row in rows]
+
+    def ack_feedback(self, feedback_id: str) -> bool:
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT state FROM feedback_event WHERE feedback_id=?",
+                             (feedback_id,)).fetchone()
+            if row is None:
+                db.rollback()
+                raise InboxError("unknown feedback event")
+            if row["state"] == "acked":
+                db.commit()
+                return True
+            db.execute("UPDATE feedback_event SET state='acked' WHERE feedback_id=?",
+                       (feedback_id,))
+            db.commit()
+            return True
 
     def stats(self) -> dict[str, int]:
         with self._connect() as db:
