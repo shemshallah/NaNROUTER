@@ -206,7 +206,7 @@ class SQLiteSourceInbox:
     def record_feedback(self, feedback: dict[str, Any]) -> str:
         required = (
             "schema", "universe_id", "macrocluster", "stage", "completed_steps",
-            "base_generation", "candidate_digest", "acl_digest", "live_map_commit",
+            "base_generation", "candidate_digest", "acl_digest", "live_map_commit", "signature",
         )
         if any(key not in feedback for key in required):
             raise InboxError("bootstrap feedback envelope is incomplete")
@@ -214,12 +214,19 @@ class SQLiteSourceInbox:
             raise InboxError("unsupported bootstrap feedback schema")
         if feedback.get("macrocluster") != "MC0:0" or feedback.get("live_map_commit") is not False:
             raise InboxError("feedback must target MC0:0 and remain candidate-only")
+        if feedback.get("stage") not in ("LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO"):
+            raise InboxError("unsupported feedback stage")
+        if not feedback.get("universe_id") or int(feedback.get("nanclock_tick", 0)) < 0:
+            raise InboxError("feedback universe and NaN clock tick are required")
         for field in ("candidate_digest", "acl_digest"):
             value = str(feedback.get(field, ""))
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
                 raise InboxError(f"feedback {field} must be lowercase SHA-256 hex")
         if int(feedback.get("completed_steps", -1)) < 0 or int(feedback.get("base_generation", -1)) < 0:
             raise InboxError("feedback counters must be nonnegative")
+        signature = str(feedback.get("signature", ""))
+        if len(signature) != 64 or any(ch not in "0123456789abcdef" for ch in signature):
+            raise InboxError("feedback signature must be lowercase SHA-256 hex")
         feedback_json = json.dumps(feedback, sort_keys=True, separators=(",", ":"))
         feedback_id = hashlib.sha256(feedback_json.encode()).hexdigest()
         with self._connect() as db:
