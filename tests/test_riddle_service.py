@@ -126,6 +126,28 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(result["packet"]["schema"], "nanrouter.micro-route.v1")
         self.assertFalse(result["live_route_commit"])
 
+    def test_candidate_feedback_returns_to_bootstrap_in_durable_queue(self):
+        _, accepted = self.request("/v1/riddle/feedback", {
+            "universe_id": "overbootstrap-mc0",
+            "stage": "LEARN_ROUTING",
+            "base_generation": 7,
+            "completed_steps": 64,
+            "candidate_digest": "c" * 64,
+            "acl_digest": "d" * 64,
+            "nanclock_tick": 99,
+        }, "w" * 40)
+        self.assertTrue(accepted["accepted"])
+        _, pending = self.request("/v1/riddle/feedback", token="w" * 40)
+        item = pending["pending"][0]
+        self.assertEqual(item["feedback"]["macrocluster"], "MC0:0")
+        self.assertFalse(item["feedback"]["live_map_commit"])
+        _, ack = self.request("/v1/riddle/feedback/ack", {
+            "feedback_id": item["feedback_id"]
+        }, "w" * 40)
+        self.assertTrue(ack["acknowledged"])
+        _, empty = self.request("/v1/riddle/feedback", token="w" * 40)
+        self.assertEqual(empty["pending"], [])
+
     def test_macro_plan_fails_closed_without_signed_allocator_manifest(self):
         with self.assertRaises(HTTPError) as err:
             self.request("/v1/riddle/plan", {"state": {}}, "w" * 40)
