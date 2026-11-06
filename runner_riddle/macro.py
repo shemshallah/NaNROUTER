@@ -160,18 +160,30 @@ class BootstrapMacroPlanner:
         )
 
     @staticmethod
-    def feedback(job: MacroJob, *, completed_steps: int,
-                 candidate_digest: str, acl_digest: str) -> dict[str, Any]:
-        if completed_steps < 0 or len(candidate_digest) != 64 or len(acl_digest) != 64:
+    def feedback_envelope(*, universe_id: str, stage: str, base_generation: int,
+                          completed_steps: int, candidate_digest: str,
+                          acl_digest: str) -> dict[str, Any]:
+        if (not universe_id or stage not in ("LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO")
+                or base_generation < 0 or completed_steps < 0
+                or len(candidate_digest) != 64 or len(acl_digest) != 64):
             raise PolicyError("invalid feedback provenance")
         return {
             "schema": "nanrouter.bootstrap-feedback.v1",
-            "universe_id": job.universe_id,
-            "macrocluster": job.macrocluster,
-            "stage": job.stage,
+            "universe_id": universe_id,
+            "macrocluster": "MC0:0",
+            "stage": stage,
             "completed_steps": completed_steps,
-            "base_generation": job.base_generation,
+            "base_generation": base_generation,
             "candidate_digest": candidate_digest,
             "acl_digest": acl_digest,
             "live_map_commit": False,
         }
+
+    @staticmethod
+    def feedback(job: MacroJob, *, completed_steps: int,
+                 candidate_digest: str, acl_digest: str) -> dict[str, Any]:
+        return BootstrapMacroPlanner.feedback_envelope(
+            universe_id=job.universe_id, stage=job.stage,
+            base_generation=job.base_generation, completed_steps=completed_steps,
+            candidate_digest=candidate_digest, acl_digest=acl_digest,
+        )
