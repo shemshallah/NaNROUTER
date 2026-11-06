@@ -12,6 +12,8 @@
     "step",
     "nanclock_tick",
     "source_hash",
+    "source_ref",
+    "target_ref",
     "input_hash",
     "output_hash",
     "active_heads",
@@ -30,6 +32,8 @@
     "step": { "type": "integer", "minimum": 0 },
     "nanclock_tick": { "type": "integer", "minimum": 0 },
     "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "source_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "target_ref": { "type": "string", "minLength": 1, "maxLength": 256 },
     "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "active_heads": {
