@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/object-association.schema.json",
+  "title": "Committed typed object to address association",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "object_id", "association_ref", "source_hash", "acl_digest", "learner_id", "base_generation", "generation", "state"],
+  "properties": {
+    "kind": {"enum": ["vector", "hyperedge", "rule", "route", "bin", "temporal"]},
+    "object_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "association_ref": {"type": "string", "minLength": 1, "maxLength": 256},
+    "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "acl_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "learner_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "base_generation": {"type": "integer", "minimum": 0},
+    "generation": {"type": "integer", "minimum": 1},
+    "state": {"const": "committed"}
+  }
+}
