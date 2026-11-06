@@ -13,6 +13,7 @@
     "nanclock_tick",
     "acl_digest",
     "expires_at_tick",
+    "signature",
     "nonce"
   ],
   "properties": {
