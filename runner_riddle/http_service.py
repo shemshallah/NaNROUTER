@@ -187,11 +187,13 @@ def make_handler(service: RiddleService):
                         completed_steps=int(body["completed_steps"]),
                         candidate_digest=str(body["candidate_digest"]),
                         acl_digest=str(body["acl_digest"]),
+                        signing_key=service.feedback_key,
                     )
                     feedback["nanclock_tick"] = int(body.get("nanclock_tick", 0))
                     feedback["signature"] = hmac.new(
                         service.feedback_key,
-                        json.dumps(feedback, sort_keys=True, separators=(",", ":")).encode(),
+                        json.dumps({k: v for k, v in feedback.items() if k != "signature"},
+                                   sort_keys=True, separators=(",", ":")).encode(),
                         "sha256",
                     ).hexdigest()
                     feedback_id = service.inbox.record_feedback(feedback)
