@@ -1,0 +1,100 @@
+import json
+import os
+import tempfile
+import threading
+import unittest
+from http.server import ThreadingHTTPServer
+from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+from runner_riddle.http_service import RiddleService, make_handler
+
+
+class ServiceTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.env = patch.dict(os.environ, {
+            "RIDDLE_DATA_DIR": self.tmp.name,
+            "RIDDLE_INTAKE_TOKEN": "i" * 40,
+            "RIDDLE_WORKER_TOKEN": "w" * 40,
+        })
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        self.service = RiddleService()
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.service))
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.thread.join)
+        self.addCleanup(self.server.server_close)
+        self.addCleanup(self.server.shutdown)
+        self.base = f"http://127.0.0.1:{self.server.server_port}"
+
+    def request(self, path, body=None, token=None):
+        raw = None if body is None else json.dumps(body).encode()
+        headers = {}
+        if raw is not None:
+            headers["Content-Type"] = "application/json"
+        if token:
+            headers["Authorization"] = "Bearer " + token
+        req = Request(self.base + path, data=raw, headers=headers,
+                      method="GET" if body is None else "POST")
+        with urlopen(req, timeout=3) as response:
+            payload = response.read()
+            return response.status, json.loads(payload) if payload else {}
+
+    def test_health_identifies_bs0_gateway_and_queue(self):
+        status, body = self.request("/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["address"], "nan://GM0:SC0:MC0:BS0:0:HW0:0")
+        self.assertFalse(body["live_route_commit"])
+
+    def test_intake_requires_auth_and_worker_can_lease_and_ack(self):
+        payload = b"NaN16 source"
+        body = {
+            "universe_id": "training-universe-0",
+            "node_point": 9,
+            "head_index": 17,
+            "source_kind": "nan-source",
+            "payload_hex": payload.hex(),
+            "acl_digest": "b" * 64,
+            "nanclock_tick": 12,
+        }
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/intake", body)
+        self.assertEqual(err.exception.code, 401)
+
+        _, accepted = self.request("/v1/riddle/intake", body, "i" * 40)
+        self.assertTrue(accepted["accepted"])
+        _, leased = self.request("/v1/riddle/lease",
+                                 {"owner": "runner-0", "now_tick": 13}, "w" * 40)
+        self.assertEqual(bytes.fromhex(leased["payload_hex"]), payload)
+        trace = {
+            "schema": "nanrouter.trace.v1",
+            "universe_id": leased["universe_id"],
+            "source_hash": leased["source_hash"],
+            "acl_digest": leased["acl_digest"],
+            "source_ref": "point:9:head:17",
+            "target_ref": "vector:1337",
+            "nanclock_tick": 14,
+        }
+        _, ack = self.request("/v1/riddle/ack", {
+            "event_id": leased["event_id"],
+            "owner": "runner-0",
+            "result_digest": "c" * 64,
+            "result_generation": 0,
+            "trace": trace,
+        }, "w" * 40)
+        self.assertTrue(ack["acknowledged"])
+        _, queue = self.request("/v1/riddle/queue", token="w" * 40)
+        self.assertEqual(queue["queue"]["acked"], 1)
+
+    def test_macro_plan_fails_closed_without_signed_allocator_manifest(self):
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/plan", {"state": {}}, "w" * 40)
+        self.assertEqual(err.exception.code, 503)
+
+
+if __name__ == "__main__":
+    unittest.main()

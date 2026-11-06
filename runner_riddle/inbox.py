@@ -130,6 +130,21 @@ class SQLiteSourceInbox:
                 owner, attempts
             )
 
+    def get_leased(self, event_id: str, owner: str) -> LeasedSource:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM source_event WHERE event_id=? AND state='leased' AND lease_owner=?",
+                (event_id, owner)
+            ).fetchone()
+        if row is None:
+            raise InboxError("event is not leased by this worker")
+        return LeasedSource(
+            row["event_id"], row["universe_id"], row["node_point"],
+            row["head_index"], row["source_kind"], row["source_hash"],
+            bytes(row["payload"]), row["acl_digest"], row["nanclock_tick"],
+            owner, row["attempts"]
+        )
+
     def ack(self, event: LeasedSource, *, result_digest: str,
             result_generation: int, trace: dict[str, Any]) -> bool:
         if len(result_digest) != 64 or any(ch not in "0123456789abcdef" for ch in result_digest):
