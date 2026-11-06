@@ -172,7 +172,7 @@ def make_handler(service: RiddleService):
                         self._json(503, {"error": "signed master route cache is not installed"})
                         return
                     cache = MasterRouteCache.load(service.route_cache_path, service.route_key)
-                    packet = cache.resolve(str(body["address"]))
+                    packet = cache.resolve(str(body["address"]), now_tick=int(body["nanclock_tick"]) if "nanclock_tick" in body else None)
                     self._json(200, {"packet": packet, "live_route_commit": False})
                     return
 
