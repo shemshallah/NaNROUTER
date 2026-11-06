@@ -37,6 +37,9 @@ class CacheTests(unittest.TestCase):
             "route_kind": "network",
             "source_ref": "koyeb:bs0:0",
             "target_ref": "universe-0:point-0:head-0",
+            "target_head": {"universe_id": "bootstrap-universe-0", "node_point": 0,
+                            "head_index": 0, "permanence": "permanent",
+                            "head_ref": "universe-0:point-0:head-0"},
             "path": [{"namespace": "BS", "id": 0}, {"namespace": "HW", "id": 0}],
             "permanence": "permanent",
             "source_hash": "a" * 64,
@@ -79,9 +82,9 @@ class CacheTests(unittest.TestCase):
         packet = self.cache.resolve(
             ROOT + "::HW0:1,2,3::vector1337::hyperedge1337",
             head_refs={
-                "HW0:1": {"head_ref": "runner-1:head-1", "permanence": "permanent"},
-                "HW0:2": {"head_ref": "runner-2:head-2", "permanence": "permanent"},
-                "HW0:3": {"head_ref": "runner-3:head-3", "permanence": "permanent"},
+                "HW0:1": {"universe_id": "runner-1", "node_point": 0, "head_index": 1, "head_ref": "runner-1:head-1", "permanence": "permanent"},
+                "HW0:2": {"universe_id": "runner-2", "node_point": 0, "head_index": 2, "head_ref": "runner-2:head-2", "permanence": "permanent"},
+                "HW0:3": {"universe_id": "runner-3", "node_point": 0, "head_index": 3, "head_ref": "runner-3:head-3", "permanence": "permanent"},
             },
             object_refs={
                 "vector:1337": {"kind": "vector", "object_id": "1337",
