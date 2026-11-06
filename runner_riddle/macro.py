@@ -172,11 +172,12 @@ class BootstrapMacroPlanner:
     @staticmethod
     def feedback_envelope(*, universe_id: str, stage: str, base_generation: int,
                           completed_steps: int, candidate_digest: str,
-                          acl_digest: str, signing_key: bytes) -> dict[str, Any]:
+                          acl_digest: str, signing_key: bytes,
+                          nanclock_tick: int = 0) -> dict[str, Any]:
         if (not universe_id or stage not in ("LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO")
                 or base_generation < 0 or completed_steps < 0
                 or len(candidate_digest) != 64 or len(acl_digest) != 64
-                or len(signing_key) < 32):
+                or len(signing_key) < 32 or nanclock_tick < 0):
             raise PolicyError("invalid feedback provenance or signing key")
         feedback = {
             "schema": "nanrouter.bootstrap-feedback.v1",
@@ -188,6 +189,7 @@ class BootstrapMacroPlanner:
             "candidate_digest": candidate_digest,
             "acl_digest": acl_digest,
             "live_map_commit": False,
+            "nanclock_tick": nanclock_tick,
         }
         feedback["signature"] = hmac.new(
             signing_key, json.dumps(feedback, sort_keys=True, separators=(",", ":")).encode(),
@@ -198,10 +200,10 @@ class BootstrapMacroPlanner:
     @staticmethod
     def feedback(job: MacroJob, *, completed_steps: int,
                  candidate_digest: str, acl_digest: str,
-                 signing_key: bytes) -> dict[str, Any]:
+                 signing_key: bytes, nanclock_tick: int = 0) -> dict[str, Any]:
         return BootstrapMacroPlanner.feedback_envelope(
             universe_id=job.universe_id, stage=job.stage,
             base_generation=job.base_generation, completed_steps=completed_steps,
             candidate_digest=candidate_digest, acl_digest=acl_digest,
-            signing_key=signing_key,
+            signing_key=signing_key, nanclock_tick=nanclock_tick,
         )
