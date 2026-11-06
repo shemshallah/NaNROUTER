@@ -1,0 +1,109 @@
+import unittest
+
+from runner_riddle.volume_registry import (
+    CANONICAL, VolumeRegistry, VolumeRegistryError,
+)
+
+
+KEY = b"nanrouter-volume-registry-test-key-32-bytes"
+
+
+def records(health="green", verified=True):
+    out = []
+    for tier, (address, database_file) in CANONICAL.items():
+        out.append({
+            "tier": tier,
+            "logical_address": address,
+            "shard": 0,
+            "provider": "koyeb",
+            "provider_volume_id": "koyeb-volume-" + tier.lower(),
+            "mount_root": "/" + address,
+            "database_file": database_file,
+            "region": "was",
+            "health": health,
+            "mount_verified": verified,
+            "observed_at_tick": 100,
+            "generation": 1,
+        })
+    return out
+
+
+class VolumeRegistryTests(unittest.TestCase):
+    def test_all_four_green_mount_verified_volumes_aggregate_green(self):
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=1, previous_digest=None,
+            volumes=records(), key=KEY,
+        )
+        self.assertEqual(registry.health, "green")
+        summary = registry.summary()
+        self.assertEqual(set(summary["canonical_tiers"]), {"BS0", "MC0", "SC0", "GM0"})
+
+    def test_green_without_verified_mount_is_not_green(self):
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=1, previous_digest=None,
+            volumes=records(verified=False), key=KEY,
+        )
+        self.assertEqual(registry.health, "degraded")
+
+    def test_missing_tier_is_rejected(self):
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=records()[:-1], key=KEY,
+            )
+
+    def test_tier_address_and_database_filename_are_bound(self):
+        bad = records()
+        bad[0]["logical_address"] = CANONICAL["MC0"][0]
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=bad, key=KEY,
+            )
+
+    def test_mount_root_must_be_logical_address_path(self):
+        bad = records()
+        bad[0]["mount_root"] = "/bs0db"
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=bad, key=KEY,
+            )
+
+    def test_provider_placeholders_and_duplicate_ids_are_rejected(self):
+        bad = records()
+        bad[0]["provider_volume_id"] = "<actual Koyeb volume ID>"
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=bad, key=KEY,
+            )
+        bad = records()
+        bad[1]["provider_volume_id"] = bad[0]["provider_volume_id"]
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=bad, key=KEY,
+            )
+
+    def test_tampering_is_detected(self):
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=1, previous_digest=None,
+            volumes=records(), key=KEY,
+        )
+        document = dict(registry.document)
+        document["volumes"] = [dict(v) for v in document["volumes"]]
+        document["volumes"][0]["health"] = "unavailable"
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry(document, KEY)
+
+    def test_registry_signature_requires_independent_long_key(self):
+        with self.assertRaises(VolumeRegistryError):
+            VolumeRegistry.build_signed(
+                network_id="nan-global", generation=1, previous_digest=None,
+                volumes=records(), key=b"short",
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
