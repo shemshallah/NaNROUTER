@@ -52,7 +52,7 @@ def logical_address(tier: str, shard: int) -> str:
     if tier not in CANONICAL or not isinstance(shard, int) or not 0 <= shard <= 255:
         raise VolumeRegistryError("unknown tier or shard outside 0..255")
     tier_code = {"BS0": 1, "MC0": 2, "SC0": 3, "GM0": 4}[tier]
-    prefix = bytes((0x4E, 0x11 | (tier_code - 1), shard))
+    prefix = bytes((0x4E, 0x10 | tier_code, shard))
     payload = (int.from_bytes(prefix, "big") << 8) | _crc8_atm(prefix)
     return f"0x7FF1{payload:08X}F17F"
 
