@@ -108,8 +108,8 @@ class MasterRouteCache:
             raise RouteError("route source_hash must be lowercase SHA-256 hex")
         if not re.fullmatch(r"[0-9a-f]{64}", str(candidate.get("acl_digest", ""))):
             raise RouteError("route acl_digest must be lowercase SHA-256 hex")
-        if candidate.get("permanence") not in ("permanent", "ephemeral"):
-            raise RouteError("invalid permanence")
+        if candidate.get("permanence") != "permanent":
+            raise RouteError("the BS0 root route must have permanent identity")
         if not candidate.get("source_ref") or not candidate.get("target_ref"):
             raise RouteError("route source_ref and target_ref are required")
         target_head = candidate.get("target_head")
@@ -180,6 +180,13 @@ class MasterRouteCache:
             raise RouteError("head association node point outside 0..255")
         if record.get("permanence") not in ("permanent", "ephemeral"):
             raise RouteError("invalid head permanence")
+        lease_until = record.get("lease_until_tick")
+        if record.get("permanence") == "permanent" and lease_until is not None:
+            raise RouteError("permanent head associations cannot carry an expiry lease")
+        if record.get("permanence") == "ephemeral" and (
+            not isinstance(lease_until, int) or lease_until <= int(record.get("nanclock_tick", -1))
+        ):
+            raise RouteError("ephemeral head associations require a future lease expiry")
         for field in ("source_hash", "acl_digest"):
             if not re.fullmatch(r"[0-9a-f]{64}", str(record.get(field, ""))):
                 raise RouteError(f"head association {field} must be SHA-256 hex")
@@ -267,7 +274,7 @@ class MasterRouteCache:
             fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
             return cache, committed
 
-    def resolve(self, address: str) -> dict[str, Any]:
+    def resolve(self, address: str, *, now_tick: int | None = None) -> dict[str, Any]:
         parsed = parse_address(address)
         head_refs = {item["head_key"]: item for item in self.document["head_associations"]
                      if item.get("state") == "committed"}
@@ -288,8 +295,8 @@ class MasterRouteCache:
         root_head = route.get("target_head")
         if not isinstance(root_head, dict):
             raise RouteError("committed root route is missing its typed target_head")
-        if root_head.get("permanence") not in ("permanent", "ephemeral"):
-            raise RouteError("root head permanence is invalid")
+        if root_head.get("permanence") != "permanent":
+            raise RouteError("BS0 root head must remain permanently attached")
         if not root_head.get("head_ref"):
             raise RouteError("root head reference is missing")
         resolved_heads.append({
@@ -310,6 +317,10 @@ class MasterRouteCache:
                         raise RouteError(f"unregistered head selector: {key}")
                     if record.get("permanence") not in ("permanent", "ephemeral"):
                         raise RouteError(f"invalid permanence for head selector: {key}")
+                    if record.get("permanence") == "ephemeral":
+                        lease_until = record.get("lease_until_tick")
+                        if now_tick is None or not isinstance(lease_until, int) or now_tick >= lease_until:
+                            raise RouteError(f"ephemeral head lease expired or current tick missing: {key}")
                     if not record.get("head_ref") or not record.get("universe_id"):
                         raise RouteError(f"incomplete head association: {key}")
                     resolved_heads.append({
