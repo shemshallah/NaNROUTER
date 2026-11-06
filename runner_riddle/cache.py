@@ -291,7 +291,13 @@ class MasterRouteCache:
                         raise RouteError(f"invalid permanence for head selector: {key}")
                     if not record.get("head_ref") or not record.get("universe_id"):
                         raise RouteError(f"incomplete head association: {key}")
-                    resolved_heads.append(dict(record))
+                    resolved_heads.append({
+                        "universe_id": record["universe_id"],
+                        "node_point": record["node_point"],
+                        "head_index": record["head_index"],
+                        "permanence": record["permanence"],
+                        "head_ref": record["head_ref"],
+                    })
             elif isinstance(selector, ObjectSelector):
                 key = f"{selector.kind}:{selector.object_id}"
                 record = object_refs.get(key)
@@ -301,7 +307,11 @@ class MasterRouteCache:
                     raise RouteError(f"typed object association mismatch: {key}")
                 if not record.get("association_ref"):
                     raise RouteError(f"object association reference missing: {key}")
-                resolved_objects.append(dict(record))
+                resolved_objects.append({
+                    "kind": record["kind"],
+                    "object_id": str(record["object_id"]),
+                    "association_ref": record["association_ref"],
+                })
         packet = {
             "schema": "nanrouter.micro-route.v1",
             "cache_generation": self.generation,
