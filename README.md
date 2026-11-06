@@ -113,3 +113,27 @@ See [runner-riddle/README.md](runner-riddle/README.md). The listener is designed
 ## Status
 
 This repository begins as the routing/control-plane specification and policy home. A manifest does not mean a 24/7 service is already deployed. The listener, storage adapter, integration tests, and persistent service deployment must be built and verified against the canonical NaNLMind APIs before live learning is enabled.
+
+## CLOCKED service identity and HW3 selector (proposed)
+
+The Rezolve.ai CLOCKED service is registered as the Clocked demo at Router node
+point 3. HERMES reserves HW3 for the corresponding service/hardware identity.
+These identifiers are separate namespaces and require an explicit signed
+binding; point 3 must not be inferred to mean head 3 or BSR wire 3.
+
+The proposed selector contract is:
+
+- `HW3` — registered CLOCKED service identity;
+- `HW3:0` — NANNET interface/control endpoint for handshake, capabilities,
+  route resolution, task/scratch transport and receipts;
+- `HW3:1..255` — logical head ports resolved through explicit Router
+  head/object associations.
+
+This is a proposed CLOCKED binding, not a currently deployed Router route.
+The port table must map to existing internal head IDs and pair ranges without
+renumbering the 256-head topology or the six reserved BSR heads. It must also
+preserve the six-runner ownership map and generation-checked route cache.
+HW3:0 is not an extra semantic head.
+
+See the canonical NaNLMind CLOCKED architecture:
+[docs/CLOCKED_HERMES_BRAINSTORM.md](https://github.com/shemshallah/NaNLMind/blob/main/docs/CLOCKED_HERMES_BRAINSTORM.md).
