@@ -23,6 +23,10 @@ class AddressTests(unittest.TestCase):
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW0:256")
         with self.assertRaises(AddressError):
+            parse_address(ROOT + "::HW256:1")
+        with self.assertRaises(AddressError):
+            parse_address("nan://GM0:SC0:MC0:BS0:0:HW0:256")
+        with self.assertRaises(AddressError):
             parse_address(ROOT + "::memory1337")
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW0:1,1")
