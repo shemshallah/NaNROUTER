@@ -9,6 +9,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from runner_riddle.cache import MasterRouteCache
+from runner_riddle.macro import verify_feedback_signature
 from runner_riddle.http_service import RiddleService, make_handler
 
 
@@ -142,6 +143,7 @@ class ServiceTests(unittest.TestCase):
         item = pending["pending"][0]
         self.assertEqual(item["feedback"]["macrocluster"], "MC0:0")
         self.assertEqual(len(item["feedback"]["signature"]), 64)
+        self.assertTrue(verify_feedback_signature(item["feedback"], b"f" * 40))
         self.assertFalse(item["feedback"]["live_map_commit"])
         _, ack = self.request("/v1/riddle/feedback/ack", {
             "feedback_id": item["feedback_id"]
