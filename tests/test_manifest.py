@@ -55,6 +55,14 @@ class ManifestTests(unittest.TestCase):
         self.assertFalse(self.policy["permissions"]["bsr_control_head_learning"])
         self.assertFalse(self.policy["permissions"]["code_self_modification"])
 
+    def test_router_merge_and_training_have_separate_bins(self):
+        bins = self.policy["bin_classes"]
+        self.assertEqual(set(bins), {"router", "merge", "training", "universe_map"})
+        self.assertEqual(bins["router"]["live_commit_scope"], "nannet.route.commit")
+        self.assertTrue(bins["merge"]["idempotency_required"])
+        self.assertFalse(bins["training"]["live_map_commit"])
+        self.assertFalse(self.policy["range_import"]["router_merge_training_ranges_enabled"])
+
     def test_android_never_maps_overbootstrap(self):
         self.assertEqual(self.policy["universe"]["android_limit_bytes"], 8_388_608)
         self.assertFalse(self.policy["universe"]["android_may_map_overbootstrap"])
