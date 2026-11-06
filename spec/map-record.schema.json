@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/map-record.schema.json",
+  "title": "NaN16 permanent address-to-head map record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "universe_id",
+    "node_point",
+    "address",
+    "canonical_address",
+    "mirror_address",
+    "head_index",
+    "permanence",
+    "layer",
+    "mapping_kind",
+    "source_hash",
+    "evidence_digest",
+    "base_generation",
+    "nanclock_tick",
+    "acl_digest"
+  ],
+  "properties": {
+    "schema": { "const": "nanrouter.map-record.v1" },
+    "universe_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "node_point": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "address": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "canonical_address": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "mirror_address": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "head_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "permanence": { "enum": ["permanent", "ephemeral"] },
+    "layer": { "type": "integer", "minimum": 0, "maximum": 9 },
+    "mapping_kind": {
+      "enum": [
+        "bit-to-head",
+        "address-to-head",
+        "head-to-bin",
+        "vector-to-bin",
+        "hyperedge",
+        "temporal-link",
+        "logic-rule",
+        "route",
+        "merge-provenance",
+        "meta-policy"
+      ]
+    },
+    "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "evidence_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "base_generation": { "type": "integer", "minimum": 0 },
+    "nanclock_tick": { "type": "integer", "minimum": 0 },
+    "acl_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}
