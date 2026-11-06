@@ -75,3 +75,26 @@ runners. Physical Koyeb mount verification is a separate volume observation.
 - `POST /v1/riddle/ring/heartbeat` — authenticated runner acknowledgement
 - `GET /v1/riddle/ring?nanclock_tick=N` — authenticated reconciliation snapshot
 - `GET /healthz` — includes runner-ring convergence status
+
+## Koyeb registry bootstrap
+
+The service image includes a read-only/check-first bootstrap utility:
+
+```sh
+python -m runner_riddle.volume_registry
+python -m runner_riddle.volume_registry --write
+```
+
+Configure `RIDDLE_VOLUME_HMAC_KEY` (32+ bytes), `KOYEB_REGION`, and the four
+real provider IDs `KOYEB_VOLUME_ID_BS0`, `KOYEB_VOLUME_ID_MC0`,
+`KOYEB_VOLUME_ID_SC0`, and `KOYEB_VOLUME_ID_GM0`. Optional
+`KOYEB_MOUNT_ROOT_<TIER>` variables override the existing mount roots
+`/bs0db`, `/mc0db`, `/sc0db`, and `/gm0db`. The utility verifies each
+mountpoint and the expected database file before assigning green health. A
+missing mount or database is recorded as degraded, never green. `--write`
+atomically installs the signed registry and chains its generation to any valid
+previous registry. It never mounts, formats, detaches, or migrates volumes.
+
+Run the command after Koyeb has attached all four volumes and before enabling
+strict runner-ring reconciliation. The check-only invocation prints aggregate
+status without writing the registry.
