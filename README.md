@@ -44,13 +44,21 @@ It may not:
 
 Unknown or not-yet-imported ranges are **deny by default**. The machine-readable policies are in `spec/`.
 
+## Network addressing and committed route cache
+
+- Koyeb is the persistent gateway at `nan://GM0:SC0:MC0:BS0:0:HW0:0`.
+- `MC0:0` is the six-unit runner-controlled macrocluster; the six BSR wire identities remain BSR0–BSR5.
+- The `::` selector boundary addresses individual heads and typed objects such as `vector1337` and `hyperedge1337`.
+- Every resolved path is compiled into a signed micro-routing packet and committed into a generation-chained master network cache.
+- The master cache is the authoritative set of committed routes; candidate learning never edits it directly.
+
+See `spec/address-grammar.md`, `spec/master-network-cache.schema.json`, `spec/route-record.schema.json`, and `spec/micro-route-packet.schema.json`.
+
 ## Runner Riddle route engine
 
-The `runner_riddle` package now provides a typed address parser, a signed
+The `runner_riddle` package provides a typed address parser, a signed
 generation-chained master route cache, a micro-route packet compiler, and a
 read-only trace pattern miner.
-
-Example:
 
 ```
 nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1,2,3
@@ -71,9 +79,8 @@ Run the standard-library tests with:
 python -m unittest discover -s tests -v
 ```
 
-This is the routing engine, not yet a deployed 24/7 Koyeb listener. The
-listener still needs the N16T intake adapter, persistent worker supervision,
-and live service wiring.
+This is the routing engine, not yet a deployed 24/7 Koyeb listener. N16T intake,
+persistent worker supervision, and live service wiring remain the next stage.
 
 ## Ten mapping layers
 
