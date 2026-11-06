@@ -20,6 +20,7 @@ class ServiceTests(unittest.TestCase):
             "RIDDLE_DATA_DIR": self.tmp.name,
             "RIDDLE_INTAKE_TOKEN": "i" * 40,
             "RIDDLE_WORKER_TOKEN": "w" * 40,
+            "RIDDLE_FEEDBACK_HMAC_KEY": "f" * 40,
         })
         self.env.start()
         self.addCleanup(self.env.stop)
@@ -140,6 +141,7 @@ class ServiceTests(unittest.TestCase):
         _, pending = self.request("/v1/riddle/feedback", token="w" * 40)
         item = pending["pending"][0]
         self.assertEqual(item["feedback"]["macrocluster"], "MC0:0")
+        self.assertEqual(len(item["feedback"]["signature"]), 64)
         self.assertFalse(item["feedback"]["live_map_commit"])
         _, ack = self.request("/v1/riddle/feedback/ack", {
             "feedback_id": item["feedback_id"]
