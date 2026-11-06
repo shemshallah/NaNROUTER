@@ -86,6 +86,11 @@ class RunnerRing:
             now_tick=nanclock_tick,
         )
 
+    def latest_tick(self) -> int:
+        with self._connect() as db:
+            row = db.execute("SELECT MAX(nanclock_tick) AS tick FROM runner_ring_heartbeat").fetchone()
+        return int(row["tick"] or 0)
+
     def snapshot(self, *, expected_generation: int, expected_digest: str,
                  now_tick: int) -> dict[str, Any]:
         if now_tick < 0:
