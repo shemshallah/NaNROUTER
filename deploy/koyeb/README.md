@@ -32,7 +32,7 @@ Do not commit any secret, token, HMAC key, allocator manifest, or live route cac
 - `POST /v1/riddle/retry`: release a failed lease or dead-letter after the attempt limit
 - `GET /v1/riddle/queue`: worker-authenticated queue counts
 - `POST /v1/riddle/plan`: returns a bounded Boolean/routing job only when a signed allocator manifest is installed
-- `POST /v1/riddle/routes/resolve`: resolves a typed address from the signed master cache and returns a signed micro-route packet; it never commits routes
+- `POST /v1/riddle/routes/resolve`: resolves a typed address from the signed master cache and returns a signed micro-route packet; include `nanclock_tick` when selecting ephemeral heads; it never commits routes
 
 Every POST requires JSON and an appropriate bearer token. Request bodies are limited to 2 MiB. Intake payloads are hex-encoded NaN bytes.
 
