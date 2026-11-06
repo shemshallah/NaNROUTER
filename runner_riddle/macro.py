@@ -60,6 +60,8 @@ class SignedRangeManifest:
         limit = int(doc.get("address_limit_bytes", 0))
         if limit < 1 or limit > 2_147_483_648:
             raise PolicyError("address limit must be within 2 GiB")
+        if doc.get("platform") == "android" and limit > 8_388_608:
+            raise PolicyError("Android mapping limit is 8 MiB")
         ranges = []
         for item in doc.get("ranges", []):
             start, end = int(item["start"]), int(item["end_exclusive"])
@@ -101,7 +103,8 @@ class MacroJob:
     macrocluster: str
     learner_heads: tuple[int, ...]
     mapping_layers: tuple[int, ...]
-    source_ranges: tuple[AddressRange, ...]
+    input_ranges: tuple[AddressRange, ...]
+    candidate_ranges: tuple[AddressRange, ...]
     base_generation: int
     writes_live_map: bool = False
 
@@ -116,31 +119,36 @@ class BootstrapMacroPlanner:
                  manifest: SignedRangeManifest) -> MacroJob:
         training_ranges = manifest.grant("BOOTSTRAP_BOOLEAN_TRAINING_BIN",
                                          "bootstrap.boolean.read")
-        if not training_ranges:
-            raise PolicyError("no allocator-approved Boolean training range")
+        training_candidates = manifest.grant("BOOTSTRAP_BOOLEAN_TRAINING_BIN",
+                                              "bootstrap.boolean.candidate-write")
+        if not training_ranges or not training_candidates:
+            raise PolicyError("Boolean training input and candidate ranges are both required")
         if not state.boolean_gate_passed:
             if state.boolean_heads_verified >= 250 and state.distinct_boolean_rules == 16:
                 raise PolicyError("Boolean state is complete but its gate is not marked passed")
             return MacroJob(
                 "LEARN_BOOLEAN", self.universe_id, "MC0:0", BOOLEAN_HEADS,
-                (0,), training_ranges, state.base_generation, False
+                (0,), training_ranges, training_candidates, state.base_generation, False
             )
         if not state.routing_gate_passed:
             route_ranges = manifest.grant("NANNET_ROUTE_BIN", "nannet.route.read")
-            if not route_ranges:
-                raise PolicyError("no allocator-approved NANNET route read range")
+            route_candidates = manifest.grant("NANNET_ROUTE_BIN", "nannet.route.candidate-write")
+            if not route_ranges or not route_candidates:
+                raise PolicyError("NANNET route input and candidate ranges are both required")
             return MacroJob(
                 "LEARN_ROUTING", self.universe_id, "MC0:0", BOOLEAN_HEADS,
-                tuple(range(10)), route_ranges, state.base_generation, False
+                tuple(range(10)), route_ranges, route_candidates, state.base_generation, False
             )
         # Language is deliberately deferred until the logic and mapping gates pass.
-        language_ranges = manifest.grant("BOOTSTRAP_BOOLEAN_TRAINING_BIN",
-                                         "bootstrap.language.demo")
-        if not language_ranges:
-            raise PolicyError("language demo range is not authorized")
+        language_ranges = manifest.grant("BOOTSTRAP_LANGUAGE_DEMO_BIN",
+                                         "bootstrap.language.read")
+        language_candidates = manifest.grant("BOOTSTRAP_LANGUAGE_DEMO_BIN",
+                                             "bootstrap.language.candidate-write")
+        if not language_ranges or not language_candidates:
+            raise PolicyError("language demo remains disabled until its own bin is authorized")
         return MacroJob(
             "LANGUAGE_DEMO", self.universe_id, "MC0:0", BOOLEAN_HEADS,
-            tuple(range(10)), language_ranges, state.base_generation, False
+            tuple(range(10)), language_ranges, language_candidates, state.base_generation, False
         )
 
     @staticmethod
