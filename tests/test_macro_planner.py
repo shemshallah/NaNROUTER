@@ -61,12 +61,8 @@ class MacroPlannerTests(unittest.TestCase):
             universe_id="overbootstrap-mc0", stage="LEARN_BOOLEAN",
             base_generation=2, completed_steps=16,
             candidate_digest="a" * 64, acl_digest="b" * 64,
+            signing_key=KEY, nanclock_tick=17,
         )
-        feedback["nanclock_tick"] = 17
-        feedback["signature"] = hmac.new(
-            KEY, json.dumps(feedback, sort_keys=True, separators=(",", ":")).encode(),
-            hashlib.sha256
-        ).hexdigest()
         self.assertTrue(verify_feedback_signature(feedback, KEY))
         feedback["completed_steps"] = 17
         self.assertFalse(verify_feedback_signature(feedback, KEY))
