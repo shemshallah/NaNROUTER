@@ -31,6 +31,20 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(points[2]["role"], "hermes-demo")
         self.assertEqual(points[3]["role"], "clocked-demo")
 
+    def test_local_bsr_heads_are_explicitly_bound_not_namespace_casts(self):
+        bindings = self.points["head_namespace"]["bsr_binding"]
+        self.assertEqual(
+            [(b["head_index"], b["node_point"], b["bsr_wire"]) for b in bindings],
+            [(0, 0, 0), (4, 4, 1), (5, 5, 2), (6, 6, 3), (7, 7, 4), (8, 8, 5)]
+        )
+
+    def test_range_manifest_is_allocator_signed_and_bounded(self):
+        schema = json.loads((ROOT / "spec/range-manifest.schema.json").read_text())
+        self.assertEqual(schema["properties"]["authority"]["const"],
+                         "nanlmind-canonical-allocator")
+        self.assertEqual(schema["properties"]["address_limit_bytes"]["maximum"], 2147483648)
+        self.assertIn("signature", schema["required"])
+
     def test_registration_range_is_exact(self):
         registration = self.points["registration"]
         self.assertEqual(registration["available_points"], "9..255")
