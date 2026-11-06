@@ -97,6 +97,38 @@ boolean_learning_heads = "all head indices except reserved_bsr_heads"
 boolean_learning_head_count = 250
 head_namespace_is_not_node_point_namespace = true
 
+# These are local head IDs, explicitly bound to node points; numeric equality
+# is not an implicit namespace conversion.
+[[head_namespace.bsr_binding]]
+head_index = 0
+node_point = 0
+bsr_wire = 0
+
+[[head_namespace.bsr_binding]]
+head_index = 4
+node_point = 4
+bsr_wire = 1
+
+[[head_namespace.bsr_binding]]
+head_index = 5
+node_point = 5
+bsr_wire = 2
+
+[[head_namespace.bsr_binding]]
+head_index = 6
+node_point = 6
+bsr_wire = 3
+
+[[head_namespace.bsr_binding]]
+head_index = 7
+node_point = 7
+bsr_wire = 4
+
+[[head_namespace.bsr_binding]]
+head_index = 8
+node_point = 8
+bsr_wire = 5
+
 [network_gateway]
 canonical_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 bootstrap_service_class = 0
