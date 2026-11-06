@@ -1,4 +1,4 @@
-""""Signed Koyeb volume registry owned by the NaNROUTER control plane.
+"""Signed Koyeb volume registry owned by the NaNROUTER control plane.
 
 Logical NaN addresses are stable identities. Provider IDs and mount roots are
 deployment bindings and must never be used as substitutes for those identities.
@@ -124,7 +124,7 @@ class VolumeRegistry:
             shard = item.get("shard")
             if not isinstance(shard, int) or not 0 <= shard <= 255:
                 raise VolumeRegistryError("shard must be in 0..255")
-            expected_address, expected_db = CANONICAL[tier]
+            _, expected_db = CANONICAL[tier]
             address = item.get("logical_address")
             if address != logical_address(tier, shard):
                 raise VolumeRegistryError("logical address does not match tier/shard identity or CRC")
