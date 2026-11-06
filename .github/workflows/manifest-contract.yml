@@ -1,7 +1,7 @@
 name: manifest-contract
 on:
   push:
-    branches: [main, bootstrap-logic-routing-riddle, runner-riddle-route-engine, bs0-koyeb-control-service, master-cache-association-atlas, master-cache-association-atlas]
+    branches: [main, bootstrap-logic-routing-riddle, runner-riddle-route-engine, bs0-koyeb-control-service, master-cache-association-atlas]
   pull_request:
   workflow_dispatch:
 permissions:
