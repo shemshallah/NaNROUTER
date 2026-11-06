@@ -52,7 +52,7 @@ Unknown or not-yet-imported ranges are **deny by default**. The machine-readable
 - Every resolved path is compiled into a signed micro-routing packet and committed into a generation-chained master network cache.
 - The master cache is the authoritative set of committed routes; candidate learning never edits it directly.
 
-See `spec/address-grammar.md`, `spec/master-network-cache.schema.json`, `spec/route-record.schema.json`, and `spec/micro-route-packet.schema.json`.
+See `spec/address-grammar.md`, `spec/master-network-cache.schema.json`, `spec/route-record.schema.json`, and `spec/micro-route-packet.schema.json`. The router-owned Koyeb logical-volume registry is specified in `spec/volume-registry.md` and `spec/volume-registry.schema.json`; NaNLMind supplies the codec, while NaNROUTER owns provider bindings and health.
 
 ## Runner Riddle route engine
 
