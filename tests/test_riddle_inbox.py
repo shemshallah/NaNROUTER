@@ -6,6 +6,7 @@ from runner_riddle import BootstrapMacroPlanner, InboxError, InboxFull, RunnerRi
 
 
 ACL = "b" * 64
+FEEDBACK_KEY = b"runner-riddle-feedback-test-key-32b"
 
 
 class InboxTests(unittest.TestCase):
@@ -81,9 +82,9 @@ class InboxTests(unittest.TestCase):
             completed_steps=256,
             candidate_digest="c" * 64,
             acl_digest="d" * 64,
+            signing_key=FEEDBACK_KEY,
+            nanclock_tick=42,
         )
-        feedback["nanclock_tick"] = 42
-        feedback["signature"] = "e" * 64
         feedback_id = self.inbox.record_feedback(feedback)
         self.assertEqual(self.inbox.record_feedback(feedback), feedback_id)
         pending = self.inbox.list_feedback()
