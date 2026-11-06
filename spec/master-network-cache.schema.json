@@ -4,13 +4,15 @@
   "title": "NaN master committed route cache",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "network_id", "generation", "previous_digest", "routes", "cache_digest", "signature"],
+  "required": ["schema", "network_id", "generation", "previous_digest", "routes", "head_associations", "object_associations", "cache_digest", "signature"],
   "properties": {
     "schema": {"const": "nanrouter.master-cache.v1"},
     "network_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "generation": {"type": "integer", "minimum": 0},
     "previous_digest": {"type": ["string", "null"]},
     "routes": {"type": "array", "items": {"$ref": "route-record.schema.json"}},
+    "head_associations": {"type": "array", "items": {"$ref": "head-association.schema.json"}},
+    "object_associations": {"type": "array", "items": {"$ref": "object-association.schema.json"}},
     "cache_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "signature": {"type": "string", "minLength": 32, "maxLength": 512}
   }
