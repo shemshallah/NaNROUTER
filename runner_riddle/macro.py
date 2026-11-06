@@ -20,6 +20,16 @@ class PolicyError(ValueError):
     pass
 
 
+def verify_feedback_signature(feedback: dict[str, Any], key: bytes) -> bool:
+    signature = str(feedback.get("signature", ""))
+    core = {name: value for name, value in feedback.items() if name != "signature"}
+    expected = hmac.new(
+        key, json.dumps(core, sort_keys=True, separators=(",", ":")).encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected)
+
+
 def _canonical(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
