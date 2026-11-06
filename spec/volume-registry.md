@@ -62,3 +62,16 @@ copy, or migrate Koyeb data.
 The first production registry must be populated from the four real Koyeb
 volume IDs and verified mount observations. Until then the software reports
 unconfigured/unknown and does not alter the existing volumes.
+
+## MC0:0 runner-ring reconciliation
+
+Six reserved runner identities `MC0:0/R0` through `MC0:0/R5` acknowledge
+the exact signed registry generation and digest. The router persists each
+heartbeat and exposes a convergence snapshot. Green requires all six slots to
+be in sync and fresh under `RIDDLE_RING_STALE_TICKS` (default 256). The runner
+ring observes registry convergence; it does not claim direct mounts on remote
+runners. Physical Koyeb mount verification is a separate volume observation.
+
+- `POST /v1/riddle/ring/heartbeat` — authenticated runner acknowledgement
+- `GET /v1/riddle/ring?nanclock_tick=N` — authenticated reconciliation snapshot
+- `GET /healthz` — includes runner-ring convergence status
