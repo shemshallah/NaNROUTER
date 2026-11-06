@@ -1,0 +1,96 @@
+schema = "nanrouter.bin-policy.v1"
+default = "deny"
+unknown_ranges = "deny"
+raw_address_allocation = "disabled-until-authority-manifest-imported"
+
+[universe]
+canonical_register_bytes = 8388608
+android_limit_bytes = 8388608
+android_may_map_overbootstrap = false
+
+# Existing NaNLMind overbootstrap page roles. These are logical page/bank IDs,
+# not fabricated byte offsets. Exact byte ranges must be imported from the
+# canonical allocator before any write capability is issued.
+[overbootstrap]
+enabled_only_on_bootstrap_runner = true
+page_0 = "bootstrap-8mib-live-universe-image"
+page_1 = "256-head-arena-256x32KiB-regions"
+pages_2_and_above = "layer-payload-store"
+unknown_page = "deny"
+
+[permissions]
+runner_riddle_live_map_access = "read-only"
+runner_riddle_candidate_delta_write = true
+boolean_curriculum_write = "boolean-training-bin-only"
+route_table_write = "authority-approved-route-delta-only"
+merge_write = "generation-checked-merge-ingress-only"
+permanent_identity_write = false
+bsr_control_head_learning = false
+ephemeral_head_promotion = false
+unregistered_node_write = false
+code_self_modification = false
+
+[required_capabilities]
+boolean_training = ["bootstrap.boolean.read", "bootstrap.boolean.candidate-write"]
+nannet_route_learning = ["nannet.route.read", "nannet.route.candidate-write"]
+merge_learning = ["merge.manifest.read", "merge.delta.submit"]
+universe_mapping = ["universe.atlas.read", "universe.heads.read"]
+live_route_commit = ["nannet.route.commit", "generation.compare-and-swap"]
+
+[bin_classes.router]
+region_id = "NANNET_ROUTE_BIN"
+storage = "formatted-route-bin"
+read_scope = "nannet.route.read"
+candidate_write_scope = "nannet.route.candidate-write"
+live_commit_scope = "nannet.route.commit"
+live_commit_requires_generation_cas = true
+
+[bin_classes.merge]
+region_id = "OVERBOOTSTRAP_MERGE_BIN"
+storage = "merge-manifest-bin"
+read_scope = "merge.manifest.read"
+write_scope = "merge.delta.submit"
+stale_generation_rejected = true
+idempotency_required = true
+
+[bin_classes.training]
+region_id = "BOOTSTRAP_BOOLEAN_TRAINING_BIN"
+storage = "isolated-candidate-training-bin"
+read_scope = "bootstrap.boolean.read"
+write_scope = "bootstrap.boolean.candidate-write"
+permitted_heads = "all local heads except reserved_bsr_heads"
+live_map_commit = false
+
+[bin_classes.universe_map]
+region_id = "PERMANENT_HEAD_ADDRESS_ATLAS"
+storage = "universe-atlas"
+read_scope = "universe.atlas.read"
+write_scope = "authority-approved-map-delta-only"
+ephemeral_records_may_not_overwrite_permanent = true
+
+[range_import]
+source_of_truth = "NaNLMind canonical allocator"
+exact_byte_offsets = "must be imported from allocator; do not infer from page numbers"
+router_merge_training_ranges_enabled = false
+enable_only_after = [
+  "allocator manifest signature verified",
+  "non-overlap proof passed",
+  "permissions tested against every byte range",
+  "8 MiB and 2 GiB bounds exhaustively checked"
+]
+
+[required_provenance]
+every_delta_requires_source_hash = true
+every_delta_requires_universe_id = true
+every_delta_requires_base_generation = true
+every_delta_requires_nanclock_tick = true
+every_delta_requires_learner_id = true
+every_delta_requires_acl_digest = true
+every_delta_requires_deterministic_delta_digest = true
+
+[limits]
+max_candidate_delta_bytes = 65536
+max_active_heads_per_trace = 256
+max_hyperedge_members = 256
+max_route_hops = 32
+max_pending_candidate_deltas = 4096
