@@ -49,6 +49,14 @@ class RiddleService:
             return None
         return VolumeRegistry.load(self.volume_registry_path, self.volume_key)
 
+    def volume_registry_health(self):
+        if not self.volume_registry_path.exists() or len(self.volume_key) < 32:
+            return {"health": "unknown", "configured": False}
+        try:
+            return self.volume_registry().summary()
+        except VolumeRegistryError:
+            return {"health": "degraded", "configured": True, "valid": False}
+
 
 def make_handler(service: RiddleService):
     class Handler(BaseHTTPRequestHandler):
@@ -99,9 +107,7 @@ def make_handler(service: RiddleService):
                     "queue": service.inbox.stats(),
                     "range_manifest_present": service.range_manifest_path.exists(),
                     "route_cache_present": service.route_cache_path.exists(),
-                    "volume_registry": (service.volume_registry().summary()
-                                        if service.volume_registry() is not None
-                                        else {"health": "unknown", "configured": False}),
+                    "volume_registry": service.volume_registry_health(),
                     "live_route_commit": False,
                 })
                 return
