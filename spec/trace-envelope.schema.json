@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/trace-envelope.schema.json",
+  "title": "NaNLMind bounded learning trace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "universe_id",
+    "node_point",
+    "layer",
+    "step",
+    "nanclock_tick",
+    "source_hash",
+    "input_hash",
+    "output_hash",
+    "active_heads",
+    "confidence_q16",
+    "correct",
+    "delta_digest",
+    "base_generation",
+    "acl_digest",
+    "learner_id"
+  ],
+  "properties": {
+    "schema": { "const": "nanrouter.trace.v1" },
+    "universe_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "node_point": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "layer": { "type": "integer", "minimum": 0, "maximum": 9 },
+    "step": { "type": "integer", "minimum": 0 },
+    "nanclock_tick": { "type": "integer", "minimum": 0 },
+    "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "input_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "output_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "active_heads": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+    },
+    "confidence_q16": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "correct": { "type": "boolean" },
+    "delta_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "base_generation": { "type": "integer", "minimum": 0 },
+    "acl_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "learner_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+  }
+}
