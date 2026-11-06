@@ -32,8 +32,11 @@ class RiddleService:
         self.worker_token = os.environ.get("RIDDLE_WORKER_TOKEN", "")
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
         self.route_key = os.environ.get("RIDDLE_ROUTE_HMAC_KEY", "").encode()
+        self.feedback_key = os.environ.get("RIDDLE_FEEDBACK_HMAC_KEY", "").encode()
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
+        if len(self.feedback_key) < 32:
+            raise ServiceConfigError("RIDDLE_FEEDBACK_HMAC_KEY must be 32+ bytes")
 
 
 def make_handler(service: RiddleService):
@@ -183,6 +186,11 @@ def make_handler(service: RiddleService):
                         acl_digest=str(body["acl_digest"]),
                     )
                     feedback["nanclock_tick"] = int(body.get("nanclock_tick", 0))
+                    feedback["signature"] = hmac.new(
+                        service.feedback_key,
+                        json.dumps(feedback, sort_keys=True, separators=(",", ":")).encode(),
+                        "sha256",
+                    ).hexdigest()
                     feedback_id = service.inbox.record_feedback(feedback)
                     self._json(202, {"feedback_id": feedback_id, "accepted": True})
                     return
