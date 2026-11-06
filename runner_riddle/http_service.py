@@ -12,6 +12,7 @@ from typing import Any
 from .inbox import InboxError, InboxFull, SQLiteSourceInbox
 from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRangeManifest
 from .cache import MasterRouteCache, RouteError
+from .volume_registry import VolumeRegistry, VolumeRegistryError
 
 ROOT_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 MAX_REQUEST_BYTES = 2_097_152
@@ -31,6 +32,8 @@ class RiddleService:
         )
         self.range_manifest_path = data_dir / "allocator-range-manifest.json"
         self.route_cache_path = data_dir / "master-network-cache.json"
+        self.volume_registry_path = Path(os.environ.get("RIDDLE_VOLUME_REGISTRY_PATH", str(data_dir / "volume-registry.json")))
+        self.volume_key = os.environ.get("RIDDLE_VOLUME_HMAC_KEY", "").encode()
         self.intake_token = os.environ.get("RIDDLE_INTAKE_TOKEN", "")
         self.worker_token = os.environ.get("RIDDLE_WORKER_TOKEN", "")
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
@@ -40,6 +43,11 @@ class RiddleService:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
         if len(self.feedback_key) < 32:
             raise ServiceConfigError("RIDDLE_FEEDBACK_HMAC_KEY must be 32+ bytes")
+
+    def volume_registry(self):
+        if not self.volume_registry_path.exists() or len(self.volume_key) < 32:
+            return None
+        return VolumeRegistry.load(self.volume_registry_path, self.volume_key)
 
 
 def make_handler(service: RiddleService):
@@ -91,6 +99,9 @@ def make_handler(service: RiddleService):
                     "queue": service.inbox.stats(),
                     "range_manifest_present": service.range_manifest_path.exists(),
                     "route_cache_present": service.route_cache_path.exists(),
+                    "volume_registry": (service.volume_registry().summary()
+                                        if service.volume_registry() is not None
+                                        else {"health": "unknown", "configured": False}),
                     "live_route_commit": False,
                 })
                 return
@@ -99,6 +110,16 @@ def make_handler(service: RiddleService):
                     self._json(401, {"error": "worker authorization required"})
                     return
                 self._json(200, {"pending": service.inbox.list_feedback()})
+                return
+            if self.path == "/v1/riddle/volumes":
+                if not self._authorized(service.worker_token):
+                    self._json(401, {"error": "worker authorization required"})
+                    return
+                registry = service.volume_registry()
+                if registry is None:
+                    self._json(503, {"error": "signed volume registry is not installed"})
+                    return
+                self._json(200, {"registry": registry.summary(), "volumes": registry.public_records()})
                 return
             if self.path == "/v1/riddle/queue":
                 if not self._authorized(service.worker_token):
@@ -232,7 +253,7 @@ def make_handler(service: RiddleService):
                 self._json(404, {"error": "not found"})
             except InboxFull as exc:
                 self._json(429, {"error": str(exc), "retryable": True})
-            except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError) as exc:
+            except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError, VolumeRegistryError) as exc:
                 self._json(400, {"error": str(exc)})
             except Exception:
                 self._json(500, {"error": "internal service error"})
