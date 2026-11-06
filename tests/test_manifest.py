@@ -48,6 +48,13 @@ class ManifestTests(unittest.TestCase):
         self.assertIn("association_ref", obj["required"])
         self.assertIn("universe_atlas_commit", self.policy["required_capabilities"])
 
+    def test_bootstrap_feedback_is_candidate_only(self):
+        schema = json.loads((ROOT / "spec/bootstrap-feedback.schema.json").read_text())
+        self.assertEqual(schema["properties"]["macrocluster"]["const"], "MC0:0")
+        self.assertFalse(schema["properties"]["live_map_commit"]["const"])
+        self.assertIn("candidate_digest", schema["required"])
+        self.assertIn("acl_digest", schema["required"])
+
     def test_range_manifest_is_allocator_signed_and_bounded(self):
         schema = json.loads((ROOT / "spec/range-manifest.schema.json").read_text())
         self.assertEqual(schema["properties"]["authority"]["const"],
