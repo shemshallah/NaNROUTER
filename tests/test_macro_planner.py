@@ -57,7 +57,11 @@ class MacroPlannerTests(unittest.TestCase):
 
     def test_language_stage_stays_locked_without_own_bin(self):
         manifest = SignedRangeManifest(signed_manifest(), KEY)
-        state = CurriculumState(boolean_gate_passed=True, routing_gate_passed=True)
+        state = CurriculumState(
+            boolean_gate_passed=True, boolean_heads_verified=250,
+            distinct_boolean_rules=16, routing_gate_passed=True,
+            permanent_heads_mapped=6, mapped_layers=tuple(range(10))
+        )
         with self.assertRaises(PolicyError):
             BootstrapMacroPlanner().next_job(state, manifest)
 
