@@ -17,7 +17,7 @@ def records(health="green", verified=True):
             "shard": 0,
             "provider": "koyeb",
             "provider_volume_id": "koyeb-volume-" + tier.lower(),
-            "mount_root": "/" + address,
+            "mount_root": { "BS0": "/bs0db", "MC0": "/mc0db", "SC0": "/sc0db", "GM0": "/gm0db" }[tier],
             "database_file": database_file,
             "region": "was",
             "health": health,
@@ -69,7 +69,7 @@ class VolumeRegistryTests(unittest.TestCase):
         extra.append({
             "tier": "BS0", "logical_address": logical_address("BS0", 1),
             "shard": 1, "provider": "koyeb", "provider_volume_id": "koyeb-volume-bs0-shard-1",
-            "mount_root": "/" + logical_address("BS0", 1), "database_file": "bs0db.sqlite3",
+            "mount_root": "/bs0db-shard-1", "database_file": "bs0db.sqlite3",
             "region": "was", "health": "green", "mount_verified": True,
             "observed_at_tick": 101, "generation": 1,
         })
@@ -79,9 +79,9 @@ class VolumeRegistryTests(unittest.TestCase):
         )
         self.assertEqual(registry.health, "green")
 
-    def test_mount_root_must_be_logical_address_path(self):
+    def test_mount_root_must_be_normalized_absolute_physical_path(self):
         bad = records()
-        bad[0]["mount_root"] = "/bs0db"
+        bad[0]["mount_root"] = "/../bs0db"
         with self.assertRaises(VolumeRegistryError):
             VolumeRegistry.build_signed(
                 network_id="nan-global", generation=1, previous_digest=None,
