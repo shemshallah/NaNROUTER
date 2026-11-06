@@ -13,6 +13,10 @@ class InboxError(ValueError):
     pass
 
 
+class InboxFull(InboxError):
+    pass
+
+
 @dataclass(frozen=True)
 class LeasedSource:
     event_id: str
@@ -31,9 +35,13 @@ class LeasedSource:
 class SQLiteSourceInbox:
     """WAL-backed idempotent intake with leases, ACKs, retries, and dead letters."""
 
-    def __init__(self, path: str | Path, max_payload_bytes: int = 1_048_576):
+    def __init__(self, path: str | Path, max_payload_bytes: int = 1_048_576,
+                 max_pending_events: int = 4096):
         self.path = str(path)
         self.max_payload_bytes = max_payload_bytes
+        self.max_pending_events = max_pending_events
+        if not 1 <= max_pending_events <= 65536:
+            raise InboxError("pending event limit must be in 1..65536")
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
@@ -98,6 +106,17 @@ class SQLiteSourceInbox:
         ).hexdigest()
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            exists = db.execute("SELECT 1 FROM source_event WHERE event_id=?",
+                                (event_id,)).fetchone()
+            if exists is not None:
+                db.commit()
+                return event_id
+            pending = db.execute(
+                "SELECT COUNT(*) FROM source_event WHERE state IN ('queued','leased')"
+            ).fetchone()[0]
+            if int(pending) >= self.max_pending_events:
+                db.rollback()
+                raise InboxFull("source inbox is full; retry after worker drain")
             db.execute("""
                 INSERT OR IGNORE INTO source_event
                 (event_id, universe_id, node_point, head_index, source_kind,
