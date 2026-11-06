@@ -115,16 +115,19 @@ class MasterRouteCache:
         target_head = candidate.get("target_head")
         if not isinstance(target_head, dict):
             raise RouteError("route requires a typed target_head association")
+        try:
+            parsed_root = parse_address(str(candidate.get("canonical_address", "")))
+        except ValueError as exc:
+            raise RouteError("candidate canonical_address is invalid") from exc
+        if parsed_root.selectors:
+            raise RouteError("committed route canonical_address must be a root address without selectors")
         if (not target_head.get("universe_id") or not target_head.get("head_ref")
                 or target_head.get("permanence") != candidate.get("permanence")
                 or target_head.get("head_ref") != candidate.get("target_ref")
-                or not 0 <= int(target_head.get("node_point", -1)) <= 255
-                or not 0 <= int(target_head.get("head_index", -1)) <= 255):
+                or int(target_head.get("namespace", -1)) != parsed_root.root_namespace
+                or int(target_head.get("head_index", -1)) != parsed_root.root_head
+                or not 0 <= int(target_head.get("node_point", -1)) <= 255):
             raise RouteError("target_head association is incomplete or inconsistent")
-        try:
-            parse_address(str(candidate.get("canonical_address", "")))
-        except ValueError as exc:
-            raise RouteError("candidate canonical_address is invalid") from exc
         routes = list(self.document["routes"])
         if any(r.get("route_id") == candidate.get("route_id") for r in routes):
             raise RouteError("route_id already exists")
@@ -184,6 +187,12 @@ class MasterRouteCache:
             raise RouteError("head association provenance is incomplete")
         if any(item.get("head_key") == key for item in self.document["head_associations"]):
             raise RouteError("head association already committed; permanent identity cannot be overwritten")
+        for route in self.document["routes"]:
+            if route.get("state") != "committed":
+                continue
+            root = parse_address(route["canonical_address"])
+            if key == f"HW{root.root_namespace}:{root.root_head}":
+                raise RouteError("a committed route root head cannot be reassigned")
         committed = dict(record, head_key=key, generation=self.generation + 1, state="committed")
         self._publish_associations(
             head_associations=list(self.document["head_associations"]) + [committed],
@@ -262,6 +271,11 @@ class MasterRouteCache:
         parsed = parse_address(address)
         head_refs = {item["head_key"]: item for item in self.document["head_associations"]
                      if item.get("state") == "committed"}
+        for committed_route in self.document["routes"]:
+            if committed_route.get("state") == "committed":
+                root_address = parse_address(committed_route["canonical_address"])
+                root_key = f"HW{root_address.root_namespace}:{root_address.root_head}"
+                head_refs[root_key] = committed_route["target_head"]
         object_refs = {str(item["kind"]) + ":" + str(item["object_id"]): item
                        for item in self.document["object_associations"]
                        if item.get("state") == "committed"}
@@ -278,7 +292,14 @@ class MasterRouteCache:
             raise RouteError("root head permanence is invalid")
         if not root_head.get("head_ref"):
             raise RouteError("root head reference is missing")
-        resolved_heads.append(dict(root_head))
+        resolved_heads.append({
+            "namespace": parsed.root_namespace,
+            "universe_id": root_head["universe_id"],
+            "node_point": root_head["node_point"],
+            "head_index": root_head["head_index"],
+            "permanence": root_head["permanence"],
+            "head_ref": root_head["head_ref"],
+        })
         resolved_objects: list[dict[str, Any]] = []
         for selector in parsed.selectors:
             if isinstance(selector, HeadSelector):
@@ -292,6 +313,7 @@ class MasterRouteCache:
                     if not record.get("head_ref") or not record.get("universe_id"):
                         raise RouteError(f"incomplete head association: {key}")
                     resolved_heads.append({
+                        "namespace": selector.namespace,
                         "universe_id": record["universe_id"],
                         "node_point": record["node_point"],
                         "head_index": record["head_index"],
