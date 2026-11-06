@@ -51,6 +51,8 @@ def make_handler(service: RiddleService):
             self.wfile.write(raw)
 
         def _body(self) -> dict[str, Any]:
+            if self.headers.get_content_type() != "application/json":
+                raise ValueError("Content-Type must be application/json")
             try:
                 length = int(self.headers.get("Content-Length", "0"))
             except ValueError as exc:
