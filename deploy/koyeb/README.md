@@ -19,6 +19,7 @@ Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT
 - Set `RIDDLE_INTAKE_TOKEN` and `RIDDLE_WORKER_TOKEN` as separate random secrets, each at least 32 characters
 - Set `RIDDLE_RANGE_HMAC_KEY` only after the canonical allocator issues a signed range manifest
 - Set `RIDDLE_ROUTE_HMAC_KEY` to the independent key used to verify the signed master route cache
+- Set `RIDDLE_FEEDBACK_HMAC_KEY` to an independent 32+ byte secret shared with Bootstrap for feedback verification
 - Set `PORT=8080` and `RIDDLE_DATA_DIR=/data`
 
 Do not commit any secret, token, HMAC key, allocator manifest, or live route cache to Git.
@@ -37,7 +38,7 @@ Do not commit any secret, token, HMAC key, allocator manifest, or live route cac
 - `POST /v1/riddle/plan`: returns a bounded Boolean/routing job only when a signed allocator manifest is installed
 - `POST /v1/riddle/routes/resolve`: resolves a typed address from the signed master cache and returns a signed micro-route packet; include `nanclock_tick` when selecting ephemeral heads; it never commits routes
 
-Every POST requires JSON and an appropriate bearer token. Request bodies are limited to 2 MiB. Intake payloads are hex-encoded NaN bytes.
+Every POST requires JSON and an appropriate bearer token. Feedback envelopes are HMAC-signed with RIDDLE_FEEDBACK_HMAC_KEY before they enter the return queue. Request bodies are limited to 2 MiB. Intake payloads are hex-encoded NaN bytes.
 
 ## Important safety boundaries
 
