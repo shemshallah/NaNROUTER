@@ -14,8 +14,9 @@
     "target_head": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["universe_id", "node_point", "head_index", "permanence", "head_ref"],
+      "required": ["namespace", "universe_id", "node_point", "head_index", "permanence", "head_ref"],
       "properties": {
+        "namespace": {"type": "integer", "minimum": 0, "maximum": 255},
         "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
         "node_point": {"type": "integer", "minimum": 0, "maximum": 255},
         "head_index": {"type": "integer", "minimum": 0, "maximum": 255},

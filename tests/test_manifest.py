@@ -38,6 +38,16 @@ class ManifestTests(unittest.TestCase):
             [(0, 0, 0), (4, 4, 1), (5, 5, 2), (6, 6, 3), (7, 7, 4), (8, 8, 5)]
         )
 
+    def test_master_cache_contains_committed_head_and_object_atlases(self):
+        schema = json.loads((ROOT / "spec/master-network-cache.schema.json").read_text())
+        self.assertIn("head_associations", schema["required"])
+        self.assertIn("object_associations", schema["required"])
+        head = json.loads((ROOT / "spec/head-association.schema.json").read_text())
+        obj = json.loads((ROOT / "spec/object-association.schema.json").read_text())
+        self.assertIn("permanence", head["required"])
+        self.assertIn("association_ref", obj["required"])
+        self.assertIn("universe_atlas_commit", self.policy["required_capabilities"])
+
     def test_range_manifest_is_allocator_signed_and_bounded(self):
         schema = json.loads((ROOT / "spec/range-manifest.schema.json").read_text())
         self.assertEqual(schema["properties"]["authority"]["const"],

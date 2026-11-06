@@ -58,6 +58,8 @@ def parse_address(value: str) -> NanAddress:
     )}
     if any(number > 65535 for number in nums.values()):
         raise AddressError("address coordinate exceeds the v1 bound")
+    if nums["root_ns"] > 255 or nums["root_head"] > 255:
+        raise AddressError("root HW namespace and head must be in 0..255")
     selectors: list[HeadSelector | ObjectSelector] = []
     raw = match.group("selectors")
     if raw:
@@ -69,7 +71,10 @@ def parse_address(value: str) -> NanAddress:
                     raise AddressError("head list is duplicated or exceeds 256 entries")
                 if any(index > 255 for index in indices):
                     raise AddressError("head index must be in 0..255")
-                selectors.append(HeadSelector(int(head.group("namespace")), indices))
+                namespace = int(head.group("namespace"))
+                if namespace > 255:
+                    raise AddressError("HW namespace must be in 0..255")
+                selectors.append(HeadSelector(namespace, indices))
                 continue
             obj = _OBJECT.fullmatch(token)
             if obj:

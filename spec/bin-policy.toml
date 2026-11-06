@@ -35,6 +35,7 @@ boolean_training = ["bootstrap.boolean.read", "bootstrap.boolean.candidate-write
 nannet_route_learning = ["nannet.route.read", "nannet.route.candidate-write"]
 merge_learning = ["merge.manifest.read", "merge.delta.submit"]
 universe_mapping = ["universe.atlas.read", "universe.heads.read"]
+universe_atlas_commit = ["universe.atlas.commit", "generation.compare-and-swap"]
 live_route_commit = ["nannet.route.commit", "generation.compare-and-swap"]
 
 [bin_classes.router]

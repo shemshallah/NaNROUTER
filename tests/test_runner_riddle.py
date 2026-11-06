@@ -23,6 +23,10 @@ class AddressTests(unittest.TestCase):
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW0:256")
         with self.assertRaises(AddressError):
+            parse_address(ROOT + "::HW256:1")
+        with self.assertRaises(AddressError):
+            parse_address("nan://GM0:SC0:MC0:BS0:0:HW0:256")
+        with self.assertRaises(AddressError):
             parse_address(ROOT + "::memory1337")
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW0:1,1")
@@ -37,7 +41,7 @@ class CacheTests(unittest.TestCase):
             "route_kind": "network",
             "source_ref": "koyeb:bs0:0",
             "target_ref": "universe-0:point-0:head-0",
-            "target_head": {"universe_id": "bootstrap-universe-0", "node_point": 0,
+            "target_head": {"namespace": 0, "universe_id": "bootstrap-universe-0", "node_point": 0,
                             "head_index": 0, "permanence": "permanent",
                             "head_ref": "universe-0:point-0:head-0"},
             "path": [{"namespace": "BS", "id": 0}, {"namespace": "HW", "id": 0}],
@@ -55,11 +59,11 @@ class CacheTests(unittest.TestCase):
         self.assertEqual(self.cache.generation, 1)
         candidate = self.cache.propose({
             "route_id": "runner-route",
-            "canonical_address": ROOT + "::HW0:1",
+            "canonical_address": "nan://GM0:SC0:MC0:BS0:1:HW0:1",
             "route_kind": "runner-ring",
             "source_ref": "bootstrap",
             "target_ref": "runner-1:head-1",
-            "target_head": {"universe_id": "runner-1", "node_point": 0,
+            "target_head": {"namespace": 0, "universe_id": "runner-1", "node_point": 0,
                             "head_index": 1, "permanence": "permanent",
                             "head_ref": "runner-1:head-1"},
             "path": [{"namespace": "HW", "id": 1}],
@@ -94,7 +98,7 @@ class CacheTests(unittest.TestCase):
                 "route_kind": "network",
                 "source_ref": "koyeb:bs0:0",
                 "target_ref": "universe-0:point-0:head-0",
-                "target_head": {"universe_id": "bootstrap-universe-0",
+                "target_head": {"namespace": 0, "universe_id": "bootstrap-universe-0",
                                 "node_point": 0, "head_index": 0,
                                 "permanence": "permanent",
                                 "head_ref": "universe-0:point-0:head-0"},
@@ -117,19 +121,37 @@ class CacheTests(unittest.TestCase):
                 )
 
     def test_resolves_heads_and_typed_objects_to_micro_packet(self):
+        for index in (1, 2, 3):
+            generation = self.cache.generation
+            self.cache.register_head_association({
+                "namespace": 0,
+                "universe_id": f"runner-{index}",
+                "node_point": 0,
+                "head_index": index,
+                "permanence": "permanent",
+                "lease_until_tick": None,
+                "head_ref": f"runner-{index}:head-{index}",
+                "source_hash": "e" * 64,
+                "acl_digest": "f" * 64,
+                "nanclock_tick": 2,
+                "learner_id": "bootstrap-authority",
+                "base_generation": generation,
+            }, expected_generation=generation,
+               capabilities={"universe.atlas.commit"})
+        for kind in ("vector", "hyperedge"):
+            generation = self.cache.generation
+            self.cache.register_object_association({
+                "kind": kind,
+                "object_id": "1337",
+                "association_ref": f"atlas:{kind}s:1337",
+                "source_hash": "e" * 64,
+                "acl_digest": "f" * 64,
+                "learner_id": "bootstrap-authority",
+                "base_generation": generation,
+            }, expected_generation=generation,
+               capabilities={"universe.atlas.commit"})
         packet = self.cache.resolve(
-            ROOT + "::HW0:1,2,3::vector1337::hyperedge1337",
-            head_refs={
-                "HW0:1": {"universe_id": "runner-1", "node_point": 0, "head_index": 1, "head_ref": "runner-1:head-1", "permanence": "permanent"},
-                "HW0:2": {"universe_id": "runner-2", "node_point": 0, "head_index": 2, "head_ref": "runner-2:head-2", "permanence": "permanent"},
-                "HW0:3": {"universe_id": "runner-3", "node_point": 0, "head_index": 3, "head_ref": "runner-3:head-3", "permanence": "permanent"},
-            },
-            object_refs={
-                "vector:1337": {"kind": "vector", "object_id": "1337",
-                                "association_ref": "atlas:vectors:1337"},
-                "hyperedge:1337": {"kind": "hyperedge", "object_id": "1337",
-                                   "association_ref": "atlas:hyperedges:1337"},
-            },
+            ROOT + "::HW0:1,2,3::vector1337::hyperedge1337"
         )
         self.assertEqual(packet["schema"], "nanrouter.micro-route.v1")
         self.assertEqual(len(packet["packet_digest"]), 64)
@@ -138,7 +160,45 @@ class CacheTests(unittest.TestCase):
         self.assertEqual([x["kind"] for x in packet["object_refs"]],
                          ["vector", "hyperedge"])
         with self.assertRaises(RouteError):
-            self.cache.resolve(ROOT + "::HW0:99", head_refs={}, object_refs={})
+            self.cache.resolve(ROOT + "::HW0:99")
+
+    def test_permanent_head_association_cannot_be_reassigned(self):
+        record = {
+            "namespace": 0, "universe_id": "runner-1", "node_point": 0,
+            "head_index": 1, "permanence": "permanent", "lease_until_tick": None,
+            "head_ref": "runner-1:head-1", "source_hash": "e" * 64,
+            "acl_digest": "f" * 64, "nanclock_tick": 2,
+            "learner_id": "bootstrap-authority", "base_generation": 1,
+        }
+        self.cache.register_head_association(
+            record, expected_generation=1, capabilities={"universe.atlas.commit"}
+        )
+        replacement = dict(record, head_ref="attacker:head-1", base_generation=2)
+        with self.assertRaises(RouteError):
+            self.cache.register_head_association(
+                replacement, expected_generation=2,
+                capabilities={"universe.atlas.commit"}
+            )
+        with self.assertRaises(RouteError):
+            self.cache.register_head_association(
+                dict(record, base_generation=2), expected_generation=2, capabilities=set()
+            )
+
+    def test_ephemeral_head_mapping_expires_and_cannot_be_used_after_lease(self):
+        generation = self.cache.generation
+        self.cache.register_head_association({
+            "namespace": 0, "universe_id": "ephemeral-runner", "node_point": 9,
+            "head_index": 9, "permanence": "ephemeral", "lease_until_tick": 20,
+            "head_ref": "ephemeral-runner:head-9", "source_hash": "e" * 64,
+            "acl_digest": "f" * 64, "nanclock_tick": 10,
+            "learner_id": "bootstrap-authority", "base_generation": generation,
+        }, expected_generation=generation, capabilities={"universe.atlas.commit"})
+        packet = self.cache.resolve(ROOT + "::HW0:9", now_tick=15)
+        self.assertEqual(packet["resolved_heads"][-1]["permanence"], "ephemeral")
+        with self.assertRaises(RouteError):
+            self.cache.resolve(ROOT + "::HW0:9", now_tick=20)
+        with self.assertRaises(RouteError):
+            self.cache.resolve(ROOT + "::HW0:9")
 
     def test_atomic_roundtrip_and_tamper_detection(self):
         with tempfile.TemporaryDirectory() as directory:

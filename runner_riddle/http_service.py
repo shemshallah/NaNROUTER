@@ -11,6 +11,7 @@ from typing import Any
 
 from .inbox import InboxError, SQLiteSourceInbox
 from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRangeManifest
+from .cache import MasterRouteCache, RouteError
 
 ROOT_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 MAX_REQUEST_BYTES = 2_097_152
@@ -26,9 +27,11 @@ class RiddleService:
         data_dir.mkdir(parents=True, exist_ok=True)
         self.inbox = SQLiteSourceInbox(data_dir / "runner-riddle.sqlite")
         self.range_manifest_path = data_dir / "allocator-range-manifest.json"
+        self.route_cache_path = data_dir / "master-network-cache.json"
         self.intake_token = os.environ.get("RIDDLE_INTAKE_TOKEN", "")
         self.worker_token = os.environ.get("RIDDLE_WORKER_TOKEN", "")
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
+        self.route_key = os.environ.get("RIDDLE_ROUTE_HMAC_KEY", "").encode()
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
 
@@ -81,6 +84,7 @@ def make_handler(service: RiddleService):
                     "status": "ready",
                     "queue": service.inbox.stats(),
                     "range_manifest_present": service.range_manifest_path.exists(),
+                    "route_cache_present": service.route_cache_path.exists(),
                     "live_route_commit": False,
                 })
                 return
@@ -163,6 +167,15 @@ def make_handler(service: RiddleService):
                     self._json(200, {"event_id": event.event_id, "state": state})
                     return
 
+                if self.path == "/v1/riddle/routes/resolve":
+                    if not service.route_cache_path.exists() or len(service.route_key) < 32:
+                        self._json(503, {"error": "signed master route cache is not installed"})
+                        return
+                    cache = MasterRouteCache.load(service.route_cache_path, service.route_key)
+                    packet = cache.resolve(str(body["address"]), now_tick=int(body["nanclock_tick"]) if "nanclock_tick" in body else None)
+                    self._json(200, {"packet": packet, "live_route_commit": False})
+                    return
+
                 if self.path == "/v1/riddle/plan":
                     if not service.range_manifest_path.exists() or len(service.range_key) < 32:
                         self._json(503, {"error": "verified allocator range manifest is not installed"})
@@ -185,7 +198,7 @@ def make_handler(service: RiddleService):
                     return
 
                 self._json(404, {"error": "not found"})
-            except (KeyError, TypeError, ValueError, InboxError, PolicyError) as exc:
+            except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError) as exc:
                 self._json(400, {"error": str(exc)})
             except Exception:
                 self._json(500, {"error": "internal service error"})
