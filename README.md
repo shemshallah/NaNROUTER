@@ -44,6 +44,37 @@ It may not:
 
 Unknown or not-yet-imported ranges are **deny by default**. The machine-readable policies are in `spec/`.
 
+## Runner Riddle route engine
+
+The `runner_riddle` package now provides a typed address parser, a signed
+generation-chained master route cache, a micro-route packet compiler, and a
+read-only trace pattern miner.
+
+Example:
+
+```
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1,2,3
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1::vector1337
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:2::hyperedge1337
+```
+
+The parser keeps node, head, and object namespaces distinct. Resolution uses
+only committed cache entries and explicit head/object association tables.
+Micro-route packets are digest-bound and HMAC-signed. Candidate learning never
+writes the master cache; committing requires the route-commit capability and
+an exact generation compare-and-swap. Trace mining emits pattern candidates,
+not executable routes.
+
+Run the standard-library tests with:
+
+```
+python -m unittest discover -s tests -v
+```
+
+This is the routing engine, not yet a deployed 24/7 Koyeb listener. The
+listener still needs the N16T intake adapter, persistent worker supervision,
+and live service wiring.
+
 ## Ten mapping layers
 
 | Layer | Mapping job | Primary representation |
