@@ -2,7 +2,7 @@ import hashlib
 import tempfile
 import unittest
 
-from runner_riddle import BootstrapMacroPlanner, InboxError, RunnerRiddleWorker, SQLiteSourceInbox
+from runner_riddle import BootstrapMacroPlanner, InboxError, InboxFull, RunnerRiddleWorker, SQLiteSourceInbox
 
 
 ACL = "b" * 64
@@ -92,6 +92,18 @@ class InboxTests(unittest.TestCase):
         self.assertFalse(pending[0]["feedback"]["live_map_commit"])
         self.assertTrue(self.inbox.ack_feedback(feedback_id))
         self.assertEqual(self.inbox.list_feedback(), [])
+
+    def test_pending_queue_has_hard_backpressure_and_keeps_duplicate_idempotent(self):
+        bounded = SQLiteSourceInbox(self.tmp.name + "/bounded.sqlite", max_pending_events=1)
+        args = {
+            "universe_id": "u", "node_point": 9, "head_index": 4,
+            "source_kind": "nan-source", "payload": b"first",
+            "acl_digest": ACL, "nanclock_tick": 1,
+        }
+        event_id = bounded.enqueue(**args)
+        self.assertEqual(bounded.enqueue(**args), event_id)
+        with self.assertRaises(InboxFull):
+            bounded.enqueue(**dict(args, payload=b"second"))
 
     def test_payload_and_acl_bounds(self):
         with self.assertRaises(InboxError):
