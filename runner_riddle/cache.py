@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -93,12 +94,23 @@ class MasterRouteCache:
             raise RouteError("candidate was learned against a stale generation")
         if candidate.get("state") != "candidate":
             raise RouteError("only candidate routes can be committed")
-        if not candidate.get("source_hash") or not candidate.get("acl_digest"):
-            raise RouteError("route provenance and ACL digest are required")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(candidate.get("source_hash", ""))):
+            raise RouteError("route source_hash must be lowercase SHA-256 hex")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(candidate.get("acl_digest", ""))):
+            raise RouteError("route acl_digest must be lowercase SHA-256 hex")
         if candidate.get("permanence") not in ("permanent", "ephemeral"):
             raise RouteError("invalid permanence")
         if not candidate.get("source_ref") or not candidate.get("target_ref"):
             raise RouteError("route source_ref and target_ref are required")
+        target_head = candidate.get("target_head")
+        if not isinstance(target_head, dict):
+            raise RouteError("route requires a typed target_head association")
+        if (not target_head.get("universe_id") or not target_head.get("head_ref")
+                or target_head.get("permanence") != candidate.get("permanence")
+                or target_head.get("head_ref") != candidate.get("target_ref")
+                or not 0 <= int(target_head.get("node_point", -1)) <= 255
+                or not 0 <= int(target_head.get("head_index", -1)) <= 255):
+            raise RouteError("target_head association is incomplete or inconsistent")
         try:
             parse_address(str(candidate.get("canonical_address", "")))
         except ValueError as exc:
@@ -140,6 +152,27 @@ class MasterRouteCache:
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
+
+    @classmethod
+    def commit_atomic(cls, path: str | Path, *, key: bytes, network_id: str,
+                      candidate: dict[str, Any], expected_generation: int,
+                      capabilities: set[str]) -> tuple["MasterRouteCache", dict[str, Any]]:
+        """Serialize competing writers with an OS lock and generation CAS."""
+        import fcntl
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = str(target) + ".lock"
+        with open(lock_path, "a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            cache = cls.load(target, key) if target.exists() else cls.empty(network_id, key)
+            committed = cache.commit(
+                candidate, expected_generation=expected_generation,
+                capabilities=capabilities
+            )
+            cache.save_atomic(target)
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+            return cache, committed
 
     def resolve(self, address: str, *, head_refs: dict[str, dict[str, Any]],
                 object_refs: dict[str, dict[str, Any]]) -> dict[str, Any]:
