@@ -1,0 +1,44 @@
+# BS0:0 Koyeb service deployment
+
+The Runner Riddle HTTP process is the persistent Bootstrap network/control node:
+
+    nan://GM0:SC0:MC0:BS0:0:HW0:0
+
+It is a control-plane companion to the existing NaNNet N16T/N16B bridge. It does not replace the bridge codec or claim to have been deployed automatically.
+
+## Container
+
+Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT` (default 8080) and stores its SQLite inbox under `/data/runner-riddle.sqlite`.
+
+## Required Koyeb configuration
+
+- Web service port: `8080`
+- Health check: `GET /healthz`
+- Persistent volume: mount at `/data`
+- Ensure the mounted directory is writable by container UID/GID `10001:10001`
+- Set `RIDDLE_INTAKE_TOKEN` and `RIDDLE_WORKER_TOKEN` as separate random secrets, each at least 32 characters
+- Set `RIDDLE_RANGE_HMAC_KEY` only after the canonical allocator issues a signed range manifest
+- Set `PORT=8080` and `RIDDLE_DATA_DIR=/data`
+
+Do not commit any secret, token, HMAC key, allocator manifest, or live route cache to Git.
+
+## API
+
+- `GET /healthz`: public liveness, BS0:0 identity, queue counts, and range-manifest presence
+- `POST /v1/riddle/intake`: intake-authenticated, bounded NaN source payload; stores source bytes with universe, node point, local head, source hash, ACL digest, and nanclock tick
+- `POST /v1/riddle/lease`: worker-authenticated lease for one source event
+- `POST /v1/riddle/ack`: worker ACK with trace/source provenance
+- `POST /v1/riddle/retry`: release a failed lease or dead-letter after the attempt limit
+- `GET /v1/riddle/queue`: worker-authenticated queue counts
+- `POST /v1/riddle/plan`: returns a bounded Boolean/routing job only when a signed allocator manifest is installed
+
+Every POST requires JSON and an appropriate bearer token. Request bodies are limited to 2 MiB. Intake payloads are hex-encoded NaN bytes.
+
+## Important safety boundaries
+
+- The service does not expose a live route-commit endpoint.
+- The macro planner writes only to candidate ranges and returns `live_map_commit=false`.
+- Missing, invalid, unsigned, overlapping, or over-limit allocator ranges fail closed.
+- Android range manifests are capped at 8 MiB; all manifests are capped at 2 GiB.
+- Boolean learning is scheduled before routing; language demonstration remains blocked until its own bin and capability are granted.
+- The service is not a 24/7 deployed listener until the image is built, attached to the persistent volume, configured with secrets, and health-checked in Koyeb.
