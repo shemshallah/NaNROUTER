@@ -204,10 +204,10 @@ class VolumeRegistry:
 
 
 DEFAULT_MOUNT_ROOTS = {
-    "BS0": "/bs0db",
-    "MC0": "/mc0db",
-    "SC0": "/sc0db",
-    "GM0": "/gm0db",
+    "BS0": "/0x7FF14E1100E8F17F",
+    "MC0": "/0x7FF14E1200D7F17F",
+    "SC0": "/0x7FF14E1300C2F17F",
+    "GM0": "/0x7FF14E1400A9F17F",
 }
 
 
