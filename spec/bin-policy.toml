@@ -37,6 +37,48 @@ merge_learning = ["merge.manifest.read", "merge.delta.submit"]
 universe_mapping = ["universe.atlas.read", "universe.heads.read"]
 live_route_commit = ["nannet.route.commit", "generation.compare-and-swap"]
 
+[bin_classes.router]
+region_id = "NANNET_ROUTE_BIN"
+storage = "formatted-route-bin"
+read_scope = "nannet.route.read"
+candidate_write_scope = "nannet.route.candidate-write"
+live_commit_scope = "nannet.route.commit"
+live_commit_requires_generation_cas = true
+
+[bin_classes.merge]
+region_id = "OVERBOOTSTRAP_MERGE_BIN"
+storage = "merge-manifest-bin"
+read_scope = "merge.manifest.read"
+write_scope = "merge.delta.submit"
+stale_generation_rejected = true
+idempotency_required = true
+
+[bin_classes.training]
+region_id = "BOOTSTRAP_BOOLEAN_TRAINING_BIN"
+storage = "isolated-candidate-training-bin"
+read_scope = "bootstrap.boolean.read"
+write_scope = "bootstrap.boolean.candidate-write"
+permitted_heads = "all local heads except reserved_bsr_heads"
+live_map_commit = false
+
+[bin_classes.universe_map]
+region_id = "PERMANENT_HEAD_ADDRESS_ATLAS"
+storage = "universe-atlas"
+read_scope = "universe.atlas.read"
+write_scope = "authority-approved-map-delta-only"
+ephemeral_records_may_not_overwrite_permanent = true
+
+[range_import]
+source_of_truth = "NaNLMind canonical allocator"
+exact_byte_offsets = "must be imported from allocator; do not infer from page numbers"
+router_merge_training_ranges_enabled = false
+enable_only_after = [
+  "allocator manifest signature verified",
+  "non-overlap proof passed",
+  "permissions tested against every byte range",
+  "8 MiB and 2 GiB bounds exhaustively checked"
+]
+
 [required_provenance]
 every_delta_requires_source_hash = true
 every_delta_requires_universe_id = true
