@@ -52,7 +52,7 @@ class MacroPlannerTests(unittest.TestCase):
         self.assertEqual(routing.mapping_layers, tuple(range(10)))
         self.assertFalse(routing.writes_live_map)
         feedback = planner.feedback(routing, completed_steps=64,
-                                    candidate_digest="a" * 64, acl_digest="b" * 64)
+                                    candidate_digest="a" * 64, acl_digest="b" * 64, signing_key=KEY)
         self.assertFalse(feedback["live_map_commit"])
         self.assertEqual(feedback["base_generation"], 4)
 
