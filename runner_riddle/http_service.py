@@ -108,7 +108,7 @@ def make_handler(service: RiddleService):
                 if registry is None:
                     return {"health": "unknown", "configured": False}
                 query = parse_qs(urlsplit(self.path).query)
-                tick = int(query.get("nanclock_tick", ["0"])[0])
+                tick = int(query.get("nanclock_tick", [str(service.runner_ring.latest_tick())])[0])
                 return service.runner_ring.snapshot(
                     expected_generation=registry.document["generation"],
                     expected_digest=registry.document["registry_digest"],
@@ -147,7 +147,7 @@ def make_handler(service: RiddleService):
                         self._json(503, {"error": "signed volume registry is not installed"})
                         return
                     query = parse_qs(urlsplit(self.path).query)
-                    tick = int(query.get("nanclock_tick", ["0"])[0])
+                    tick = int(query.get("nanclock_tick", [str(service.runner_ring.latest_tick())])[0])
                     snapshot = service.runner_ring.snapshot(
                         expected_generation=registry.document["generation"],
                         expected_digest=registry.document["registry_digest"],
