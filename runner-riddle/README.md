@@ -42,3 +42,14 @@ in [../spec/volume-registry.md](../spec/volume-registry.md). The registry is
 read-only at runtime: it does not create, mount, detach, format, snapshot, or
 migrate provider volumes. Missing registry configuration reports health as
 unknown; green requires both a signed green observation and verified mount.
+
+## MC0:0 six-runner reconciliation
+
+The ring has six fixed identities, `MC0:0/R0` through `MC0:0/R5`. Each
+runner acknowledges the current signed volume-registry generation and digest
+through `POST /v1/riddle/ring/heartbeat`. The router persists the latest
+heartbeat in SQLite and reports `in_sync`, `waiting`, `stale`, or `drift` per
+slot. The ring is green only when all six slots acknowledge the same current
+registry and are within `RIDDLE_RING_STALE_TICKS` (default 256 NaN-clock ticks).
+This is control-plane convergence, not a claim that every remote runner mounts
+Koyeb storage directly. Volume mount health remains independently verified.
