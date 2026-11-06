@@ -75,6 +75,15 @@ class ManifestTests(unittest.TestCase):
         self.assertIn("acl_digest", schema["required"])
         self.assertIn("base_generation", schema["required"])
 
+    def test_address_map_records_track_permanent_vs_ephemeral_identity(self):
+        schema = json.loads((ROOT / "spec/map-record.schema.json").read_text())
+        self.assertEqual(schema["properties"]["address"]["maximum"], 65535)
+        self.assertEqual(schema["properties"]["head_index"]["maximum"], 255)
+        self.assertEqual(schema["properties"]["permanence"]["enum"],
+                         ["permanent", "ephemeral"])
+        self.assertIn("evidence_digest", schema["required"])
+        self.assertIn("acl_digest", schema["required"])
+
 
 if __name__ == "__main__":
     unittest.main()
