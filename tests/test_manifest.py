@@ -54,6 +54,7 @@ class ManifestTests(unittest.TestCase):
         self.assertFalse(schema["properties"]["live_map_commit"]["const"])
         self.assertIn("candidate_digest", schema["required"])
         self.assertIn("acl_digest", schema["required"])
+        self.assertIn("signature", schema["required"])
 
     def test_range_manifest_is_allocator_signed_and_bounded(self):
         schema = json.loads((ROOT / "spec/range-manifest.schema.json").read_text())
