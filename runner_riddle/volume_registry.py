@@ -271,7 +271,7 @@ def write_koyeb_registry(path: str | Path, registry: VolumeRegistry) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(target.name + ".tmp")
-    temporary.write_text(json.dumps(registry.document, sort_keys=True, indent=2) + "\\n",
+    temporary.write_text(json.dumps(registry.document, sort_keys=True, indent=2) + "\n",
                          encoding="utf-8")
     os.replace(temporary, target)
 
