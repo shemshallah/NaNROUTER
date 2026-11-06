@@ -9,7 +9,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from .inbox import InboxError, SQLiteSourceInbox
+from .inbox import InboxError, InboxFull, SQLiteSourceInbox
 from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRangeManifest
 from .cache import MasterRouteCache, RouteError
 
@@ -25,7 +25,10 @@ class RiddleService:
     def __init__(self):
         data_dir = Path(os.environ.get("RIDDLE_DATA_DIR", "/data"))
         data_dir.mkdir(parents=True, exist_ok=True)
-        self.inbox = SQLiteSourceInbox(data_dir / "runner-riddle.sqlite")
+        max_pending = int(os.environ.get("RIDDLE_MAX_PENDING_EVENTS", "4096"))
+        self.inbox = SQLiteSourceInbox(
+            data_dir / "runner-riddle.sqlite", max_pending_events=max_pending
+        )
         self.range_manifest_path = data_dir / "allocator-range-manifest.json"
         self.route_cache_path = data_dir / "master-network-cache.json"
         self.intake_token = os.environ.get("RIDDLE_INTAKE_TOKEN", "")
@@ -231,6 +234,8 @@ def make_handler(service: RiddleService):
                     return
 
                 self._json(404, {"error": "not found"})
+            except InboxFull as exc:
+                self._json(429, {"error": str(exc), "retryable": True})
             except (KeyError, TypeError, ValueError, InboxError, PolicyError, RouteError) as exc:
                 self._json(400, {"error": str(exc)})
             except Exception:
