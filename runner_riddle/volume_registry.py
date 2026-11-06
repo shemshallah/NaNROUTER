@@ -7,7 +7,10 @@ moves, or writes to provider volumes.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
+import os
+import time
 import hmac
 import json
 import re
@@ -198,3 +201,109 @@ class VolumeRegistry:
     def public_records(self) -> list[dict[str, Any]]:
         """Return operational fields without exposing secrets (the signature key is never stored)."""
         return [dict(item) for item in self.document["volumes"]]
+
+
+DEFAULT_MOUNT_ROOTS = {
+    "BS0": "/bs0db",
+    "MC0": "/mc0db",
+    "SC0": "/sc0db",
+    "GM0": "/gm0db",
+}
+
+
+def build_koyeb_registry(environ: dict[str, str] | None = None, *,
+                         mount_probe=None, now_tick: int | None = None,
+                         generation: int = 1,
+                         previous_digest: str | None = None) -> "VolumeRegistry":
+    """Build a signed registry from explicit Koyeb bindings and mount probes.
+
+    Provider IDs are required; logical NaN addresses never stand in for
+    Koyeb's physical IDs or mount paths. A volume is green only if its mount
+    point is verified and its tier database file exists.
+    """
+    env = os.environ if environ is None else environ
+    key = env.get("RIDDLE_VOLUME_HMAC_KEY", "").encode()
+    if len(key) < 32:
+        raise VolumeRegistryError("RIDDLE_VOLUME_HMAC_KEY must be 32+ bytes")
+    region = env.get("KOYEB_REGION", "").strip()
+    if not region:
+        raise VolumeRegistryError("KOYEB_REGION is required")
+    if mount_probe is None:
+        mount_probe = os.path.ismount
+    tick = int(time.time()) if now_tick is None else int(now_tick)
+    volumes = []
+    for tier, (address, database_file) in CANONICAL.items():
+        provider_id = env.get(f"KOYEB_VOLUME_ID_{tier}", "").strip()
+        if not provider_id or provider_id.startswith("<") or "placeholder" in provider_id.lower():
+            raise VolumeRegistryError(f"KOYEB_VOLUME_ID_{tier} must be the real provider volume ID")
+        mount_root = env.get(f"KOYEB_MOUNT_ROOT_{tier}", DEFAULT_MOUNT_ROOTS[tier]).strip()
+        if (not mount_root.startswith("/") or mount_root == "/" or chr(92) in mount_root
+                or any(part in ("", ".", "..") for part in mount_root.split("/")[1:])):
+            raise VolumeRegistryError(f"KOYEB_MOUNT_ROOT_{tier} must be a normalized absolute path")
+        database_path = Path(mount_root) / database_file
+        verified = bool(mount_probe(mount_root) and Path(mount_root).is_dir()
+                         and database_path.is_file())
+        volumes.append({
+            "tier": tier,
+            "logical_address": address,
+            "shard": 0,
+            "provider": "koyeb",
+            "provider_volume_id": provider_id,
+            "mount_root": mount_root,
+            "database_file": database_file,
+            "region": region,
+            "health": "green" if verified else "degraded",
+            "mount_verified": verified,
+            "observed_at_tick": tick,
+            "generation": generation,
+        })
+    return VolumeRegistry.build_signed(
+        network_id=env.get("NANLM_NETWORK_ID", "nan-global"),
+        generation=generation,
+        previous_digest=previous_digest,
+        volumes=volumes,
+        key=key,
+    )
+
+
+def write_koyeb_registry(path: str | Path, registry: VolumeRegistry) -> None:
+    """Atomically install a verified signed registry; never mutate Koyeb mounts."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + ".tmp")
+    temporary.write_text(json.dumps(registry.document, sort_keys=True, indent=2) + "\n",
+                         encoding="utf-8")
+    os.replace(temporary, target)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Check or write the signed Koyeb volume registry")
+    parser.add_argument("--write", action="store_true",
+                        help="atomically write the registry after probing all four mounts")
+    parser.add_argument("--path", default=os.environ.get(
+        "RIDDLE_VOLUME_REGISTRY_PATH", "/data/volume-registry.json"))
+    args = parser.parse_args(argv)
+    key = os.environ.get("RIDDLE_VOLUME_HMAC_KEY", "").encode()
+    previous_digest = None
+    generation = 1
+    target = Path(args.path)
+    if target.exists():
+        previous = VolumeRegistry.load(target, key)
+        generation = previous.document["generation"] + 1
+        previous_digest = previous.document["registry_digest"]
+    try:
+        registry = build_koyeb_registry(
+            generation=generation, previous_digest=previous_digest,
+        )
+        print(json.dumps(registry.summary(), sort_keys=True, indent=2))
+        if args.write:
+            write_koyeb_registry(target, registry)
+            print("registry_written=true")
+        return 0 if registry.health == "green" else 2
+    except (VolumeRegistryError, OSError) as exc:
+        print(json.dumps({"health": "unknown", "error": str(exc)}, sort_keys=True))
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
