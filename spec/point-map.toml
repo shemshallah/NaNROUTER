@@ -1,0 +1,98 @@
+schema = "nanrouter.point-map.v1"
+namespace = "overbootstrap-node-point"
+point_min = 0
+point_max = 255
+registration_min = 9
+registration_max = 255
+
+# Display names are one-based; existing NANNET wire BSR coordinates remain 0-based.
+# point 0 is BSR1 for humans and BSR0 on the wire.
+[[point]]
+id = 0
+role = "bootstrap-runner-ring"
+label = "BSR1"
+bsr_display = 1
+bsr_wire = 0
+permanent = true
+registration = "reserved"
+
+[[point]]
+id = 1
+role = "personal-phone"
+label = "permanently-attached-phone"
+permanent = true
+registration = "paired-device-only"
+
+[[point]]
+id = 2
+role = "hermes-demo"
+label = "Hermes demonstration"
+permanent = true
+registration = "demo-only"
+
+[[point]]
+id = 3
+role = "clocked-demo"
+label = "Clocked demonstration"
+permanent = true
+registration = "demo-only"
+
+[[point]]
+id = 4
+role = "bootstrap-runner-ring"
+label = "BSR2"
+bsr_display = 2
+bsr_wire = 1
+permanent = true
+registration = "reserved"
+
+[[point]]
+id = 5
+role = "bootstrap-runner-ring"
+label = "BSR3"
+bsr_display = 3
+bsr_wire = 2
+permanent = true
+registration = "reserved"
+
+[[point]]
+id = 6
+role = "bootstrap-runner-ring"
+label = "BSR4"
+bsr_display = 4
+bsr_wire = 3
+permanent = true
+registration = "reserved"
+
+[[point]]
+id = 7
+role = "bootstrap-runner-ring"
+label = "BSR5"
+bsr_display = 5
+bsr_wire = 4
+permanent = true
+registration = "reserved"
+
+[[point]]
+id = 8
+role = "bootstrap-runner-ring"
+label = "BSR6"
+bsr_display = 6
+bsr_wire = 5
+permanent = true
+registration = "reserved"
+
+[registration]
+available_points = "9..255"
+requires_nannet_registration = true
+requires_unique_identity = true
+requires_route_authority = true
+ephemeral_points_may_not_be_promoted_to_permanent = true
+permanent_points_may_not_be_reassigned_by_learning = true
+
+[head_namespace]
+count = 256
+reserved_bsr_heads = [0, 4, 5, 6, 7, 8]
+boolean_learning_heads = "all head indices except reserved_bsr_heads"
+boolean_learning_head_count = 250
+head_namespace_is_not_node_point_namespace = true
