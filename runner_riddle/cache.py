@@ -97,9 +97,18 @@ class MasterRouteCache:
             raise RouteError("route provenance and ACL digest are required")
         if candidate.get("permanence") not in ("permanent", "ephemeral"):
             raise RouteError("invalid permanence")
+        if not candidate.get("source_ref") or not candidate.get("target_ref"):
+            raise RouteError("route source_ref and target_ref are required")
+        try:
+            parse_address(str(candidate.get("canonical_address", "")))
+        except ValueError as exc:
+            raise RouteError("candidate canonical_address is invalid") from exc
         routes = list(self.document["routes"])
         if any(r.get("route_id") == candidate.get("route_id") for r in routes):
             raise RouteError("route_id already exists")
+        if any(r.get("canonical_address") == candidate.get("canonical_address")
+               and r.get("state") == "committed" for r in routes):
+            raise RouteError("canonical address already has a committed route")
         committed = dict(candidate, state="committed", generation=self.generation + 1)
         core = {
             "schema": "nanrouter.master-cache.v1",
@@ -159,7 +168,7 @@ class MasterRouteCache:
                 if record is None:
                     raise RouteError(f"unregistered object selector: {key}")
                 resolved_objects.append(dict(record))
-        return {
+        packet = {
             "schema": "nanrouter.micro-route.v1",
             "cache_generation": self.generation,
             "route_id": route["route_id"],
@@ -169,3 +178,6 @@ class MasterRouteCache:
             "bridge_profile": route.get("bridge_profile", "local-only"),
             "acl_digest": route["acl_digest"],
         }
+        packet["packet_digest"] = _digest(packet)
+        packet["signature"] = _sign(packet, self.key)
+        return packet
