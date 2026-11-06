@@ -34,3 +34,11 @@ The production listener should run as a persistent Koyeb service (or an always-o
 ## Not yet implemented
 
 This directory is currently the runtime contract. The listener implementation, exact allocator-backed bin ACL import, source adapters, and persistent deployment must be completed and tested before enabling live learning.
+
+## Router-owned Koyeb volume registry
+
+The four canonical shard-zero identities and provider-binding rules are defined
+in [../spec/volume-registry.md](../spec/volume-registry.md). The registry is
+read-only at runtime: it does not create, mount, detach, format, snapshot, or
+migrate provider volumes. Missing registry configuration reports health as
+unknown; green requires both a signed green observation and verified mount.
