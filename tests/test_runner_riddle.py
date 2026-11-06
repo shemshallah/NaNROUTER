@@ -125,6 +125,7 @@ class CacheTests(unittest.TestCase):
                 "node_point": 0,
                 "head_index": index,
                 "permanence": "permanent",
+                "lease_until_tick": None,
                 "head_ref": f"runner-{index}:head-{index}",
                 "source_hash": "e" * 64,
                 "acl_digest": "f" * 64,
@@ -160,7 +161,7 @@ class CacheTests(unittest.TestCase):
     def test_permanent_head_association_cannot_be_reassigned(self):
         record = {
             "namespace": 0, "universe_id": "runner-1", "node_point": 0,
-            "head_index": 1, "permanence": "permanent",
+            "head_index": 1, "permanence": "permanent", "lease_until_tick": None,
             "head_ref": "runner-1:head-1", "source_hash": "e" * 64,
             "acl_digest": "f" * 64, "nanclock_tick": 2,
             "learner_id": "bootstrap-authority", "base_generation": 1,
@@ -178,6 +179,22 @@ class CacheTests(unittest.TestCase):
             self.cache.register_head_association(
                 dict(record, base_generation=2), expected_generation=2, capabilities=set()
             )
+
+    def test_ephemeral_head_mapping_expires_and_cannot_be_used_after_lease(self):
+        generation = self.cache.generation
+        self.cache.register_head_association({
+            "namespace": 0, "universe_id": "ephemeral-runner", "node_point": 9,
+            "head_index": 9, "permanence": "ephemeral", "lease_until_tick": 20,
+            "head_ref": "ephemeral-runner:head-9", "source_hash": "e" * 64,
+            "acl_digest": "f" * 64, "nanclock_tick": 10,
+            "learner_id": "bootstrap-authority", "base_generation": generation,
+        }, expected_generation=generation, capabilities={"universe.atlas.commit"})
+        packet = self.cache.resolve(ROOT + "::HW0:9", now_tick=15)
+        self.assertEqual(packet["resolved_heads"][-1]["permanence"], "ephemeral")
+        with self.assertRaises(RouteError):
+            self.cache.resolve(ROOT + "::HW0:9", now_tick=20)
+        with self.assertRaises(RouteError):
+            self.cache.resolve(ROOT + "::HW0:9")
 
     def test_atomic_roundtrip_and_tamper_detection(self):
         with tempfile.TemporaryDirectory() as directory:
