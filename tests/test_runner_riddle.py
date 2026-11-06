@@ -91,6 +91,8 @@ class CacheTests(unittest.TestCase):
             },
         )
         self.assertEqual(packet["schema"], "nanrouter.micro-route.v1")
+        self.assertEqual(len(packet["packet_digest"]), 64)
+        self.assertEqual(len(packet["signature"]), 64)
         self.assertEqual(len(packet["resolved_heads"]), 4)
         self.assertEqual([x["kind"] for x in packet["object_refs"]],
                          ["vector", "hyperedge"])
