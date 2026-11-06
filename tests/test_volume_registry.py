@@ -1,7 +1,7 @@
 import unittest
 
 from runner_riddle.volume_registry import (
-    CANONICAL, VolumeRegistry, VolumeRegistryError,
+    CANONICAL, VolumeRegistry, VolumeRegistryError, logical_address,
 )
 
 
@@ -60,6 +60,24 @@ class VolumeRegistryTests(unittest.TestCase):
                 network_id="nan-global", generation=1, previous_digest=None,
                 volumes=bad, key=KEY,
             )
+
+    def test_nonzero_shards_have_distinct_crc_checked_addresses(self):
+        self.assertEqual(logical_address("BS0", 0), CANONICAL["BS0"][0])
+        self.assertNotEqual(logical_address("BS0", 1), CANONICAL["BS0"][0])
+        self.assertNotEqual(logical_address("BS0", 1), logical_address("MC0", 1))
+        extra = records()
+        extra.append({
+            "tier": "BS0", "logical_address": logical_address("BS0", 1),
+            "shard": 1, "provider": "koyeb", "provider_volume_id": "koyeb-volume-bs0-shard-1",
+            "mount_root": "/" + logical_address("BS0", 1), "database_file": "bs0db.sqlite3",
+            "region": "was", "health": "green", "mount_verified": True,
+            "observed_at_tick": 101, "generation": 1,
+        })
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=1, previous_digest=None,
+            volumes=extra, key=KEY,
+        )
+        self.assertEqual(registry.health, "green")
 
     def test_mount_root_must_be_logical_address_path(self):
         bad = records()
