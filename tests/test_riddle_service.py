@@ -12,6 +12,7 @@ from runner_riddle.cache import MasterRouteCache
 from runner_riddle.macro import verify_feedback_signature
 from runner_riddle.http_service import RiddleService, make_handler
 from runner_riddle.volume_registry import CANONICAL, VolumeRegistry
+from runner_riddle.ring import RING_SLOTS
 
 
 class ServiceTests(unittest.TestCase):
@@ -82,6 +83,62 @@ class ServiceTests(unittest.TestCase):
         _, response = self.request("/v1/riddle/volumes", token="w" * 40)
         self.assertEqual(response["registry"]["health"], "green")
         self.assertEqual(len(response["volumes"]), 4)
+
+    def test_six_runner_ring_reconciles_against_signed_volume_registry(self):
+        key = b"volume-registry-service-test-key-32bytes"
+        volumes = []
+        roots = {"BS0": "/bs0db", "MC0": "/mc0db", "SC0": "/sc0db", "GM0": "/gm0db"}
+        for tier, (address, database_file) in CANONICAL.items():
+            volumes.append({
+                "tier": tier, "logical_address": address, "shard": 0,
+                "provider": "koyeb", "provider_volume_id": "koyeb-volume-" + tier.lower(),
+                "mount_root": roots[tier], "database_file": database_file,
+                "region": "was", "health": "green", "mount_verified": True,
+                "observed_at_tick": 25, "generation": 1,
+            })
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=4, previous_digest=None,
+            volumes=volumes, key=key,
+        )
+        self.service.volume_registry_path.write_text(json.dumps(registry.document))
+        self.service.volume_key = key
+        for slot, runner_id in enumerate(RING_SLOTS):
+            _, ack = self.request("/v1/riddle/ring/heartbeat", {
+                "slot": slot, "runner_id": runner_id,
+                "registry_generation": 4,
+                "registry_digest": registry.document["registry_digest"],
+                "nanclock_tick": 100 + slot,
+            }, "w" * 40)
+            self.assertTrue(ack["accepted"])
+        _, response = self.request("/v1/riddle/ring", token="w" * 40)
+        self.assertEqual(response["runner_ring"]["health"], "green")
+        self.assertEqual(response["runner_ring"]["in_sync"], 6)
+        _, health = self.request("/healthz")
+        self.assertEqual(health["runner_ring"]["health"], "green")
+
+    def test_ring_heartbeat_rejects_stale_registry_generation(self):
+        key = b"volume-registry-service-test-key-32bytes"
+        roots = {"BS0": "/bs0db", "MC0": "/mc0db", "SC0": "/sc0db", "GM0": "/gm0db"}
+        volumes = [{
+            "tier": tier, "logical_address": address, "shard": 0,
+            "provider": "koyeb", "provider_volume_id": "koyeb-volume-" + tier.lower(),
+            "mount_root": roots[tier], "database_file": database_file,
+            "region": "was", "health": "green", "mount_verified": True,
+            "observed_at_tick": 25, "generation": 1,
+        } for tier, (address, database_file) in CANONICAL.items()]
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=4, previous_digest=None,
+            volumes=volumes, key=key,
+        )
+        self.service.volume_registry_path.write_text(json.dumps(registry.document))
+        self.service.volume_key = key
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/ring/heartbeat", {
+                "slot": 0, "runner_id": RING_SLOTS[0],
+                "registry_generation": 3, "registry_digest": "a" * 64,
+                "nanclock_tick": 100,
+            }, "w" * 40)
+        self.assertEqual(err.exception.code, 400)
 
     def test_volumes_endpoint_requires_worker_auth(self):
         with self.assertRaises(HTTPError) as err:
