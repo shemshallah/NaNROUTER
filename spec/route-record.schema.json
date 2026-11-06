@@ -4,13 +4,25 @@
   "title": "NaN committed route record",
   "type": "object",
   "additionalProperties": false,
-  "required": ["route_id", "canonical_address", "route_kind", "source_ref", "target_ref", "path", "generation", "base_generation", "permanence", "state", "source_hash", "acl_digest", "nanclock_tick", "learner_id"],
+  "required": ["route_id", "canonical_address", "route_kind", "source_ref", "target_ref", "target_head", "path", "generation", "base_generation", "permanence", "state", "source_hash", "acl_digest", "nanclock_tick", "learner_id"],
   "properties": {
     "route_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "canonical_address": {"type": "string", "minLength": 1, "maxLength": 1024},
     "route_kind": {"enum": ["network", "runner-ring", "head-list", "vector", "hyperedge", "rule", "temporal", "bin", "merge-feedback"]},
     "source_ref": {"type": "string", "minLength": 1, "maxLength": 256},
     "target_ref": {"type": "string", "minLength": 1, "maxLength": 256},
+    "target_head": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["universe_id", "node_point", "head_index", "permanence", "head_ref"],
+      "properties": {
+        "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "node_point": {"type": "integer", "minimum": 0, "maximum": 255},
+        "head_index": {"type": "integer", "minimum": 0, "maximum": 255},
+        "permanence": {"enum": ["permanent", "ephemeral"]},
+        "head_ref": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
     "path": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"type": "object", "additionalProperties": false, "required": ["namespace", "id"], "properties": {"namespace": {"enum": ["GM", "SC", "MC", "BS", "HW", "vector", "hyperedge", "rule", "route", "bin", "temporal"]}, "id": {"type": ["integer", "string"]}}}},
     "generation": {"type": "integer", "minimum": 1},
     "base_generation": {"type": "integer", "minimum": 0},
