@@ -5,6 +5,7 @@ from dataclasses import asdict
 import hmac
 import json
 import os
+import time
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -108,7 +109,7 @@ def make_handler(service: RiddleService):
                 if registry is None:
                     return {"health": "unknown", "configured": False}
                 query = parse_qs(urlsplit(self.path).query)
-                tick = int(query.get("nanclock_tick", [str(service.runner_ring.latest_tick())])[0])
+                tick = int(query.get("nanclock_tick", [str(int(time.time()))])[0])
                 return service.runner_ring.snapshot(
                     expected_generation=registry.document["generation"],
                     expected_digest=registry.document["registry_digest"],
