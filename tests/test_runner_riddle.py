@@ -59,6 +59,9 @@ class CacheTests(unittest.TestCase):
             "route_kind": "runner-ring",
             "source_ref": "bootstrap",
             "target_ref": "runner-1:head-1",
+            "target_head": {"universe_id": "runner-1", "node_point": 0,
+                            "head_index": 1, "permanence": "permanent",
+                            "head_ref": "runner-1:head-1"},
             "path": [{"namespace": "HW", "id": 1}],
             "permanence": "permanent",
             "source_hash": "c" * 64,
@@ -77,6 +80,41 @@ class CacheTests(unittest.TestCase):
         self.assertEqual(self.cache.generation, 2)
         self.assertEqual(self.cache.document["previous_digest"],
                          self.cache.document["previous_digest"])
+
+    def test_atomic_commit_persists_and_rejects_stale_generation(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "master.json"
+            initial = MasterRouteCache.empty("nan-network-0", KEY)
+            initial.save_atomic(path)
+            candidate = initial.propose({
+                "route_id": "atomic-root",
+                "canonical_address": ROOT,
+                "route_kind": "network",
+                "source_ref": "koyeb:bs0:0",
+                "target_ref": "universe-0:point-0:head-0",
+                "target_head": {"universe_id": "bootstrap-universe-0",
+                                "node_point": 0, "head_index": 0,
+                                "permanence": "permanent",
+                                "head_ref": "universe-0:point-0:head-0"},
+                "path": [{"namespace": "BS", "id": 0}],
+                "permanence": "permanent",
+                "source_hash": "a" * 64,
+                "acl_digest": "b" * 64,
+                "nanclock_tick": 1,
+                "learner_id": "bootstrap-authority",
+            })
+            saved, _ = MasterRouteCache.commit_atomic(
+                path, key=KEY, network_id="nan-network-0", candidate=candidate,
+                expected_generation=0, capabilities={"nannet.route.commit"}
+            )
+            self.assertEqual(saved.generation, 1)
+            with self.assertRaises(RouteError):
+                MasterRouteCache.commit_atomic(
+                    path, key=KEY, network_id="nan-network-0", candidate=candidate,
+                    expected_generation=0, capabilities={"nannet.route.commit"}
+                )
 
     def test_resolves_heads_and_typed_objects_to_micro_packet(self):
         packet = self.cache.resolve(
