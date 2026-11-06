@@ -4,7 +4,7 @@
   "title": "Committed local-head to universe address association",
   "type": "object",
   "additionalProperties": false,
-  "required": ["head_key", "namespace", "universe_id", "node_point", "head_index", "permanence", "head_ref", "source_hash", "acl_digest", "nanclock_tick", "learner_id", "base_generation", "generation", "state"],
+  "required": ["head_key", "namespace", "universe_id", "node_point", "head_index", "permanence", "lease_until_tick", "head_ref", "source_hash", "acl_digest", "nanclock_tick", "learner_id", "base_generation", "generation", "state"],
   "properties": {
     "head_key": {"type": "string", "pattern": "^HW[0-9]+:[0-9]+$"},
     "namespace": {"type": "integer", "minimum": 0, "maximum": 255},
@@ -12,6 +12,7 @@
     "node_point": {"type": "integer", "minimum": 0, "maximum": 255},
     "head_index": {"type": "integer", "minimum": 0, "maximum": 255},
     "permanence": {"enum": ["permanent", "ephemeral"]},
+    "lease_until_tick": {"type": ["integer", "null"], "minimum": 0},
     "head_ref": {"type": "string", "minLength": 1, "maxLength": 256},
     "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "acl_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
