@@ -127,7 +127,7 @@ def make_handler(service: RiddleService):
                         lease_ticks=int(body.get("lease_ticks", 64)),
                     )
                     if event is None:
-                        self._json(204, {})
+                        self._json(200, {"event": None})
                         return
                     self._json(200, {
                         "event_id": event.event_id,
