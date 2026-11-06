@@ -2,6 +2,7 @@ import unittest
 
 from runner_riddle.volume_registry import (
     CANONICAL, VolumeRegistry, VolumeRegistryError, logical_address,
+    build_koyeb_registry, write_koyeb_registry,
 )
 
 
@@ -103,6 +104,45 @@ class VolumeRegistryTests(unittest.TestCase):
                 network_id="nan-global", generation=1, previous_digest=None,
                 volumes=bad, key=KEY,
             )
+
+    def test_koyeb_bootstrap_requires_real_ids_and_verified_mounts(self):
+        import os
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {
+                "RIDDLE_VOLUME_HMAC_KEY": KEY.decode(),
+                "KOYEB_REGION": "was",
+            }
+            roots = {}
+            for tier, (_, database_file) in CANONICAL.items():
+                root = Path(tmp) / tier.lower()
+                root.mkdir()
+                (root / database_file).write_bytes(b"sqlite-placeholder-for-mount-probe")
+                roots[tier] = str(root)
+                env["KOYEB_VOLUME_ID_" + tier] = "real-provider-id-" + tier.lower()
+                env["KOYEB_MOUNT_ROOT_" + tier] = str(root)
+            registry = build_koyeb_registry(
+                env, mount_probe=lambda root: True, now_tick=123,
+            )
+            self.assertEqual(registry.health, "green")
+            self.assertTrue(all(v["mount_verified"] for v in registry.document["volumes"]))
+            path = Path(tmp) / "registry.json"
+            write_koyeb_registry(path, registry)
+            loaded = VolumeRegistry.load(path, KEY)
+            self.assertEqual(loaded.document["registry_digest"], registry.document["registry_digest"])
+
+            degraded = build_koyeb_registry(
+                env, mount_probe=lambda root: False, now_tick=124,
+            )
+            self.assertEqual(degraded.health, "degraded")
+            self.assertFalse(any(v["mount_verified"] for v in degraded.document["volumes"]))
+
+            missing = dict(env)
+            missing.pop("KOYEB_VOLUME_ID_GM0")
+            with self.assertRaises(VolumeRegistryError):
+                build_koyeb_registry(missing, mount_probe=lambda root: True, now_tick=125)
 
     def test_tampering_is_detected(self):
         registry = VolumeRegistry.build_signed(
