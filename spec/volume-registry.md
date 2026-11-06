@@ -26,10 +26,13 @@ runner ring and authorized universe clients.
 | SC0 | `0x7FF14E1300C2F17F` | `/0x7FF14E1300C2F17F` | `sc0db.sqlite3` |
 | GM0 | `0x7FF14E1400A9F17F` | `/0x7FF14E1400A9F17F` | `gm0db.sqlite3` |
 
-These are stable logical addresses. Koyeb's provider-generated volume IDs,
-region, mount verification, and observed health are deployment bindings.
-Replacing a physical volume must not change the logical address. Never invent
-provider IDs or mark a volume green from configuration alone.
+These are stable logical addresses, not Koyeb filesystem paths. The current
+physical mount destinations remain `/bs0db`, `/mc0db`, `/sc0db`, and `/gm0db`
+from the existing four-volume deployment. Koyeb provider-generated volume IDs,
+mount destinations, region, mount verification, and observed health are
+physical deployment bindings. Replacing a physical volume must not change its
+logical NaN address. Never invent provider IDs or mark a volume green from
+configuration alone.
 
 ## Registry contract
 
