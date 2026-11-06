@@ -117,19 +117,36 @@ class CacheTests(unittest.TestCase):
                 )
 
     def test_resolves_heads_and_typed_objects_to_micro_packet(self):
+        for index in (1, 2, 3):
+            generation = self.cache.generation
+            self.cache.register_head_association({
+                "namespace": 0,
+                "universe_id": f"runner-{index}",
+                "node_point": 0,
+                "head_index": index,
+                "permanence": "permanent",
+                "head_ref": f"runner-{index}:head-{index}",
+                "source_hash": "e" * 64,
+                "acl_digest": "f" * 64,
+                "nanclock_tick": 2,
+                "learner_id": "bootstrap-authority",
+                "base_generation": generation,
+            }, expected_generation=generation,
+               capabilities={"universe.atlas.commit"})
+        for kind in ("vector", "hyperedge"):
+            generation = self.cache.generation
+            self.cache.register_object_association({
+                "kind": kind,
+                "object_id": "1337",
+                "association_ref": f"atlas:{kind}s:1337",
+                "source_hash": "e" * 64,
+                "acl_digest": "f" * 64,
+                "learner_id": "bootstrap-authority",
+                "base_generation": generation,
+            }, expected_generation=generation,
+               capabilities={"universe.atlas.commit"})
         packet = self.cache.resolve(
-            ROOT + "::HW0:1,2,3::vector1337::hyperedge1337",
-            head_refs={
-                "HW0:1": {"universe_id": "runner-1", "node_point": 0, "head_index": 1, "head_ref": "runner-1:head-1", "permanence": "permanent"},
-                "HW0:2": {"universe_id": "runner-2", "node_point": 0, "head_index": 2, "head_ref": "runner-2:head-2", "permanence": "permanent"},
-                "HW0:3": {"universe_id": "runner-3", "node_point": 0, "head_index": 3, "head_ref": "runner-3:head-3", "permanence": "permanent"},
-            },
-            object_refs={
-                "vector:1337": {"kind": "vector", "object_id": "1337",
-                                "association_ref": "atlas:vectors:1337"},
-                "hyperedge:1337": {"kind": "hyperedge", "object_id": "1337",
-                                   "association_ref": "atlas:hyperedges:1337"},
-            },
+            ROOT + "::HW0:1,2,3::vector1337::hyperedge1337"
         )
         self.assertEqual(packet["schema"], "nanrouter.micro-route.v1")
         self.assertEqual(len(packet["packet_digest"]), 64)
@@ -138,7 +155,29 @@ class CacheTests(unittest.TestCase):
         self.assertEqual([x["kind"] for x in packet["object_refs"]],
                          ["vector", "hyperedge"])
         with self.assertRaises(RouteError):
-            self.cache.resolve(ROOT + "::HW0:99", head_refs={}, object_refs={})
+            self.cache.resolve(ROOT + "::HW0:99")
+
+    def test_permanent_head_association_cannot_be_reassigned(self):
+        record = {
+            "namespace": 0, "universe_id": "runner-1", "node_point": 0,
+            "head_index": 1, "permanence": "permanent",
+            "head_ref": "runner-1:head-1", "source_hash": "e" * 64,
+            "acl_digest": "f" * 64, "nanclock_tick": 2,
+            "learner_id": "bootstrap-authority", "base_generation": 1,
+        }
+        self.cache.register_head_association(
+            record, expected_generation=1, capabilities={"universe.atlas.commit"}
+        )
+        replacement = dict(record, head_ref="attacker:head-1", base_generation=2)
+        with self.assertRaises(RouteError):
+            self.cache.register_head_association(
+                replacement, expected_generation=2,
+                capabilities={"universe.atlas.commit"}
+            )
+        with self.assertRaises(RouteError):
+            self.cache.register_head_association(
+                dict(record, base_generation=2), expected_generation=2, capabilities=set()
+            )
 
     def test_atomic_roundtrip_and_tamper_detection(self):
         with tempfile.TemporaryDirectory() as directory:
