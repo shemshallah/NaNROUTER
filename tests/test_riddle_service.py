@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -102,12 +103,13 @@ class ServiceTests(unittest.TestCase):
         )
         self.service.volume_registry_path.write_text(json.dumps(registry.document))
         self.service.volume_key = key
+        base_tick = int(time.time())
         for slot, runner_id in enumerate(RING_SLOTS):
             _, ack = self.request("/v1/riddle/ring/heartbeat", {
                 "slot": slot, "runner_id": runner_id,
                 "registry_generation": 4,
                 "registry_digest": registry.document["registry_digest"],
-                "nanclock_tick": 100 + slot,
+                "nanclock_tick": base_tick + slot,
             }, "w" * 40)
             self.assertTrue(ack["accepted"])
         _, response = self.request("/v1/riddle/ring", token="w" * 40)
