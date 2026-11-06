@@ -1,3 +1,4 @@
+import json
 import pathlib
 import tomllib
 import unittest
@@ -57,6 +58,22 @@ class ManifestTests(unittest.TestCase):
     def test_android_never_maps_overbootstrap(self):
         self.assertEqual(self.policy["universe"]["android_limit_bytes"], 8_388_608)
         self.assertFalse(self.policy["universe"]["android_may_map_overbootstrap"])
+
+    def test_learning_trigger_requires_signature_and_expiry(self):
+        schema = json.loads((ROOT / "spec/learning-trigger.schema.json").read_text())
+        required = set(schema["required"])
+        self.assertIn("signature", required)
+        self.assertIn("expires_at_tick", required)
+        self.assertIn("acl_digest", required)
+        self.assertEqual(schema["properties"]["requested_stage"]["enum"],
+                         ["OBSERVE", "LEARN_BOOLEAN", "LEARN_ROUTING", "LANGUAGE_DEMO"])
+
+    def test_trace_schema_covers_ten_layers(self):
+        schema = json.loads((ROOT / "spec/trace-envelope.schema.json").read_text())
+        self.assertEqual(schema["properties"]["layer"]["minimum"], 0)
+        self.assertEqual(schema["properties"]["layer"]["maximum"], 9)
+        self.assertIn("acl_digest", schema["required"])
+        self.assertIn("base_generation", schema["required"])
 
 
 if __name__ == "__main__":
