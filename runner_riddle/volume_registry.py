@@ -137,8 +137,10 @@ class VolumeRegistry:
             if provider_id.startswith("<") or "placeholder" in provider_id.lower():
                 raise VolumeRegistryError("placeholder provider volume IDs are forbidden")
             mount_root = item.get("mount_root")
-            if mount_root != "/" + address:
-                raise VolumeRegistryError("mount_root must equal the logical NaN address path")
+            if (not isinstance(mount_root, str) or not mount_root.startswith("/")
+                    or mount_root == "/" or "\\\\" in mount_root
+                    or any(part in ("", ".", "..") for part in mount_root.split("/")[1:])):
+                raise VolumeRegistryError("mount_root must be a normalized absolute Koyeb mount path")
             if item.get("database_file") != expected_db:
                 raise VolumeRegistryError("database filename does not match its tier")
             if item.get("health") not in ("green", "degraded", "unavailable", "unknown"):
