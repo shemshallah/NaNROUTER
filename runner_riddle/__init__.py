@@ -7,4 +7,4 @@ from .macro import (AddressRange, BootstrapMacroPlanner, CurriculumState,
 __all__ = ["AddressError", "NanAddress", "parse_address", "MasterRouteCache",
            "RouteError", "PatternCandidate", "TracePatternMiner", "AddressRange",
            "BootstrapMacroPlanner", "CurriculumState", "MacroJob", "PolicyError",
-           "SignedRangeManifest"]
+           "SignedRangeManifest", "InboxError", "LeasedSource",\n           "RunnerRiddleWorker", "SQLiteSourceInbox"]
