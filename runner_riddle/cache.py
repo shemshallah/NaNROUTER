@@ -150,9 +150,14 @@ class MasterRouteCache:
         if route is None:
             raise RouteError("root route is not committed in the master cache")
         resolved_heads: list[dict[str, Any]] = []
-        root_ref = route.get("target_ref")
-        if root_ref:
-            resolved_heads.append({"head_ref": root_ref, "permanence": route.get("permanence", "permanent")})
+        root_head = route.get("target_head")
+        if not isinstance(root_head, dict):
+            raise RouteError("committed root route is missing its typed target_head")
+        if root_head.get("permanence") not in ("permanent", "ephemeral"):
+            raise RouteError("root head permanence is invalid")
+        if not root_head.get("head_ref"):
+            raise RouteError("root head reference is missing")
+        resolved_heads.append(dict(root_head))
         resolved_objects: list[dict[str, Any]] = []
         for selector in parsed.selectors:
             if isinstance(selector, HeadSelector):
@@ -161,12 +166,20 @@ class MasterRouteCache:
                     record = head_refs.get(key)
                     if record is None:
                         raise RouteError(f"unregistered head selector: {key}")
+                    if record.get("permanence") not in ("permanent", "ephemeral"):
+                        raise RouteError(f"invalid permanence for head selector: {key}")
+                    if not record.get("head_ref") or not record.get("universe_id"):
+                        raise RouteError(f"incomplete head association: {key}")
                     resolved_heads.append(dict(record))
             elif isinstance(selector, ObjectSelector):
                 key = f"{selector.kind}:{selector.object_id}"
                 record = object_refs.get(key)
                 if record is None:
                     raise RouteError(f"unregistered object selector: {key}")
+                if record.get("kind") != selector.kind or str(record.get("object_id")) != selector.object_id:
+                    raise RouteError(f"typed object association mismatch: {key}")
+                if not record.get("association_ref"):
+                    raise RouteError(f"object association reference missing: {key}")
                 resolved_objects.append(dict(record))
         packet = {
             "schema": "nanrouter.micro-route.v1",
