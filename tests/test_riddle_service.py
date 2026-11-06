@@ -8,7 +8,8 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from runner_riddle.cache import MasterRouteCache\nfrom runner_riddle.http_service import RiddleService, make_handler
+from runner_riddle.cache import MasterRouteCache
+from runner_riddle.http_service import RiddleService, make_handler
 
 
 class ServiceTests(unittest.TestCase):
