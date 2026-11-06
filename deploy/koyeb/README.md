@@ -18,6 +18,7 @@ Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT
 - Ensure the mounted directory is writable by container UID/GID `10001:10001`
 - Set `RIDDLE_INTAKE_TOKEN` and `RIDDLE_WORKER_TOKEN` as separate random secrets, each at least 32 characters
 - Set `RIDDLE_RANGE_HMAC_KEY` only after the canonical allocator issues a signed range manifest
+- Set `RIDDLE_ROUTE_HMAC_KEY` to the independent key used to verify the signed master route cache
 - Set `PORT=8080` and `RIDDLE_DATA_DIR=/data`
 
 Do not commit any secret, token, HMAC key, allocator manifest, or live route cache to Git.
@@ -31,12 +32,13 @@ Do not commit any secret, token, HMAC key, allocator manifest, or live route cac
 - `POST /v1/riddle/retry`: release a failed lease or dead-letter after the attempt limit
 - `GET /v1/riddle/queue`: worker-authenticated queue counts
 - `POST /v1/riddle/plan`: returns a bounded Boolean/routing job only when a signed allocator manifest is installed
+- `POST /v1/riddle/routes/resolve`: resolves a typed address from the signed master cache and returns a signed micro-route packet; it never commits routes
 
 Every POST requires JSON and an appropriate bearer token. Request bodies are limited to 2 MiB. Intake payloads are hex-encoded NaN bytes.
 
 ## Important safety boundaries
 
-- The service does not expose a live route-commit endpoint.
+- The service does not expose a live route-commit endpoint. The route resolver reads head and object association tables from the signed master cache; callers cannot supply substitute head maps.
 - The macro planner writes only to candidate ranges and returns `live_map_commit=false`.
 - Missing, invalid, unsigned, overlapping, or over-limit allocator ranges fail closed.
 - Android range manifests are capped at 8 MiB; all manifests are capped at 2 GiB.
