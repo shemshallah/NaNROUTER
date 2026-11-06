@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/range-manifest.schema.json",
+  "title": "Canonical allocator signed range manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "authority", "verified", "platform", "address_limit_bytes", "ranges", "signature"],
+  "properties": {
+    "schema": {"const": "nanrouter.range-manifest.v1"},
+    "authority": {"const": "nanlmind-canonical-allocator"},
+    "verified": {"const": true},
+    "platform": {"enum": ["android", "server"]},
+    "address_limit_bytes": {"type": "integer", "minimum": 1, "maximum": 2147483648},
+    "ranges": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bin_name", "start", "end_exclusive", "permissions"],
+        "properties": {
+          "bin_name": {"type": "string", "minLength": 1, "maxLength": 128},
+          "start": {"type": "integer", "minimum": 0},
+          "end_exclusive": {"type": "integer", "minimum": 1},
+          "permissions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "signature": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
