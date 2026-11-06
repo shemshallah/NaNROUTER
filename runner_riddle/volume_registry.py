@@ -39,6 +39,24 @@ def _signature(value: Any, key: bytes) -> str:
     return hmac.new(key, _canonical(value), hashlib.sha256).hexdigest()
 
 
+def _crc8_atm(data: bytes) -> int:
+    crc = 0
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x07) & 0xFF if crc & 0x80 else (crc << 1) & 0xFF
+    return crc
+
+
+def logical_address(tier: str, shard: int) -> str:
+    if tier not in CANONICAL or not isinstance(shard, int) or not 0 <= shard <= 255:
+        raise VolumeRegistryError("unknown tier or shard outside 0..255")
+    tier_code = {"BS0": 1, "MC0": 2, "SC0": 3, "GM0": 4}[tier]
+    prefix = bytes((0x4E, 0x11 | (tier_code - 1), shard))
+    payload = (int.from_bytes(prefix, "big") << 8) | _crc8_atm(prefix)
+    return f"0x7FF1{payload:08X}F17F"
+
+
 class VolumeRegistry:
     """Read-only verifier for a generation-chained, HMAC-authenticated registry."""
 
@@ -108,10 +126,8 @@ class VolumeRegistry:
                 raise VolumeRegistryError("shard must be in 0..255")
             expected_address, expected_db = CANONICAL[tier]
             address = item.get("logical_address")
-            if address != expected_address if shard == 0 else not (
-                isinstance(address, str) and address.startswith("0x7FF1") and address.endswith("F17F")
-            ):
-                raise VolumeRegistryError("logical address does not match tier/shard identity")
+            if address != logical_address(tier, shard):
+                raise VolumeRegistryError("logical address does not match tier/shard identity or CRC")
             if shard == 0:
                 canonical_tiers.add(tier)
             provider = item.get("provider")
@@ -131,8 +147,10 @@ class VolumeRegistry:
                 raise VolumeRegistryError("mount_verified must be boolean")
             if not isinstance(item.get("observed_at_tick"), int) or item["observed_at_tick"] < 0:
                 raise VolumeRegistryError("observed_at_tick must be nonnegative")
-            if not isinstance(item.get("generation"), int) or item["generation"] < 1:
-                raise VolumeRegistryError("volume generation must be positive")
+            if not isinstance(item.get("generation"), int) or not 1 <= item["generation"] <= doc["generation"]:
+                raise VolumeRegistryError("volume generation must be positive and no newer than registry")
+            if not isinstance(item.get("region"), str) or not item["region"]:
+                raise VolumeRegistryError("Koyeb region is required")
             for field, value in (("logical_address", address), ("provider_volume_id", provider_id),
                                  ("mount_root", mount_root)):
                 if value in (seen_addresses if field == "logical_address" else
