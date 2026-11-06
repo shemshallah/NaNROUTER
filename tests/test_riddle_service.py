@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 from runner_riddle.cache import MasterRouteCache
 from runner_riddle.macro import verify_feedback_signature
 from runner_riddle.http_service import RiddleService, make_handler
+from runner_riddle.volume_registry import CANONICAL, VolumeRegistry
 
 
 class ServiceTests(unittest.TestCase):
@@ -52,6 +53,40 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body["address"], "nan://GM0:SC0:MC0:BS0:0:HW0:0")
         self.assertFalse(body["live_route_commit"])
+
+    def test_health_reports_unconfigured_volume_registry_as_unknown(self):
+        status, body = self.request("/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["volume_registry"]["health"], "unknown")
+        self.assertFalse(body["volume_registry"]["configured"])
+
+    def test_runner_ring_can_read_verified_volume_registry(self):
+        key = b"volume-registry-service-test-key-32bytes"
+        volumes = []
+        for tier, (address, database_file) in CANONICAL.items():
+            volumes.append({
+                "tier": tier, "logical_address": address, "shard": 0,
+                "provider": "koyeb", "provider_volume_id": "koyeb-volume-" + tier.lower(),
+                "mount_root": "/" + address, "database_file": database_file,
+                "region": "was", "health": "green", "mount_verified": True,
+                "observed_at_tick": 25, "generation": 1,
+            })
+        registry = VolumeRegistry.build_signed(
+            network_id="nan-global", generation=1, previous_digest=None,
+            volumes=volumes, key=key,
+        )
+        self.service.volume_registry_path.write_text(json.dumps(registry.document))
+        self.service.volume_key = key
+        _, health = self.request("/healthz")
+        self.assertEqual(health["volume_registry"]["health"], "green")
+        _, response = self.request("/v1/riddle/volumes", token="w" * 40)
+        self.assertEqual(response["registry"]["health"], "green")
+        self.assertEqual(len(response["volumes"]), 4)
+
+    def test_volumes_endpoint_requires_worker_auth(self):
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/riddle/volumes")
+        self.assertEqual(err.exception.code, 401)
 
     def test_intake_requires_auth_and_worker_can_lease_and_ack(self):
         payload = b"NaN16 source"
