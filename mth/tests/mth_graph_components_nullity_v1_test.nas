@@ -1141,7 +1141,7 @@ mth_comp_tmp:
 .word 0
 .word 0
 .word 0
-.org 1800
+.org 3072
 mth_comp_count:
 .word 0
 mth_comp_scratch:
@@ -1161,7 +1161,7 @@ mth_comp_scratch:
 .word 0
 .word 0
 .word 0
-.org 1900
+.org 3300
 mth_comp_pass:
 .str "MTH GRAPH COMPONENTS NULLITY V1 PASS\n"
 mth_comp_bad:
