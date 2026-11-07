@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 540 Python tests pass.
+- [x] 650 Python tests pass (1 skipped).
 - [x] Canonical workflow `42405417726` passed 130 steps for the 61-fixture set, including native preflight/admission gates.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -30,26 +30,26 @@
 **Full architecture, schemas, authority rules, and the complete verification matrix:** `docs/GAME_PLAN_::.md`.
 **Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `docs/GAME_PLAN_::.md` §19–20.
 
-- [ ] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split.
+- [x] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split. GLT 2 MiB page-limit loading remains the separate pending gate above.
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
   - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job.
   - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
-  - [ ] P0.4 Peak-liveness helper/test exists (`MthRegistry.plan_workspace_peak`); wire it into admission and test exact/+1 boundaries.
+  - [x] P0.4 Peak-liveness admission wired through `MthRegistry.validate_plan` and `MthSystem.submit_plan`; dependent plans admit by peak live workspace, undeclared-liveness plans keep the conservative sum; exact/-1 tests added.
   - [x] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump (`math_store`).
-  - [ ] P0.6 Freeze authority/`::` context rules and JAHS execution binding.
-- [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` (14 tests).
+  - [x] P0.6 Authority/`::` context rules frozen; `MathExecutionBridge` binds admission, NMP packet, active-ring incarnation/epoch, JAHS seal, capability, and one MthSystem lease (7 tests + restart projection).
+- [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` (8 object tests + 17 store tests).
 - [x] **P2 — Semantic function registry.** `math_registry` + `spec/math-functions.v1.json`; 19 contracts/8 implementation bindings; composition tests (17).
-- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); Authorization/capability gate wiring remains.
-- [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 23 tests; does not execute.
-- [ ] **P5 — NMP + execution bridge.** NMP packet/state/dedupe/batch module and 45 tests are implemented; MthSystem/WaveService/lease/point-0 execution binding remains.
-- [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 15 tests.
-- [ ] **P7 — Null/void/undefined algebra.** Typed absence/undefined semantics; no zero/null wildcard.
-- [ ] **P8 — Relations/hyperedges/hypergraphs.** Schema constraints, membership/incidence, bounded traversal, hyperedge-as-input.
-- [ ] **P9 — Learning/rule discovery.** Structural/transformational/derivational/relational/operational learning; proposal isolation; proof statuses; transactional promotion; Boolean-head governance.
-- [ ] **P10 — Scratch/oscillation/pruning.** Budgeted oscillation, duplicate-rediscovery control, retention scoring, structural pruning, recovery.
-- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding remains in P5/P11.
-- [ ] **P12 — End-to-end demo.** Leaf → `::` → preflight → execute → commit → feed back; all T01–T20 and additional negative tests green.
-- [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB; explicit blocked/rejected results instead of fabricated claims.
+- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); capability admission is wired in P5, while authorization remains a separate orthogonal verdict by design.
+- [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 26 tests; does not execute.
+- [x] **P5 — NMP + execution bridge.** NMP packet/state/dedupe/batch (57 tests) plus `MathExecutionBridge`; `MthSystem`/`WaveService`/lease/capability/JAHS/active-ring binding, cancellation, restart projection, and 7 execution tests are green (`docs/MATH_EXECUTION_BRIDGE.md`).
+- [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 17 tests.
+- [x] **P7 — Null/void/undefined algebra.** Typed `ZERO/NULL/VOID/EMPTY/UNDEFINED/INFINITY/UNKNOWN/ERROR/CANCELLED` states, explicit conjunction semantics, missing-reference dominance; 59 tests (`docs/MATH_ABSENCE_ALGEBRA.md`).
+- [x] **P8 — Relations/hyperedges/hypergraphs.** Typed schema/roles/arity/duplicate policy, immutable relation versions, incidence, bounded nested traversal, digest stability; 9 tests (`docs/MATH_RELATIONS_HYPERGRAPHS.md`).
+- [x] **P9 — Learning/rule discovery.** Five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transactional promotion, negative memory, audit chain, Boolean-head utility-only governance; 20 tests (`docs/MATH_RULE_LIFECYCLE.md`).
+- [x] **P10 — Scratch/oscillation/pruning.** Typed retention features/scoring, tier policy, deterministic plans, protected proof objects, shadow/apply/rollback/restore, oscillation budgets, duplicate and rewrite-cycle stops; 10 tests (`docs/MATH_RETENTION_AND_OSCILLATION.md`).
+- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5.
+- [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The demo is control-plane only: its digest is not a claimed numeric dot product (`docs/MATH_DEMO.md`).
+- [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB; blocked pending real model/data/credentials. No fabricated claims.
 
 ## R0 — Contract and storage freeze
 
@@ -200,12 +200,12 @@
 python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
 
-python3 -m unittest discover -s tests -v
-Ran 235 tests
-OK
+python3 -m unittest discover -s tests -q
+Ran 650 tests
+OK (skipped=1)
 ```
 
-CI: `42405417726` — 130/130 steps for the 61-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42405417726` — 130/130 steps for the 61-fixture set. GLT 2 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

@@ -1,6 +1,6 @@
 # GAME PLAN `::` — NaN Mathematical Linker, Validity, and Self-Organizing Memory
 
-**Status:** architecture and integration plan, not an implementation claim.
+**Status:** architecture and integration plan; P0–P12 control-plane integration is implemented and tested, while P13 live/experiment gates remain explicitly blocked. The evidence ledger is authoritative for counts and CI IDs.
 **Date:** 2026-11-07.
 **Parent plans:** `docs/game_plan_deep.md`, `docs/game_plan_foundations.md`, `docs/GAME_PLAN_MTH.md`, `docs/DEEP_PLAN_CONT.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
@@ -110,7 +110,7 @@ At the time of writing the checked-in `main` contains:
 - **63 native MTH kernels** with fixtures; 60 local and 61 total fixtures;
 - **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
 - canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
-- **540 Python tests** (after the page-store/page-executor additions);
+- **650 Python tests** (1 skipped) after the P7–P12 math integration additions;
 - **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
@@ -552,7 +552,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 540-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 650-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1581,6 +1581,7 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Scope:** 2 MiB adjustable guest budget is checked in; finish capability re-registration for all six slots, peak-liveness admission, point-0/HTTP bounds, math schema isolation, and the authority/`::` context split.
 **Files:** `runner_riddle/mth_system.py`, `point0_bridge.py`, `tools/register_wave_capabilities.py`, `docs/MTH_SYSTEM_RUNTIME.md`, `docs/MTH_MEMORY_1MIB.md`/new 2 MiB doc, `tests/test_mth_system.py`, `tests/test_point0_bridge.py`.
 **Exit:** all P0 tests; no existing test regression; explicit GLT gate.
+**Implemented:** P0.1–P0.6 are checked in. Dependent plans are admitted by peak live workspace; undeclared-liveness plans keep the v1 sum. Authority/JAHS execution binding is enforced by `MathExecutionBridge`. GLT-enforced 2 MiB page-limit loading remains unproven.
 
 ### P1 — Leaf/identity/storage schema
 
@@ -1612,6 +1613,7 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Priority:** 5.
 **Scope:** NMP packet/states, preflight digest, MthSystem/WaveService/lease/point-0 path, dedupe/in-flight, cancellation, JAHS binding.
 **Exit:** one end-to-end dot product leaf; duplicate conjunction reuses result; invalid preflight bypass denied; T14/T19/T20; A09–A12/A19.
+**Implemented:** `MathExecutionBridge` binds typed admission, active-ring incarnation/epoch, JAHS, capability, durable job, one lease, cancellation, completion/commit, and restart projection. Seven execution tests plus the P12 demo are green.
 
 ### P6 — Meta-mapping and durable store
 
@@ -1624,24 +1626,28 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Priority:** 7.
 **Scope:** typed leaves and operation semantics; no wildcard; failure feedback.
 **Exit:** T09/T11, missing reference vs undefined vs empty, no `NULL==0`.
+**Implemented:** `math_absence.py` provides nine distinct states, explicit conjunction tables, missing-reference dominance, and mandatory reason/failure-class leaves; 59 tests.
 
 ### P8 — Relations/hyperedges/hypergraphs
 
 **Priority:** 8.
 **Scope:** relation schema, roles/order/weights/constraints, membership/incidence, bounded traversal, hyperedge-as-input.
 **Exit:** T07/T08 and cycle/depth/fan-out tests.
+**Implemented:** `math_relation.py` provides typed schemas/roles/arity/duplicate policy, immutable versions, incidence, bounded nested traversal, and canonical digests; 9 tests.
 
 ### P9 — Learning/rule discovery and promotion
 
 **Priority:** 9.
 **Scope:** structural/transformational/derivational/relational/operational learning; proposal isolation; proof status; contradiction; transactional promotion; Boolean heads.
 **Exit:** T16, A13–A14; no self-promotion; level-0 immutability; rollback.
+**Implemented:** `math_learning.py` enforces five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transaction/CAS promotion, negative memory, audit chaining, and utility-only Boolean-head experiment evidence; 20 tests.
 
 ### P10 — Scratch, oscillation, pruning, retention
 
 **Priority:** 10.
 **Scope:** scratch tiers, oscillation state/budgets, duplicate rediscovery control, retention score, structural pruning, recovery.
 **Exit:** T20, A15–A16; no infinite loop; cache eviction recoverable.
+**Implemented:** `math_retention.py` provides typed scoring, tier policy, deterministic plans, proof/truth preservation, shadow/apply/rollback/restore, oscillation budgets, duplicate and rewrite-cycle stops; 10 tests.
 
 ### P11 — 255 logical lanes and capability-aware ring
 
@@ -1654,12 +1660,14 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Priority:** 12.
 **Scope:** leaf → `::` → preflight → execute → commit → feed back; full provenance; negative suite.
 **Exit:** all T01–T20 and A01–A20 green; demo evidence; no host math.
+**Implemented:** `tools/run_math_demo.py` runs the control-plane vertical slice with NMP, active-ring lease, commit, and output feedback; 2 tests. It deliberately labels its executor digest as evidence, not a numeric dot product. Full T01–T20/A01–A20 closure remains tied to P13 evidence where applicable.
 
 ### P13 — LM/R7/capacity and live deployment
 
 **Priority:** 13.
 **Scope:** real frozen-model/data ablations, R7 held-out experiment, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB.
 **Exit:** real evidence or an explicit blocked/rejected result; no fabricated claim.
+**Status:** blocked. No live credentials/volumes, frozen-model/data harness, or held-out experiment is available in this environment. No P13 result is claimed.
 
 ---
 
@@ -1675,7 +1683,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests should live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, and `tests/test_math_end_to_end.py`. The existing 540-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 650-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 
