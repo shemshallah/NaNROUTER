@@ -106,22 +106,34 @@ mth_link_pf_main:
   MOVI r1,@mth_link_pf_stage_after_resolve
   CALL @mth_link_pf_puts
   CMP r8,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_resolve_fail
+  MOVI r1,@mth_link_pf_stage_resolve_status
+  CALL @mth_link_pf_puts
   MOVI r6,123
   CMP r1,r6
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_left_id
+  CALL @mth_link_pf_puts
   MOVI r6,234
   CMP r2,r6
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_right_id
+  CALL @mth_link_pf_puts
   MOVI r6,77
   CMP r3,r6
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_op_id
+  CALL @mth_link_pf_puts
   MOVI r6,3
   CMP r4,r6
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_out_kind
+  CALL @mth_link_pf_puts
   MOVI r6,900
   CMP r5,r6
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_program_id
+  CALL @mth_link_pf_puts
   ST r5,r0,@mth_link_pf_program_id
   MOVI r6,3
   CMP r9,r6
@@ -338,6 +350,11 @@ mth_link_pf_main:
   CALL @mth_link_pf_puts
   HALT
 
+mth_link_pf_resolve_fail:
+  MOVI r1,@mth_link_pf_resolve_bad
+  CALL @mth_link_pf_puts
+  HALT
+
 mth_link_pf_shape_fail:
   MOVI r1,@mth_link_pf_shape_bad
   CALL @mth_link_pf_puts
@@ -492,3 +509,17 @@ mth_link_pf_stage_before_shape:
 .str "STAGE BEFORE SHAPE\n"
 mth_link_pf_shape_bad:
 .str "MTH SHAPE REGISTRATION FAIL\n"
+mth_link_pf_stage_resolve_status:
+.str "STAGE RESOLVE STATUS OK\n"
+mth_link_pf_stage_left_id:
+.str "STAGE LEFT ID OK\n"
+mth_link_pf_stage_right_id:
+.str "STAGE RIGHT ID OK\n"
+mth_link_pf_stage_op_id:
+.str "STAGE OP ID OK\n"
+mth_link_pf_stage_out_kind:
+.str "STAGE OUT KIND OK\n"
+mth_link_pf_stage_program_id:
+.str "STAGE PROGRAM ID OK\n"
+mth_link_pf_resolve_bad:
+.str "MTH LINK RESOLVE STATUS FAIL\n"
