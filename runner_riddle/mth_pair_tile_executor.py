@@ -150,6 +150,29 @@ class CandidatePageStore(Protocol):
         """Discard an unpublished candidate; must never touch the canonical generation."""
 
 
+def _pack_row_strip_k16(data: bytes) -> bytes:
+    """Reorder a 16x256 row-major strip into sixteen contiguous 16x16 K blocks.
+
+    The guest driver advances each strip pointer by 256 words per K slice.
+    Row-major storage interleaves K slices by output row, so the three
+    row-oriented strips must be transposed at the 16-column block granularity.
+    This is data layout only; it performs no numerical operation.
+    """
+    expected = 16 * 256 * NAN16_WORD_BYTES
+    if not isinstance(data, bytes) or len(data) != expected:
+        raise PairTileExecutionError("row strip must contain exactly 16x256 NaN16 words")
+    packed = bytearray(expected)
+    block_bytes = 16 * NAN16_WORD_BYTES
+    for k_block in range(16):
+        for row in range(16):
+            source_start = (row * 256 + k_block * 16) * NAN16_WORD_BYTES
+            target_start = (k_block * 256 + row * 16) * NAN16_WORD_BYTES
+            packed[target_start:target_start + block_bytes] = data[
+                source_start:source_start + block_bytes
+            ]
+    return bytes(packed)
+
+
 def _tile_strips(source: PairTilePageSource, snapshot: OperatorSnapshot,
                  descriptor: TileDescriptor) -> dict[str, bytes]:
     i, j = descriptor.i_base, descriptor.j_base
@@ -169,7 +192,10 @@ def _tile_strips(source: PairTilePageSource, snapshot: OperatorSnapshot,
             snapshot, matrix=matrix, row_base=row_base, col_base=col_base,
             rows=rows, cols=cols,
         )
-        staged[name] = page.data
+        # U_KJ is a 256x16 column strip already stored in K-major order.
+        # The other three strips are 16x256 row windows and need 16x16-block
+        # packing so the native driver can advance by 256 words per K slice.
+        staged[name] = page.data if cols == 16 else _pack_row_strip_k16(page.data)
     return staged
 
 
@@ -318,4 +344,5 @@ __all__ = [
     "STRIP_LAYOUT",
     "STRIP_WORDS",
     "build_pair_plan_digest",
+    "_pack_row_strip_k16",
 ]
