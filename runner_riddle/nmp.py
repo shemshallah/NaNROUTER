@@ -2511,6 +2511,8 @@ def prepare(
     )
     packet = packet.transition(RESOLVED, reason="candidate inputs resolved", tick=tick)
     packet = packet.transition(CLASSIFIED, reason="candidate function classified", tick=tick)
+    if control_result is None and defer_preflight:
+        return packet.transition(PROPOSED, reason="candidate selected; awaiting native guest preflight", tick=tick)
     if control_result != "VALID":
         failure = _ADMISSION_FAILURE.get(control_result or "", REJECTED)
         if failure is None:
@@ -2544,8 +2546,6 @@ def prepare(
             tick=tick,
         )
     packet = packet.transition(PROPOSED, reason="candidate selected", tick=tick)
-    if defer_preflight and control_result is None:
-        return packet
     return packet.transition(PREFLIGHTED, reason="preflight VALID", tick=tick)
 
 
