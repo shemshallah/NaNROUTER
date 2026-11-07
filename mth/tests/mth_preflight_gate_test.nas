@@ -15,6 +15,9 @@ pf_test_main:
   JMP[NE] @pf_test_fail
 
   ; A changed candidate epoch must fail closed as STALE_EPOCH (2).
+  MOVI r4,@pf_candidate
+  MOVI r5,@pf_rule
+  MOVI r6,@pf_result
   MOVI r7,6
   ST r7,r4,9
   ADD r1,r4,r0
