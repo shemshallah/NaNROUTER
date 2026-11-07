@@ -649,7 +649,6 @@ class NmpPacket:
     admission_id: str | None = None
     admission_verdict: str | None = None
     preflight_digest: str | None = None
-    admission_receipt: dict[str, Any] | None = None
     preflight_result: str | None = None
     ruleset_id: str = ""
     ruleset_version: int = 1
@@ -688,6 +687,7 @@ class NmpPacket:
     created_tick: int = 0
     updated_tick: int = 0
     history: tuple[dict[str, Any], ...] = ()
+    admission_receipt: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         # Lane validation comes first so NANNET0/out-of-range cannot be hidden
