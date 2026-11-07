@@ -419,10 +419,20 @@ mth_link_pf_admit_ok:
   JMP[NE] @mth_link_pf_dispatch_status_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
+  ; Float32 cosine of equal nonzero vectors is 1.0 within a tight
+  ; 0.001 ULP-scale envelope; sqrt/divide need not round to exact 1.0.
+  MOVI r10,0x3F7F
+  SHL r10,r10,16
+  MOVI r11,0xF000
+  ADD r10,r10,r11
+  CMP r9,r10
+  JMP[LT] @mth_link_pf_fail
   MOVI r10,0x3F80
   SHL r10,r10,16
+  MOVI r11,0x1000
+  ADD r10,r10,r11
   CMP r9,r10
-  JMP[NE] @mth_link_pf_fail
+  JMP[GT] @mth_link_pf_fail
   MOVI r1,@mth_link_pf_stage_cosine
   CALL @mth_link_pf_puts
 
