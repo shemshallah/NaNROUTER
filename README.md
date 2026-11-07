@@ -103,7 +103,7 @@ Every layer lives in the same universe and is addressed through the same atlas. 
 
 MTH is the mathematical kernel being built alongside the router control plane. Its game plan is in [`docs/GAME_PLAN_MTH.md`](docs/GAME_PLAN_MTH.md), and its first NaN16 source slice is under [`mth/`](mth/README.md).
 
-The initial native slice includes the 16-way Boolean transform, ordered class rotation, the frozen eight-byte `BSWAPM` operation wrapper, and the tagged double-endian pair codec. Mathematical implementations are NaN16 source; the router is only the authorized task/result path. The current source and smoke fixtures are committed, but they are **not marked assembled or passing** until run through the canonical NaN16 assembler/interpreter.
+The initial native slice includes the 16-way Boolean transform, all four NaN face-type operations, ordered class packing/rotation, the frozen eight-byte `BSWAPM` wrapper, the tagged double-endian pair codec, checked integer arithmetic, bitwise/comparison primitives, variable shifts, and native 32×32→64 multiplication plus restoring division. Mathematical implementations are NaN16 source; the router is only the authorized task/result path. The current source and smoke fixtures are committed, but they are **not marked assembled or passing** until run through the canonical NaN16 assembler/interpreter.
 
 MTH does not add a second execution universe, runner ring, math service, or task ledger. It uses the existing canonical topology and router authorization boundaries.
 
