@@ -1,6 +1,6 @@
 # MTH graph invariants ABI
 
-Status: connected-component kernel source-written; canonical native execution pending. Weighted CSR Laplacian v2 is native_verified separately.
+Status: connected-component kernel **native_verified** by canonical NaN16 CI run #119. Weighted CSR Laplacian v2 is native_verified separately.
 
 ## 1. Connected components
 
@@ -12,7 +12,8 @@ Input is canonical symmetric simple CSR over exactly 256 vertices:
 
 The NaN16 routine `mth_graph_components_256` uses a caller-owned 256-word parent array and emits 256 deterministic representative labels. It unions each undirected edge once (j>i). Return is `r1=1` success and `r2=component_count`; malformed CSR returns `r1=0` before writing labels or scratch. Labels are the final union-find roots; their numeric value is an implementation-defined deterministic representative, not a semantic Head ID.
 
-Native fixture oracles:
+Native fixture oracles passed canonical NaN16 CI run #119: 29,931 guest steps, expected HALT. Kernel SHA-256: `064d6b52cf2d0dda561de020da25575225568999635bcad6dd117f4b0355c13b`.
+
 - path 0--1--2--3 with 252 isolated vertices: 253 components;
 - disjoint edges (0--1) and (2--3), plus 252 isolates: 254 components;
 - offset[0] != 0: reject and preserve output.
