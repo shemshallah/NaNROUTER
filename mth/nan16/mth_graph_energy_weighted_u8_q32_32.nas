@@ -28,7 +28,7 @@ mth_graph_energy_weighted_u8_q32_32:
   CMP r6,r8
   JMP[GT] @mth_energy_invalid
 
-  ; State preflight: unsigned top 15 bits must be 0 or 0x7FFF.
+  ; State preflight: signed Q16.16 in [-1,+1].
   ADD r8,r4,r0
   MOVI r9,256
 mth_energy_validate_x:
@@ -78,7 +78,7 @@ mth_energy_validate_offsets:
   CMP r10,r1
   JMP[NE] @mth_energy_invalid
 
-  ; Validate sorted unique non-self endpoints and U8 nonzero weights.
+  ; Validate sorted unique non-self endpoints and canonical nonzero U8 weights.
   MOVI r6,0
 mth_energy_validate_row:
   LD r1,r11,0
@@ -93,25 +93,25 @@ mth_energy_validate_edge:
   JMP[EQ] @mth_energy_next_validate_row
   LD r1,r11,1
   ADD r1,r1,r9
-  LD r11,r1,0
-  SHR r1,r11,8
+  LD r12,r1,0
+  SHR r1,r12,8
   CMP r1,r0
   JMP[NE] @mth_energy_invalid
   MOVI r1,256
-  CMP r11,r1
+  CMP r12,r1
   JMP[LT] @mth_energy_endpoint_ok
   JMP @mth_energy_invalid
 mth_energy_endpoint_ok:
-  CMP r11,r6
+  CMP r12,r6
   JMP[EQ] @mth_energy_invalid
   CMP r9,r7
   JMP[EQ] @mth_energy_first_neighbor
-  CMP r11,r10
+  CMP r12,r10
   JMP[GT] @mth_energy_sorted_neighbor
   JMP @mth_energy_invalid
 mth_energy_sorted_neighbor:
 mth_energy_first_neighbor:
-  ADD r10,r11,r0
+  ADD r10,r12,r0
   LD r1,r11,2
   ADD r1,r1,r9
   LD r1,r1,0
@@ -128,7 +128,152 @@ mth_energy_next_validate_row:
   CMP r6,r1
   JMP[LT] @mth_energy_validate_row
 
-  ; Reset long-lived base pointer after preflight (r11 was a temporary).
-  ADD r11,r7,r0
-  ; Saved scratch pointer was overwritten above: recover from caller argument
-  ; is impossible after clobber, so the scratch base is kept in r7 throughout.
+  ; Zero the U64 energy accumulator and begin exact edge reduction.
+  MOVI r8,0
+  ST r8,r11,10
+  ST r8,r11,11
+  MOVI r8,0
+  ST r8,r11,6
+mth_energy_apply_row:
+  LD r8,r11,6
+  LD r1,r11,0
+  ADD r1,r1,r8
+  LD r9,r1,0
+  ADD r1,r1,r13
+  LD r12,r1,0
+  ST r9,r11,7
+  ST r12,r11,8
+  LD r1,r11,3
+  ADD r1,r1,r8
+  LD r10,r1,0
+  ST r10,r11,9
+
+mth_energy_apply_edge:
+  LD r8,r11,7
+  LD r9,r11,8
+  CMP r8,r9
+  JMP[EQ] @mth_energy_next_apply_row
+  LD r1,r11,1
+  ADD r1,r1,r8
+  LD r10,r1,0
+  LD r6,r11,6
+  CMP r10,r6
+  JMP[GT] @mth_energy_process_edge
+  JMP @mth_energy_next_edge
+
+mth_energy_process_edge:
+  LD r1,r11,3
+  ADD r1,r1,r10
+  LD r3,r1,0
+  LD r4,r11,9
+  SUB r1,r4,r3
+  CMP r1,r0
+  JMP[GT] @mth_energy_abs_ready
+  JMP[EQ] @mth_energy_abs_ready
+  SUB r1,r0,r1
+mth_energy_abs_ready:
+  ; Exact square via unsigned 32x32 -> 64 shift/add.
+  MOVI r3,0
+  MOVI r4,0
+  MOVI r5,0
+  ADD r6,r1,r0
+  ADD r7,r1,r0
+  MOVI r8,32
+mth_energy_square_loop:
+  MOVI r10,1
+  BOOL.8 r9,r7,r10
+  CMP r9,r0
+  JMP[EQ] @mth_energy_square_shift
+  ADD r10,r4,r0
+  ADD r4,r4,r6
+  CMP r4,r10
+  JMP[LT] @mth_energy_square_carry
+  ADD r3,r3,r5
+  JMP @mth_energy_square_shift
+mth_energy_square_carry:
+  ADD r3,r3,r5
+  ADD r3,r3,r13
+mth_energy_square_shift:
+  SHR r9,r6,31
+  SHL r6,r6,1
+  SHL r5,r5,1
+  BOOL.14 r5,r5,r9
+  SHR r7,r7,1
+  SUB r8,r8,r13
+  CMP r8,r0
+  JMP[GT] @mth_energy_square_loop
+
+  ; Multiply the 64-bit square by the U8 edge weight (8 shift/add rounds).
+  LD r1,r11,2
+  LD r2,r11,7
+  ADD r1,r1,r2
+  LD r7,r1,0
+  MOVI r5,0
+  MOVI r6,0
+  MOVI r8,8
+mth_energy_weight_loop:
+  MOVI r10,1
+  BOOL.8 r9,r7,r10
+  CMP r9,r0
+  JMP[EQ] @mth_energy_weight_shift
+  ADD r10,r5,r0
+  ADD r5,r5,r4
+  CMP r5,r10
+  JMP[LT] @mth_energy_weight_carry
+  ADD r6,r6,r3
+  JMP @mth_energy_weight_shift
+mth_energy_weight_carry:
+  ADD r6,r6,r3
+  ADD r6,r6,r13
+mth_energy_weight_shift:
+  SHR r9,r4,31
+  SHL r4,r4,1
+  SHL r3,r3,1
+  BOOL.14 r3,r3,r9
+  SHR r7,r7,1
+  SUB r8,r8,r13
+  CMP r8,r0
+  JMP[GT] @mth_energy_weight_loop
+
+  ; Add weighted square into the U64 total.
+  LD r9,r11,10
+  LD r10,r11,11
+  ADD r1,r9,r0
+  ADD r9,r9,r5
+  CMP r9,r1
+  JMP[LT] @mth_energy_acc_carry
+  ADD r10,r10,r6
+  JMP @mth_energy_acc_store
+mth_energy_acc_carry:
+  ADD r10,r10,r13
+  ADD r10,r10,r6
+mth_energy_acc_store:
+  ST r9,r11,10
+  ST r10,r11,11
+
+mth_energy_next_edge:
+  LD r8,r11,7
+  ADD r8,r8,r13
+  ST r8,r11,7
+  JMP @mth_energy_apply_edge
+
+mth_energy_next_apply_row:
+  LD r8,r11,6
+  ADD r8,r8,r13
+  ST r8,r11,6
+  MOVI r9,256
+  CMP r8,r9
+  JMP[LT] @mth_energy_apply_row
+
+  ; Commit the scalar only after the complete exact reduction.
+  LD r1,r11,4
+  LD r8,r11,10
+  ST r8,r1,0
+  LD r9,r11,11
+  ST r9,r1,1
+  MOVI r1,1
+  RET
+
+mth_energy_invalid:
+  MOVI r1,0
+  RET
