@@ -30,9 +30,9 @@ logical routing, and state transitions are validated by the guest entry
 `n16_server_exchange`.
 
 The pool supports bounded concurrent sessions. Each VM serializes its own
-state transitions; different sessions can execute in parallel. At capacity,
-the pool evicts the least-recently-used idle VM and refuses admission if every
-VM is busy. The HTTP adapter passes the exact request bytes to this guest pool
+state transitions; different sessions can execute in parallel. At capacity, the pool refuses new sessions rather than evicting a live
+protocol state and erasing its replay cursor. A guest-validated CLOSE response
+signals the pool to destroy that session VM and reclaim its slot. The HTTP adapter passes the exact request bytes to this guest pool
 and returns the exact guest-built response bytes.
 
 Configure the runtime artifacts with:
