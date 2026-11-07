@@ -99,6 +99,8 @@
                 "math_relation_version",
                 "math_candidate",
                 "math_admission",
+                "math_nmp_packet",
+                "math_nmp_transition",
                 "math_mapping",
                 "math_preflight_cache",
                 "math_commit_intent"
@@ -136,6 +138,12 @@
                 },
                 "math_admission": {
                   "$ref": "#/$defs/math_admission"
+                },
+                "math_nmp_packet": {
+                  "$ref": "#/$defs/math_nmp_packet"
+                },
+                "math_nmp_transition": {
+                  "$ref": "#/$defs/math_nmp_transition"
                 },
                 "math_mapping": {
                   "$ref": "#/$defs/math_mapping"
@@ -192,7 +200,8 @@
         "mapping_object_type",
         "mapping_status",
         "commit_intent_state",
-        "event_type"
+        "event_type",
+        "nmp_state"
       ],
       "properties": {
         "math_leaf_kind": {
@@ -314,6 +323,29 @@
             "relation",
             "cache",
             "certificate"
+          ]
+        },
+        "nmp_state": {
+          "const": [
+            "CREATED",
+            "RESOLVED",
+            "CLASSIFIED",
+            "PROPOSED",
+            "PREFLIGHTED",
+            "QUEUED",
+            "EXECUTING",
+            "COMPLETED",
+            "COMMITTED",
+            "NULL",
+            "UNDEFINED",
+            "REJECTED",
+            "UNAVAILABLE",
+            "UNAUTHORIZED",
+            "STALE",
+            "FAILED",
+            "CANCELLED",
+            "INVALID",
+            "EXPERIMENTAL"
           ]
         }
       }
@@ -969,6 +1001,153 @@
           "const": [
             "verdict is a typed validity outcome, never a numerical answer",
             "preflight_digest may be empty only before a preflight binding exists"
+          ]
+        }
+      }
+    },
+    "math_nmp_packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "packet_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "packet_id",
+            "state",
+            "snapshot_id",
+            "candidate_id",
+            "packet_digest",
+            "packet_json",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "packet_id": "TEXT",
+            "state": "TEXT",
+            "snapshot_id": "TEXT",
+            "candidate_id": "TEXT",
+            "admission_id": "TEXT",
+            "plan_digest": "TEXT",
+            "packet_digest": "TEXT",
+            "packet_json": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "admission_id",
+            "plan_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "plan_digest",
+            "packet_digest"
+          ]
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "CREATED",
+            "RESOLVED",
+            "CLASSIFIED",
+            "PROPOSED",
+            "PREFLIGHTED",
+            "QUEUED",
+            "EXECUTING",
+            "COMPLETED",
+            "COMMITTED",
+            "NULL",
+            "UNDEFINED",
+            "REJECTED",
+            "UNAVAILABLE",
+            "UNAUTHORIZED",
+            "STALE",
+            "FAILED",
+            "CANCELLED",
+            "INVALID",
+            "EXPERIMENTAL"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "packet_json is the canonical nanrouter.nmp.v1 record and is immutable",
+            "identical packet content replay is idempotent; different content under the same packet_id is a conflict",
+            "state is the current-state index over the append-only transition chain",
+            "identity columns are immutable and DELETE is rejected by triggers",
+            "packets and transitions carry digests/references, never tokens, passwords, or credentials"
+          ]
+        }
+      }
+    },
+    "math_nmp_transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "transition_seq"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "transition_seq",
+            "packet_id",
+            "from_state",
+            "to_state",
+            "tick",
+            "transition_json"
+          ]
+        },
+        "columns": {
+          "const": {
+            "transition_seq": "INTEGER",
+            "packet_id": "TEXT",
+            "from_state": "TEXT",
+            "to_state": "TEXT",
+            "tick": "INTEGER",
+            "evidence_digest": "TEXT",
+            "transition_json": "TEXT"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "evidence_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "evidence_digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "transitions must chain from the stored current state and follow the closed NMP transition table",
+            "a seed transition may bootstrap an imported history before the first normal transition",
+            "evidence_digest is SHA-256 over the canonical evidence JSON when evidence is present",
+            "UPDATE and DELETE are rejected by triggers"
           ]
         }
       }

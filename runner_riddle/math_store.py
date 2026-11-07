@@ -28,6 +28,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import hashlib
 import json
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
@@ -85,6 +86,31 @@ class MathContentDigestError(MathPayloadError):
     """A leaf's declared ``content["digest"]`` is not the canonical content."""
 
 
+class MathNmpError(MathStoreError):
+    """An NMP packet or transition record is invalid."""
+
+
+class MathNmpTransitionError(MathNmpError):
+    """An NMP transition does not chain from the stored current state."""
+
+
+# Approximate secret-key detection for NMP evidence.  Digests and hashes of a
+# token/key are evidence, not bearer material, so ``*_digest``/``*_hash`` keys
+# are explicitly allowed.  The check is deliberately conservative: writing a
+# packet or transition with an obvious credential key fails closed.
+_SECRET_KEY_TOKENS = frozenset({
+    "password", "passwd", "passphrase", "passcode", "pass", "pwd",
+    "secret", "secrets", "token", "tokens", "credential", "credentials",
+    "authorization", "auth", "bearer", "apikey",
+})
+_SECRET_KEY_COMPACT = frozenset({
+    "apikey", "apisecret", "accesskey", "secretkey", "privatekey",
+    "signingkey", "encryptionkey", "clientsecret", "authtoken",
+    "accesstoken", "refreshtoken", "sessiontoken", "bearertoken",
+})
+_SECRET_SAFE_SUFFIXES = ("_digest", "_hash", "_sha256", "_hex")
+
+
 def _require_text(name: str, value: Any, *, maximum: int = 512) -> str:
     if not isinstance(value, str) or not value or len(value) > maximum:
         raise MathStoreError(
@@ -119,6 +145,52 @@ def _canonical(value: Any, name: str) -> str:
         return canonical_json(value)
     except MathObjectError as exc:
         raise MathStoreError(f"{name} is not canonical JSON") from exc
+
+
+def _nmp_module() -> Any:
+    """Import NMP lazily so the store has no import-time cycle with it."""
+    from . import nmp
+    return nmp
+
+
+def _is_secret_key(key: Any) -> bool:
+    text = key if isinstance(key, str) else str(key)
+    # Split snake_case, kebab-case, dotted, and camelCase names consistently.
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", text)
+    normalized = re.sub(r"[^a-z0-9]+", "_", spaced.strip().lower()).strip("_")
+    if not normalized or normalized.endswith(_SECRET_SAFE_SUFFIXES):
+        return False
+    parts = [part for part in normalized.split("_") if part]
+    if any(part in _SECRET_KEY_TOKENS for part in parts):
+        return True
+    return "".join(parts) in _SECRET_KEY_COMPACT
+
+
+def _find_secret_key(value: Any, path: str = "") -> str | None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            key_text = str(key)
+            child = f"{path}.{key_text}" if path else key_text
+            if _is_secret_key(key_text):
+                return child
+            found = _find_secret_key(item, child)
+            if found is not None:
+                return found
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            found = _find_secret_key(item, f"{path}[{index}]")
+            if found is not None:
+                return found
+    return None
+
+
+def _reject_secret_keys(value: Any, name: str) -> None:
+    found = _find_secret_key(value)
+    if found is not None:
+        raise MathNmpError(
+            f"{name} contains a secret-like key at {found!r}; "
+            "tokens, passwords, and credentials must stay out of NMP evidence"
+        )
 
 
 def _row_record(row: sqlite3.Row) -> dict[str, Any]:
@@ -325,6 +397,53 @@ CREATE TRIGGER IF NOT EXISTS math_admission_no_update
 CREATE TRIGGER IF NOT EXISTS math_admission_no_delete
     BEFORE DELETE ON math_admission
     BEGIN SELECT RAISE(ABORT, 'math_admission is immutable'); END;
+
+CREATE TABLE IF NOT EXISTS math_nmp_packet (
+    packet_id TEXT PRIMARY KEY,
+    state TEXT NOT NULL,
+    snapshot_id TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    admission_id TEXT,
+    plan_digest TEXT
+        CHECK(plan_digest IS NULL OR length(plan_digest) = 64),
+    packet_digest TEXT NOT NULL CHECK(length(packet_digest) = 64),
+    packet_json TEXT NOT NULL,
+    created_tick INTEGER NOT NULL CHECK(created_tick >= 0),
+    updated_tick INTEGER NOT NULL CHECK(updated_tick >= 0)
+);
+CREATE INDEX IF NOT EXISTS math_nmp_packet_state
+    ON math_nmp_packet(state, updated_tick, packet_id);
+CREATE TRIGGER IF NOT EXISTS math_nmp_packet_no_delete
+    BEFORE DELETE ON math_nmp_packet
+    BEGIN SELECT RAISE(ABORT, 'math_nmp_packet is durable evidence'); END;
+CREATE TRIGGER IF NOT EXISTS math_nmp_packet_identity_immutable
+    BEFORE UPDATE OF packet_id, snapshot_id, candidate_id, admission_id,
+        plan_digest, packet_digest, packet_json, created_tick
+    ON math_nmp_packet
+    BEGIN
+        SELECT RAISE(ABORT, 'math_nmp_packet identity is immutable');
+    END;
+
+CREATE TABLE IF NOT EXISTS math_nmp_transition (
+    transition_seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    packet_id TEXT NOT NULL,
+    from_state TEXT NOT NULL,
+    to_state TEXT NOT NULL,
+    tick INTEGER NOT NULL CHECK(tick >= 0),
+    evidence_digest TEXT
+        CHECK(evidence_digest IS NULL OR length(evidence_digest) = 64),
+    transition_json TEXT NOT NULL,
+    FOREIGN KEY(packet_id) REFERENCES math_nmp_packet(packet_id)
+        ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS math_nmp_transition_packet
+    ON math_nmp_transition(packet_id, transition_seq);
+CREATE TRIGGER IF NOT EXISTS math_nmp_transition_no_update
+    BEFORE UPDATE ON math_nmp_transition
+    BEGIN SELECT RAISE(ABORT, 'math_nmp_transition is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS math_nmp_transition_no_delete
+    BEFORE DELETE ON math_nmp_transition
+    BEGIN SELECT RAISE(ABORT, 'math_nmp_transition is append-only'); END;
 
 CREATE TABLE IF NOT EXISTS math_mapping (
     mapping_id TEXT PRIMARY KEY,
@@ -592,6 +711,12 @@ class MathStore:
                 "functions": self._table_count(self.mc0_path, "math_function"),
                 "rules": self._table_count(self.mc0_path, "math_rule"),
                 "mappings": self._table_count(self.mc0_path, "math_mapping"),
+                "nmp_packets": self._table_count(
+                    self.mc0_path, "math_nmp_packet"
+                ),
+                "nmp_transitions": self._table_count(
+                    self.mc0_path, "math_nmp_transition"
+                ),
                 "commit_intents": self._table_count(
                     self.mc0_path, "math_commit_intent"
                 ),
@@ -1886,6 +2011,422 @@ class MathStore:
             ) from exc
         return admission
 
+    # -- NMP packet/transition evidence -------------------------------------
+
+    @staticmethod
+    def _nmp_state(value: Any, name: str) -> str:
+        module = _nmp_module()
+        state = _require_text(name, value, maximum=32).upper()
+        if state not in module.ALL_STATES:
+            raise MathNmpError(f"{name} is not a known NMP state: {state!r}")
+        return state
+
+    def _canonical_nmp_packet(
+        self, packet: Any, *, operation: str = "put_nmp_packet",
+    ) -> tuple[Any, dict[str, Any]]:
+        """Return the rebuilt ``NmpPacket`` and its canonical document."""
+        module = _nmp_module()
+        if isinstance(packet, Mapping):
+            raw = dict(packet)
+        else:
+            to_dict = getattr(packet, "to_dict", None)
+            if not callable(to_dict):
+                raise MathNmpError(
+                    "packet must be an NmpPacket or a mapping with NMP fields"
+                )
+            raw = to_dict()
+            if not isinstance(raw, Mapping):
+                raise MathNmpError("packet to_dict() did not return a mapping")
+            raw = dict(raw)
+        _reject_secret_keys(raw, f"{operation} packet")
+        try:
+            rebuilt = module.NmpPacket.from_dict(raw)
+        except (module.NmpError, TypeError) as exc:
+            raise MathNmpError(f"invalid NMP packet: {exc}") from exc
+        document = rebuilt.to_dict()
+        _reject_secret_keys(document, f"{operation} packet")
+        return rebuilt, document
+
+    def _decode_nmp_packet_row(self, row: sqlite3.Row) -> dict[str, Any]:
+        record = _row_record(row)
+        packet_json = str(row["packet_json"])
+        if sha256_text(packet_json) != str(row["packet_digest"]):
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} digest mismatch"
+            )
+        document = record.get("packet")
+        if not isinstance(document, Mapping):
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} has no canonical JSON"
+            )
+        try:
+            stored_json = _canonical(document, "stored NMP packet")
+        except MathStoreError as exc:
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} is not canonical"
+            ) from exc
+        if stored_json != packet_json:
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} is not canonical"
+            )
+        module = _nmp_module()
+        try:
+            rebuilt = module.NmpPacket.from_dict(document)
+            canonical = rebuilt.to_dict()
+        except (module.NmpError, TypeError, ValueError) as exc:
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} is invalid"
+            ) from exc
+        if _canonical(canonical, "stored NMP packet") != packet_json:
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} does not round-trip"
+            )
+        for key in ("packet_id", "snapshot_id", "candidate_id"):
+            if document.get(key) != record[key]:
+                raise MathReferenceError(
+                    f"NMP packet {record.get('packet_id')!r} {key} column "
+                    "does not match its canonical JSON"
+                )
+        for key in ("admission_id", "plan_digest"):
+            if document.get(key) != record[key]:
+                raise MathReferenceError(
+                    f"NMP packet {record.get('packet_id')!r} {key} column "
+                    "does not match its canonical JSON"
+                )
+        if str(record["state"]) not in module.ALL_STATES:
+            raise MathReferenceError(
+                f"NMP packet {record.get('packet_id')!r} has an unknown state"
+            )
+        return record
+
+    def _decode_nmp_transition_row(self, row: sqlite3.Row) -> dict[str, Any]:
+        record = _row_record(row)
+        transition_json = str(row["transition_json"])
+        transition = record.get("transition")
+        if not isinstance(transition, Mapping):
+            raise MathReferenceError(
+                f"NMP transition {record.get('transition_seq')!r} has no "
+                "canonical JSON"
+            )
+        try:
+            stored_json = _canonical(transition, "stored NMP transition")
+        except MathStoreError as exc:
+            raise MathReferenceError(
+                f"NMP transition {record.get('transition_seq')!r} is not "
+                "canonical"
+            ) from exc
+        if stored_json != transition_json:
+            raise MathReferenceError(
+                f"NMP transition {record.get('transition_seq')!r} is not "
+                "canonical"
+            )
+        for key in ("packet_id", "from_state", "to_state", "tick"):
+            if transition.get(key) != record[key]:
+                raise MathReferenceError(
+                    f"NMP transition {record.get('transition_seq')!r} {key} "
+                    "column does not match its canonical JSON"
+                )
+        evidence = transition.get("evidence")
+        digest = record["evidence_digest"]
+        if evidence is None:
+            if digest is not None:
+                raise MathReferenceError(
+                    f"NMP transition {record.get('transition_seq')!r} has an "
+                    "unexpected evidence digest"
+                )
+        else:
+            if digest is None:
+                raise MathReferenceError(
+                    f"NMP transition {record.get('transition_seq')!r} has no "
+                    "evidence digest"
+                )
+            try:
+                evidence_json = _canonical(
+                    evidence, "stored NMP transition evidence"
+                )
+            except MathStoreError as exc:
+                raise MathReferenceError(
+                    f"NMP transition {record.get('transition_seq')!r} "
+                    "evidence is not canonical"
+                ) from exc
+            if sha256_text(evidence_json) != str(digest):
+                raise MathReferenceError(
+                    f"NMP transition {record.get('transition_seq')!r} "
+                    "evidence digest mismatch"
+                )
+        if transition.get("evidence_digest") != digest:
+            raise MathReferenceError(
+                f"NMP transition {record.get('transition_seq')!r} evidence "
+                "digest column does not match its canonical JSON"
+            )
+        module = _nmp_module()
+        if (str(record["from_state"]) not in module.ALL_STATES
+                or str(record["to_state"]) not in module.ALL_STATES):
+            raise MathReferenceError(
+                f"NMP transition {record.get('transition_seq')!r} has an "
+                "unknown state"
+            )
+        return record
+
+    def put_nmp_packet(self, packet_or_mapping: Any,
+                       tick: int = 0) -> dict[str, Any]:
+        """Persist one canonical NMP packet record.
+
+        The packet document is immutable.  A byte-identical replay returns the
+        existing row; the same ``packet_id`` with different content is a
+        conflict.  Current state advances only through
+        :meth:`append_nmp_transition`.
+        """
+        _require_int("tick", tick)
+        _packet, document = self._canonical_nmp_packet(packet_or_mapping)
+        packet_json = _canonical(document, "NMP packet")
+        packet_digest = sha256_text(packet_json)
+        state = str(document["state"])
+        snapshot_id = str(document["snapshot_id"])
+        candidate_id = str(document["candidate_id"])
+        admission_id = document.get("admission_id")
+        plan_digest = document.get("plan_digest")
+        if admission_id is not None:
+            admission_id = _require_text("admission_id", admission_id,
+                                         maximum=512)
+        if plan_digest is not None:
+            plan_digest = _require_digest("plan_digest", plan_digest)
+
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_nmp_packet WHERE packet_id=?",
+                (str(document["packet_id"]),),
+            ).fetchone()
+            if row is not None:
+                if (str(row["packet_json"]) != packet_json
+                        or str(row["packet_digest"]) != packet_digest):
+                    raise MathConflictError(
+                        f"NMP packet {document['packet_id']!r} already exists "
+                        "with different content"
+                    )
+                record = _row_record(row)
+                record["reused"] = True
+                return record
+            db.execute(
+                "INSERT INTO math_nmp_packet(packet_id, state, snapshot_id, "
+                "candidate_id, admission_id, plan_digest, packet_digest, "
+                "packet_json, created_tick, updated_tick) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (str(document["packet_id"]), state, snapshot_id, candidate_id,
+                 admission_id, plan_digest, packet_digest, packet_json, tick,
+                 tick),
+            )
+            row = db.execute(
+                "SELECT * FROM math_nmp_packet WHERE packet_id=?",
+                (str(document["packet_id"]),),
+            ).fetchone()
+        record = _row_record(row)
+        record["reused"] = False
+        return record
+
+    def get_nmp_packet(self, packet_id: str) -> dict[str, Any]:
+        """Load one packet and verify its digest and transition chain."""
+        _require_text("packet_id", packet_id, maximum=512)
+        with self._connect(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_nmp_packet WHERE packet_id=?",
+                (packet_id,),
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(f"unknown NMP packet {packet_id!r}")
+            transition_rows = db.execute(
+                "SELECT * FROM math_nmp_transition WHERE packet_id=? "
+                "ORDER BY transition_seq ASC",
+                (packet_id,),
+            ).fetchall()
+        record = self._decode_nmp_packet_row(row)
+        previous: str | None = None
+        for transition_row in transition_rows:
+            transition = self._decode_nmp_transition_row(transition_row)
+            if previous is not None and transition["from_state"] != previous:
+                raise MathReferenceError(
+                    f"NMP packet {packet_id!r} transition chain is broken"
+                )
+            previous = str(transition["to_state"])
+        if previous is None:
+            if str(record["state"]) != str(record["packet"]["state"]):
+                raise MathReferenceError(
+                    f"NMP packet {packet_id!r} state does not match its record"
+                )
+        elif previous != str(record["state"]):
+            raise MathReferenceError(
+                f"NMP packet {packet_id!r} current state does not match its "
+                "transition chain"
+            )
+        return record
+
+    def list_nmp_packets(self, *, state: str | None = None,
+                         limit: int = 1024) -> list[dict[str, Any]]:
+        """List durable NMP packets in creation order."""
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathStoreError("limit must be <= 65536")
+        query = "SELECT * FROM math_nmp_packet"
+        args: list[Any] = []
+        if state is not None:
+            query += " WHERE state=?"
+            args.append(self._nmp_state(state, "state"))
+        query += " ORDER BY created_tick ASC, packet_id ASC LIMIT ?"
+        args.append(limit)
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(query, args).fetchall()
+        return [self._decode_nmp_packet_row(row) for row in rows]
+
+    def list_nmp_transitions(self, packet_id: str, *,
+                             limit: int = 65536) -> list[dict[str, Any]]:
+        """List a packet's append-only transition evidence in sequence order."""
+        _require_text("packet_id", packet_id, maximum=512)
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathStoreError("limit must be <= 65536")
+        with self._connect(self.mc0_path) as db:
+            packet = db.execute(
+                "SELECT packet_id FROM math_nmp_packet WHERE packet_id=?",
+                (packet_id,),
+            ).fetchone()
+            if packet is None:
+                raise MathReferenceError(
+                    f"unknown NMP packet {packet_id!r}"
+                )
+            rows = db.execute(
+                "SELECT * FROM math_nmp_transition WHERE packet_id=? "
+                "ORDER BY transition_seq ASC LIMIT ?",
+                (packet_id, limit),
+            ).fetchall()
+        records: list[dict[str, Any]] = []
+        previous: str | None = None
+        for row in rows:
+            record = self._decode_nmp_transition_row(row)
+            if previous is not None and record["from_state"] != previous:
+                raise MathReferenceError(
+                    f"NMP packet {packet_id!r} transition chain is broken"
+                )
+            previous = str(record["to_state"])
+            records.append(record)
+        return records
+
+    def latest_nmp_transition(self, packet_id: str) -> dict[str, Any] | None:
+        """Return the newest transition for a packet, or ``None``."""
+        _require_text("packet_id", packet_id, maximum=512)
+        with self._connect(self.mc0_path) as db:
+            packet = db.execute(
+                "SELECT packet_id FROM math_nmp_packet WHERE packet_id=?",
+                (packet_id,),
+            ).fetchone()
+            if packet is None:
+                raise MathReferenceError(
+                    f"unknown NMP packet {packet_id!r}"
+                )
+            row = db.execute(
+                "SELECT * FROM math_nmp_transition WHERE packet_id=? "
+                "ORDER BY transition_seq DESC LIMIT 1",
+                (packet_id,),
+            ).fetchone()
+        return None if row is None else self._decode_nmp_transition_row(row)
+
+    def append_nmp_transition(self, packet_id: str, from_state: str,
+                              to_state: str, *, tick: int = 0,
+                              evidence: Any = None,
+                              seed: bool = False) -> dict[str, Any]:
+        """Append one transition and advance the packet's current-state index.
+
+        Without ``seed`` the transition must leave the stored current state and
+        follow NMP's closed transition table.  ``seed=True`` is the explicit
+        bootstrap path for importing an existing packet history; it may start
+        from another state but is accepted only before the first transition.
+        Transitions are append-only and always validated against NMP.
+        """
+        _require_text("packet_id", packet_id, maximum=512)
+        _require_int("tick", tick)
+        if not isinstance(seed, bool):
+            raise MathStoreError("seed must be a boolean")
+        module = _nmp_module()
+        source = self._nmp_state(from_state, "from_state")
+        target = self._nmp_state(to_state, "to_state")
+        if source == target:
+            raise MathNmpTransitionError(
+                f"NMP transition {source} -> {target} is not a state change"
+            )
+        allowed = module.TRANSITIONS.get(source, frozenset())
+        if target not in allowed:
+            raise MathNmpTransitionError(
+                f"invalid NMP transition {source} -> {target} "
+                f"(allowed: {sorted(allowed)})"
+            )
+        if evidence is not None:
+            _reject_secret_keys(evidence, "NMP transition evidence")
+        evidence_json = (
+            None if evidence is None else _canonical(
+                evidence, "NMP transition evidence"
+            )
+        )
+        evidence_digest = (
+            None if evidence_json is None else sha256_text(evidence_json)
+        )
+        transition = {
+            "packet_id": packet_id,
+            "from_state": source,
+            "to_state": target,
+            "tick": tick,
+            "evidence": None if evidence_json is None else json.loads(
+                evidence_json
+            ),
+            "evidence_digest": evidence_digest,
+        }
+        _reject_secret_keys(transition, "NMP transition")
+        transition_json = _canonical(transition, "NMP transition")
+
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_nmp_packet WHERE packet_id=?",
+                (packet_id,),
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(f"unknown NMP packet {packet_id!r}")
+            current = str(row["state"])
+            if current not in module.ALL_STATES:
+                raise MathReferenceError(
+                    f"NMP packet {packet_id!r} has an unknown state"
+                )
+            if seed:
+                count = int(db.execute(
+                    "SELECT COUNT(*) FROM math_nmp_transition WHERE packet_id=?",
+                    (packet_id,),
+                ).fetchone()[0])
+                if count:
+                    raise MathNmpTransitionError(
+                        f"NMP packet {packet_id!r} already has transitions; "
+                        "seed is only valid before the first transition"
+                    )
+            elif source != current:
+                raise MathNmpTransitionError(
+                    f"NMP packet {packet_id!r} is at {current}, not {source}; "
+                    "transition would skip or reorder the chain"
+                )
+            db.execute(
+                "INSERT INTO math_nmp_transition(packet_id, from_state, "
+                "to_state, tick, evidence_digest, transition_json) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (packet_id, source, target, tick, evidence_digest,
+                 transition_json),
+            )
+            db.execute(
+                "UPDATE math_nmp_packet SET state=?, updated_tick=? "
+                "WHERE packet_id=?",
+                (target, tick, packet_id),
+            )
+            transition_row = db.execute(
+                "SELECT * FROM math_nmp_transition WHERE packet_id=? "
+                "ORDER BY transition_seq DESC LIMIT 1",
+                (packet_id,),
+            ).fetchone()
+        return _row_record(transition_row)
+
     # -- mappings ------------------------------------------------------------
 
     def get_mapping(self, mapping_id: str) -> dict[str, Any]:
@@ -3063,6 +3604,12 @@ class MathStore:
                 "math_admission": self._table_count(
                     self.mc0_path, "math_admission"
                 ),
+                "math_nmp_packet": self._table_count(
+                    self.mc0_path, "math_nmp_packet"
+                ),
+                "math_nmp_transition": self._table_count(
+                    self.mc0_path, "math_nmp_transition"
+                ),
                 "math_mapping": self._table_count(
                     self.mc0_path, "math_mapping"
                 ),
@@ -3179,6 +3726,7 @@ __all__ = [
     "COMMIT_INTENT_STATES", "DEFAULT_CHUNK_BYTES",
     "DEFAULT_MAX_PAYLOAD_BYTES", "EVENT_TYPES", "MAPPING_OBJECT_TYPES",
     "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA", "MathCommitError",
-    "MathConflictError", "MathPayloadError", "MathReferenceError",
+    "MathConflictError", "MathNmpError", "MathNmpTransitionError",
+    "MathPayloadError", "MathReferenceError",
     "MathSchemaError", "MathStore", "MathStoreError", "StaleGenerationError",
 ]
