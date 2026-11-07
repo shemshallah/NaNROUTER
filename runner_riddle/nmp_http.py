@@ -113,10 +113,8 @@ def _validate_execution_evidence(
         value = evidence.get(field)
         if not isinstance(value, str) or len(value) != 64:
             raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex")
-        try:
-            int(value, 16)
-        except ValueError as exc:
-            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex") from exc
+        if any(char not in "0123456789abcdefABCDEF" for char in value):
+            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex")
     for field, expected_digest in (
         ("guest_image_digest", expected_image_digest),
         ("guest_source_digest", expected_source_digest),
@@ -124,10 +122,8 @@ def _validate_execution_evidence(
         if expected_digest is not None:
             if not isinstance(expected_digest, str) or len(expected_digest) != 64:
                 raise NmpHttpError(f"server-pinned {field} is invalid")
-            try:
-                int(expected_digest, 16)
-            except ValueError as exc:
-                raise NmpHttpError(f"server-pinned {field} is invalid") from exc
+            if any(char not in "0123456789abcdefABCDEF" for char in expected_digest):
+                raise NmpHttpError(f"server-pinned {field} is invalid")
             if evidence[field].lower() != expected_digest.lower():
                 raise NmpHttpError(f"kernel execution {field} differs from server-pinned guest")
     if evidence["output_digest"].lower() != result_digest.lower():
@@ -530,10 +526,8 @@ class NmpHttpAdapter:
             raise NmpHttpError("completion does not match the packet's active lease")
         if not isinstance(result_digest, str) or len(result_digest) != 64:
             raise NmpHttpError("result_digest must be a SHA-256 hex digest")
-        try:
-            int(result_digest, 16)
-        except ValueError as exc:
-            raise NmpHttpError("result_digest must be a SHA-256 hex digest") from exc
+        if any(char not in "0123456789abcdefABCDEF" for char in result_digest):
+            raise NmpHttpError("result_digest must be a SHA-256 hex digest")
 
         # Re-evaluate the gate against the concrete current lease before the
         # durable completion write. Native packets additionally verify that
