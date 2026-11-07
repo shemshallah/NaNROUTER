@@ -1263,7 +1263,7 @@ class NmpPacket:
         ring_incarnation: str,
     ) -> "NmpPacket":
         """Bind the stored native receipt to one active worker lease and ring epoch."""
-        if not self.metadata.get("native_preflight_required"):
+        if not _packet_requires_native_receipt(self):
             raise NmpTransitionError("packet has no native preflight receipt requirement")
         receipt_data = self.evidence.get("native_preflight_receipt")
         if not isinstance(receipt_data, Mapping):
@@ -1351,7 +1351,7 @@ class NmpPacket:
             ))
         evidence = {"lease_gate": decision.to_dict()}
         transition_fields: dict[str, Any] = {}
-        if self.metadata.get("native_preflight_required"):
+        if _packet_requires_native_receipt(self):
             stored = self.evidence.get("native_preflight_lease_binding")
             if not isinstance(stored, Mapping):
                 raise NmpGateError(NmpGateDecision(
@@ -1402,6 +1402,10 @@ class NmpPacket:
                 stored_binding.receipt_digest != receipt_obj.receipt_digest
                 or stored_binding.output_generation != receipt_obj.output_generation
                 or stored_binding.cancel_epoch != self.cancel_epoch
+                or stored_binding.ring_incarnation != self.ring_incarnation
+                or stored_binding.ring_epoch != self.ring_epoch
+                or (self.job_id is not None and stored_binding.job_id != self.job_id)
+                or (self.lease_epoch is not None and stored_binding.lease_epoch != self.lease_epoch)
             ):
                 raise NmpGateError(NmpGateDecision(
                     packet_id=self.packet_id,
@@ -2242,9 +2246,16 @@ def _is_cancelled_job(job: Any) -> bool:
     return "cancel" in error
 
 
+def _packet_requires_native_receipt(packet: NmpPacket) -> bool:
+    return bool(
+        packet.metadata.get("native_preflight_required")
+        or "native_preflight_receipt" in packet.evidence
+    )
+
+
 def _native_preflight_receipt_gate(packet: NmpPacket) -> tuple[bool, str | None]:
     """Validate a packet-bound native receipt when the packet requires one."""
-    if not packet.metadata.get("native_preflight_required"):
+    if not _packet_requires_native_receipt(packet):
         return True, None
     receipt_data = packet.evidence.get("native_preflight_receipt")
     if not isinstance(receipt_data, Mapping):
