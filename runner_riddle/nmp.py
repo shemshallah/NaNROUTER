@@ -275,6 +275,13 @@ def _row_get(row: Any, key: str, default: Any = None) -> Any:
         return default
     if isinstance(row, Mapping):
         return row.get(key, default)
+    keys = getattr(row, "keys", None)
+    if callable(keys):
+        try:
+            if key in keys():
+                return row[key]
+        except (KeyError, TypeError):
+            pass
     return getattr(row, key, default)
 
 
@@ -283,6 +290,12 @@ def _row_dict(row: Any) -> dict[str, Any]:
         return {}
     if isinstance(row, Mapping):
         return dict(row)
+    keys = getattr(row, "keys", None)
+    if callable(keys):
+        try:
+            return {str(key): row[key] for key in keys()}
+        except (KeyError, TypeError):
+            pass
     to_dict = getattr(row, "to_dict", None)
     if callable(to_dict):
         try:
@@ -309,6 +322,18 @@ def _payload(job: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, Mapping) else {}
     raw = _row_get(job, "payload")
     return dict(raw) if isinstance(raw, Mapping) else {}
+
+
+def _job_value(job: Any, payload: Mapping[str, Any], *keys: str) -> Any:
+    """Read a binding from a row field first, then from its payload."""
+    for key in keys:
+        value = _row_get(job, key)
+        if value is not None:
+            return value
+    for key in keys:
+        if payload.get(key) is not None:
+            return payload[key]
+    return None
 
 
 def is_valid_lane(lane_id: Any) -> bool:
@@ -1809,7 +1834,7 @@ def _admission_gate(
 ) -> tuple[bool, str | None, str | None, dict[str, Any]]:
     """Check admission and preflight evidence.  Returns (ok, failure, reason, data)."""
     external_admission = _admission_fields(admission)
-    verdict, admission_data = _admission_verdict(admission)
+    verdict, _admission_data = _admission_verdict(admission)
     if verdict is None:
         verdict = packet.admission_verdict
     # The packet's own bound evidence cannot be overridden by a caller note.
@@ -1934,21 +1959,25 @@ def _job_gate(
         if job_generation != packet.base_generation:
             return False, STALE, "job generation does not match the packet snapshot"
     payload = _payload(job)
-    for key in ("snapshot_id", "nmp_snapshot_id", "math_snapshot_id"):
-        if payload.get(key) is not None and str(payload[key]) != packet.snapshot_id:
+    for candidate_snapshot in (
+        _job_value(job, payload, "snapshot_id", "nmp_snapshot_id", "math_snapshot_id"),
+    ):
+        if candidate_snapshot is not None and str(candidate_snapshot) != packet.snapshot_id:
             return False, STALE, "job payload belongs to another snapshot"
-    if payload.get("ruleset_snapshot_id") is not None and packet.ruleset_snapshot_id and (
-        str(payload["ruleset_snapshot_id"]) != packet.ruleset_snapshot_id
+    job_ruleset = _job_value(job, payload, "ruleset_snapshot_id")
+    if job_ruleset is not None and packet.ruleset_snapshot_id and (
+        str(job_ruleset) != packet.ruleset_snapshot_id
     ):
         return False, STALE, "job payload belongs to another ruleset snapshot"
-    if payload.get("preflight_digest") is not None and packet.preflight_digest:
+    job_preflight = _job_value(job, payload, "preflight_digest")
+    if job_preflight is not None and packet.preflight_digest:
         try:
-            if normalize_digest(payload["preflight_digest"], "preflight_digest") != packet.preflight_digest:
+            if normalize_digest(job_preflight, "preflight_digest") != packet.preflight_digest:
                 return False, STALE, "job preflight digest does not match the packet"
         except NmpValidationError:
             return False, STALE, "job preflight digest is malformed"
-    payload_ring = payload.get("ring_incarnation")
-    payload_epoch = payload.get("ring_epoch")
+    payload_ring = _job_value(job, payload, "ring_incarnation")
+    payload_epoch = _job_value(job, payload, "ring_epoch")
     if payload_ring is not None and packet.ring_incarnation and (
         str(payload_ring) != packet.ring_incarnation
     ):
@@ -2836,21 +2865,25 @@ def project_packet(
 
     payload = _payload(job)
     evidence["payload"] = payload
-    for key in ("snapshot_id", "nmp_snapshot_id", "math_snapshot_id"):
-        if payload.get(key) is not None and str(payload[key]) != packet.snapshot_id:
-            return projection(STALE, False, "job payload belongs to another snapshot")
-    if payload.get("ruleset_snapshot_id") is not None and packet.ruleset_snapshot_id and (
-        str(payload["ruleset_snapshot_id"]) != packet.ruleset_snapshot_id
+    job_snapshot = _job_value(
+        job, payload, "snapshot_id", "nmp_snapshot_id", "math_snapshot_id",
+    )
+    if job_snapshot is not None and str(job_snapshot) != packet.snapshot_id:
+        return projection(STALE, False, "job payload belongs to another snapshot")
+    job_ruleset = _job_value(job, payload, "ruleset_snapshot_id")
+    if job_ruleset is not None and packet.ruleset_snapshot_id and (
+        str(job_ruleset) != packet.ruleset_snapshot_id
     ):
         return projection(STALE, False, "job payload belongs to another ruleset snapshot")
-    if payload.get("preflight_digest") is not None and packet.preflight_digest:
+    job_preflight = _job_value(job, payload, "preflight_digest")
+    if job_preflight is not None and packet.preflight_digest:
         try:
-            if normalize_digest(payload["preflight_digest"], "preflight_digest") != packet.preflight_digest:
+            if normalize_digest(job_preflight, "preflight_digest") != packet.preflight_digest:
                 return projection(STALE, False, "job preflight digest does not match the packet")
         except NmpValidationError:
             return projection(STALE, False, "job preflight digest is malformed")
-    payload_ring = payload.get("ring_incarnation")
-    payload_epoch = payload.get("ring_epoch")
+    payload_ring = _job_value(job, payload, "ring_incarnation")
+    payload_epoch = _job_value(job, payload, "ring_epoch")
     if payload_ring is not None and packet.ring_incarnation and (
         str(payload_ring) != packet.ring_incarnation
     ):
@@ -2859,7 +2892,7 @@ def project_packet(
         payload_epoch != packet.ring_epoch
     ):
         return projection(STALE, False, "job ring epoch does not match the packet")
-    payload_cancel = payload.get("cancel_epoch")
+    payload_cancel = _job_value(job, payload, "cancel_epoch")
     if payload_cancel is not None and isinstance(payload_cancel, int) and (
         payload_cancel > packet.cancel_epoch
     ):

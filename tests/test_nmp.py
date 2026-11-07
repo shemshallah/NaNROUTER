@@ -684,6 +684,12 @@ class ProjectionTests(unittest.TestCase):
         )
         self.assertEqual(other_snapshot.state, nmp.STALE)
 
+        direct_snapshot = nmp.project_packet(
+            packet,
+            job=self._job("leased", snapshot_id=OTHER_SNAP),
+        )
+        self.assertEqual(direct_snapshot.state, nmp.STALE)
+
     def test_projection_maps_failed_and_cancelled_jobs_distinctly(self):
         packet = make_packet(state=nmp.EXECUTING)
         failed = nmp.project_packet(

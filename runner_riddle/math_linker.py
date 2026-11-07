@@ -101,6 +101,15 @@ class MathRef:
     content_digest: str | None = None
     via_alias: str | None = None
 
+    def __getitem__(self, key: str) -> Any:
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_dict().get(key, default)
+
+    def as_dict(self) -> dict[str, Any]:
+        return self.to_dict()
+
     def to_dict(self) -> dict[str, Any]:
         document: dict[str, Any] = {
             "leaf_id": self.leaf_id,
@@ -378,6 +387,18 @@ class LinkSnapshot:
     declared_capabilities: tuple[dict[str, Any], ...] = ()
     implementation_capabilities: tuple[dict[str, Any], ...] = ()
 
+    @property
+    def function_snapshot_id(self) -> str:
+        return self.function_snapshot_digest
+
+    @property
+    def rule_snapshot_id(self) -> str:
+        return self.rule_snapshot_digest
+
+    @property
+    def capability_set_digest(self) -> str:
+        return self.capability_digest
+
     def __getitem__(self, key: str) -> Any:
         return self.to_dict()[key]
 
@@ -475,6 +496,14 @@ class LinkResult:
     @property
     def snapshot_id(self) -> str:
         return self.snapshot.snapshot_id
+
+    @property
+    def rule_snapshot_id(self) -> str:
+        return self.snapshot.rule_snapshot_digest
+
+    @property
+    def capability_set_digest(self) -> str:
+        return self.snapshot.capability_digest
 
     @property
     def authorized(self) -> bool:
@@ -609,6 +638,10 @@ def parse_ref(value: Any, *, aliases: Mapping[str, Any] | None = None,
             return MathRef(leaf.leaf_id, leaf.version, leaf.content_digest)
         if isinstance(value.get("ref"), (str, MathRef, MathLeaf)):
             return parse_ref(value["ref"], aliases=aliases, _depth=_depth + 1)
+        if "leaf_id" not in value and "id" not in value and (
+            "offset" in value or "address_offset" in value
+        ):
+            raise LinkError("raw_offset", "numeric offsets are not mathematical leaves")
         leaf_id = value.get("leaf_id", value.get("id"))
         if isinstance(leaf_id, bool) or isinstance(leaf_id, (int, float)):
             raise LinkError("raw_offset", "numeric offsets are not mathematical leaves")
@@ -641,6 +674,12 @@ def parse_ref(value: Any, *, aliases: Mapping[str, Any] | None = None,
     text = value.strip()
     if not text:
         raise LinkError("invalid_reference", "empty reference")
+    lowered = text.lower()
+    if lowered.startswith("nan://"):
+        raise LinkError(
+            "address_context_mismatch",
+            "nan:// is a routing grammar; use a pinned math leaf reference",
+        )
     if aliases is not None:
         if text in aliases:
             bound = parse_ref(aliases[text], aliases=aliases, _depth=_depth + 1)
@@ -649,12 +688,6 @@ def parse_ref(value: Any, *, aliases: Mapping[str, Any] | None = None,
             bound = parse_ref(aliases[text.upper()], aliases=aliases, _depth=_depth + 1)
             return replace(bound, via_alias=text)
 
-    lowered = text.lower()
-    if lowered.startswith("nan://"):
-        raise LinkError(
-            "address_context_mismatch",
-            "nan:// is a routing grammar; use a pinned math leaf reference",
-        )
     if lowered.startswith("math://"):
         return _parse_math_uri(text)
     if _HW_RE.match(text):
@@ -786,7 +819,9 @@ def _resolve_leaf(operand: Any, ref: MathRef, leaves: Any) -> MathLeaf:
     if isinstance(operand, Mapping):
         if isinstance(operand.get("leaf"), MathLeaf):
             return operand["leaf"]
-        if operand.get("kind") is not None and operand.get("type") is not None:
+        if operand.get("kind") is not None and (
+            operand.get("type") is not None or operand.get("schema") == LEAF_SCHEMA
+        ):
             return _leaf_from_mapping(_leaf_document_for_ref(operand, ref))
     value: Any = None
     if leaves is None:
