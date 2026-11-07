@@ -10,7 +10,7 @@ The owner reports that GLT is increasing the guest page limit to **1 MiB**:
 1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
 ```
 
-The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical CI run 42395852453 executed all 59 fixtures, including images above 65,536 words, through the text loader; GLT-enforced 1 MiB page-limit loading remains a separate pending gate.
+The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical CI run 42396090387 executed all 59 fixtures, including images above 65,536 words, through the text loader; GLT-enforced 1 MiB page-limit loading remains a separate pending gate.
 
 ## 2. What changes
 
