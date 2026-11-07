@@ -94,7 +94,7 @@ GitHub Actions run 42389738332: 87/87 steps passed (42-fixture set)
 | R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
-| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); default MTH guest budget raised to 1 MiB (131,072 words); full-U reference requires 73,990 words and is now dispatchable on 1 MiB runners, but not 512 KiB runners; next: page-window orchestration and full 256-tile atomic publication, rank-R sum, matrix-free product; K256 closed-form 256×256 done |
+| R6 | bounded K16 accumulator native_verified (1,542 words) plus full 16-slice guest driver native_verified (2,224,303 steps; 17,170-word full working set); runner budgets configurable above the 1 MiB default (2 MiB admission test passes); full-U reference fits 1 MiB but not 512 KiB; next: page-window retrieval/staging, 256-tile scheduling, immutable digest checks, dense-reference comparison, cancellation and atomic publication; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep driver, held-out creativity/association experiment; two-level spectrum and phase metric done |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
 | R9 | frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE and 256-block residual done |
