@@ -86,7 +86,39 @@ mth_link_pf_main:
   SHL r1,r1,2
   CALL @nmr_expr_resolve
   CMP r8,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[EQ] @mth_link_pf_resolve_ok
+  MOVI r6,1
+  CMP r8,r6
+  JMP[EQ] @mth_link_pf_resolve_s1
+  MOVI r6,2
+  CMP r8,r6
+  JMP[EQ] @mth_link_pf_resolve_s2
+  MOVI r6,3
+  CMP r8,r6
+  JMP[EQ] @mth_link_pf_resolve_s3
+  MOVI r6,4
+  CMP r8,r6
+  JMP[EQ] @mth_link_pf_resolve_s4
+  MOVI r1,@mth_link_pf_resolve_other
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_resolve_s1:
+  MOVI r1,@mth_link_pf_resolve_1
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_resolve_s2:
+  MOVI r1,@mth_link_pf_resolve_2
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_resolve_s3:
+  MOVI r1,@mth_link_pf_resolve_3
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_resolve_s4:
+  MOVI r1,@mth_link_pf_resolve_4
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_resolve_ok:
   MOVI r6,123
   CMP r1,r6
   JMP[NE] @mth_link_pf_fail
@@ -199,6 +231,17 @@ mth_link_pf_puts_byte:
   JMP[NE] @mth_link_pf_puts_byte
   ADD r1,r1,r13
   JMP @mth_link_pf_puts_word
+
+mth_link_pf_resolve_1:
+.str "MTH RESOLVE STATUS 1\\n"
+mth_link_pf_resolve_2:
+.str "MTH RESOLVE STATUS 2\\n"
+mth_link_pf_resolve_3:
+.str "MTH RESOLVE STATUS 3\\n"
+mth_link_pf_resolve_4:
+.str "MTH RESOLVE STATUS 4\\n"
+mth_link_pf_resolve_other:
+.str "MTH RESOLVE STATUS OTHER\\n"
 
 .org 30000
 mth_link_pf_left:
