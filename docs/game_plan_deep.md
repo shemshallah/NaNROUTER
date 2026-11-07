@@ -1903,8 +1903,10 @@ full product operator matrix-free.
 
 The 16×16 fixture uses L=2I and verifies the complete tile oracle Y=4U.
 The ABI, fixture, and canonical CI workflow entry are committed on the
-implementation branch. Status remains SOURCE-WRITTEN until canonical
-NaN16 assembly and execution pass. Next after that gate: implement a
+implementation branch. Canonical NaN16 CI run 201 assembled and executed
+the L=2I fixture successfully (2,301,554 guest steps), verifying all 256
+cells in the first tile. The tile kernel is native_verified for that ABI;
+full page-window orchestration is not yet verified. Next: implement a
 page-window orchestrator that fetches the correct L row windows, runs all
 256 tiles against one operator digest, and publishes the output generation
 only after every tile and the final digest check succeed.
