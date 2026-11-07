@@ -204,6 +204,8 @@ mth_comp_count_next:
   JMP @mth_comp_count
 
 mth_comp_count_done:
+  MOVI r10,75
+  PUTC r10
   ; Copy converged labels to public output if active buffer is tmp.
   LD r8,r11,3
   LD r9,r11,12
@@ -220,10 +222,14 @@ mth_comp_copy_final:
   CMP r12,r0
   JMP[GT] @mth_comp_copy_final
 mth_comp_commit_count:
+  MOVI r10,76
+  PUTC r10
   LD r1,r11,5
   LD r2,r11,8
   ST r2,r1,0
   MOVI r1,1
+  MOVI r10,82
+  PUTC r10
   RET
 
 mth_comp_bad_count:
