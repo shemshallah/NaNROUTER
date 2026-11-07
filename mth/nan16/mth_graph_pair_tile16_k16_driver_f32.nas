@@ -5,7 +5,7 @@
 ;   no output pointer: caller finalizes after validating the accumulators
 ; r13 must contain 1. Driver state is private static guest scratch.
 ; Each strip is laid out as 16 contiguous 16x16 blocks in increasing K order.
-; Driver executes all K=0,16,...,240 and finalizes the output tile.
+; Driver executes all K=0,16,...,240 and returns both accumulators; caller finalizes.
 ; Host staging is limited to these four strips for the current output tile.
 
 mth_graph_pair_tile16_k16_driver_f32:
