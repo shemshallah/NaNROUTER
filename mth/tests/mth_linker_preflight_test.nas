@@ -235,6 +235,8 @@ mth_link_pf_admit_ok:
   SHL r10,r10,16
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_dot
+  CALL @mth_link_pf_puts
   ; Preserve the exact dot contract pointer for the negative-path checks.
   LD r10,r0,@mth_link_pf_contract
   ST r10,r0,@mth_link_pf_dot_contract
@@ -271,6 +273,8 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_stale_dispatch
+  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
@@ -305,6 +309,8 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_mismatch
+  CALL @mth_link_pf_puts
   ; Unknown program IDs are rejected before preflight or output publication.
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0x1234
@@ -337,6 +343,8 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_unknown
+  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_output
   LD r9,r8,0
   MOVI r10,55
@@ -415,6 +423,8 @@ mth_link_pf_admit_ok:
   SHL r10,r10,16
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_cosine
+  CALL @mth_link_pf_puts
 
   ; Restore dot operator/rule/contract for the negative-path checks below.
   MOVI r9,77
@@ -579,6 +589,16 @@ mth_link_pf_stage_stale:
 .str "STAGE STALE OK\n"
 mth_link_pf_stage_shape:
 .str "STAGE SHAPE OK\n"
+mth_link_pf_stage_dot:
+.str "STAGE DOT PASS\n"
+mth_link_pf_stage_stale_dispatch:
+.str "STAGE STALE DISPATCH PASS\n"
+mth_link_pf_stage_mismatch:
+.str "STAGE MISMATCH PASS\n"
+mth_link_pf_stage_unknown:
+.str "STAGE UNKNOWN PASS\n"
+mth_link_pf_stage_cosine:
+.str "STAGE COSINE PASS\n"
 mth_link_pf_stage_before_resolve:
 .str "STAGE BEFORE RESOLVE\n"
 mth_link_pf_stage_after_resolve:
