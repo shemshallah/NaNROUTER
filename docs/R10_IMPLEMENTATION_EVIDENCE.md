@@ -3,7 +3,7 @@
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
 **Result:** 33/33 previously locally runnable fixtures passed; 35/35 total CI fixtures passed, including the K256 pair and pair-tile16; 189 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
+**CI:** canonical workflow run 218 (`42388101426`) passed the extended pair-tile fixture; the two tile origins (0,0) and (16,32) executed in 4,643,414 guest steps.
 
 ## Native fixtures
 
