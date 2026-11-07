@@ -36,10 +36,10 @@ mth_de_bswap16:
 ; r1=chunk, r2=destination, r12=caller frame[3]
 mth_de_encode:
   STW r15,r12,r0
-  MOVI r6,1
-  STW r1,r12,r6
-  MOVI r6,2
-  STW r2,r12,r6
+  ADD r6,r12,r13
+  STW r1,r6,r0
+  ADD r6,r6,r13
+  STW r2,r6,r0
 
   MOVI r4,#MTH_DE_CLASS
   STW r1,r2,r4
