@@ -59,12 +59,23 @@ def current_nmp_context(*, packet, stage, job, lease):
     # NmpPacket.start_execution()/execution_gate(). Raise if evidence is absent.
     return load_current_gate_evidence(packet, stage, job, lease)
 
-nmp = NmpHttpAdapter(service, current_nmp_context)
+def verify_worker_identity(token, owner):
+    # Resolve the presented worker credential to its server-issued principal,
+    # then require that principal to own the requested native capability.
+    # Compare a token hash or opaque credential ID; never log or persist token text.
+    return worker_registry.verify_owner(token, owner)
+
+nmp = NmpHttpAdapter(service, current_nmp_context, verify_worker_identity)
 server = WaveHttpServer(service, host="127.0.0.1", port=8080, nmp_adapter=nmp)
 server.start()
 ~~~
 
-The context provider is a mandatory deployment dependency. It must not trust
+The context provider and worker identity provider are mandatory deployment dependencies. The
+worker identity provider must bind the presented worker credential to the requested
+capability owner before the durable lease is acquired, and must recheck that binding
+against the durable lease owner at completion. A worker role token alone is not a
+worker identity. It should compare an opaque credential identifier or token hash and
+must never log or persist bearer-token text. The context provider must not trust
 client-supplied admission, capability, ruleset, ring or cancellation claims.
 For the lease and complete stages it must return an expected_worker_owner
 field derived from the native-verified capability registry; the adapter checks
