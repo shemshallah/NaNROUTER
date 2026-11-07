@@ -84,9 +84,13 @@ mth_link_pf_main:
 
   ; The literal ::op: expression is parsed and resolved by the canonical
   ; NaN0S linker. Its r10 is the registered 10-word contract descriptor.
+  MOVI r1,@mth_link_pf_stage_before_resolve
+  CALL @mth_link_pf_puts
   MOVI r1,@mth_link_pf_expression
   SHL r1,r1,2
   CALL @nmr_expr_resolve
+  MOVI r1,@mth_link_pf_stage_after_resolve
+  CALL @mth_link_pf_puts
   CMP r8,r0
   JMP[NE] @mth_link_pf_fail
   MOVI r6,123
@@ -111,6 +115,8 @@ mth_link_pf_main:
   CMP r10,r0
   JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
+  MOVI r1,@mth_link_pf_stage_contract
+  CALL @mth_link_pf_puts
   MOVI r1,@mth_link_pf_stage_linker
   CALL @mth_link_pf_puts
 
@@ -445,3 +451,9 @@ mth_link_pf_stage_stale:
 .str "STAGE STALE OK\n"
 mth_link_pf_stage_shape:
 .str "STAGE SHAPE OK\n"
+mth_link_pf_stage_before_resolve:
+.str "STAGE BEFORE RESOLVE\n"
+mth_link_pf_stage_after_resolve:
+.str "STAGE AFTER RESOLVE\n"
+mth_link_pf_stage_contract:
+.str "STAGE CONTRACT OK\n"
