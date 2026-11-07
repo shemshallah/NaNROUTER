@@ -56,8 +56,6 @@ mth_weighted_v2_x_ok:
   SUB r9,r9,r13
   CMP r9,r0
   JMP[GT] @mth_weighted_v2_validate_x
-  MOVI r5,88
-  PUTC r5
 
   ; Validate 257 monotone offsets, degree <=255, final == edge_count.
   LD r8,r11,0
@@ -85,8 +83,6 @@ mth_weighted_v2_validate_offsets:
   LD r1,r11,5
   CMP r10,r1
   JMP[NE] @mth_weighted_v2_invalid_offsets
-  MOVI r5,79
-  PUTC r5
 
   ; Validate endpoint words are canonical U8 indices.
   LD r8,r11,1
@@ -109,8 +105,6 @@ mth_weighted_v2_neighbor_valid:
 
   ; Validate U8 weights are nonzero and have no upper bits set.
 mth_weighted_v2_validate_weights_setup:
-  MOVI r5,78
-  PUTC r5
   LD r8,r11,2
   LD r9,r11,5
 mth_weighted_v2_validate_weights:
@@ -128,8 +122,6 @@ mth_weighted_v2_validate_weights:
 
   ; All inputs are valid. Each output row accumulates in signed I64.
 mth_weighted_v2_apply_setup:
-  MOVI r5,87
-  PUTC r5
   MOVI r8,0
   ST r8,r11,6
 mth_weighted_v2_apply_row:
