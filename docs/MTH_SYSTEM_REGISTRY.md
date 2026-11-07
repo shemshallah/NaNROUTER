@@ -149,6 +149,8 @@ No numerical result is produced or checked. A structurally valid plan is a contr
   "status": {"native_verified": 0},
   "precision": {"float32": 0},
   "ci": {"verified": 0, "unverified": 0},
+  "ci_verified": 0,
+  "ci_unverified": 0,
   "native_verified_ci": 0
 }
 ```
@@ -168,6 +170,6 @@ The counts above illustrate the shape; actual values come from the loaded manife
 
 ```
 python3 -m unittest tests.test_mth_registry -v
-Ran 25 tests in 0.392s
+Ran 26 tests in 0.410s
 OK
 ```

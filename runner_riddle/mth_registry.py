@@ -777,6 +777,8 @@ class MthRegistry:
                 "verified": ci_counts.get(True, 0),
                 "unverified": ci_counts.get(False, 0),
             },
+            "ci_verified": ci_counts.get(True, 0),
+            "ci_unverified": ci_counts.get(False, 0),
             "native_verified_ci": sum(
                 1 for descriptor in self._descriptors
                 if descriptor.status == "native_verified" and descriptor.ci_verified

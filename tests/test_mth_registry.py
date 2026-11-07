@@ -185,6 +185,8 @@ class RealManifestRegistryTests(unittest.TestCase):
             "verified": ci_counts.get(True, 0),
             "unverified": ci_counts.get(False, 0),
         })
+        self.assertEqual(health["ci_verified"], ci_counts.get(True, 0))
+        self.assertEqual(health["ci_unverified"], ci_counts.get(False, 0))
         self.assertEqual(
             health["native_verified_ci"],
             sum(
@@ -384,7 +386,7 @@ class MthPlanTests(unittest.TestCase):
         self.assertEqual(
             tuple(step.name for step in plan.steps), ("update", "renorm")
         )
-        self.assertEqual(plan.inputs, ("f32[256].state", "f32[256].delta"))
+        self.assertEqual(plan.inputs, ("f32[256].delta",))
         self.assertEqual(plan.outputs, ("f32[256].state",))
 
     def test_compose_accepts_an_explicit_workspace_bound(self):
