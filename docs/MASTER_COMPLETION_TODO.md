@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 814 Python tests, 1 skipped, OK; 70 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
+**Baseline:** 849 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -54,7 +54,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `A-20` Add an end-to-end rejection test for a rule/capability/auth change between submit and complete.
 - [x] `A-21` Make math admission binding mandatory for direct `MthSystem.submit_plan` in math mode (`require_math_admission=True`); default remains off for legacy wave jobs.
 - [ ] `A-22` Add typed result fields beyond digest: runner/kernel identity, residual/error bound, saturation/iterations/status.
-- [ ] `A-23` Implement native receipt production (`mth_admit` caller) and native operator dispatch.
+- [ ] `A-23` **PARTIAL:** native NaN16 dispatch is implemented for canonical program/operator pairs 900/77 and 901/78 (`mth_execute.nas`), and N16T worker execution evidence is integrated with NMP pre-lease/completion pins. Native admission-receipt production remains external.
 - [ ] `A-24` Make the demo use the real native executor when the NaN0S toolchain is available, while retaining the evidence-digest fallback.
 
 ## A3. Identity/storage
@@ -130,11 +130,22 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-121` `/v1/math/health|link|execute` seam with JAHS/auth/token redaction.
 - [x] `A-122` Math health in `MthSystem.health(math_health=...)` and `MathRuntime.health()`.
 - [x] `A-123` Demo output provenance and hypergraph relation.
-- [ ] `A-124` Wire `/v1/math/execute` to a real prepared-packet/lease service (currently typed `UNAVAILABLE` seam).
+- [ ] `A-124` **PARTIAL:** NMP HTTP submit/lease/complete routes are implemented with durable job payloads and N16T worker evidence; the `/v1/math/execute` route remains a typed `UNAVAILABLE` seam.
 - [ ] `A-125` Add math HTTP submit/lease/complete routes or explicitly document point-0-only ingress.
 - [ ] `A-126` Add path-wide no-host-math runtime audit.
 - [ ] `A-127` Add demo negative-suite orchestration (mismatch/stale/unavailable/unauthorized together).
 - [ ] `A-128` Add complete math health probes for store/cache/linker/validity/executor.
+
+## A8. Native worker and NMP HTTP
+
+- [x] `A-130` N16T binary HTTP worker handoff (`POST /n16t`) with guest-owned HELLO/CAPABILITIES/CLOSE and bounded frames.
+- [x] `A-131` NMP HTTP submit/lease/complete routes with durable job payloads.
+- [x] `A-132` NMP native execution evidence: pre-lease gate and completion bound to trusted guest binary pins.
+- [ ] `A-133` Durable N16T session/replay cursor checkpoint across service restart (currently process-local).
+- [ ] `A-134` Authenticated worker-identity-to-capability-owner binding callback (interface exists; deployment verifier still caller-supplied).
+- [ ] `A-135` Guest-built native admission receipt production and output-digest verification in the normal worker path.
+- [ ] `A-136` N16T message types beyond HELLO/CAPABILITIES/CLOSE; corpus/training/candidate/merge capabilities remain unimplemented.
+
 
 ---
 
@@ -145,7 +156,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-01` Machine-readable NaN16 word/ISA layout with class, face, payload, legal/illegal pairs.
 - [ ] `B-02` Add Stage 0 kernels/fixtures to canonical CI: `mth_stage0`, `mth_double_endian`, `mth_core`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`. **PARTIAL:** 6 locally passing kernels (`bool.all`, `bitwise.u32`, `integer.checked.i32`, `shift.u32`, `multiply.wide.u32`, `divmod.u32`) and the `negate256.f32` composite are now registered. Still unregistered: `mth_core`/stage0 (local fixture fails), `mth_double_endian` (assembler rejects `r6`), `mth_vector` (assembler rejects `r9`), and typed `mth_preflight` (fixture needs external `nan0s/src/nannet/math_registry.nas`).
+- [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`. **PARTIAL:** 6 locally passing kernels (`bool.all`, `bitwise.u32`, `integer.checked.i32`, `shift.u32`, `multiply.wide.u32`, `divmod.u32`) and the `negate256.f32` composite are registered. Still unregistered: `mth_core`/stage0 (local fixture fails), `mth_double_endian` (assembler rejects `r6`), `mth_vector` (assembler rejects `r9`), typed `mth_preflight`, and the new native-dispatch `mth_execute` (fixture needs external NAN0S route/math registry sources).
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.

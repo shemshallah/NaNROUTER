@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **70 manifest kernels with fixtures**: 66 pass in the local harness and all 61 CI fixtures pass canonical CI run 42405649076 (132 steps). The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 814 Python tests (1 skipped).
+The project has crossed an important boundary: it is no longer only a plan. There are **70 manifest kernels with fixtures**: 66 pass in the local harness and all 61 CI fixtures pass canonical CI run 42405649076 (132 steps). The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 849 Python tests (1 skipped).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
