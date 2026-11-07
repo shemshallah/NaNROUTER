@@ -1342,6 +1342,7 @@ class NmpPacket:
         lease_epoch: int | None = None,
         ring_incarnation: str | None = None,
         ring_epoch: int | None = None,
+        ring_snapshot: Mapping[str, Any] | None = None,
         tick: int = 0,
         **gate_kwargs: Any,
     ) -> "NmpPacket":
@@ -1426,6 +1427,34 @@ class NmpPacket:
                     from_state=self.state,
                     failure=STALE,
                     reason="native lease binding no longer matches receipt/output/cancel epoch",
+                ))
+            live_job = gate_kwargs.get("job")
+            live_lease = gate_kwargs.get("lease")
+            if ring_snapshot is None or live_job is None or live_lease is None or ring_incarnation is None:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="native lease start requires the live job, lease, ring snapshot, and incarnation",
+                ))
+            try:
+                live_binding = NativePreflightLeaseBinding.from_live_lease(
+                    self, receipt_obj, live_job, live_lease, ring_snapshot,
+                    ring_incarnation=ring_incarnation,
+                )
+            except NativePreflightReceiptError as exc:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason=f"live native lease binding is stale: {exc}",
+                )) from exc
+            if live_binding.binding_digest != stored_binding.binding_digest:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="live worker lease changed after native receipt binding",
                 ))
             for name, supplied, expected in (
                 ("job_id", job_id, stored_binding.job_id),
