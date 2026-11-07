@@ -203,7 +203,7 @@ mth_link_pf_main:
   MOVI r9,0x1234
   SHL r9,r9,16
   MOVI r10,0x5678
-  OR r9,r9,r10
+  ADD r9,r9,r10
   ST r9,r8,0
   MOVI r1,@mth_link_pf_candidate
   MOVI r2,@mth_link_pf_rule
@@ -223,7 +223,7 @@ mth_link_pf_main:
   MOVI r10,0x1234
   SHL r10,r10,16
   MOVI r11,0x5678
-  OR r10,r10,r11
+  ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_candidate
