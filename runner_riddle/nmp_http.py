@@ -68,6 +68,8 @@ def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) 
 def _validate_execution_evidence(
     evidence: Any, *, packet: NmpPacket, expected_program_id: int,
     result_digest: str, lease_epoch: int, lease_owner: str,
+    expected_image_digest: str | None = None,
+    expected_source_digest: str | None = None,
 ) -> dict[str, Any]:
     if not isinstance(evidence, Mapping):
         raise NmpHttpError("native kernel execution evidence is required")
@@ -110,6 +112,19 @@ def _validate_execution_evidence(
             int(value, 16)
         except ValueError as exc:
             raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex") from exc
+    for field, expected_digest in (
+        ("guest_image_digest", expected_image_digest),
+        ("guest_source_digest", expected_source_digest),
+    ):
+        if expected_digest is not None:
+            if not isinstance(expected_digest, str) or len(expected_digest) != 64:
+                raise NmpHttpError(f"server-pinned {field} is invalid")
+            try:
+                int(expected_digest, 16)
+            except ValueError as exc:
+                raise NmpHttpError(f"server-pinned {field} is invalid") from exc
+            if evidence[field].lower() != expected_digest.lower():
+                raise NmpHttpError(f"kernel execution {field} differs from server-pinned guest")
     if evidence["output_digest"].lower() != result_digest.lower():
         raise NmpHttpError("kernel execution output digest does not match result_digest")
     return {
@@ -311,10 +326,16 @@ class NmpHttpAdapter:
             self.context_provider, packet, "complete", job=job, lease=lease
         )
         expected_program_id = _require_server_program_binding(packet, gate_context)
+        # Optional trusted pins from server-side deployment context. Packet
+        # metadata and worker-provided evidence are never digest authorities.
+        expected_image_digest = gate_context.pop("expected_guest_image_digest", None)
+        expected_source_digest = gate_context.pop("expected_guest_source_digest", None)
         native_execution = _validate_execution_evidence(
             execution_evidence, packet=packet, expected_program_id=expected_program_id,
             result_digest=result_digest, lease_epoch=lease_epoch,
             lease_owner=str(lease_owner or ""),
+            expected_image_digest=expected_image_digest,
+            expected_source_digest=expected_source_digest,
         )
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != lease_owner:
