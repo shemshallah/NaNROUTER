@@ -185,6 +185,8 @@ mth_link_pf_main:
   MOVI r9,38
   CMP r1,r9
   JMP[NE] @mth_link_pf_fail
+  ; mth_admit may clobber r8; reload the output descriptor before checking it.
+  MOVI r8,@mth_link_pf_output
   LD r10,r8,0
   MOVI r9,55
   CMP r10,r9
