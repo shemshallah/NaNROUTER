@@ -4,8 +4,6 @@ JMP @mth_weighted_v2_test_main
 
 mth_weighted_v2_test_main:
   MOVI r13,1
-  MOVI r1,@mth_weighted_v2_before
-  CALL @mth_weighted_v2_puts
   MOVI r1,@mth_weighted_v2_offsets
   MOVI r2,@mth_weighted_v2_neighbors
   MOVI r3,@mth_weighted_v2_weights_a
@@ -14,14 +12,8 @@ mth_weighted_v2_test_main:
   MOVI r6,6
   MOVI r7,@mth_weighted_v2_scratch
   CALL @mth_sparse_weighted_graph_laplacian_q16_16_i64_v2
-  ADD r12,r1,r0
-  MOVI r1,@mth_weighted_v2_after
-  CALL @mth_weighted_v2_puts
-  ADD r1,r12,r0
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
-  MOVI r1,@mth_weighted_v2_status_a
-  CALL @mth_weighted_v2_puts
 
   ; Expected [-2,-7,-16,25] in signed I64 Q16.16.
   MOVI r6,@mth_weighted_v2_output
@@ -29,42 +21,40 @@ mth_weighted_v2_test_main:
   MOVI r8,0
   MOVHI r8,0xFFFE
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_low0
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,1
   MOVI r8,0xFFFF
   MOVHI r8,0xFFFF
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_high0
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,2
   MOVI r8,0
   MOVHI r8,0xFFF9
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_low1
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,3
   MOVI r8,0xFFFF
   MOVHI r8,0xFFFF
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_high1
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,4
   MOVI r8,0
   MOVHI r8,0xFFF0
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_low2
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,5
   MOVI r8,0xFFFF
   MOVHI r8,0xFFFF
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_high2
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,6
   MOVI r8,0
   MOVHI r8,0x0019
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_low3
+  JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,7
   CMP r7,r0
-  JMP[NE] @mth_weighted_v2_fail_high3
-  MOVI r1,@mth_weighted_v2_oracle_a
-  CALL @mth_weighted_v2_puts
+  JMP[NE] @mth_weighted_v2_fail
 
   ; Second exact oracle: [-1,-20,11,10].
   MOVI r1,@mth_weighted_v2_offsets
@@ -77,8 +67,6 @@ mth_weighted_v2_test_main:
   CALL @mth_sparse_weighted_graph_laplacian_q16_16_i64_v2
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
-  MOVI r1,@mth_weighted_v2_status_b
-  CALL @mth_weighted_v2_puts
   MOVI r6,@mth_weighted_v2_output
   LD r7,r6,0
   MOVI r8,0
@@ -116,8 +104,6 @@ mth_weighted_v2_test_main:
   LD r7,r6,7
   CMP r7,r0
   JMP[NE] @mth_weighted_v2_fail
-  MOVI r1,@mth_weighted_v2_oracle_b
-  CALL @mth_weighted_v2_puts
 
   ; Zero weight is invalid and must preserve the entire output page.
   MOVI r6,@mth_weighted_v2_weights_a
@@ -141,8 +127,6 @@ mth_weighted_v2_test_main:
   MOVI r8,77
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail
-  MOVI r1,@mth_weighted_v2_atomicity
-  CALL @mth_weighted_v2_puts
 
   MOVI r1,@mth_weighted_v2_pass
   CALL @mth_weighted_v2_puts
@@ -1248,74 +1232,3 @@ mth_weighted_v2_pass:
 mth_weighted_v2_bad:
 .str "MTH WEIGHTED CSR LAPLACIAN V2 FAIL\n"
 
-mth_weighted_v2_before:
-.str "BEFORE WEIGHTED CALL\\n"
-mth_weighted_v2_after:
-.str "AFTER WEIGHTED CALL\\n"
-
-mth_weighted_v2_status_a:
-.str "STATUS A OK\\n"
-mth_weighted_v2_oracle_a:
-.str "ORACLE A OK\\n"
-mth_weighted_v2_status_b:
-.str "STATUS B OK\\n"
-mth_weighted_v2_oracle_b:
-.str "ORACLE B OK\\n"
-mth_weighted_v2_atomicity:
-.str "ATOMICITY OK\\n"
-
-mth_weighted_v2_fail_low0:
-  MOVI r1,@mth_weighted_v2_msg_low0
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_low0:
-.str "FAIL low0\\n"
-
-mth_weighted_v2_fail_high0:
-  MOVI r1,@mth_weighted_v2_msg_high0
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_high0:
-.str "FAIL high0\\n"
-
-mth_weighted_v2_fail_low1:
-  MOVI r1,@mth_weighted_v2_msg_low1
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_low1:
-.str "FAIL low1\\n"
-
-mth_weighted_v2_fail_high1:
-  MOVI r1,@mth_weighted_v2_msg_high1
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_high1:
-.str "FAIL high1\\n"
-
-mth_weighted_v2_fail_low2:
-  MOVI r1,@mth_weighted_v2_msg_low2
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_low2:
-.str "FAIL low2\\n"
-
-mth_weighted_v2_fail_high2:
-  MOVI r1,@mth_weighted_v2_msg_high2
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_high2:
-.str "FAIL high2\\n"
-
-mth_weighted_v2_fail_low3:
-  MOVI r1,@mth_weighted_v2_msg_low3
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_low3:
-.str "FAIL low3\\n"
-
-mth_weighted_v2_fail_high3:
-  MOVI r1,@mth_weighted_v2_msg_high3
-  CALL @mth_weighted_v2_puts
-  HALT
-mth_weighted_v2_msg_high3:
-.str "FAIL high3\\n"
