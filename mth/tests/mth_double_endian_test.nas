@@ -76,7 +76,12 @@ mth_de_test_main:
   CMP r2,r0
   JMP[NE] @mth_de_fail
 
-  ; Wrong second-member class must be rejected.
+  ; Restore the first member, then reject a wrong second-member class.
+  MOVI r2,4096
+  MOVI r5,0
+  MOVI r6,10
+  STW r5,r2,r6
+
   MOVI r2,4096
   ADD r2,r2,r13
   MOVI r5,0
