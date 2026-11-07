@@ -41,3 +41,12 @@ A canonical execution workflow is defined at `.github/workflows/mth-native-contr
 It builds the NaN0S CLI harness, assembles the MTH fixture with the NaN0S
 NaN16 source assembler, and executes the emitted image. The K256 U16-input kernel is marked native_verified after workflow run #17
 assembled and executed its fixture successfully (5,399 guest steps; HALT). The NaNLMind RSS worker still advertises the capability as source-written/not dispatchable until the verified kernel is registered with its digest and workspace contract.
+
+
+## Sparse graph Laplacian v1
+
+- `nan16/mth_sparse_graph_laplacian.nas`: exact symmetric simple-graph CSR Laplacian, Q16.16/I32 v1, bounded input range, complete preflight, no static scratch.
+- `tests/mth_sparse_graph_laplacian_test.nas`: path, disconnected graph, and invalid-input atomicity fixtures.
+- Full ABI and range proof: `docs/MTH_SPARSE_GRAPH_ABI.md`.
+
+The sparse kernel is source-written and is not native-verified until the canonical NaN16 CI fixture passes. Weighted CSR remains a separately versioned follow-on.
