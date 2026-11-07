@@ -520,6 +520,7 @@ def make_wave_handler(service: WaveService, *,
                 lease_epoch=_int_field(body, "lease_epoch", minimum=1),
                 result_digest=_text_field(body, "result_digest"),
                 now_tick=_int_field(body, "now_tick"),
+                execution_evidence=body.get("execution_evidence"),
                 result_generation=_int_field(body, "result_generation", default=None),
                 lease_owner=_text_field(body, "lease_owner", default=None),
             )
