@@ -96,7 +96,7 @@
 - [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
-- [x] Add 256×256 tiled dense product action — 16×16 NaN16 tile kernel and exact L=2I fixture native_verified in CI run 218 with tile origins (0,0) and (16,32); page-window orchestration and atomic publication remain open.
+- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U tile is reference-only because it exceeds 512 KiB.
 
 ## R7 — Tunneling and creativity
 
