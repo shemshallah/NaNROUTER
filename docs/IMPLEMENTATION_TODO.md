@@ -19,9 +19,9 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate + fixture pending integration.
 - [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 44/44 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 235 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 45-fixture/93-step run pending.
+- [x] 48/48 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 317 Python tests pass.
+- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 49-fixture/101-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -64,7 +64,8 @@
 - [x] Add 128×128, 16×256, and 15×255 certificates.
 - [x] Add 16×256 and 15×255 streaming certificates.
 - [x] Add 128×128 power-iteration kernel.
-- [ ] Add Lanczos/top-k deflation.
+- [x] Add deterministic 256-tile page-window orchestration and atomic publication (`wave_tile_orchestrator`, 28 tests).
+- [ ] Add Lanczos/top-k deflation (SVD top-2 and Lanczos kernels in progress).
 - [ ] Add residual/orthogonality fixture for a real operator.
 
 ## R4 — Wave dynamics
@@ -106,9 +107,9 @@
 - [x] Add block-coupling `eta` primitive.
 - [x] Add transmission metric primitive.
 - [x] Add experiment protocol with conditions, metrics, baselines, kill criteria.
-- [x] Add two-level avoided-crossing spectrum kernel.
+- [x] Add two-level avoided-crossing spectrum kernel and native coupling sweep (11,651 steps).
 - [x] Add 128-element phase-coherence metric kernel.
-- [ ] Run held-out creativity/association experiment.
+- [ ] Run held-out creativity/association experiment (sweep primitive done; real LM harness remains gated).
 - [ ] Record supported/rejected/inconclusive result.
 
 ## R8 — NANNET node and storage
@@ -124,8 +125,9 @@
 - [x] Add point-0 stable ingress and active-slot routing.
 - [x] Add standalone Wave HTTP adapter over WaveService.
 - [x] Add point-0 NaN↔binary↔NaN bridge/router to the active slot (10 tests).
-- [ ] Add live NANNET0/Koyeb integration and signed volume-registry check.
-- [ ] Run signed Koyeb volume-registry integration check.
+- [x] Add point-0 HTTP ingress with bounded 1 MiB frames, stable route, active-slot/epoch evidence, and JAHS seal.
+- [x] Add offline live-preflight and signed-volume-registry gate (no network by default).
+- [ ] Add live NANNET0/Koyeb integration and production signed volume-registry check (blocked on real credentials).
 
 ## R9 — LM adapter
 
@@ -134,12 +136,14 @@
 - [x] Add frozen-base ablation labels and safety gate.
 - [x] Add 128-dimensional NaN16 adapter residual composition.
 - [x] Add 256→128 ENCODE and 128→256 DECODE kernels.
-- [ ] Run retrieval/memory adapter and frozen-base ablations.
+- [x] Add full 256×256 ENCODE/DECODE and full 256 adapter residual kernels.
+- [x] Add frozen-base ablation harness with paired controls and hard evidence gate.
+- [ ] Run retrieval/memory adapter and frozen-base ablations against a real frozen model/data set (blocked on model harness).
 - [ ] Enable only after measured held-out benefit.
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 47 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 51 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -165,14 +169,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-44/44 local fixtures passed; 45/45 total (K256 pair CI-only)
+48/48 local fixtures passed; 49/49 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI prior: `42389738332` — 87/87 steps; 45-fixture/93-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42389738332` — 87/87 steps; 49-fixture/101-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

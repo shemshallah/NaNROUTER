@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **47 native MTH kernels with fixtures**: 44 pass in the local harness and all prior fixtures pass canonical CI; the 1 MiB full 256 matvec/SVD/ENCODE/DECODE fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **51 native MTH kernels with fixtures**: 48 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, JAHS, full-255, adapter, and avoided-crossing fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 317 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -73,17 +73,17 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 43 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 47-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 51 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 51-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 93 steps, 45 fixtures; 1 MiB additions pending |
+| `.github/workflows/mth-native-contract.yml` | 101 steps, 49 fixtures; 1 MiB additions pending |
 
 ### 1.3 Evidence baseline
 
 ```
-41/41 locally runnable fixtures pass; K256 pair passed canonical CI
-42/42 total native fixtures; 235/235 Python tests pass
-GitHub Actions run 42389738332: 87/87 steps passed (42-fixture set)
+48/48 locally runnable fixtures pass; K256 pair passed canonical CI
+49/49 total native fixtures; 317/317 Python tests pass
+GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 49-fixture/101-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger

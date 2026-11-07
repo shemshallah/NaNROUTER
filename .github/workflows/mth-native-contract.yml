@@ -170,6 +170,17 @@ jobs:
           cat build/mth/void.err
           grep -q '^MTH GRAPH VOID POTENTIAL PASS' build/mth/void.out
 
+      - name: Assemble full 255-centrosymmetry fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry_255_full_test.nas > build/mth/centro255full.nan
+
+      - name: Execute full 255-centrosymmetry fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/centro255full.nan --steps 10000000 --serial > build/mth/centro255full.out 2> build/mth/centro255full.err
+          cat build/mth/centro255full.out
+          cat build/mth/centro255full.err
+          grep -q '^MTH CENTROSYMMETRY 255 FULL PASS' build/mth/centro255full.out
+
       - name: Assemble 255-block centrosymmetry fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry255_block15_test.nas > build/mth/centro255b.nan
@@ -235,6 +246,17 @@ jobs:
           cat build/mth/two-level.out
           cat build/mth/two-level.err
           grep -q '^MTH TWO LEVEL SPECTRUM PASS' build/mth/two-level.out
+
+      - name: Assemble avoided-crossing sweep fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_avoided_crossing_sweep_test.nas > build/mth/avoided-crossing-sweep.nan
+
+      - name: Execute avoided-crossing sweep fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/avoided-crossing-sweep.nan --steps 4000000 --serial > build/mth/avoided-crossing-sweep.out 2> build/mth/avoided-crossing-sweep.err
+          cat build/mth/avoided-crossing-sweep.out
+          cat build/mth/avoided-crossing-sweep.err
+          grep -q '^MTH AVOIDED CROSSING SWEEP PASS' build/mth/avoided-crossing-sweep.out
 
       - name: Assemble phase-coherence fixture with NaN16 source assembler
         run: |
@@ -324,6 +346,17 @@ jobs:
           cat build/mth/power128.err
           grep -q '^MTH POWER_ITER128 PASS' build/mth/power128.out
 
+      - name: Assemble JAHS handoff-gate fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_jahs_gate_test.nas > build/mth/jahs-gate.nan
+
+      - name: Execute JAHS handoff-gate fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/jahs-gate.nan --steps 2000000 --serial > build/mth/jahs-gate.out 2> build/mth/jahs-gate.err
+          cat build/mth/jahs-gate.out
+          cat build/mth/jahs-gate.err
+          grep -q '^MTH JAHS GATE PASS' build/mth/jahs-gate.out
+
       - name: Assemble full 256-matvec fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_matvec256_full_test.nas > build/mth/matvec256full.nan
@@ -378,6 +411,17 @@ jobs:
           cat build/mth/adapter256b.out
           cat build/mth/adapter256b.err
           grep -q '^MTH ADAPTER RESIDUAL 256 BLOCK16 PASS' build/mth/adapter256b.out
+
+      - name: Assemble full 256 adapter residual fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_adapter_residual_256_full_test.nas > build/mth/adapter256full.nan
+
+      - name: Execute full 256 adapter residual fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/adapter256full.nan --steps 50000000 --serial > build/mth/adapter256full.out 2> build/mth/adapter256full.err
+          cat build/mth/adapter256full.out
+          cat build/mth/adapter256full.err
+          grep -q '^MTH ADAPTER RESIDUAL 256 FULL PASS' build/mth/adapter256full.out
 
       - name: Assemble full 256 encode/decode fixture with NaN16 source assembler
         run: |

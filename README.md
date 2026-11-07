@@ -115,18 +115,28 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/DEEP_PLAN_CONT.md` — continuation architecture, 256×256 paging, shard/NANNET0 integration, and MTH System v1.
 - `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
 - `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
+- `docs/WAVE_TILE_ORCHESTRATOR.md` — 256-tile page window and atomic publication.
+- `docs/LIVE_PREFLIGHT.md` — offline live-deployment and signed-volume-registry gate.
+- `docs/LM_ABLATION_HARNESS.md` — frozen-base adapter ablation harness contract.
+- `docs/POINT0_HTTP.md` — authenticated point-0 HTTP ingress and JAHS seal.
+- `docs/MTH_JAHS_GATE_ABI.md` — native "Just A Handoff Seal" gate.
+- `docs/MTH_MEMORY_1MIB.md` — 1 MiB guest-budget migration.
 - `spec/ring-255.json` — deterministic C255 CSR and 255+1 page map.
-- `spec/wave-capabilities.json` — 47-kernel capability manifest.
+- `spec/wave-capabilities.json` — 51-kernel capability manifest.
 - `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
 - `runner_riddle/wave_service.py` — authenticated submit/worker/admin facade over the wave store.
 - `runner_riddle/wave_node.py` — one NANNET node binding per universe.
 - `runner_riddle/wave_ring_scheduler.py` — single-active six-slot runner ring with a 7 GiB ceiling and 24/7 cycle/handoff.
 - `runner_riddle/point0_bridge.py` — stable point-0 NaN16↔binary↔NaN16 ingress, routing to the active slot.
+- `runner_riddle/wave_tile_orchestrator.py` — deterministic 256-tile page window and all-or-nothing publication.
+- `runner_riddle/live_preflight.py` — offline Koyeb/NANNET0 and signed-volume-registry gate.
+- `runner_riddle/lm_ablation.py` — frozen-base LM adapter ablation harness (no fabricated model result).
+- `runner_riddle/point0_http.py` — authenticated bounded point-0 HTTP ingress carrying the JAHS seal.
 - `runner_riddle/mth_system.py` — one runtime facade over registry, store, service, and ring scheduler.
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 44 locally runnable fixtures and 235 Python tests pass; the 45th (K256 pair) is CI-verified. GitHub Actions run `42389738332` passed all 87 native steps for the 42-fixture set.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 48 locally runnable fixtures and 317 Python tests pass; the 49th (K256 pair) is CI-verified. GitHub Actions run `42389738332` passed all 87 native steps for the 42-fixture set.
 
 ## Runner Riddle
 

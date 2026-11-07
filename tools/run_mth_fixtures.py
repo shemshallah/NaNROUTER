@@ -53,9 +53,11 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("matvec128", "mth/tests/mth_matvec128_test.nas", 10_000_000, "MTH MATVEC128 PASS", "native_verified"),
     Fixture("matvec256b", "mth/tests/mth_matvec256_block16_test.nas", 20_000_000, "MTH MATVEC256 BLOCK16 PASS", "native_verified"),
     Fixture("matvec256full", "mth/tests/mth_matvec256_full_test.nas", 50_000_000, "MTH MATVEC256 FULL PASS", "native_verified"),
+    Fixture("jahs_gate", "mth/tests/mth_jahs_gate_test.nas", 2_000_000, "MTH JAHS GATE PASS", "native_verified"),
     Fixture("centro128", "mth/tests/mth_centrosymmetry_128_test.nas", 10_000_000, "MTH CENTROSYMMETRY 128 PASS", "native_verified"),
     Fixture("centro256b", "mth/tests/mth_centrosymmetry_block16_test.nas", 20_000_000, "MTH CENTROSYMMETRY BLOCK16 PASS", "native_verified"),
     Fixture("centro255b", "mth/tests/mth_centrosymmetry255_block15_test.nas", 20_000_000, "MTH CENTROSYMMETRY 255 BLOCK15 PASS", "native_verified"),
+    Fixture("centro255full", "mth/tests/mth_centrosymmetry_255_full_test.nas", 10_000_000, "MTH CENTROSYMMETRY 255 FULL PASS", "native_verified"),
     Fixture("power128", "mth/tests/mth_power_iter128_test.nas", 50_000_000, "MTH POWER_ITER128 PASS", "native_verified"),
     Fixture("pair_full", "mth/tests/mth_graph_pair_test.nas", 100_000_000, "MTH GRAPH PAIR FULL 128 PASS", "native_verified"),
     Fixture("pair_tile16", "mth/tests/mth_graph_pair_tile16_f32_test.nas", 30_000_000, "MTH PAIR TILE16 F32 PASS", "native_verified"),
@@ -64,6 +66,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("lowrank128", "mth/tests/mth_lowrank_add_128_test.nas", 20_000_000, "MTH LOWRANK ADD 128 PASS", "native_verified"),
     Fixture("adapter128", "mth/tests/mth_adapter_residual_128_test.nas", 30_000_000, "MTH ADAPTER RESIDUAL 128 PASS", "native_verified"),
     Fixture("adapter256b", "mth/tests/mth_adapter_residual_256_block16_test.nas", 20_000_000, "MTH ADAPTER RESIDUAL 256 BLOCK16 PASS", "native_verified"),
+    Fixture("adapter256full", "mth/tests/mth_adapter_residual_256_full_test.nas", 50_000_000, "MTH ADAPTER RESIDUAL 256 FULL PASS", "native_verified"),
     Fixture("encode_decode", "mth/tests/mth_encode_decode_test.nas", 30_000_000, "MTH ENCODE DECODE PASS", "native_verified"),
     Fixture("encode_decode256", "mth/tests/mth_encode_decode256_test.nas", 30_000_000, "MTH ENCODE DECODE 256 PASS", "native_verified"),
     Fixture("svd128", "mth/tests/mth_svd_top128_test.nas", 100_000_000, "MTH SVD TOP128 PASS", "native_verified"),
@@ -73,6 +76,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("couple128", "mth/tests/mth_graph_couple_128_test.nas", 4_000_000, "MTH GRAPH COUPLE 128 PASS", "native_verified"),
     Fixture("transmission128", "mth/tests/mth_graph_transmission_128_test.nas", 4_000_000, "MTH GRAPH TRANSMISSION 128 PASS", "native_verified"),
     Fixture("two_level", "mth/tests/mth_two_level_spectrum_test.nas", 1_000_000, "MTH TWO LEVEL SPECTRUM PASS", "native_verified"),
+    Fixture("avoided_crossing_sweep", "mth/tests/mth_avoided_crossing_sweep_test.nas", 4_000_000, "MTH AVOIDED CROSSING SWEEP PASS", "native_verified"),
     Fixture("phase_coherence", "mth/tests/mth_phase_coherence_128_test.nas", 4_000_000, "MTH PHASE COHERENCE 128 PASS", "native_verified"),
 )
 
