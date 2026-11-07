@@ -99,6 +99,14 @@ persistent worker supervision, and live service wiring remain the next stage.
 
 Every layer lives in the same universe and is addressed through the same atlas. Each layer has its own math and storage contract; no single optimizer is imposed across them.
 
+## MTH — NaN-native mathematical substrate
+
+MTH is the mathematical kernel being built alongside the router control plane. Its game plan is in [`docs/GAME_PLAN_MTH.md`](docs/GAME_PLAN_MTH.md), and its first NaN16 source slice is under [`mth/`](mth/README.md).
+
+The initial native slice includes the 16-way Boolean transform, ordered class rotation, the frozen eight-byte `BSWAPM` operation wrapper, and the tagged double-endian pair codec. Mathematical implementations are NaN16 source; the router is only the authorized task/result path. The current source and smoke fixtures are committed, but they are **not marked assembled or passing** until run through the canonical NaN16 assembler/interpreter.
+
+MTH does not add a second execution universe, runner ring, math service, or task ledger. It uses the existing canonical topology and router authorization boundaries.
+
 ## Runner Riddle
 
 See [runner-riddle/README.md](runner-riddle/README.md). The listener is designed as a persistent service, not a short-lived scheduled GitHub Action. It continuously ingests permitted NaN source, learns Boolean and routing maps first, and emits bounded trace/delta records. Language learning is a later curriculum stage, disabled until the logic/routing gates pass.
