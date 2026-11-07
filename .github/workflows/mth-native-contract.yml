@@ -689,3 +689,14 @@ jobs:
           cat build/mth/preflight.out
           cat build/mth/preflight.err
           grep -q '^MTH TYPED PREFLIGHT PASS' build/mth/preflight.out
+
+      - name: Assemble canonical :: linker-to-preflight fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_linker_preflight_test.nas > build/mth/linker-preflight.nan
+
+      - name: Execute canonical :: linker-to-preflight fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/linker-preflight.nan --steps 3000000 --serial > build/mth/linker-preflight.out 2> build/mth/linker-preflight.err
+          cat build/mth/linker-preflight.out
+          cat build/mth/linker-preflight.err
+          grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
