@@ -7,10 +7,12 @@ pointers, rollback events, reference errors for missing/corrupt payloads,
 append-only evidence, disposable-cache reload, and 2 MiB chunking.
 """
 import hashlib
+import json
 import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
+from pathlib import Path
 
 from runner_riddle.math_objects import (
     MathAdmission, MathCandidate, MathFunction, MathLeaf, MathRule,
@@ -205,6 +207,45 @@ class MathStoreTests(unittest.TestCase):
                 self.assertEqual(db.execute(
                     "SELECT version FROM math_schema WHERE store='MC0DB'"
                 ).fetchone()[0], MATH_SCHEMA_VERSION)
+
+    def test_spec_matches_implemented_table_contract(self):
+        spec_path = Path(__file__).resolve().parents[1] / "spec" / \
+            "math-store.schema.json"
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        self.assertEqual(spec["properties"]["schema"]["const"],
+                         "nanrouter.math-store.v1")
+        self.assertEqual(spec["properties"]["version"]["const"], 1)
+        self.assertEqual(
+            spec["properties"]["wave_schema_compatibility"]["const"], 1
+        )
+        chunking = spec["properties"]["payload_chunking"]
+        self.assertEqual(chunking["properties"]["chunk_bytes"]["const"],
+                         DEFAULT_CHUNK_BYTES)
+        self.assertEqual(chunking["properties"]["max_payload_bytes"]["const"],
+                         2 * 1024 * 1024)
+        for store, path in (("BS0DB", self.bs0_path),
+                            ("MC0DB", self.mc0_path)):
+            table_refs = spec["properties"]["stores"]["properties"][store][
+                "properties"]["tables"]["properties"
+            ]
+            with closing(sqlite3.connect(path)) as db:
+                actual = {
+                    row[0]: {
+                        column[1]: column[2]
+                        for column in db.execute(f"PRAGMA table_info({row[0]})")
+                    }
+                    for row in db.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    )
+                }
+            for table_name, ref in table_refs.items():
+                definition = spec["$defs"][ref["$ref"].split("/")[-1]]
+                self.assertIn(table_name, actual)
+                self.assertEqual(definition["columns"], actual[table_name])
+                self.assertTrue(
+                    set(definition["required_fields"])
+                    <= set(definition["columns"])
+                )
 
     # -- immutable leaves and content addressing ---------------------------
 

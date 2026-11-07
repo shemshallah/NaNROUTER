@@ -1009,14 +1009,20 @@ class MathStore:
         try:
             stored_json = str(row["leaf_json"])
             document = json.loads(stored_json)
+            if canonical_json(document) != stored_json:
+                raise MathReferenceError(
+                    f"leaf {leaf_id!r} version {row['version']} is not canonical"
+                )
+        except MathReferenceError:
+            raise
         except (TypeError, ValueError) as exc:
             raise MathReferenceError(
                 f"leaf {leaf_id!r} version {row['version']} has invalid JSON"
             ) from exc
-        if canonical_json(document) != stored_json:
+        except MathObjectError as exc:
             raise MathReferenceError(
                 f"leaf {leaf_id!r} version {row['version']} is not canonical"
-            )
+            ) from exc
         try:
             leaf = MathLeaf(**{key: value for key, value in document.items()
                                if key != "schema"})
@@ -1337,15 +1343,21 @@ class MathStore:
         )
         try:
             document = json.loads(payload.decode("utf-8"))
+            if canonical_json(document) != payload.decode("utf-8"):
+                raise MathReferenceError(
+                    f"function {function_id!r} version {version} is not canonical"
+                )
+        except MathReferenceError:
+            raise
         except (UnicodeDecodeError, ValueError) as exc:
             raise MathPayloadError(
                 f"function {function_id!r} version {version} payload is "
                 "not canonical JSON"
             ) from exc
-        if canonical_json(document) != payload.decode("utf-8"):
+        except MathObjectError as exc:
             raise MathReferenceError(
                 f"function {function_id!r} version {version} is not canonical"
-            )
+            ) from exc
         try:
             function = MathFunction(
                 **{key: value for key, value in document.items()
@@ -1514,15 +1526,21 @@ class MathStore:
         )
         try:
             document = json.loads(payload.decode("utf-8"))
+            if canonical_json(document) != payload.decode("utf-8"):
+                raise MathReferenceError(
+                    f"rule {rule_id!r} version {version} is not canonical"
+                )
+        except MathReferenceError:
+            raise
         except (UnicodeDecodeError, ValueError) as exc:
             raise MathPayloadError(
                 f"rule {rule_id!r} version {version} payload is not canonical "
                 "JSON"
             ) from exc
-        if canonical_json(document) != payload.decode("utf-8"):
+        except MathObjectError as exc:
             raise MathReferenceError(
                 f"rule {rule_id!r} version {version} is not canonical"
-            )
+            ) from exc
         try:
             rule = MathRule(
                 **{key: value for key, value in document.items()
@@ -2278,6 +2296,7 @@ class MathStore:
         return {
             "schema": "nanrouter.math-store-health.v1",
             "status": status,
+            "schema_version": MATH_SCHEMA_VERSION,
             "math_schema_version": MATH_SCHEMA_VERSION,
             "schema_versions": schema_versions,
             "wave_schema_versions": wave_versions,
