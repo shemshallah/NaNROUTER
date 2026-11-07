@@ -16,7 +16,7 @@ already owns that operation.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, Mapping
 
 from .mth_registry import MthPlan, MthRegistry
 from .wave_ring_scheduler import JAHS_SEAL, WaveRingScheduler, resolve_slot
@@ -99,6 +99,7 @@ class MthSystem:
         guest_budget_words: int | None = None,
         workspace_word_bytes: int = DEFAULT_WORKSPACE_WORD_BYTES,
         enforce_active_slot: bool = True,
+        math_health: Callable[[], Mapping[str, Any]] | None = None,
     ) -> None:
         if not isinstance(registry, MthRegistry):
             raise MthSystemConfigError("registry must be an MthRegistry")
@@ -114,6 +115,8 @@ class MthSystem:
             )
         if not isinstance(enforce_active_slot, bool):
             raise MthSystemConfigError("enforce_active_slot must be a boolean")
+        if math_health is not None and not callable(math_health):
+            raise MthSystemConfigError("math_health must be callable")
 
         self.registry = registry
         self.store = store
@@ -152,6 +155,7 @@ class MthSystem:
             self.guest_budget_bytes, self.runner_budget_bytes
         )
         self.enforce_active_slot = enforce_active_slot
+        self.math_health = math_health
 
     def __repr__(self) -> str:
         return (
@@ -462,13 +466,25 @@ class MthSystem:
     # -- Observability --------------------------------------------------------
 
     def health(self) -> dict[str, Any]:
-        """Merge token-free store, registry, ring, and budget health."""
+        """Merge token-free store, registry, ring, budget, and math health."""
         store_health = self.store.health()
         registry_health = self.registry.health()
         ring_snapshot = self.scheduler.snapshot()
+        math_health = None
+        if self.math_health is not None:
+            try:
+                math_health = dict(self.math_health())
+            except Exception as exc:  # health must never crash the facade
+                math_health = {
+                    "status": "unhealthy",
+                    "reason": "math_health_provider_failed",
+                    "error": type(exc).__name__,
+                }
 
         ring_health = ring_snapshot["health"]
         if store_health.get("status") != "green":
+            status = "degraded"
+        elif math_health is not None and math_health.get("status") != "green":
             status = "degraded"
         elif ring_health == "green":
             status = "green"
@@ -483,6 +499,7 @@ class MthSystem:
             "store": store_health,
             "registry": registry_health,
             "ring": ring_snapshot,
+            "math": math_health,
             "point_zero": {
                 "route": POINT_ZERO_ADDRESS,
                 "point_zero": POINT_ZERO_IDENTITY,

@@ -5,9 +5,13 @@ from pathlib import Path
 
 from runner_riddle.wave_store import WaveStore
 from tools.register_wave_capabilities import (
+    DEFAULT_GUEST_WORKSPACE_WORDS,
     DEFAULT_MANIFEST,
+    WORDS_PER_MIB,
     load_manifest,
+    parse_args,
     register_manifest,
+    resolve_guest_workspace_words,
 )
 
 
@@ -107,6 +111,39 @@ class WaveCapabilityTests(unittest.TestCase):
                 precision=target["precision"],
             )
             self.assertEqual([row["runner_id"] for row in admitted], ["MC0:0/R2M"])
+
+    def test_guest_workspace_mib_uses_131072_words_per_mib(self):
+        self.assertEqual(WORDS_PER_MIB, 131_072)
+        self.assertEqual(DEFAULT_GUEST_WORKSPACE_WORDS, 262_144)
+        self.assertEqual(
+            resolve_guest_workspace_words(mib=1), 131_072
+        )
+        self.assertEqual(
+            resolve_guest_workspace_words(mib=2), 262_144
+        )
+        self.assertEqual(
+            resolve_guest_workspace_words(words=131_072), 131_072
+        )
+        self.assertEqual(
+            resolve_guest_workspace_words(), DEFAULT_GUEST_WORKSPACE_WORDS
+        )
+        with self.assertRaises(ValueError):
+            resolve_guest_workspace_words(words=131_072, mib=1)
+        with self.assertRaises(ValueError):
+            resolve_guest_workspace_words(mib=-1)
+
+    def test_guest_workspace_mib_selection_resolves_through_cli_parse(self):
+        for mib, expected_words in ((1, 131_072), (2, 262_144)):
+            with self.subTest(mib=mib):
+                args = parse_args(["--guest-workspace-mib", str(mib)])
+                self.assertIsNone(args.guest_workspace_words)
+                self.assertEqual(args.guest_workspace_mib, mib)
+                self.assertEqual(
+                    resolve_guest_workspace_words(
+                        args.guest_workspace_words, args.guest_workspace_mib
+                    ),
+                    expected_words,
+                )
 
     def test_manifest_json_is_valid(self):
         document = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))

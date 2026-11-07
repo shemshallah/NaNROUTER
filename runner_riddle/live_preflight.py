@@ -24,6 +24,15 @@ from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
 from .address import AddressError, parse_address
+from .budget import (
+    DEFAULT_GUEST_BUDGET_BYTES,
+    GuestBudget,
+    LEGACY_GUEST_BUDGET_BYTES,
+    PAGE_BYTES,
+    WORD_BYTES,
+    from_bytes as guest_budget_from_bytes,
+    from_words as guest_budget_from_words,
+)
 from .point0_bridge import (
     MAX_FRAME_WORDS,
     MAX_PAYLOAD_BYTES,
@@ -45,11 +54,13 @@ MAX_SECRET_BYTES = 4_096
 MAX_REGISTRY_BYTES = 16 * 1024 * 1024
 
 UNIVERSE_PAGES = 256
-PAGE_BYTES = 32_768
 UNIVERSE_BYTES = UNIVERSE_PAGES * PAGE_BYTES  # 8 MiB
-GUEST_BUDGET_BYTES = 2 * 1024 * 1024  # 2 MiB default
-LEGACY_GUEST_BUDGET_BYTES = 1_048_576
+GUEST_BUDGET_BYTES = DEFAULT_GUEST_BUDGET_BYTES  # 2 MiB default
 GUEST_PAGES = GUEST_BUDGET_BYTES // PAGE_BYTES  # 64
+# A live deployment must still hold the legacy 1 MiB working set; the budget is
+# adjustable upward from that floor up to the 8 MiB universe.
+MIN_GUEST_BUDGET_BYTES = LEGACY_GUEST_BUDGET_BYTES
+MAX_GUEST_BUDGET_BYTES = UNIVERSE_BYTES
 ACTIVE_SLOT_POLICY = "single-active"
 
 _HTTP_SCHEMES = frozenset(("http", "https"))
@@ -103,6 +114,10 @@ _ENV_ALIASES: dict[str, tuple[str, ...]] = {
         "NANROUTER_GUEST_BUDGET_BYTES", "GUEST_BUDGET_BYTES",
         "NANROUTER_GUEST_BYTES", "NANROUTER_GUEST_BUDGET",
         "RIDDLE_GUEST_BUDGET_BYTES",
+    ),
+    "guest_budget_words": (
+        "NANROUTER_GUEST_BUDGET_WORDS", "GUEST_BUDGET_WORDS",
+        "NANROUTER_GUEST_WORDS", "RIDDLE_GUEST_BUDGET_WORDS",
     ),
     "ring_active_slot_policy": (
         "RIDDLE_RING_ACTIVE_SLOT_POLICY", "RUNNER_RING_ACTIVE_SLOT_POLICY",
@@ -165,6 +180,7 @@ class DeploymentConfig:
     universe_pages: int = UNIVERSE_PAGES
     page_bytes: int = PAGE_BYTES
     guest_budget_bytes: int = GUEST_BUDGET_BYTES
+    guest_budget_words: int | None = None
     ring_active_slot_policy: str = ACTIVE_SLOT_POLICY
     point0_route: str = POINT_ZERO_ADDRESS
     expected_generation: int | None = None
@@ -184,6 +200,7 @@ class DeploymentConfig:
             f"universe_pages={self.universe_pages}, "
             f"page_bytes={self.page_bytes}, "
             f"guest_budget_bytes={self.guest_budget_bytes}, "
+            f"guest_budget_words={self.guest_budget_words}, "
             f"ring_active_slot_policy={self.ring_active_slot_policy!r}, "
             f"point0_route={self.point0_route!r}, "
             f"expected_generation={self.expected_generation}, "
@@ -313,6 +330,65 @@ def _optional_int(
             "invalid_integer", f"{name} must be at least {minimum}"
         )
     return number
+
+
+def _resolve_guest_budget(
+    raw: Mapping[str, Any],
+) -> tuple[GuestBudget | None, str | None, str | None]:
+    """Resolve the deployment guest budget through the shared budget model.
+
+    Returns ``(budget, error_code, error_message)``.  A valid budget is positive,
+    word aligned, at least the legacy 1 MiB floor, and no larger than the 8 MiB
+    universe.  Words and bytes may be supplied together only when they agree.
+    """
+    words_raw = raw.get("guest_budget_words")
+    bytes_raw = raw.get("guest_budget_bytes")
+    words_given = words_raw not in (None, "")
+    bytes_given = bytes_raw not in (None, "")
+    if not words_given and not bytes_given:
+        return None, "guest_budget_required", (
+            "guest budget is required "
+            f"({_ENV_ALIASES['guest_budget_bytes'][0]} or "
+            f"{_ENV_ALIASES['guest_budget_words'][0]})"
+        )
+    try:
+        words = (
+            _optional_int(words_raw, "guest_budget_words", minimum=1)
+            if words_given else None
+        )
+        size = (
+            _optional_int(bytes_raw, "guest_budget_bytes", minimum=1)
+            if bytes_given else None
+        )
+    except LivePreflightError as exc:
+        return None, "invalid_guest_budget", exc.message
+    try:
+        if words is not None and size is not None:
+            if words * WORD_BYTES != size:
+                return None, "guest_budget_mismatch", (
+                    f"guest_budget_words ({words}) and "
+                    f"guest_budget_bytes ({size}) disagree"
+                )
+            budget = guest_budget_from_words(words)
+        elif words is not None:
+            budget = guest_budget_from_words(words)
+        elif size is not None:
+            budget = guest_budget_from_bytes(size)
+        else:  # pragma: no cover - guarded by the required-input check
+            return None, "guest_budget_required", "guest budget is required"
+    except ValueError as exc:
+        return None, "invalid_guest_budget", f"guest budget: {exc}"
+    if budget.bytes < MIN_GUEST_BUDGET_BYTES:
+        return None, "guest_budget_below_legacy_floor", (
+            f"guest_budget_bytes must be at least {MIN_GUEST_BUDGET_BYTES} "
+            f"(legacy 1 MiB floor); got {budget.bytes}"
+        )
+    if budget.bytes > MAX_GUEST_BUDGET_BYTES:
+        return None, "guest_budget_exceeds_universe", (
+            f"guest_budget_bytes must be at most {MAX_GUEST_BUDGET_BYTES} "
+            f"(8 MiB universe); got {budget.bytes}"
+        )
+    return budget, None, None
 
 
 def _validate_http_url(value: Any) -> str | None:
@@ -743,6 +819,7 @@ def preflight_report(
     universe_pages: int | str | None = None,
     page_bytes: int | str | None = None,
     guest_budget_bytes: int | str | None = None,
+    guest_budget_words: int | str | None = None,
     ring_active_slot_policy: str | None = None,
     ring_active_slots: int | str | None = None,
     point0_route: str | None = None,
@@ -777,6 +854,7 @@ def preflight_report(
         "universe_pages": universe_pages,
         "page_bytes": page_bytes,
         "guest_budget_bytes": guest_budget_bytes,
+        "guest_budget_words": guest_budget_words,
         "ring_active_slot_policy": ring_active_slot_policy,
         "ring_active_slots": ring_active_slots,
         "point0_route": point0_route,
@@ -1152,40 +1230,56 @@ def preflight_report(
             required=PAGE_BYTES, source=sources.get("page_bytes"),
         ))
 
-    guest_ok = False
-    runtime_guest_bytes = GUEST_BUDGET_BYTES
-    try:
-        guest = _as_int(raw.get("guest_budget_bytes"))
-        runtime_guest_bytes = guest
-        guest_ok = guest in (GUEST_BUDGET_BYTES, LEGACY_GUEST_BUDGET_BYTES)
-        message = (
-            "guest budget matches the 2 MiB / 262144-word target (or 1 MiB legacy)"
-            if guest_ok
-            else f"guest_budget_bytes must be {GUEST_BUDGET_BYTES} (2 MiB) or {LEGACY_GUEST_BUDGET_BYTES} (legacy)"
-        )
+    guest_budget, guest_error_code, guest_error_message = _resolve_guest_budget(raw)
+    guest_ok = guest_budget is not None
+    runtime_guest_bytes = (
+        guest_budget.bytes if guest_budget is not None else GUEST_BUDGET_BYTES
+    )
+    guest_source = (
+        sources.get("guest_budget_words")
+        if raw.get("guest_budget_words") not in (None, "")
+        else sources.get("guest_budget_bytes")
+    )
+    if guest_budget is not None:
         checks.append(_check(
-            "universe.guest_budget", "pass" if guest_ok else "fail", message,
-            value=guest, required=GUEST_BUDGET_BYTES, guest_pages=(guest + PAGE_BYTES - 1) // PAGE_BYTES,
-            word_bytes=8, guest_words=guest // 8,
-            source=sources.get("guest_budget_bytes"),
+            "universe.guest_budget", "pass",
+            (
+                f"guest budget is {guest_budget.bytes} bytes / "
+                f"{guest_budget.words} NaN16 words / {guest_budget.pages} pages"
+            ),
+            value=guest_budget.bytes,
+            required=GUEST_BUDGET_BYTES,
+            minimum_bytes=MIN_GUEST_BUDGET_BYTES,
+            maximum_bytes=MAX_GUEST_BUDGET_BYTES,
+            word_bytes=WORD_BYTES,
+            guest_words=guest_budget.words,
+            guest_pages=guest_budget.pages,
+            guest_slack_words=guest_budget.slack_words,
+            source=guest_source,
         ))
-    except LivePreflightError as exc:
+    else:
         checks.append(_check(
             "universe.guest_budget", "fail",
-            f"guest_budget_bytes: {exc.message}",
-            required=GUEST_BUDGET_BYTES, source=sources.get("guest_budget_bytes"),
+            guest_error_message or "guest budget is invalid",
+            code=guest_error_code,
+            value=(
+                raw.get("guest_budget_words")
+                if raw.get("guest_budget_words") not in (None, "")
+                else raw.get("guest_budget_bytes")
+            ),
+            required=GUEST_BUDGET_BYTES,
+            minimum_bytes=MIN_GUEST_BUDGET_BYTES,
+            maximum_bytes=MAX_GUEST_BUDGET_BYTES,
+            word_bytes=WORD_BYTES,
+            source=guest_source,
         ))
 
-    if pages_ok and page_bytes_ok and guest_ok:
+    if pages_ok and page_bytes_ok and guest_budget is not None:
         universe_bytes = pages * page_size
-        guest_pages = guest // page_size if page_size else None
         budget_consistent = (
             universe_bytes == UNIVERSE_BYTES
-            and guest % page_size == 0
-            and guest_pages in (
-                GUEST_PAGES,
-                LEGACY_GUEST_BUDGET_BYTES // PAGE_BYTES,
-            )
+            and guest_budget.bytes <= universe_bytes
+            and guest_budget.pages <= pages
         )
         checks.append(_check(
             "universe.budget_consistency",
@@ -1196,9 +1290,12 @@ def preflight_report(
                 else "universe/page/guest budget is inconsistent"
             ),
             universe_bytes=universe_bytes,
-            guest_pages=guest_pages,
+            guest_bytes=guest_budget.bytes,
+            guest_words=guest_budget.words,
+            guest_pages=guest_budget.pages,
+            guest_slack_words=guest_budget.slack_words,
             expected_universe_bytes=UNIVERSE_BYTES,
-            expected_guest_pages=[GUEST_PAGES, LEGACY_GUEST_BUDGET_BYTES // PAGE_BYTES],
+            max_guest_pages=UNIVERSE_PAGES,
         ))
     else:
         checks.append(_check(
@@ -1396,6 +1493,7 @@ def preflight_report(
             "pages": raw.get("universe_pages"),
             "page_bytes": raw.get("page_bytes"),
             "guest_budget_bytes": raw.get("guest_budget_bytes"),
+            "guest_budget_words": raw.get("guest_budget_words"),
         },
         "runner_ring": {
             "active_slot_policy": raw.get("ring_active_slot_policy"),
@@ -1435,8 +1533,18 @@ def preflight_report(
                 "page_bytes": PAGE_BYTES,
                 "universe_bytes": UNIVERSE_BYTES,
                 "guest_budget_bytes": runtime_guest_bytes,
-                "guest_pages": (runtime_guest_bytes + PAGE_BYTES - 1) // PAGE_BYTES,
-                "guest_words": runtime_guest_bytes // 8,
+                "guest_budget_words": runtime_guest_bytes // WORD_BYTES,
+                "guest_pages": (
+                    runtime_guest_bytes + PAGE_BYTES - 1
+                ) // PAGE_BYTES,
+                "guest_words": runtime_guest_bytes // WORD_BYTES,
+                "guest_slack_words": (
+                    ((runtime_guest_bytes + PAGE_BYTES - 1) // PAGE_BYTES)
+                    * (PAGE_BYTES // WORD_BYTES)
+                    - runtime_guest_bytes // WORD_BYTES
+                ),
+                "requested_guest_budget_bytes": raw.get("guest_budget_bytes"),
+                "requested_guest_budget_words": raw.get("guest_budget_words"),
                 "ring_slot_count": SLOT_COUNT,
                 "ring_slots": list(MC0_SLOTS),
                 "active_memory_ceiling_bytes": MAX_ACTIVE_MEMORY_BYTES,
@@ -1552,13 +1660,16 @@ __all__ = [
     "GUEST_PAGES",
     "LivePreflight",
     "LivePreflightError",
+    "MAX_GUEST_BUDGET_BYTES",
     "MAX_PROBE_BYTES",
     "MAX_PROBE_TIMEOUT",
+    "MIN_GUEST_BUDGET_BYTES",
     "MIN_PROBE_TIMEOUT",
     "PAGE_BYTES",
     "SCHEMA",
     "UNIVERSE_BYTES",
     "UNIVERSE_PAGES",
+    "WORD_BYTES",
     "load_signed_registry",
     "preflight_report",
     "verify_signed_registry",

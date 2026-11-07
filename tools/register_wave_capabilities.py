@@ -17,8 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 DEFAULT_MANIFEST = REPO_ROOT / "spec" / "wave-capabilities.json"
-# MTH guest working-set ceiling: 1 MiB / 8 bytes per NaN16 word.
-DEFAULT_GUEST_WORKSPACE_WORDS = 262_144
+# One NaN16 guest word is 8 bytes, so 1 MiB is 131,072 words.
+WORDS_PER_MIB = (1024 * 1024) // 8  # 131_072
+# MTH guest working-set ceiling: 2 MiB / 8 bytes per NaN16 word.
+DEFAULT_GUEST_WORKSPACE_WORDS = 2 * WORDS_PER_MIB  # 262_144
 
 
 def sha256_file(path: Path) -> str:
@@ -27,6 +29,34 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def resolve_guest_workspace_words(
+    words: int | None = None,
+    mib: int | None = None,
+    *,
+    default: int = DEFAULT_GUEST_WORKSPACE_WORDS,
+) -> int:
+    """Resolve the CLI words/MiB selector to NaN16 guest words.
+
+    One NaN16 guest word is 8 bytes, so a MiB is 131,072 words.  This helper is
+    the single conversion seam used by ``main`` and by the focused tests.
+    """
+    if words is not None and mib is not None:
+        raise ValueError("guest workspace words and MiB are mutually exclusive")
+    if mib is not None:
+        if isinstance(mib, bool) or not isinstance(mib, int) or mib < 0:
+            raise ValueError(
+                "guest workspace MiB must be a non-negative integer"
+            )
+        return mib * WORDS_PER_MIB
+    if words is not None:
+        if isinstance(words, bool) or not isinstance(words, int) or words < 0:
+            raise ValueError(
+                "guest workspace words must be a non-negative integer"
+            )
+        return words
+    return default
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -127,7 +157,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     budget.add_argument("--guest-workspace-words", type=int,
                         help="available guest workspace in NaN16 words")
     budget.add_argument("--guest-workspace-mib", type=int,
-                        help="available guest workspace in MiB (2 MiB = 262144 NaN16 words)")
+                        help="available guest workspace in MiB "
+                             "(1 MiB = 131072, 2 MiB = 262144 NaN16 words)")
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--tick", type=int, default=0)
     parser.add_argument("--dry-run", action="store_true")
@@ -136,14 +167,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    if args.guest_workspace_words is not None:
-        guest_workspace_words = args.guest_workspace_words
-    elif args.guest_workspace_mib is not None:
-        guest_workspace_words = args.guest_workspace_mib * 262_144
-    else:
-        guest_workspace_words = DEFAULT_GUEST_WORKSPACE_WORDS
-    if guest_workspace_words < 0:
-        print("guest workspace must be non-negative", file=sys.stderr)
+    try:
+        guest_workspace_words = resolve_guest_workspace_words(
+            args.guest_workspace_words, args.guest_workspace_mib
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
     manifest = load_manifest(args.manifest)
     runner_ids = (

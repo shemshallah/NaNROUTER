@@ -385,6 +385,57 @@ class MthSystemTests(unittest.TestCase):
         with self.assertRaises(MthSystemWorkspaceError):
             self.submit(plan, system=legacy_system, job_id="job-full-pair-legacy")
 
+    def test_exact_2_mib_plan_bound_is_accepted_and_one_word_over_is_rejected(self):
+        boundary_words = 262_144
+        descriptor = MthKernelDescriptor(
+            kernel_id="mth.test.exact_2mib.f32",
+            source="exact_2mib.nas",
+            fixture="exact_2mib_test.nas",
+            marker="TEST EXACT 2 MIB",
+            steps=1,
+            precision="float32",
+            workspace_words=boundary_words,
+            shape=(1,),
+            status="native_verified",
+            ci_verified=True,
+            source_digest="a" * 64,
+            fixture_digest="b" * 64,
+        )
+        registry = MthRegistry([descriptor])
+        system = MthSystem(registry, self.store, self.service, self.scheduler)
+        self.assertEqual(system.workspace_budget_bytes, 2 * 1024 * 1024)
+        spec = {
+            "plan_id": "exact-2mib",
+            "steps": [{
+                "name": "step",
+                "kernel_id": descriptor.kernel_id,
+                "inputs": [],
+                "outputs": [],
+                "depends_on": [],
+            }],
+        }
+
+        at_limit = registry.compose(spec)
+        self.assertEqual(at_limit.workspace_words, boundary_words)
+        job = self.submit(
+            at_limit, system=system, job_id="job-exact-2mib"
+        )
+        self.assertEqual(job["workspace"], boundary_words)
+        self.assertEqual(self.store.health()["jobs"]["queued"], 1)
+
+        over_limit = registry.compose({
+            **spec,
+            "plan_id": "exact-2mib-over",
+            "workspace_words": boundary_words + 1,
+        })
+        self.assertEqual(over_limit.workspace_words, boundary_words + 1)
+        with self.assertRaises(MthSystemWorkspaceError):
+            self.submit(
+                over_limit, system=system, job_id="job-exact-2mib-over"
+            )
+        self.assertEqual(self.store.health()["jobs"]["queued"], 1)
+        self.assertIsNone(self.store.get_job("job-exact-2mib-over"))
+
     def test_separately_declared_guest_budget_is_enforced(self):
         plan = self.make_plan()
         guest_system = self.make_system(guest_budget_bytes=16)
@@ -481,6 +532,21 @@ class MthSystemTests(unittest.TestCase):
             self.assertNotIn("NANROUTER", route)
             self.assertNotIn("MC0:0/R", route)
 
+    def test_health_includes_and_gates_on_optional_math_health(self):
+        healthy = self.make_system(math_health=lambda: {"status": "green"})
+        self.assertEqual(healthy.health()["math"]["status"], "green")
+
+        degraded = self.make_system(math_health=lambda: {"status": "red"})
+        self.assertEqual(degraded.health()["status"], "degraded")
+
+        def broken():
+            raise RuntimeError("math store unavailable")
+
+        failed = self.make_system(math_health=broken)
+        health = failed.health()
+        self.assertEqual(health["status"], "degraded")
+        self.assertEqual(health["math"]["reason"], "math_health_provider_failed")
+
     def test_health_merges_components_without_secrets(self):
         self.scheduler.start(0)
         plan = self.make_plan()
@@ -519,6 +585,7 @@ class MthSystemTests(unittest.TestCase):
         self.assertEqual(health["budgets"]["guest_budget_pages"], 64)
         self.assertEqual(health["budgets"]["workspace_budget_words"], 262144)
         self.assertEqual(health["store"]["jobs"]["done"], 1)
+        self.assertIsNone(health["math"])
 
         rendered = json.dumps(health, sort_keys=True)
         for token in (self.submit_token, self.worker_token, self.admin_token):
