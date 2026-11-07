@@ -19,7 +19,7 @@ mth_graph_components_nullity_v1:
   ST r4,r11,3
   ST r5,r11,4
   ST r6,r11,5
-  ST r4,r11,14
+  ST r4,r11,12
   CMP r3,r0
   JMP[LT] @mth_comp_bad_count
   MOVI r8,65280
@@ -212,7 +212,7 @@ mth_comp_count_next:
 mth_comp_count_done:
   ; Copy converged labels to public output if active buffer is tmp.
   LD r8,r11,3
-  LD r9,r11,14
+  LD r9,r11,12
   CMP r8,r9
   JMP[EQ] @mth_comp_commit_count
   LD r10,r11,3
