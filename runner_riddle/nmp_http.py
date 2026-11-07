@@ -133,20 +133,39 @@ class WaveStoreNmpContextProvider:
         }
         return dict(operator), list(rows), workspace, precision, required
 
-    def select_worker(self, packet: NmpPacket, owner: str) -> bool:
-        """Check worker capability before a durable lease is acquired."""
+    def select_worker(
+        self,
+        packet: NmpPacket,
+        owner: str,
+        *,
+        job: Mapping[str, Any] | None = None,
+        now_tick: int | None = None,
+    ) -> bool:
+        """Run the full queued-state gate before a durable lease is acquired."""
         try:
-            _, rows, workspace, _, required = self._operator_capabilities(
-                packet, owner=owner
+            context = dict(self(
+                packet=packet,
+                stage="lease_candidate",
+                job=job,
+                lease=None,
+            ))
+            rows = context.get("capability")
+            if not isinstance(rows, list):
+                return False
+            context["capability"] = [
+                row for row in rows
+                if isinstance(row, Mapping) and row.get("runner_id") == owner
+            ]
+            if not context["capability"]:
+                return False
+            decision = packet.execution_gate(
+                job=job,
+                lease=None,
+                now_tick=now_tick,
+                **context,
             )
-            ok, _, _ = _check_capabilities(
-                packet,
-                rows,
-                required_capability=required,
-                workspace=workspace,
-            )
-            return bool(ok)
-        except (NmpHttpError, ValueError, TypeError):
+            return bool(decision.ok)
+        except Exception:
             return False
 
     def __call__(
@@ -297,7 +316,9 @@ class NmpHttpAdapter:
                     continue
                 if candidate.get("state") != "queued":
                     continue
-                if select_worker(packet, owner):
+                if select_worker(
+                    packet, owner, job=candidate, now_tick=now_tick
+                ):
                     selected_id = candidate.get("job_id")
                     break
             if selected_id is None:
