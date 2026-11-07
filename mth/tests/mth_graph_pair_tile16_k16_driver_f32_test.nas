@@ -33,8 +33,33 @@ mth_pair_driver_test_main:
   LA r5,@mth_driver_acc_lu
   LA r6,@mth_driver_acc_ult
   LA r7,@mth_driver_scratch
-  LA r8,@mth_driver_y
   CALL @mth_graph_pair_tile16_k16_driver_f32
+  MOVI r2,1
+  CMP r1,r2
+  JMP[NE] @mth_pair_driver_test_fail
+
+  ; Verify both independent accumulators after all sixteen K slices.
+  LA r4,@mth_driver_acc_lu
+  MOVI r6,18
+  ADD r4,r4,r6
+  LD r7,r4,0
+  MOVI r8,0
+  MOVHI r8,0x4080
+  CMP r7,r8
+  JMP[NE] @mth_pair_driver_test_fail
+  LA r4,@mth_driver_acc_ult
+  MOVI r6,18
+  ADD r4,r4,r6
+  LD r7,r4,0
+  CMP r7,r8
+  JMP[NE] @mth_pair_driver_test_fail
+
+  ; Finalize in the fixture after the driver returns.
+  LA r1,@mth_driver_acc_lu
+  LA r2,@mth_driver_acc_ult
+  LA r3,@mth_driver_y
+  MOVI r13,1
+  CALL @mth_graph_pair_tile16_finalize_f32
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_test_fail
