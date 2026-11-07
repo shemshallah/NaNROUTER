@@ -36,7 +36,7 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
     if not isinstance(value, Mapping):
         raise NmpHttpError("server admission context is unavailable")
     result = dict(value)
-    forbidden = {"job", "lease", "tick", "gate"}
+    forbidden = {"job", "lease", "tick", "now_tick", "gate"}
     if forbidden.intersection(result):
         raise NmpHttpError("context provider returned reserved gate fields")
     return result
@@ -59,6 +59,7 @@ def _lease_from_job(job: Mapping[str, Any]) -> dict[str, Any]:
         "lease_token": job.get("lease_token"),
         "lease_owner": job.get("lease_owner"),
         "lease_epoch": job.get("lease_epoch"),
+        "deadline_tick": job.get("deadline_tick"),
         "state": "active",
     }
 
@@ -140,7 +141,7 @@ class NmpHttpAdapter:
             self.context_provider, packet, "lease", job=job, lease=lease
         )
         executing = packet.start_execution(
-            tick=now_tick, job=job, lease=lease, **gate_context
+            tick=now_tick, job=job, lease=lease, now_tick=now_tick, **gate_context
         )
         return {
             "schema": "nanrouter.nmp-lease.v1",
@@ -173,20 +174,18 @@ class NmpHttpAdapter:
         # Re-evaluate the gate against the concrete current lease before the
         # durable completion write. Native packets additionally verify that
         # the receipt-derived lease binding in packet evidence is unchanged.
-        lease = {
-            "job_id": job_id,
-            "lease_token": lease_token,
-            "lease_owner": lease_owner,
-            "lease_epoch": lease_epoch,
-            "state": "active",
-        }
-        job = {
-            "job_id": job_id,
-            "state": "leased",
-            "lease_token": lease_token,
-            "lease_owner": lease_owner,
-            "lease_epoch": lease_epoch,
-        }
+        self.service._authorize(token, ("worker",))
+        job = self.service.store.get_job(job_id)
+        if not isinstance(job, Mapping) or job.get("state") != "leased":
+            raise NmpHttpError("completion job is not actively leased")
+        lease = _lease_from_job(job)
+        if (
+            lease.get("lease_token") != lease_token
+            or lease.get("lease_epoch") != lease_epoch
+            or (lease_owner is not None and lease.get("lease_owner") != lease_owner)
+        ):
+            raise NmpHttpError("completion lease does not match the durable worker lease")
+        lease_owner = lease.get("lease_owner")
         gate_context = _context(
             self.context_provider, packet, "complete", job=job, lease=lease
         )
