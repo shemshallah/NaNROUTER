@@ -197,6 +197,7 @@ mth_link_pf_main:
   HALT
 
 mth_link_pf_fail:
+  ST r1,r12,47
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
   HALT
