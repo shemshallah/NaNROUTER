@@ -910,8 +910,10 @@ NaNNet runners advertise per-kernel capability and workspace. Only a capability 
 
 ### 20.4 Immediate gate
 
-The canonical NaN16 assembler/interpreter is now located and exercised by CI. The first exact K256 U16-input matrix-free Laplacian kernel is native_verified; it checks all 256 inputs before writing and passes the impulse response plus invalid-input atomicity fixture. This baseline deliberately does not define the signed fixed-point ABI for waves.
+The signed fixed-point ABI is now frozen for the first sparse operator in [MTH_SPARSE_GRAPH_ABI.md](MTH_SPARSE_GRAPH_ABI.md): Q16.16/I32, input raw range [-2^22,+2^22], exact no-rounding arithmetic, maximum degree 255, and an explicit overflow proof. The first native sparse operator is the exact **unweighted symmetric simple-graph CSR Laplacian**. Its NaN16 kernel preflights all 256 state values, CSR offsets/degrees, and endpoint ranges before output writes.
 
-Next: freeze a versioned signed fixed-point ABI (word width, Q format, rounding, overflow/saturation, scratch frame and workspace), then implement a sparse weighted-graph degree/Lx kernel against path-graph and disconnected-graph exact oracles. Only after those pass should the void potential, eigensolver/filter and wave stepper proceed. Keep the runner capability non-dispatchable until the kernel digest and workspace are registered in its manifest.
+**Native evidence:** canonical NaN16 CI run #58 assembled and executed the path graph, disconnected graph with isolated vertices, and invalid-input atomicity fixtures successfully (20,737 guest steps; expected HALT). Kernel SHA-256: `013048435c1026643554fb20e3434934cf059dd47cf2857577cac13ed5be6b8f`. The corresponding NAN-RSS-1 capability is registered as `native_verified` with operator version 1 and Q format `Q16.16/I32`; worker-level end-to-end RSS job dispatch remains disabled.
 
-**Evidence:** K256 native kernel and fixture passed canonical NaN16 CI (workflow run #17); higher-level sparse, void, spectral and wave kernels remain unimplemented.
+Next: implement **weighted CSR v2** with an explicit weight scale, signed wide intermediate/accumulator, and deterministic rounding policy. Add symmetry, energy, and component/nullity fixtures. Then proceed to pair-space action. Only after the weighted operator is proven should the void potential, eigensolver/filter, and wave stepper proceed. Keep directed W lossless and derive symmetric A explicitly.
+
+**Evidence boundary:** this pass verifies only the unweighted Q16.16/I32 v1 Laplacian. It does not verify weighted CSR, pair-space, void, spectral filters, Lanczos, or wave evolution.
