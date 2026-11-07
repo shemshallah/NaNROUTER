@@ -282,6 +282,23 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
             adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
         self.assertEqual(self.store.stats()["jobs"]["queued"], 0)
 
+    def test_submission_rejects_wrong_allowlisted_program_for_function(self):
+        # 78 is allowlisted, but only for add. Dot must resolve to 79.
+        packet = preflighted_packet()
+        def wrong_function_context(**kwargs):
+            context = gate_context(**kwargs)
+            context["expected_program_id"] = 78
+            return context
+        adapter = NmpHttpAdapter(
+            self.service, wrong_function_context,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        with self.assertRaisesRegex(
+            NmpHttpError, "does not match the NaN16 worker function ABI"
+        ):
+            adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        self.assertEqual(self.store.stats()["jobs"]["queued"], 0)
+
     def test_submission_rejects_packet_without_native_receipt(self):
         packet = make_packet(metadata={"native_admission_required": True})
         preflighted_without_receipt = replace(packet, state=nmp.PREFLIGHTED)
