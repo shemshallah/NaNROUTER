@@ -766,9 +766,11 @@ The first native source slice now lives under `mth/`:
 - `mth/nan16/mth_double_endian.nas` adapts the canonical NaN0S pair-voting codec into MTH names; it validates both tags, both class nibbles, and byte-swapped agreement.
 - `mth/nan16/mth_integer.nas` implements checked unsigned 32-bit addition and subtraction with explicit overflow/underflow status.
 - `mth/nan16/mth_bitwise.nas` implements native bitwise transforms, unsigned min/max, and comparison predicates.
+- `mth/nan16/mth_shift.nas` implements checked variable-count logical left/right shifts using NaN16 instructions.
 - `mth/tests/mth_double_endian_test.nas` checks pair round-trip and deliberate corruption rejection.
 - `mth/tests/mth_integer_test.nas` checks exact add/subtract cases and boundary overflow/underflow.
 - `mth/tests/mth_bitwise_test.nas` checks Boolean bitwise functions and unsigned comparison/min/max results.
+- `mth/tests/mth_shift_test.nas` checks shift counts 0–31, high-bit logical shifting, and invalid-count rejection.
 - `mth/tests/mth_stage0_test.nas` checks all 16 ordered face pairs, four face-type sign/quiet mappings, class packing round trips, invalid class rejection, rotation involution, exact BSWAPM payload-byte reversal, and double-reversal restoration.
 - `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
