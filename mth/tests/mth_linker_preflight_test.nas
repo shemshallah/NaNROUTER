@@ -336,7 +336,7 @@ mth_link_pf_right:
 mth_link_pf_output:
 .word 0,0,0,0,0,@mth_link_pf_output_payload,1,0
 mth_link_pf_candidate:
-.word 1,7,4,4,3,2,1,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,2,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
 mth_link_pf_rule:
 .word 1,7,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
 
