@@ -63,3 +63,13 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - State: Q16.16/I32 input in [-64,+64]; U8 integer edge weights 1..255; signed I64 Q16.16 output.
 - The caller supplies a 16-word scratch frame. The row accumulator is widened to I64; each edge product is exact signed I32.
 - Exact weighted-path and invalid-zero-weight atomicity fixtures are wired into the canonical NaN16 workflow. Canonical NaN16 CI run #107 passed the weighted path and invalid-zero-weight atomicity fixture (41,253 guest steps). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. This is native_verified only for the stated v2 contract.
+
+
+## Graph invariants
+
+- Contract: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
+- Kernel: `nan16/mth_graph_components_256.nas`.
+- Fixture: `tests/mth_graph_components_256_test.nas`.
+- Uses a caller-owned 256-word union-find parent array, emits deterministic component representatives, and returns component count.
+- Preflight rejects malformed offsets, endpoint encoding/range, self-loops, unsorted rows and duplicates before writing labels.
+- Native execution is pending canonical NaN16 CI. Component count is a topological invariant; the nullity correspondence still requires an independently verified Laplacian/nullspace fixture.
