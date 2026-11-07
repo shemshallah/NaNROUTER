@@ -1,0 +1,106 @@
+; MTH double-endian pair codec, native NaN16.
+; Adapted from NaN0S src/lib/n16de.nas (blob 47d64c3446d57669160317228258c35d2184ad17).
+; This is a redundant data carrier, not a cryptographic primitive.
+;
+; Each 16-bit chunk is encoded as two words:
+;   member 0: class 10, tag 0 in payload[31:16], chunk in payload[15:0]
+;   member 1: class 10, tag 1 in payload[31:16], bswap16(chunk) in payload[15:0]
+; Decode requires both class/tag values and agreement after byte swapping.
+;
+; ABI: r13=1. mth_de_encode: r1=chunk, r2=destination; writes 2 words.
+;      mth_de_decode: r1=pair address; returns r1=chunk, r2=1 on success;
+;      returns r1=0,r2=0 on invalid/mismatched pair.
+; NOTE: the inherited save slots make encode/decode non-reentrant. Do not call
+; these routines concurrently against the same code/data image until the ABI
+; is converted to caller-owned stack frames and tested.
+
+.equ MTH_DE_CLASS 10
+.equ MTH_DE_TAG_BE 0
+.equ MTH_DE_TAG_LE 1
+.equ MTH_DE_TAG_DELIM 2
+.equ MTH_DE_TAG_RESYNC 3
+.equ MTH_DE_TAG_CTRL 4
+
+mth_de_bswap16:
+  MOVI r5,255
+  BOOL.8 r2,r1,r5
+  SHL r2,r2,8
+  SHR r3,r1,8
+  BOOL.8 r3,r3,r5
+  BOOL.14 r1,r2,r3
+  RET
+
+mth_de_encode:
+  ST r15,r0,@mth_de_enc_ret
+  ST r1,r0,@mth_de_enc_chunk
+  ST r2,r0,@mth_de_enc_dst
+  MOVI r4,#MTH_DE_CLASS
+  STW r1,r2,r4
+  LD r1,r0,@mth_de_enc_chunk
+  CALL @mth_de_bswap16
+  MOVI r4,#MTH_DE_TAG_LE
+  SHL r4,r4,16
+  BOOL.14 r1,r1,r4
+  LD r2,r0,@mth_de_enc_dst
+  ADD r2,r2,r13
+  MOVI r4,#MTH_DE_CLASS
+  STW r1,r2,r4
+  LD r15,r0,@mth_de_enc_ret
+  RET
+mth_de_enc_ret:
+.word 0
+mth_de_enc_chunk:
+.word 0
+mth_de_enc_dst:
+.word 0
+
+mth_de_decode:
+  ST r15,r0,@mth_de_dec_ret
+  LDN r3,r1,0
+  MOVI r4,#MTH_DE_CLASS
+  CMP r3,r4
+  JMP[NE] @mth_de_bad
+  LDN r3,r1,1
+  CMP r3,r4
+  JMP[NE] @mth_de_bad
+  LD r4,r1,0
+  LD r5,r1,1
+  SHR r6,r4,16
+  CMP r6,r0
+  JMP[NE] @mth_de_bad
+  SHR r6,r5,16
+  MOVI r7,#MTH_DE_TAG_LE
+  CMP r6,r7
+  JMP[NE] @mth_de_bad
+  MOVI r6,0xFFFF
+  BOOL.8 r4,r4,r6
+  BOOL.8 r5,r5,r6
+  ADD r1,r5,r0
+  CALL @mth_de_bswap16
+  CMP r1,r4
+  JMP[NE] @mth_de_bad
+  ADD r1,r4,r0
+  MOVI r2,1
+  LD r15,r0,@mth_de_dec_ret
+  RET
+mth_de_bad:
+  MOVI r1,0
+  MOVI r2,0
+  LD r15,r0,@mth_de_dec_ret
+  RET
+mth_de_dec_ret:
+.word 0
+
+mth_de_delim:
+  MOVI r2,#MTH_DE_TAG_DELIM
+  SHL r2,r2,16
+  MOVI r3,#MTH_DE_CLASS
+  STW r2,r1,r3
+  RET
+
+mth_de_resync:
+  MOVI r2,#MTH_DE_TAG_RESYNC
+  SHL r2,r2,16
+  MOVI r3,#MTH_DE_CLASS
+  STW r2,r1,r3
+  RET
