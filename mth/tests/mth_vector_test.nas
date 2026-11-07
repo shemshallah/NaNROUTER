@@ -65,6 +65,7 @@ mth_vec_test_main:
   MOVI r2,0
   MOVI r3,0
   MOVI r4,0
+  MOVI r6,1
   CALL @mth_u32_span_add_checked
   CMP r1,r6
   JMP[NE] @mth_vec_fail
