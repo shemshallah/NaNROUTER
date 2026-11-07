@@ -25,6 +25,14 @@ class MathDemoTests(unittest.TestCase):
         self.assertEqual(
             report["feedback"]["content_digest"], report["result_digest"],
         )
+        leaf = report["output_leaf"]
+        self.assertEqual(len(leaf["parents"]), 2)
+        self.assertEqual(leaf["operation"]["function_id"], "math.vector.dot")
+        self.assertIn("function_version", leaf["operation"])
+        self.assertEqual(leaf["provenance"]["jahs"], "JAHS")
+        self.assertEqual(
+            leaf["provenance"]["packet_id"], report["packet_id"],
+        )
         self.assertIn("not a claimed numeric", report["note"])
 
     def test_cli_json_returns_success(self):

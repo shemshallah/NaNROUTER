@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from runner_riddle.math_objects import MathLeaf, MathRule
+from runner_riddle.math_objects import (
+    MathCandidate,
+    MathLeaf,
+    MathRule,
+    candidate_id_for,
+)
 from runner_riddle.math_registry import MathFunctionRegistry
 from runner_riddle.math_runtime import (
     MathRuntime,
@@ -142,6 +147,47 @@ class MathEndToEndTests(unittest.TestCase):
             admission = runtime.preflight(candidate)
             self.assertEqual(admission.rule_snapshot_id, snap.rule_snapshot_id)
 
+    def test_capability_provider_is_bound_into_preflight_snapshot(self):
+        class Provider:
+            @staticmethod
+            def capabilities():
+                return ({
+                    "kernel_id": "mth.vector.dot256.f32",
+                    "status": "native_verified",
+                    "workspace": 1,
+                },)
+
+        runtime = MathRuntime(
+            self.functions, capability_provider=Provider(),
+        )
+        leaf_a = make_leaf(1, "a")
+        leaf_b = make_leaf(2, "b")
+        runtime._leaves[leaf_a.leaf_id] = leaf_a
+        runtime._leaves[leaf_b.leaf_id] = leaf_b
+        inputs = (
+            {"leaf_id": leaf_a.leaf_id, "version": 1,
+             "content_digest": leaf_a.content_digest},
+            {"leaf_id": leaf_b.leaf_id, "version": 1,
+             "content_digest": leaf_b.content_digest},
+        )
+        dot = next(
+            item for item in self.functions.functions
+            if item.function_id == "math.vector.dot"
+        )
+        cand = MathCandidate(
+            candidate_id_for("snp:" + "f" * 64, inputs,
+                             dot.function_id, dot.version),
+            inputs,
+            dot.function_id,
+            dot.version,
+            snapshot_id="snp:" + "f" * 64,
+        )
+        snap = runtime.snapshot_for(cand)
+        self.assertEqual(snap.capabilities, (
+            {"kernel_id": "mth.vector.dot256.f32",
+             "status": "native_verified", "workspace": 1},
+        ))
+
     def test_store_backed_runtime_and_submit(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -163,6 +209,10 @@ class MathEndToEndTests(unittest.TestCase):
             runtime = MathRuntime(
                 self.functions, store=math_store, system=system,
             )
+            health = runtime.health()
+            self.assertEqual(health["status"], "green")
+            self.assertEqual(health["store"]["status"], "green")
+            self.assertFalse(health["rule_provider"])
             result = runtime.propose(
                 [f"{a.leaf_id}@v1", f"{b.leaf_id}@v1"],
                 snapshot_id="snp:" + "f" * 64,

@@ -2355,6 +2355,7 @@ def propose(
             effective,
             rejected_rows,
             incomplete_reasons,
+            rule_snapshot_id=snapshot.rule_snapshot_id,
         )
 
     search = {
@@ -2545,13 +2546,18 @@ def _null_reason(query: LinkQuery, classes: tuple[LeafClass, ...],
 
 def _typed_null(reason: str, inputs: tuple[dict[str, Any], ...], snapshot_id: str,
                 query: LinkQuery, rejected: tuple[dict[str, Any], ...],
-                incomplete_reasons: list[str]) -> MathLeaf:
+                incomplete_reasons: list[str], *,
+                rule_snapshot_id: str = "") -> MathLeaf:
     metadata = {
         "reason": reason,
+        "failure_class": reason,
+        "linker_id": LINKER_ID,
         "snapshot_id": snapshot_id,
+        "rule_snapshot_id": rule_snapshot_id,
         "mode": query.mode,
         "objective": query.objective,
         "inputs": [dict(row) for row in inputs],
+        "candidate_count": 0,
         "rejected_count": len(rejected),
         "incomplete_reasons": list(incomplete_reasons),
     }

@@ -50,6 +50,10 @@ class NanAddress:
 
 
 def parse_address(value: str) -> NanAddress:
+    if value.strip().startswith("math://"):
+        raise AddressError(
+            "route_context_mismatch: math:// is a linker context, not a router address"
+        )
     match = _ROOT.fullmatch(value.strip())
     if not match:
         raise AddressError("invalid NaN address root or selector boundary")

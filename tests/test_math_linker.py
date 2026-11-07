@@ -221,6 +221,12 @@ class MathLinkerCandidateTests(unittest.TestCase):
         self.assertEqual(result.null.kind, "null")
         self.assertIsNone(result.null.content)
         self.assertEqual(result.null.metadata["reason"], "NO_REGISTERED_FUNCTION")
+        self.assertEqual(
+            result.null.metadata["failure_class"], "NO_REGISTERED_FUNCTION"
+        )
+        self.assertEqual(result.null.metadata["linker_id"], "math.linker.v1")
+        self.assertEqual(result.null.metadata["candidate_count"], 0)
+        self.assertIn("rule_snapshot_id", result.null.metadata)
         self.assertFalse(result.incomplete)
         self.assertEqual(result.candidate_ids, ())
 

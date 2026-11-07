@@ -133,12 +133,47 @@ def run_demo(root: Path | None = None, *, keep: bool = False) -> dict[str, Any]:
             kind="scalar",
             type={"element": "float32", "shape": [], "domain": "real"},
             content={"digest": result_digest, "word_count": 1},
-            provenance={
+            parents=(
+                {
+                    "leaf_id": a.leaf_id,
+                    "version": a.version,
+                    "content_digest": a.content_digest,
+                },
+                {
+                    "leaf_id": b.leaf_id,
+                    "version": b.version,
+                    "content_digest": b.content_digest,
+                },
+            ),
+            operation={
+                "function_id": candidate.function_id,
+                "function_version": candidate.function_version,
+                "ruleset_snapshot_id": admission.rule_snapshot_id,
                 "candidate_id": candidate.candidate_id,
-                "admission_id": admission.admission_id,
-                "packet_id": packet.packet_id,
+                "plan_digest": digest_object(compiled.plan.to_dict()),
             },
-            metadata={"demo": True, "numeric_execution": "external"},
+            provenance={
+                "producer": "nanrouter.math-demo.v1",
+                "candidate_id": candidate.candidate_id,
+                "function_id": candidate.function_id,
+                "function_version": candidate.function_version,
+                "admission_id": admission.admission_id,
+                "preflight_digest": admission.preflight_digest,
+                "ruleset_snapshot_id": admission.rule_snapshot_id,
+                "packet_id": packet.packet_id,
+                "job_id": submission.job_id,
+                "kernel_id": descriptor.kernel_id,
+                "runner_id": binding.active_slot_id,
+                "ring_incarnation": packet.ring_incarnation,
+                "ring_epoch": packet.ring_epoch,
+                "jahs": packet.jahs,
+                "plan_digest": digest_object(compiled.plan.to_dict()),
+            },
+            metadata={
+                "demo": True,
+                "numeric_execution": "external",
+                "evidence_digest_only": True,
+            },
         )
         math_store.put_leaf(output)
 
@@ -168,6 +203,7 @@ def run_demo(root: Path | None = None, *, keep: bool = False) -> dict[str, Any]:
             "committed": completed.committed,
             "result_digest": completed.result_digest,
             "output_leaf_id": output.leaf_id,
+            "output_leaf": feedback_leaf.to_dict(),
             "feedback": {
                 "leaf_id": feedback_leaf.leaf_id,
                 "version": feedback_leaf.version,

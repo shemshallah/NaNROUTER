@@ -13,6 +13,7 @@ from runner_riddle.math_execution import (
     MathExecutionRingError,
     MathExecutionStateError,
 )
+from runner_riddle.math_objects import MathRule
 from runner_riddle.math_registry import MathFunctionRegistry
 from runner_riddle.math_runtime import MathRuntime, MathRuntimePlanError
 from runner_riddle.math_store import MathStore
@@ -136,6 +137,60 @@ class MathExecutionTests(unittest.TestCase):
         packet = self.bridge.prepare_packet(compiled)
         with self.assertRaises(MathExecutionBindingError):
             self.bridge._validate_compiled_binding(packet, bad)
+
+    def test_ruleset_change_after_lease_blocks_dispatch_before_executor(self):
+        class Provider:
+            rules = ()
+
+            def active_rules(self, *, include_isolated=False):
+                return tuple(self.rules)
+
+        provider = Provider()
+        runtime = MathRuntime(
+            self.functions, store=self.math_store, system=self.system,
+            rule_provider=provider,
+        )
+        bridge = MathExecutionBridge(
+            runtime, self.system,
+            submit_token=SUBMIT_TOKEN, worker_token=WORKER_TOKEN,
+        )
+        self.register_capability()
+        self.scheduler.start(0)
+        result = runtime.propose(
+            [f"{self.a.leaf_id}@v1", f"{self.b.leaf_id}@v1"],
+            snapshot_id="snp:" + "f" * 64,
+            max_candidates=8,
+        )
+        candidate = next(
+            item for item in result.items
+            if item.function_id == "math.vector.dot"
+        )
+        admission = runtime.preflight(candidate)
+        compiled = runtime.compile(candidate, admission)
+        packet = bridge.prepare_packet(compiled)
+        submission = bridge.submit(packet, compiled, now_tick=0)
+        lease = bridge.lease(submission, now_tick=0)
+        self.assertIsNotNone(lease)
+
+        provider.rules = (
+            MathRule(
+                rule_id="math.rule.late.change",
+                version=1,
+                level=1,
+                contract={"claims": {}},
+                proof_status="verified",
+                status="active",
+                scope={"function_ids": ["math.vector.dot"]},
+            ),
+        )
+        calls = []
+        with self.assertRaises(MathExecutionStateError):
+            bridge.execute(
+                lease,
+                lambda: calls.append("called") or "c" * 64,
+                now_tick=1,
+            )
+        self.assertEqual(calls, [])
 
     def test_execute_rejects_expired_lease_before_calling_executor(self):
         self.register_capability()

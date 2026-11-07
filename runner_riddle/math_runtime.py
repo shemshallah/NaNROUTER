@@ -70,6 +70,7 @@ class MathRuntime:
         validity: MathValidityEngine | None = None,
         leaves: Mapping[str, MathLeaf] | None = None,
         rule_provider: Any = None,
+        capability_provider: Any = None,
     ) -> None:
         if not isinstance(functions, MathFunctionRegistry):
             raise MathRuntimeConfigError("functions must be a MathFunctionRegistry")
@@ -85,6 +86,14 @@ class MathRuntime:
             raise MathRuntimeConfigError(
                 "rule_provider must be callable or expose active_rules()"
             )
+        if capability_provider is not None and not (
+            callable(capability_provider) or callable(
+                getattr(capability_provider, "capabilities", None)
+            )
+        ):
+            raise MathRuntimeConfigError(
+                "capability_provider must be callable or expose capabilities()"
+            )
         self.functions = functions
         self.store = store
         self.system = system
@@ -92,6 +101,7 @@ class MathRuntime:
         self.validity = validity or MathValidityEngine()
         self._leaves = dict(leaves or {})
         self.rule_provider = rule_provider
+        self.capability_provider = capability_provider
 
     # -- leaves --------------------------------------------------------------
 
@@ -150,6 +160,52 @@ class MathRuntime:
             rules = self.rule_provider.active_rules()
         return tuple(rules or ())
 
+    def current_rule_snapshot_id(self) -> str:
+        """Current active-rule snapshot; empty when no provider is bound."""
+        if self.rule_provider is None:
+            return ""
+        return MathSnapshot(
+            snapshot_id="snp:runtime-rules",
+            rules=self._active_rules(),
+        ).rule_snapshot_id
+
+    def health(self) -> dict[str, Any]:
+        """Composed math-control health; never executes or mutates."""
+        if self.store is not None:
+            store_health = self.store.health()
+        else:
+            store_health = {
+                "schema": "nanrouter.math-store-health.v1",
+                "status": "green",
+                "versions": None,
+                "counts": {},
+                "error": None,
+            }
+        function_health = self.functions.health()
+        status = "green"
+        if store_health.get("status") != "green":
+            status = "degraded"
+        if function_health.get("healthy") is False:
+            status = "degraded"
+        return {
+            "schema": "nanrouter.math-runtime-health.v1",
+            "status": status,
+            "store": store_health,
+            "functions": function_health,
+            "rule_provider": self.rule_provider is not None,
+            "capability_provider": self.capability_provider is not None,
+            "rule_snapshot_id": self.current_rule_snapshot_id() or None,
+        }
+
+    def _active_capabilities(self) -> tuple[Any, ...]:
+        if self.capability_provider is None:
+            return ()
+        if callable(self.capability_provider):
+            capabilities = self.capability_provider()
+        else:
+            capabilities = self.capability_provider.capabilities()
+        return tuple(capabilities or ())
+
     def snapshot_for(self, candidate: MathCandidate,
                      *, snapshot_id: str | None = None) -> MathSnapshot:
         function = self.functions.require(
@@ -165,7 +221,7 @@ class MathRuntime:
             functions=(function,),
             rules=self._active_rules(),
             leaf_pins=self._leaf_pins(candidate),
-            capabilities=(),
+            capabilities=self._active_capabilities(),
         )
 
     # -- linker / validity ---------------------------------------------------

@@ -19,6 +19,11 @@ class AddressTests(unittest.TestCase):
         self.assertEqual(parsed.selectors[1].kind, "vector")
         self.assertEqual(parsed.selectors[2].kind, "hyperedge")
 
+    def test_math_context_is_rejected_with_a_typed_router_mismatch(self):
+        with self.assertRaises(AddressError) as raised:
+            parse_address("math://vector:1")
+        self.assertIn("route_context_mismatch", str(raised.exception))
+
     def test_rejects_untyped_or_out_of_range_head_selector(self):
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW0:256")

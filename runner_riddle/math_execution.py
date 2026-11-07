@@ -844,6 +844,16 @@ class MathExecutionBridge:
             raise MathExecutionBindingError(
                 "compiled function version does not match the candidate"
             )
+        selected = (
+            (compiled.admission.scope or {}).get("capability", {}) or {}
+        ).get("selected") or {}
+        selected_kernel = selected.get("kernel_id")
+        if selected_kernel and tuple(compiled.plan.kernel_ids) != (
+            selected_kernel,
+        ):
+            raise MathExecutionBindingError(
+                "compiled plan kernel does not match the admission-selected kernel"
+            )
         if packet.function_id != compiled.function.function_id:
             raise MathExecutionBindingError(
                 "packet function does not match the compiled function"
@@ -1254,6 +1264,7 @@ class MathExecutionBridge:
         creates a second execution.
         """
         packet, compiled = self._coerce_packet_and_compiled(packet, compiled)
+        self._validate_current_rules(packet)
         if compiled is None:
             raise MathExecutionPlanError("submit requires a compiled MthPlan")
         if self.system is None or self.store is None:
@@ -1641,6 +1652,7 @@ class MathExecutionBridge:
         job = self._job_for(packet, _job_from(target))
         job_id = str(job.get("job_id"))
         payload = self._validate_job_binding(packet, job)
+        self._validate_current_rules(packet)
         binding = self.ring_binding(now_tick=now_tick, require_active=True)
 
         # Idempotent re-entry: the authoritative job already holds a lease.
@@ -1977,6 +1989,15 @@ class MathExecutionBridge:
             "executor must return a digest string or a result object"
         )
 
+    def _validate_current_rules(self, packet: nmp.NmpPacket) -> None:
+        if getattr(self.runtime, "rule_provider", None) is None:
+            return
+        current = self.runtime.current_rule_snapshot_id()
+        if packet.ruleset_snapshot_id != current:
+            raise MathExecutionStateError(
+                "ruleset snapshot changed before execution"
+            )
+
     def _validate_dispatch(
         self,
         lease: MathExecutionLease,
@@ -1989,9 +2010,10 @@ class MathExecutionBridge:
             raise MathExecutionBindingError("execute requires a MathExecutionLease")
         _require_int("now_tick", now_tick)
         packet = lease.packet
-        job = _job_from(lease)
-        if job is None:
-            job = self._job_for(packet)
+        self._validate_current_rules(packet)
+        # Always re-read the durable job row.  A lease is a historical record;
+        # trusting its embedded job snapshot would allow replay after commit.
+        job = self._job_for(packet)
         self._validate_job_binding(packet, job)
         if packet.state != nmp.EXECUTING:
             raise MathExecutionStateError(
@@ -1999,16 +2021,16 @@ class MathExecutionBridge:
             )
         if packet.cancel_requested:
             raise MathExecutionStateError("packet has a pending cancellation request")
-        if str(job.get("state")) != "leased":
-            raise MathExecutionStateError(
-                f"execute requires a leased job, job is {job.get('state')!r}"
-            )
+        if lease.deadline_tick is not None and now_tick >= lease.deadline_tick:
+            raise MathExecutionStateError("lease deadline has expired before dispatch")
         if lease.lease_token != str(job.get("lease_token")):
             raise MathExecutionBindingError("lease token does not match the job")
         if lease.lease_epoch != int(job.get("lease_epoch") or 0):
             raise MathExecutionBindingError("lease epoch does not match the job")
-        if lease.deadline_tick is not None and now_tick > lease.deadline_tick:
-            raise MathExecutionStateError("lease deadline has expired before dispatch")
+        if str(job.get("state")) != "leased":
+            raise MathExecutionStateError(
+                f"execute requires a leased job, job is {job.get('state')!r}"
+            )
         token = worker_token if worker_token is not None else self.worker_token
         if token is None:
             raise MathExecutionConfigError("execute requires a worker token")
