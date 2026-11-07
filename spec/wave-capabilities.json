@@ -73,7 +73,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.ring256.laplacian.f32",
@@ -87,7 +87,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.sparse.laplacian.q16.16",
@@ -229,7 +229,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.void.f32",
@@ -299,7 +299,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.matvec.128.f32",
@@ -329,7 +329,7 @@
         128
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.adapter.residual.128.f32",
@@ -343,7 +343,7 @@
         128
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.pair.full.128.f32",
@@ -388,7 +388,7 @@
         128
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.dft256.f32",
@@ -416,7 +416,7 @@
         255
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.couple128.f32",

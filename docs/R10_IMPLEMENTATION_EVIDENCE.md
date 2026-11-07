@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 31/31 native MTH fixtures passed locally; 124 Python tests passed.
-**CI:** the prior 23-fixture set passed run `42382908574` (49/49 steps). The new eight fixtures await the next CI run.
+**Result:** 31/31 native MTH fixtures passed locally and in GitHub Actions run `42384223162`; 124 Python tests passed.
+**CI:** the expanded `mth-native-contract` workflow passed all 65 steps on `main` for commit `0c75e24`.
 
 ## Native fixtures
 
@@ -32,14 +32,14 @@
 | 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | yes |
 | 22 | 128×128 matvec | `mth/tests/mth_matvec128_test.nas` | 249,914 | PASS | yes |
 | 23 | 128×128 centrosymmetry | `mth/tests/mth_centrosymmetry_128_test.nas` | 676,252 | PASS | yes |
-| 24 | 256-cosine match | `mth/tests/mth_cosine256_test.nas` | 17,189 | PASS | pending |
-| 25 | Damped harmonic energy | `mth/tests/mth_harmonic_damped_energy_test.nas` | 53,890 | PASS | pending |
-| 26 | C256 ring Laplacian | `mth/tests/mth_ring256_laplacian_test.nas` | 19,736 | PASS | pending |
-| 27 | C256 graph-H energy | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | pending |
-| 28 | 255-point DFT | `mth/tests/mth_graph_dft255_test.nas` | 6,666,266 | PASS | pending |
-| 29 | 128×128 power iteration | `mth/tests/mth_power_iter128_test.nas` | 758,847 | PASS | pending |
-| 30 | Rank-1 low-rank add | `mth/tests/mth_lowrank_add_128_test.nas` | 1,056,470 | PASS | pending |
-| 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | pending |
+| 24 | 256-cosine match | `mth/tests/mth_cosine256_test.nas` | 17,189 | PASS | yes |
+| 25 | Damped harmonic energy | `mth/tests/mth_harmonic_damped_energy_test.nas` | 53,890 | PASS | yes |
+| 26 | C256 ring Laplacian | `mth/tests/mth_ring256_laplacian_test.nas` | 19,736 | PASS | yes |
+| 27 | C256 graph-H energy | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | yes |
+| 28 | 255-point DFT | `mth/tests/mth_graph_dft255_test.nas` | 6,666,266 | PASS | yes |
+| 29 | 128×128 power iteration | `mth/tests/mth_power_iter128_test.nas` | 758,847 | PASS | yes |
+| 30 | Rank-1 low-rank add | `mth/tests/mth_lowrank_add_128_test.nas` | 1,056,470 | PASS | yes |
+| 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | yes |
 
 ## Python tests
 
@@ -57,6 +57,7 @@ Covered:
 - per-universe NANNET node binding (8 tests);
 - wave aperture descriptor/decomposition selector (9 tests);
 - wave adapter contract (7 tests);
+- authenticated WaveService submit/worker/admin facade (13 tests);
 - capability manifest registration into MC0DB (4 tests).
 
 ## Fixture runner

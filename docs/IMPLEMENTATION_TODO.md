@@ -16,7 +16,7 @@
 - [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] 31/31 native MTH fixtures pass locally with `nan_cli`.
 - [x] 124 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42382908574` (49/49 steps); 31-fixture run pending.
+- [x] Expanded GitHub Actions native workflow passed run `42384223162` (65/65 steps).
 
 ## R0 — Contract and storage freeze
 
@@ -159,8 +159,19 @@ python3 tools/run_mth_fixtures.py
 31/31 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 111 tests
+Ran 124 tests
 OK
 ```
 
-CI prior: `42382908574` — 49/49 steps; 31-fixture run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42384223162` — 65/65 steps passed for the 31-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+
+## Parallel batch 2 (2026-11-07)
+
+| Agent | Scope | Status |
+|---|---|---|
+| A9 | 255-point DFT | done — native PASS |
+| A10 | 128×128 power iteration | done — native PASS |
+| A11 | C256 ring + graph-H energy | done — both native PASS |
+| A12 | Rank-1 low-rank add | done — native PASS |
+| A13 | 128 adapter residual | done — native PASS |
+| A14 | Authenticated wave service facade | done — 13 tests |

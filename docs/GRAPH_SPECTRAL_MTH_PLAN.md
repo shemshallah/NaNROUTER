@@ -233,8 +233,8 @@ python3 tools/run_mth_fixtures.py
 31/31 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 111 tests
+Ran 124 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42382908574` (49/49 steps). The 31-fixture run is pending. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed run `42384223162` (65/65 steps) for the 31-fixture set. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
