@@ -89,16 +89,20 @@ mth_pair_driver_puts_byte:
 ; Four 16-slice strips = 4 * 4096 words.
 .org 512
 mth_driver_li:
-.word 0
+.org 531
+.word 0x40000000
 .org 4608
 mth_driver_ukj:
-.word 0
+.org 4658
+.word 0x40000000
 .org 8704
 mth_driver_uik:
-.word 0
+.org 12565
+.word 0x40000000
 .org 12800
 mth_driver_ljk:
-.word 0
+.org 16677
+.word 0x40000000
 .org 16896
 mth_driver_acc_lu:
 .word 0
@@ -128,17 +132,6 @@ mth_driver_frame:
 .word 0
 .word 0
 .word 0
-.org 17680
-; K-slice 0: L_IK[1,3]=2, U_KJ[3,2]=2.
-.org 531
-.word 0x40000000
-.org 4658
-.word 0x40000000
-; K-slice 15: U_IK[1,5]=2, L_JK[2,5]=2.
-.org 12565
-.word 0x40000000
-.org 16677
-.word 0x40000000
 .org 18000
 mth_pair_driver_pass:
 .str "MTH PAIR TILE16 K16 DRIVER PASS\\n"
