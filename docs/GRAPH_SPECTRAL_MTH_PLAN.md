@@ -190,3 +190,10 @@ The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted
 Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
 
 This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
+
+
+## 13. Connected-component kernel native verification
+
+`mth/nan16/mth_graph_components_256.nas` and `mth/tests/mth_graph_components_256_test.nas` passed canonical NaN16 CI run #119. The path fixture returned 253 components (one four-vertex component plus 252 isolates); the disconnected fixture returned 254 components (two two-vertex components plus 252 isolates); malformed offset[0] rejected without changing labels. Guest execution: 29,931 steps, expected HALT. Kernel SHA-256: `064d6b52cf2d0dda561de020da25575225568999635bcad6dd117f4b0355c13b`.
+
+This is native evidence for connected-component labeling only. It does not compute eigenvalues or numerically prove Laplacian nullity. Next gate: a bounded U64 weighted energy kernel and exact nonnegative-energy fixture, then a small verified nullspace/nullity comparison. Pair-space remains gated.
