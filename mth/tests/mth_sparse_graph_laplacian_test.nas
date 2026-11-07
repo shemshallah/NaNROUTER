@@ -14,6 +14,8 @@ mth_sparse_test_main:
   CALL @mth_sparse_graph_laplacian_q16_16
   CMP r1,r13
   JMP[NE] @mth_sparse_test_fail
+  MOVI r1,@mth_sparse_path_kernel_ok
+  CALL @mth_sparse_test_puts
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
   LA r8,0xFFFF0000
@@ -30,6 +32,8 @@ mth_sparse_test_main:
   LA r8,0x00050000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
+  MOVI r1,@mth_sparse_path_values_ok
+  CALL @mth_sparse_test_puts
 
   ; Disconnected graph (0--1) + (2--3); isolated vertices 4..255.
   MOVI r1,@mth_sparse_disc_offsets
@@ -40,6 +44,8 @@ mth_sparse_test_main:
   CALL @mth_sparse_graph_laplacian_q16_16
   CMP r1,r13
   JMP[NE] @mth_sparse_test_fail
+  MOVI r1,@mth_sparse_disc_kernel_ok
+  CALL @mth_sparse_test_puts
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
   LA r8,0xFFFF0000
@@ -57,6 +63,8 @@ mth_sparse_test_main:
   LA r8,0x00050000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
+  MOVI r1,@mth_sparse_disc_values_ok
+  CALL @mth_sparse_test_puts
 
   ; Invalid state must be rejected before any output write.
   MOVI r6,@mth_sparse_x
@@ -1157,3 +1165,11 @@ mth_sparse_test_pass:
 .str "MTH SPARSE GRAPH LAPLACIAN PASS\n"
 mth_sparse_test_bad:
 .str "MTH SPARSE GRAPH LAPLACIAN FAIL\n"
+mth_sparse_path_kernel_ok:
+.str "PATH KERNEL OK\n"
+mth_sparse_path_values_ok:
+.str "PATH VALUES OK\n"
+mth_sparse_disc_kernel_ok:
+.str "DISCONNECTED KERNEL OK\n"
+mth_sparse_disc_values_ok:
+.str "DISCONNECTED VALUES OK\n"
