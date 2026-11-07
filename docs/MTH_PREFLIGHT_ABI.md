@@ -1,6 +1,6 @@
 # MTH typed mathematical preflight ABI v1
 
-Status: source written; native CI gate is required before marking this ABI native-verified.
+Status: native-verified by canonical CI run 42405417726 (typed preflight and linker-to-preflight fixtures).
 
 ## Ownership
 
