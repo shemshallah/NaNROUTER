@@ -11,6 +11,7 @@ from runner_riddle.math_objects import (
     admission_id_for,
     candidate_id_for,
     canonical_json,
+    digest_object,
 )
 
 SNAP = "snp:" + "a" * 64
@@ -144,6 +145,113 @@ def committed_child(index: int):
         provenance={"job_id": f"job-{index}"},
         output_leaf_id=f"nml:U0:scalar:{index}",
     )
+
+
+def make_native_receipt(packet):
+    body = {
+        "schema": nmp.NATIVE_ADMISSION_RECEIPT_SCHEMA,
+        "packet_id": packet.packet_id,
+        "candidate_digest": digest_object({
+            "candidate_id": packet.candidate_id,
+            "function_id": packet.function_id,
+            "function_version": packet.function_version,
+        }),
+        "snapshot_id": packet.snapshot_id,
+        "ruleset_snapshot_id": packet.ruleset_snapshot_id,
+        "rule_epoch": 7,
+        "rule_digest": "a" * 64,
+        "input_digest": digest_object([nmp._input_identity(item) for item in packet.inputs]),
+        "capability_digest": packet.capability_set_digest,
+        "preflight_digest": packet.preflight_digest,
+        "generation": packet.generation,
+        "program_id": 900,
+        "guest_status": 0,
+        "producer": "nan16_guest",
+    }
+    return {**body, "receipt_digest": digest_object(body)}
+
+
+class NativeAdmissionReceiptTests(unittest.TestCase):
+    def make_preflighted(self):
+        packet = make_packet(
+            state=nmp.PROPOSED,
+            metadata={"native_admission_required": True},
+        )
+        receipt = make_native_receipt(packet)
+        return packet.mark_preflight(
+            result="VALID", digest=PREFLIGHT, admission_receipt=receipt,
+        )
+
+    def test_native_receipt_is_required_and_packet_bound(self):
+        packet = make_packet(
+            state=nmp.PROPOSED,
+            metadata={"native_admission_required": True},
+        )
+        with self.assertRaises(nmp.NmpTransitionError):
+            packet.mark_preflight(result="VALID", digest=PREFLIGHT)
+
+        bound = self.make_preflighted()
+        self.assertEqual(bound.admission_receipt["guest_status"], 0)
+        self.assertEqual(bound.admission_receipt["packet_id"], bound.packet_id)
+        self.assertEqual(nmp.NmpPacket.from_dict(bound.to_dict()).admission_receipt,
+                         bound.admission_receipt)
+
+    def test_native_receipt_digest_and_candidate_binding_are_checked(self):
+        packet = self.make_preflighted()
+        corrupt = dict(packet.admission_receipt)
+        corrupt["rule_digest"] = "b" * 64
+        with self.assertRaises(nmp.NmpValidationError):
+            replace(packet, admission_receipt=corrupt)
+
+        rebound = dict(packet.admission_receipt)
+        rebound["candidate_digest"] = "c" * 64
+        rebound.pop("receipt_digest")
+        rebound["receipt_digest"] = digest_object(rebound)
+        with self.assertRaises(nmp.NmpValidationError):
+            replace(packet, admission_receipt=rebound)
+
+    def test_native_receipt_is_bound_to_active_worker_lease(self):
+        packet = self.make_preflighted()
+        packet = packet.queue(gate=gate(packet))
+        token = "lease-token-" + "a" * 32
+        job = {
+            "job_id": "job-native", "state": "leased", "generation": packet.generation,
+            "lease_epoch": 3, "lease_token": token,
+        }
+        lease = {
+            "job_id": "job-native", "state": "active", "lease_owner": "MC0:0/R0",
+            "lease_epoch": 3, "lease_token": token, "deadline_tick": 100,
+        }
+        started = packet.start_execution(
+            job=job, lease=lease,
+            admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
+            capability=make_capability(), ruleset_snapshot=RULES,
+            ring_incarnation="ring-inc-1", ring_epoch=1, now_tick=20,
+        )
+        self.assertEqual(started.job_id, "job-native")
+        self.assertEqual(started.lease_epoch, 3)
+        self.assertIn("native_admission_lease", started.evidence)
+        self.assertTrue(nmp.execution_gate(
+            started, admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
+            capability=make_capability(), ruleset_snapshot=RULES,
+            ring_incarnation="ring-inc-1", ring_epoch=1,
+            job=job, lease=lease, now_tick=20,
+        ).ok)
+
+        replay_job = dict(job, lease_token="lease-token-" + "b" * 32)
+        replay_lease = dict(lease, lease_token="lease-token-" + "b" * 32)
+        decision = nmp.execution_gate(
+            started, admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
+            capability=make_capability(), ruleset_snapshot=RULES,
+            ring_incarnation="ring-inc-1", ring_epoch=1,
+            job=replay_job, lease=replay_lease, now_tick=20,
+        )
+        self.assertFalse(decision.ok)
+        self.assertEqual(decision.failure, nmp.STALE)
+
 
 
 class StateTransitionTests(unittest.TestCase):
