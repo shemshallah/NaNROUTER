@@ -268,6 +268,59 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
             )
         self.assertEqual(self.store.get_job(job_id)["state"], "leased")
 
+    def test_server_pinned_guest_image_digest_rejects_wrong_binary(self):
+        packet = preflighted_packet()
+        def pinned_context(**kwargs):
+            context = gate_context(**kwargs)
+            context["expected_guest_image_digest"] = "a" * 64
+            context["expected_guest_source_digest"] = "c" * 64
+            return context
+        adapter = NmpHttpAdapter(
+            self.service, pinned_context,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        submitted = adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        job_id = submitted["job"]["job_id"]
+        leased = adapter.lease(self.worker_token, "worker-A", now_tick=110,
+                               lease_ticks=64, job_id=job_id)
+        evidence = execution_evidence(
+            packet, lease_epoch=leased["lease"]["epoch"], lease_owner="worker-A",
+        )
+        with self.assertRaisesRegex(NmpHttpError, "differs from server-pinned guest"):
+            adapter.complete(
+                self.worker_token, leased["packet"], job_id=job_id,
+                lease_token=leased["lease"]["token"], lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=evidence,
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
+
+    def test_server_pinned_guest_digests_accept_expected_binary(self):
+        packet = preflighted_packet()
+        def pinned_context(**kwargs):
+            context = gate_context(**kwargs)
+            context["expected_guest_image_digest"] = "b" * 64
+            context["expected_guest_source_digest"] = "c" * 64
+            return context
+        adapter = NmpHttpAdapter(
+            self.service, pinned_context,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        submitted = adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        job_id = submitted["job"]["job_id"]
+        leased = adapter.lease(self.worker_token, "worker-A", now_tick=110,
+                               lease_ticks=64, job_id=job_id)
+        evidence = execution_evidence(
+            packet, lease_epoch=leased["lease"]["epoch"], lease_owner="worker-A",
+        )
+        completed = adapter.complete(
+            self.worker_token, leased["packet"], job_id=job_id,
+            lease_token=leased["lease"]["token"], lease_epoch=leased["lease"]["epoch"],
+            lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+            execution_evidence=evidence,
+        )
+        self.assertEqual(completed["packet"]["state"], nmp.COMPLETED)
+
     def test_submission_rejects_guest_echoed_program_id_not_in_server_registry(self):
         packet = preflighted_packet()
         def wrong_program_context(**kwargs):
