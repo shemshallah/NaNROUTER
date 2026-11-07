@@ -93,6 +93,10 @@ Returns r1 = 0 on success, otherwise:
 
 A capability rejection is not a mathematical null. A failed precondition is not necessarily mathematical undefinedness: the contract determines whether it means undefined input or an inapplicable execution context. Numerical execution errors are reported by the selected kernel, not this gate.
 
+## Payload aliasing and address bounds
+
+When precondition bit 1 is enabled, the gate compares half-open word ranges using each descriptor's base address and declared capacity. Exact-pointer equality is insufficient: partial overlap is rejected too. Address-plus-capacity wrap is rejected as a malformed descriptor before the output metadata commit.
+
 ## Evidence boundary
 
 The fixture checks representative success and rejection paths, including output-descriptor atomicity. It is not a theorem prover, a general tensor-shape engine, or a proof of all operator contracts. The canonical NaN16 workflow must assemble and execute the fixture before the source is marked native-verified.
