@@ -3,8 +3,8 @@
 ; semantic evaluation. All decisions below are NaN16 guest instructions.
 ;
 ; ABI:
-;   r1 = candidate descriptor (18 words)
-;   r2 = authoritative rule descriptor (13 words)
+;   r1 = candidate descriptor (22 words)
+;   r2 = authoritative rule descriptor (17 words)
 ;   r3 = result word (written on every exit)
 ;   returns r1 = status (0=ALLOW; nonzero=DENY)
 ;
@@ -12,17 +12,17 @@
 ;  0 abi, 1 rule_epoch, 2 lhs_type, 3 rhs_type, 4 out_type,
 ;  5 lhs_domain, 6 rhs_domain, 7 lhs_dim, 8 rhs_dim,
 ;  9 candidate_rule_epoch, 10 required_caps, 11 available_caps,
-; 12 proof_level, 13 enabled, 14..17 rule_digest[0..3].
+; 12 proof_level, 13 enabled, 14..21 rule_digest[0..7].
 ; Rule words:
 ;  0 abi, 1 epoch, 2 lhs_type, 3 rhs_type, 4 out_type,
 ;  5 domain, 6 shape_policy (0=any, 1=equal dimensions),
-;  7 minimum_proof_level, 8 enabled, 9..12 digest[0..3].
+;  7 minimum_proof_level, 8 enabled, 9..16 digest[0..7].
 ;
 ; Status:
 ; 0 ALLOW, 1 ABI, 2 STALE_EPOCH, 3 SIGNATURE, 4 DOMAIN,
 ; 5 SHAPE, 6 CAPABILITY, 7 PROOF, 8 DISABLED, 9 RULE_DIGEST.
 ; Capability check is (required & available) == required.
-; A successful preflight is scoped to the exact rule epoch and 4-word digest.
+; A successful preflight is scoped to the exact rule epoch and 8-word digest.
 ; The caller MUST bind the returned status and descriptor digest to its NMP
 ; packet/lease. This routine does not grant ACL authorization or runner capacity.
 
@@ -107,6 +107,22 @@ mth_pf_shape_ok:
   JMP[NE] @mth_pf_digest
   LD r6,r1,17
   LD r7,r2,12
+  CMP r6,r7
+  JMP[NE] @mth_pf_digest
+  LD r6,r1,18
+  LD r7,r2,13
+  CMP r6,r7
+  JMP[NE] @mth_pf_digest
+  LD r6,r1,19
+  LD r7,r2,14
+  CMP r6,r7
+  JMP[NE] @mth_pf_digest
+  LD r6,r1,20
+  LD r7,r2,15
+  CMP r6,r7
+  JMP[NE] @mth_pf_digest
+  LD r6,r1,21
+  LD r7,r2,16
   CMP r6,r7
   JMP[NE] @mth_pf_digest
 
