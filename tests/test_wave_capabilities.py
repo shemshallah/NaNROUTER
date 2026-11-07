@@ -37,7 +37,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 34)
+            self.assertEqual(len(rows), 35)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],
