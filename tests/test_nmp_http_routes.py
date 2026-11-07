@@ -110,6 +110,23 @@ class NmpHttpRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body["packet"]["state"], "COMPLETED")
 
+    def test_wave_service_can_lease_only_nmp_jobs(self):
+        digest = "a" * 64
+        self.service.submit_job(
+            self.submit_token, "generic-job", "U0", digest, 1,
+            {"kind": "generic"}, 1,
+        )
+        self.service.submit_job(
+            self.submit_token, "nmp-job", "U0", digest, 1,
+            {"kind": "nmp"}, 1, kind="nmp",
+        )
+        leased = self.service.lease_job(
+            self.worker_token, "worker-A", 2, kind="nmp"
+        )
+        self.assertEqual(leased["job_id"], "nmp-job")
+        self.assertEqual(leased["kind"], "nmp")
+        self.assertEqual(self.store.get_job("generic-job")["state"], "queued")
+
     def test_routes_fail_closed_when_adapter_is_not_configured(self):
         server = WaveHttpServer(self.service)
         server.start()
