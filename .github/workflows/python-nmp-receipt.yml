@@ -1,0 +1,26 @@
+name: Python NMP native receipt contract
+
+on:
+  push:
+    branches: [main, 'mth-*']
+  pull_request:
+    paths:
+      - 'runner_riddle/nmp.py'
+      - 'runner_riddle/native_preflight_receipt.py'
+      - 'tests/test_nmp.py'
+      - '.github/workflows/python-nmp-receipt.yml'
+
+jobs:
+  nmp-receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test NMP receipt, queue, and lease binding
+        run: python -m unittest discover -s tests -p 'test_nmp.py' -v
+      - name: Guard existing MTH job/lease behavior
+        run: python -m unittest discover -s tests -p 'test_mth_system.py' -v
