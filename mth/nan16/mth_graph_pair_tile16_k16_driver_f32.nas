@@ -58,6 +58,8 @@ mth_pair_driver_slice:
   LD r1,r12,9
   ADD r1,r1,r13
   ST r1,r12,9
+  MOVI r11,46
+  PUTC r11
   MOVI r2,16
   CMP r1,r2
   JMP[LT] @mth_pair_driver_slice
