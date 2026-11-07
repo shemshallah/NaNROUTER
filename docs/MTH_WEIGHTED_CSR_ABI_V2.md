@@ -72,12 +72,12 @@ Planned inputs:
 - `r4`: x
 - `r5`: output (512 U32 words)
 - `r6`: edge_count
+- `r7`: caller-owned 16-word U32 scratch frame (indices 0..14 used)
 - `r13`: constant 1
-- caller-owned scratch frame: implementation-defined until the native register/call convention is frozen for this routine
 
 Return status must distinguish success, invalid state/count, invalid offsets, invalid endpoints, and invalid weights. All descriptor and numeric validation must finish before the first output write. Output must be deterministic and exact.
 
-The exact register/scratch ABI and source are **not yet frozen**. Do not dispatch this operator or advertise it as source-written/native-verified until both exist and canonical NaN16 CI passes.
+The register/scratch ABI is now specified: the routine saves all long-lived pointers and row state in the 16-word caller frame, retaining its base in r11 across the wide-multiply helper. The source is written but remains **unverified** until canonical CI passes. Do not dispatch this operator or advertise it as source-written/native-verified until both exist and canonical NaN16 CI passes.
 
 ## 5. Exact native fixtures required
 
