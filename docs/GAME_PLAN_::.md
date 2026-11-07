@@ -1,6 +1,6 @@
 # GAME PLAN `::` — NaN Mathematical Linker, Validity, and Self-Organizing Memory
 
-**Status:** architecture and integration plan; P0–P12 control-plane integration is implemented and tested, while P13 live/experiment gates remain explicitly blocked. The evidence ledger is authoritative for counts and CI IDs.
+**Status:** architecture and integration plan. P0–P4 and P6–P12 are implemented and tested; P5's host control-plane bridge and native-receipt validation are implemented, while native receipt production and native operator dispatch remain external gates. P13 live/experiment gates are explicitly blocked. The evidence ledger is authoritative for counts and CI IDs.
 **Date:** 2026-11-07.
 **Parent plans:** `docs/game_plan_deep.md`, `docs/game_plan_foundations.md`, `docs/GAME_PLAN_MTH.md`, `docs/DEEP_PLAN_CONT.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
