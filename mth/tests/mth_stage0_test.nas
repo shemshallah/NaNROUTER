@@ -9,7 +9,6 @@ JMP @mth_test_main
 mth_test_main:
   MOVI r13,1
   MOVI r12,0
-  MOVI r14,0
 
 mth_rot_loop:
   ADD r1,r12,r0
@@ -81,10 +80,10 @@ mth_face_loop:
   MOVI r8,9
   CMP r12,r8
   JMP[NE] @mth_fail
-  LD r14,r6,0
+  LD r9,r6,0
   MOVI r8,0x3100
   MOVHI r8,0x0200
-  CMP r14,r8
+  CMP r9,r8
   JMP[NE] @mth_fail
   CALL @mth_bswapm64
   LD r2,r6,0
