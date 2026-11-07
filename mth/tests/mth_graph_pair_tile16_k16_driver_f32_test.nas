@@ -36,8 +36,6 @@ mth_pair_driver_test_main:
   LA r6,@mth_driver_acc_ult
   LA r7,@mth_driver_scratch
   CALL @mth_graph_pair_tile16_k16_driver_f32
-  MOVI r11,68
-  PUTC r11
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_test_fail
@@ -49,25 +47,8 @@ mth_pair_driver_test_main:
   LD r7,r4,0
   MOVI r8,0
   MOVHI r8,0x4080
-  CMP r7,r0
-  JMP[EQ] @mth_pair_driver_lu_zero
-  MOVI r11,78
-  PUTC r11
-  JMP @mth_pair_driver_lu_checked
-mth_pair_driver_lu_zero:
-  MOVI r11,90
-  PUTC r11
-mth_pair_driver_lu_checked:
   CMP r7,r8
-  JMP[NE] @mth_pair_driver_lu_bad
-  MOVI r11,52
-  PUTC r11
-  JMP @mth_pair_driver_lu_done
-mth_pair_driver_lu_bad:
-  MOVI r11,63
-  PUTC r11
-  JMP @mth_pair_driver_test_fail
-mth_pair_driver_lu_done:
+  JMP[NE] @mth_pair_driver_test_fail
   LA r4,@mth_driver_acc_ult
   MOVI r6,18
   ADD r4,r4,r6
@@ -80,11 +61,7 @@ mth_pair_driver_lu_done:
   LA r2,@mth_driver_acc_ult
   LA r3,@mth_driver_y
   MOVI r13,1
-  MOVI r11,65
-  PUTC r11
   CALL @mth_graph_pair_tile16_finalize_f32
-  MOVI r11,66
-  PUTC r11
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_test_fail
