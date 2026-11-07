@@ -141,7 +141,11 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
         self.service = WaveService(
             self.store, self.submit_token, self.worker_token, self.admin_token
         )
-        self.adapter = NmpHttpAdapter(self.service, gate_context)
+        self.adapter = NmpHttpAdapter(
+            self.service,
+            gate_context,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
 
     def test_native_packet_runs_queue_lease_gate_and_completion(self):
         packet = preflighted_packet()
@@ -186,6 +190,19 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
                 self.submit_token, preflighted_without_receipt.to_dict(), now_tick=100
             )
         self.assertEqual(self.store.stats()["jobs"]["queued"], 0)
+
+    def test_unbound_worker_cannot_reserve_an_nmp_lease(self):
+        packet = preflighted_packet()
+        submitted = self.adapter.submit(
+            self.submit_token, packet.to_dict(), now_tick=100
+        )
+        job_id = submitted["job"]["job_id"]
+        with self.assertRaises(NmpHttpError):
+            self.adapter.lease(
+                self.worker_token, "worker-B", now_tick=110,
+                lease_ticks=64, job_id=job_id,
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "queued")
 
     def test_nmp_lease_never_consumes_generic_wave_job(self):
         self.service.submit_job(
