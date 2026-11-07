@@ -131,3 +131,34 @@ A spectral signature is lossy. It must point back to exact source relations and 
 A .nas file is source-written, not verified. A fixture is source-written, not passed, until the canonical toolchain assembles and executes it. Python/C++ tests may validate descriptors, routing, or independent small reference expectations, but they cannot be reported as validation of NaN16 mathematical kernels.
 
 Current gate: architecture specified. Existing MTH has checked U32 arithmetic, shifts, multiplication/division, and a raw U32 span-add primitive, but the native spectral ABI is not yet frozen. The immediate next step is to establish signed fixed-point/vector ABI and canonical assembler availability, then implement K256 degree/Lx before any eigensolver or void/wave kernel.
+
+
+## 10. First native kernel: K256 Laplacian over U16 payloads
+
+A first exact integer kernel is now source-written in
+`mth/nan16/mth_k256_laplacian.nas`, with fixture
+`mth/tests/mth_k256_laplacian_test.nas`.
+
+For K256, the matrix-free identity is:
+
+```
+(Lx)[i] = 256*x[i] - sum(x)
+```
+
+The first ABI deliberately avoids prematurely choosing the signed Q format
+for wave evolution. It accepts 256 unsigned 16-bit integer payloads and
+writes 256 signed two's-complement 32-bit results. Since
+`0 <= sum(x) <= 256*65535`, every output is bounded by
+±16,776,960; the kernel is exact with no rounding or saturation. It checks
+all inputs before writing, so an out-of-range payload leaves output
+unchanged. Input and output spans must not overlap.
+
+The fixture checks the impulse oracle `[1,0,...,0] -> [255,-1,...,-1]`
+and invalid-input atomicity. A new GitHub Actions workflow checks out the
+canonical NaN0S source assembler and execution harness, assembles this
+fixture, and runs it. Until that workflow completes successfully, this
+kernel remains **source-written / execution-unverified**.
+
+This does not yet establish the signed fixed-point ABI for graph waves,
+void potentials or spectral iteration. It is a narrow exact K256 baseline
+that can be executed before those wider contracts are frozen.
