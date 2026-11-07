@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **63 native MTH kernels with fixtures**: 60 pass in the local harness and all 61 fixtures pass canonical CI run 42405010545 (124 steps). The 1 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 540 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **63 native MTH kernels with fixtures**: 60 pass in the local harness and all 61 fixtures pass canonical CI run 42405417726 (130 steps). The 1 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 540 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -78,13 +78,13 @@ The 255 + 1 rule remains:
 | `tools/register_wave_capabilities.py` | registers 63 kernels into MC0DB |
 | `spec/wave-capabilities.json` | 61-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 124 steps, 61 fixtures; canonical CI PASS (1 MiB page-limit enforcement pending) |
+| `.github/workflows/mth-native-contract.yml` | 130 steps, 61 fixtures; canonical CI PASS (1 MiB page-limit enforcement pending) |
 
 ### 1.3 Evidence baseline
 
 ```
 60/60 locally runnable fixtures pass
-60/60 local fixtures pass; 61/61 total fixtures pass canonical CI run 42405010545 (124 steps); 540/540 Python tests pass
+60/60 local fixtures pass; 61/61 total fixtures pass canonical CI run 42405417726 (130 steps); 540/540 Python tests pass
 GLT-enforced 1 MiB page-limit verification remains pending
 ```
 
@@ -973,7 +973,7 @@ The shortest correct sentence is:
 
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 63 kernels; canonical CI run 42405010545 passed 124 steps. GLT 1 MiB page-limit enforcement remains a separate pending gate.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 63 kernels; canonical CI run 42405417726 passed 130 steps. GLT 1 MiB page-limit enforcement remains a separate pending gate.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|

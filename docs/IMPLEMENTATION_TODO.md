@@ -23,7 +23,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 540 Python tests pass.
-- [x] Canonical workflow `42405010545` passed 124 steps for the 61-fixture set, including native preflight/admission gates.
+- [x] Canonical workflow `42405417726` passed 130 steps for the 61-fixture set, including native preflight/admission gates.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -205,7 +205,7 @@ Ran 235 tests
 OK
 ```
 
-CI: `42405010545` — 124/124 steps for the 61-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42405417726` — 130/130 steps for the 61-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
