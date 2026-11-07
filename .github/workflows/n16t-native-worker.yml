@@ -4,16 +4,24 @@ on:
   push:
     paths:
       - "runner_riddle/n16t_guest.py"
+      - "runner_riddle/nmp_http.py"
+      - "runner_riddle/__init__.py"
       - "runner_riddle/n16t_http.py"
       - "runner_riddle/wave_http.py"
       - "tests/test_n16t_guest_runtime.py"
+      - "tests/test_nmp_context_provider.py"
+      - "tests/test_nmp_http_adapter.py"
       - ".github/workflows/n16t-native-worker.yml"
   pull_request:
     paths:
       - "runner_riddle/n16t_guest.py"
+      - "runner_riddle/nmp_http.py"
+      - "runner_riddle/__init__.py"
       - "runner_riddle/n16t_http.py"
       - "runner_riddle/wave_http.py"
       - "tests/test_n16t_guest_runtime.py"
+      - "tests/test_nmp_context_provider.py"
+      - "tests/test_nmp_http_adapter.py"
       - ".github/workflows/n16t-native-worker.yml"
 
 permissions:
