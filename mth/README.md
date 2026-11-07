@@ -129,3 +129,8 @@ The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step
 - Closed-form K256 action: `512U-colsum(U)-rowsum(U)`; matrix-free, O(256²) storage/work.
 - Exact I32 output bound ±2^30 for input raw range ±2^20.
 - Canonical NaN16 verification: workflow run 180 passed.
+
+
+## Weighted sparse graph Laplacian v2 — mainline promotion
+
+The weighted CSR v2 kernel, fixture, and ABI have been ported from the prior verified development branch onto current mainline. The operator accepts symmetric U8 integer-weight CSR (weights 1..255), Q16.16/I32 states in [-64,+64], and returns signed I64 Q16.16 values with a caller-owned 16-word scratch frame. The fixture checks two independent weighted path oracles and zero-weight rejection with output atomicity. The prior branch recorded canonical CI run #107; this mainline port is being re-executed by the current workflow before it is marked mainline-verified.
