@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: shemshallah/NaN0S
-          ref: 1dec48476aeaa3032f24bba7b6d24656f43bda49
+          ref: bb9a615d8683ed2ae2c3f1c1fa5e6edb63b78f9e
           path: nan0s
       - name: Build the canonical NaN16 C execution core as a shared runtime
         run: |
