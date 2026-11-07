@@ -9,7 +9,8 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_bitwise.nas`: native bitwise functions, unsigned min/max, and comparison predicates.
 - `nan16/mth_shift.nas`: checked variable-count logical left/right shifts (0–31) built from NaN16 shift instructions.
 - `nan16/mth_multiply.nas`: full-width unsigned 32×32→64 multiplication using a native shift-and-add algorithm.
-- `nan16/mth_divide.nas`: unsigned 32-bit divmod using a 32-step restoring algorithm; divide-by-zero is an explicit status.\n- `nan16/mth_vector.nas`: checked contiguous U32 span addition with a preflight pass; overflow leaves output unchanged.
+- `nan16/mth_divide.nas`: unsigned 32-bit divmod using a 32-step restoring algorithm; divide-by-zero is an explicit status.
+- `nan16/mth_vector.nas`: checked contiguous U32 span addition with a preflight pass; overflow leaves output unchanged.
 - `tests/mth_stage0_test.nas`: rotation-table and double-`BSWAPM` smoke test.
 - `tests/mth_bool2_test.nas`: checks all 16 two-input truth-table classes against the expected lane pattern.
 - `tests/mth_double_endian_test.nas`: checks pair round-trip and rejects a deliberately corrupted member.
@@ -17,7 +18,10 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `tests/mth_bitwise_test.nas`: checks bitwise transforms, unsigned min/max, and comparison results.
 - `tests/mth_shift_test.nas`: checks variable shifts, boundary count 31, and rejection of count 32.
 - `tests/mth_multiply_test.nas`: checks 3×7 and two full-width overflow-boundary products.
-- `tests/mth_divide_test.nas`: checks quotient/remainder, a full-width dividend, and divide-by-zero.\n- `tests/mth_vector_test.nas`: checks vector results, overflow atomicity, and zero-length behavior.\n\nThe double-endian codec now uses caller-owned frames in `r12` and no shared static return/operand slots. The updated fixture uses independent frames for separate calls. The vector span routine is a low-level contiguous U32 primitive, not yet the typed vector-descriptor layer.
+- `tests/mth_divide_test.nas`: checks quotient/remainder, a full-width dividend, and divide-by-zero.
+- `tests/mth_vector_test.nas`: checks vector results, overflow atomicity, and zero-length behavior.
+
+The double-endian codec now uses caller-owned frames in `r12` and no shared static return/operand slots. The updated fixture uses independent frames for separate calls. The vector span routine is a low-level contiguous U32 primitive, not yet the typed vector-descriptor layer.
 
 The tests are intentionally fixtures, not exhaustive proof. They must be assembled and run with the canonical NaN16 toolchain before their gates are marked passed.
 
