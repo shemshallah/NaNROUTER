@@ -6,10 +6,12 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_bool.nas`: generic two-input Boolean transformation. It patches the frozen NaN16 `BOOL.n` class into a code slot and executes it natively.
 - `nan16/mth_double_endian.nas`: native double-endian pair codec with tagged big-endian/little-endian members and mismatch rejection.
 - `nan16/mth_integer.nas`: checked unsigned 32-bit addition and subtraction with explicit overflow/underflow status.
+- `nan16/mth_bitwise.nas`: native bitwise functions, unsigned min/max, and comparison predicates.
 - `tests/mth_stage0_test.nas`: rotation-table and double-`BSWAPM` smoke test.
 - `tests/mth_bool2_test.nas`: checks all 16 two-input truth-table classes against the expected lane pattern.
 - `tests/mth_double_endian_test.nas`: checks pair round-trip and rejects a deliberately corrupted member.
 - `tests/mth_integer_test.nas`: checks exact addition/subtraction and explicit overflow/underflow outcomes.
+- `tests/mth_bitwise_test.nas`: checks bitwise transforms, unsigned min/max, and comparison results.
 
 The test is intentionally a smoke test, not exhaustive proof. It must be assembled and run with the canonical NaN16 toolchain before this gate is marked passed.
 
