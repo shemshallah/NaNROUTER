@@ -45,7 +45,7 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
 
 
 
-def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) -> None:
+def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) -> int:
     """Bind the guest-echoed program ID to the server-owned function registry."""
     expected = context.pop("expected_program_id", None)
     if isinstance(expected, bool) or not isinstance(expected, int) or expected < 1:
@@ -53,6 +53,66 @@ def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) 
     receipt = packet.admission_receipt
     if not isinstance(receipt, Mapping) or receipt.get("program_id") != expected:
         raise NmpHttpError("native receipt program_id does not match the server-owned function registry")
+    return expected
+
+
+def _validate_execution_evidence(
+    evidence: Any, *, packet: NmpPacket, expected_program_id: int,
+    result_digest: str, lease_epoch: int, lease_owner: str,
+) -> dict[str, Any]:
+    if not isinstance(evidence, Mapping):
+        raise NmpHttpError("native kernel execution evidence is required")
+    if evidence.get("schema") != "nanrouter.native-kernel-execution.v1":
+        raise NmpHttpError("native kernel execution evidence schema is invalid")
+    if evidence.get("packet_id") != packet.packet_id:
+        raise NmpHttpError("kernel execution evidence is bound to another packet")
+    if evidence.get("function_id") != packet.function_id:
+        raise NmpHttpError("kernel execution evidence function does not match the packet")
+    program_id = evidence.get("program_id")
+    if isinstance(program_id, bool) or not isinstance(program_id, int) or program_id != expected_program_id:
+        raise NmpHttpError("kernel execution program_id does not match the server-owned function registry")
+    epoch = evidence.get("lease_epoch")
+    if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch != lease_epoch:
+        raise NmpHttpError("kernel execution evidence lease epoch mismatch")
+    if evidence.get("lease_owner") != lease_owner:
+        raise NmpHttpError("kernel execution evidence worker does not match the durable lease owner")
+    guest_steps = evidence.get("guest_steps")
+    if isinstance(guest_steps, bool) or not isinstance(guest_steps, int) or guest_steps < 1:
+        raise NmpHttpError("kernel execution evidence must include positive guest_steps")
+    dimension = evidence.get("dimension")
+    if isinstance(dimension, bool) or not isinstance(dimension, int) or not 1 <= dimension <= 16:
+        raise NmpHttpError("kernel execution dimension is outside the worker allowlist")
+    output_kind = evidence.get("output_kind")
+    output_count = evidence.get("output_count")
+    expected_kind = {78: 4, 79: 3}.get(expected_program_id)
+    expected_count = dimension if expected_program_id == 78 else 1
+    if output_kind != expected_kind or isinstance(output_count, bool) or output_count != expected_count:
+        raise NmpHttpError("kernel execution output descriptor does not match the allowlisted program")
+    for field in ("output_digest", "guest_image_digest", "guest_source_digest"):
+        value = evidence.get(field)
+        if not isinstance(value, str) or len(value) != 64:
+            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex")
+        try:
+            int(value, 16)
+        except ValueError as exc:
+            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex") from exc
+    if evidence["output_digest"].lower() != result_digest.lower():
+        raise NmpHttpError("kernel execution output digest does not match result_digest")
+    return {
+        "schema": evidence["schema"],
+        "packet_id": packet.packet_id,
+        "function_id": packet.function_id,
+        "program_id": program_id,
+        "output_kind": output_kind,
+        "dimension": dimension,
+        "output_count": output_count,
+        "output_digest": evidence["output_digest"].lower(),
+        "guest_steps": guest_steps,
+        "guest_image_digest": evidence["guest_image_digest"].lower(),
+        "guest_source_digest": evidence["guest_source_digest"].lower(),
+        "lease_epoch": lease_epoch,
+        "lease_owner": lease_owner,
+    }
 
 
 def _native_packet(record: Any) -> NmpPacket:
@@ -181,7 +241,12 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "lease", job=job, lease=lease
         )
-        _require_server_program_binding(packet, gate_context)
+        expected_program_id = _require_server_program_binding(packet, gate_context)
+        native_execution = _validate_execution_evidence(
+            execution_evidence, packet=packet, expected_program_id=expected_program_id,
+            result_digest=result_digest, lease_epoch=lease_epoch,
+            lease_owner=str(lease_owner or ""),
+        )
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != owner:
             raise NmpHttpError("worker owner is not bound to the current verified capability")
@@ -202,6 +267,7 @@ class NmpHttpAdapter:
     def complete(self, token: str, packet_record: Mapping[str, Any],
                  *, job_id: str, lease_token: str, lease_epoch: int,
                  result_digest: str, now_tick: int,
+                 execution_evidence: Mapping[str, Any] | None = None,
                  result_generation: int | None = None,
                  lease_owner: str | None = None) -> dict[str, Any]:
         packet = _native_packet(packet_record)
@@ -250,7 +316,10 @@ class NmpHttpAdapter:
             tick=now_tick,
             job_id=job_id,
             lease_epoch=lease_epoch,
-            evidence={"completion_gate": decision.to_dict()},
+            evidence={
+                "completion_gate": decision.to_dict(),
+                "native_kernel_execution": native_execution,
+            },
         )
         job_record = self.service.complete_job(
             token, job_id, lease_token, lease_epoch, result_digest,
