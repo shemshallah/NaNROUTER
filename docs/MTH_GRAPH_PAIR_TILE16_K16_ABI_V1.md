@@ -4,7 +4,7 @@ Status: NATIVE_VERIFIED by canonical NaN16 CI run 242 (283,436 guest steps).
 
 ## Purpose
 
-The dense 256×256 U matrix occupies 65,536 NaN16 words. At 8 bytes per word, that alone is 512 KiB. The new 1 MiB target gives room for U plus a bounded working set, but not for U+L+output all dense; K16 remains the bounded streaming path.
+The dense 256×256 U matrix occupies 65,536 NaN16 words. At 8 bytes per word, that alone is 512 KiB, leaving no room under a 512 KiB runner for code, L windows, accumulators, or output. The earlier full-U tile reference requires 73,990 words (591,920 bytes): it is rejected by a 512 KiB runner but fits under the configurable 1 MiB MTH guest default. K16 remains the bounded streaming path.
 
 This K16 ABI is the bounded implementation. It never stages the full U matrix.
 
@@ -56,7 +56,7 @@ Accumulator invocation:
 Finalize invocation:
 - Two accumulator blocks and one output block: 768 NaN16 words = 6,144 bytes.
 
-Both are well below the new 131,072-word / 1 MiB guest target. U and L remain in external versioned pages; only the required four 16×16 windows are staged per K slice.
+Both are well below the 131,072-word / 1 MiB default guest ceiling. U and L remain in external versioned pages; only the required four 16×16 windows are staged per K slice.
 
 ## Determinism and publication
 

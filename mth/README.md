@@ -32,7 +32,7 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_matvec256_block16.nas`: 16-row × 256-column block matvec; local canonical execution PASS.
 - `nan16/mth_centrosymmetry_block16.nas`: 16-row streaming 256 certificate; local canonical execution PASS.
 - `nan16/mth_k256_pair_space_v1.nas`: closed-form K256 256×256 pair action; canonical CI run 180 PASS.
-- `nan16/mth_graph_pair_tile16_f32.nas`: general dense full-U 16×16 pair-tile reference `LU + ULᵀ`; CI verified; the 73,990-word full-U reference fits the 1 MiB target but remains a reference, not the bounded production path.
+- `nan16/mth_graph_pair_tile16_f32.nas`: general dense full-U 16×16 pair-tile reference `LU + ULᵀ`; CI verified; dispatchable under the default 1 MiB guest budget (73,990 NaN16 words), but rejected by a 512 KiB runner.
 - `nan16/mth_svd_top128.nas`: top singular pair of a dense 128×128 matrix; local canonical execution PASS.
 - `nan16/mth_encode256_128.nas`, `nan16/mth_decode128_256.nas`: dense 256↔128 encoder/decoder; local canonical execution PASS.
 - `nan16/mth_centrosymmetry255_block15.nas`: 15×255 streaming certificate for the odd 255-head block; local canonical execution PASS.

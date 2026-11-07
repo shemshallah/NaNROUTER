@@ -1,6 +1,6 @@
 # MTH 256x256 pair-space tile ABI v1
 
-Status: NATIVE_VERIFIED as a mathematical reference by canonical NaN16 CI run 218 (4,643,414 guest steps); Fits the 1 MiB guest target; the old 512 KiB limit is historical.
+Status: NATIVE_VERIFIED by canonical NaN16 CI run 218 (4,643,414 guest steps); dispatchable when the runner is configured with the default 1 MiB MTH guest budget and rejected by a 512 KiB runner.
 
 ## Operation
 
@@ -34,7 +34,7 @@ For each output cell, the first sum and second sum use separate +0.0 accumulator
 
 ## Memory budget and dispatch status
 
-The complete guest working set is 65,536 + 4,096 + 4,096 + 256 + 6 = 73,990 NaN16 words. At 8 bytes per NaN16 word this is 591,920 bytes. The 73,990-word working set fits the new 1 MiB (131,072-word) target. Under the old 512 KiB limit it was reference-only; that restriction is historical. Use the K16 streaming ABI in docs/MTH_GRAPH_PAIR_TILE16_K16_ABI_V1.md for bounded execution.
+The complete guest working set is 65,536 + 4,096 + 4,096 + 256 + 6 = 73,990 NaN16 words (591,920 bytes). The MTH guest budget is configurable and defaults to 131,072 words (1 MiB), so this reference fits with 57,082 words (456,656 bytes) of headroom. A runner with only 65,536 words (512 KiB) must reject it. The K16 streaming ABI remains the preferred bounded path when minimizing guest memory is more important than avoiding page-window staging.
 
 ## Preconditions and limits
 

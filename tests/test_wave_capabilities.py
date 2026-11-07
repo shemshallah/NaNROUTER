@@ -52,6 +52,58 @@ class WaveCapabilityTests(unittest.TestCase):
             health = store.health()
             self.assertEqual(health["schema_version"], 1)
 
+
+    def test_guest_budget_gates_full_u_reference(self):
+        manifest = load_manifest(DEFAULT_MANIFEST)
+        target = next(
+            kernel for kernel in manifest["kernels"]
+            if kernel["kernel_id"] == "mth.graph.pair.tile16.f32"
+        )
+        required = target["workspace_words"]
+        self.assertEqual(required, 73990)
+        dry_rows = register_manifest(
+            None, manifest, runner_id="dry", dry_run=True
+        )
+        digest = next(
+            row["source_digest"] for row in dry_rows
+            if row["kernel_id"] == target["kernel_id"]
+        )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            small = WaveStore(root / "small-bs.sqlite3", root / "small-mc.sqlite3")
+            register_manifest(
+                small, manifest, runner_id="MC0:0/R512",
+                guest_workspace_words=65_536,
+            )
+            rejected = small.dispatchable_capabilities(
+                workspace=required, operator_digest=digest,
+                precision=target["precision"],
+            )
+            self.assertEqual(rejected, [])
+
+            large = WaveStore(root / "large-bs.sqlite3", root / "large-mc.sqlite3")
+            register_manifest(
+                large, manifest, runner_id="MC0:0/R1M",
+                guest_workspace_words=131_072,
+            )
+            accepted = large.dispatchable_capabilities(
+                workspace=required, operator_digest=digest,
+                precision=target["precision"],
+            )
+            self.assertEqual([row["runner_id"] for row in accepted], ["MC0:0/R1M"])
+
+            bigger = WaveStore(root / "big-bs.sqlite3", root / "big-mc.sqlite3")
+            register_manifest(
+                bigger, manifest, runner_id="MC0:0/R2M",
+                guest_workspace_words=262_144,
+            )
+            admitted = bigger.dispatchable_capabilities(
+                workspace=required, operator_digest=digest,
+                precision=target["precision"],
+            )
+            self.assertEqual([row["runner_id"] for row in admitted], ["MC0:0/R2M"])
+
     def test_manifest_json_is_valid(self):
         document = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(document["schema"], "nanrouter.wave-capabilities.v1")

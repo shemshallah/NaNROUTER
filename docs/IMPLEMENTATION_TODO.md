@@ -99,7 +99,7 @@
 - [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
-- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U tile now fits the 1 MiB target; page-window orchestration/atomic publication remain open.
+- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U reference requires 73,990 words and fits the default 1 MiB MTH guest budget; 512 KiB runners reject it.
 
 ## R7 — Tunneling and creativity
 

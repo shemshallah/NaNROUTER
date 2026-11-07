@@ -496,7 +496,7 @@ A cross-coupling term can be written as a low-rank sum:
 K = Σ_{r=1}^R B_r ⊗ C_r
 ```
 
-The rank `R`, memory, and per-step cost are declared before execution. Never materialize a dense 65,536×65,536 operator. That is 4,294,967,296 entries; even at one byte per entry it is four gigabytes, and at float32 it is sixteen gigabytes. The guest target is 1 MiB of working memory (131,072 NaN16 words); the old 512 KiB limit is historical. The product operator is applied matrix-free, blockwise, or low-rank.
+The rank `R`, memory, and per-step cost are declared before execution. Never materialize a dense 65,536×65,536 operator. That is 4,294,967,296 entries; even at one byte per entry it is four gigabytes, and at float32 it is sixteen gigabytes. The MTH guest has a configurable 1 MiB working-set budget by default (131,072 NaN16 words). The product operator is still applied matrix-free, blockwise, or low-rank.
 
 ### 5.4 The 65,536 modes are not 65,536 independent controls
 

@@ -260,7 +260,7 @@ A general dense real-matrix action is now native_verified for the stated tile AB
 For each 16×16 output tile, the kernel computes
 `Y[i,j] = sum_k L[i,k]U[k,j] + sum_k U[i,k]L[j,k]`.
 It stages the full 256×256 U matrix and two 16×256 row windows of L.
-The full-U reference uses 73,990 NaN16 words (591,920 bytes), fitting the new 1 MiB guest target; the old 512 KiB limit was the constraint. The full 65,536×65,536 Kronecker operator is never formed.
+The full-U reference uses 73,990 NaN16 words (591,920 bytes). It is rejected by 512 KiB runners and admitted by the default 1 MiB MTH guest budget (131,072 words). The full 65,536×65,536 Kronecker operator is never formed.
 
 The two sums use separate accumulators and increasing-k order, with an
 explicit final FADD. The caller supplies row windows from one immutable L
