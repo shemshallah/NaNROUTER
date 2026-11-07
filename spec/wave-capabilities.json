@@ -505,6 +505,21 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.graph.pair.tile16.k16.f32",
+      "source": "mth/nan16/mth_graph_pair_tile16_k16_f32.nas",
+      "fixture": "mth/tests/mth_graph_pair_tile16_k16_f32_test.nas",
+      "marker": "MTH PAIR TILE16 K16 ACCUM PASS",
+      "steps": 283436,
+      "precision": "float32",
+      "workspace_words": 1542,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": true
     }
   ]
 }
