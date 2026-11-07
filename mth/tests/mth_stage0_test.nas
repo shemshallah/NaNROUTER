@@ -22,10 +22,50 @@ mth_rot_loop:
   CALL @mth_rot2_class
   CMP r1,r12
   JMP[NE] @mth_fail
+
+  ; Decode and repack the ordered near/far face classes.
+  ADD r1,r12,r0
+  CALL @mth_face_near
+  ADD r5,r1,r0
+  ADD r1,r12,r0
+  CALL @mth_face_far
+  ADD r2,r1,r0
+  ADD r1,r5,r0
+  CALL @mth_pack_faces
+  CMP r2,r0
+  JMP[EQ] @mth_fail
+  CMP r1,r12
+  JMP[NE] @mth_fail
+
   ADD r12,r12,r13
   MOVI r4,16
   CMP r12,r4
   JMP[LT] @mth_rot_loop
+
+  ; Verify c=2*quiet+sign for all four legal face types.
+  MOVI r12,0
+mth_face_loop:
+  ADD r1,r12,r0
+  CALL @mth_face_sign
+  LD r5,r12,@mth_sign_expected
+  CMP r1,r5
+  JMP[NE] @mth_fail
+  ADD r1,r12,r0
+  CALL @mth_face_quiet
+  LD r5,r12,@mth_quiet_expected
+  CMP r1,r5
+  JMP[NE] @mth_fail
+  ADD r12,r12,r13
+  MOVI r4,4
+  CMP r12,r4
+  JMP[LT] @mth_face_loop
+
+  ; Invalid face classes must not be packed into a legal nibble.
+  MOVI r1,4
+  MOVI r2,0
+  CALL @mth_pack_faces
+  CMP r2,r0
+  JMP[NE] @mth_fail
 
   ; A single BSWAPM followed by a second BSWAPM must restore the word.
   MOVI r6,@mth_word
@@ -79,6 +119,16 @@ mth_puts_byte:
   ADD r1,r1,r13
   JMP @mth_puts_word
 
+mth_sign_expected:
+.word 0
+.word 1
+.word 0
+.word 1
+mth_quiet_expected:
+.word 0
+.word 0
+.word 1
+.word 1
 mth_rot_expected:
 .word 0
 .word 4
