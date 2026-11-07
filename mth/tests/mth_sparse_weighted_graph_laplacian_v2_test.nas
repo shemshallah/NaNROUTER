@@ -20,6 +20,8 @@ mth_weighted_v2_test_main:
   ADD r1,r12,r0
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
+  MOVI r1,@mth_weighted_v2_status_a
+  CALL @mth_weighted_v2_puts
 
   ; Expected [-2,-7,-16,25] in signed I64 Q16.16.
   MOVI r6,@mth_weighted_v2_output
@@ -60,6 +62,8 @@ mth_weighted_v2_test_main:
   LD r7,r6,7
   CMP r7,r0
   JMP[NE] @mth_weighted_v2_fail
+  MOVI r1,@mth_weighted_v2_oracle_a
+  CALL @mth_weighted_v2_puts
 
   ; Second exact oracle: [-1,-20,11,10].
   MOVI r1,@mth_weighted_v2_offsets
@@ -72,6 +76,8 @@ mth_weighted_v2_test_main:
   CALL @mth_sparse_weighted_graph_laplacian_q16_16_i64_v2
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
+  MOVI r1,@mth_weighted_v2_status_b
+  CALL @mth_weighted_v2_puts
   MOVI r6,@mth_weighted_v2_output
   LD r7,r6,0
   MOVI r8,0
@@ -107,6 +113,8 @@ mth_weighted_v2_test_main:
   LD r7,r6,7
   CMP r7,r0
   JMP[NE] @mth_weighted_v2_fail
+  MOVI r1,@mth_weighted_v2_oracle_b
+  CALL @mth_weighted_v2_puts
 
   ; Zero weight is invalid and must preserve the entire output page.
   MOVI r6,@mth_weighted_v2_weights_a
@@ -130,6 +138,8 @@ mth_weighted_v2_test_main:
   MOVI r8,77
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail
+  MOVI r1,@mth_weighted_v2_atomicity
+  CALL @mth_weighted_v2_puts
 
   MOVI r1,@mth_weighted_v2_pass
   CALL @mth_weighted_v2_puts
@@ -1239,3 +1249,14 @@ mth_weighted_v2_before:
 .str "BEFORE WEIGHTED CALL\\n"
 mth_weighted_v2_after:
 .str "AFTER WEIGHTED CALL\\n"
+
+mth_weighted_v2_status_a:
+.str "STATUS A OK\\n"
+mth_weighted_v2_oracle_a:
+.str "ORACLE A OK\\n"
+mth_weighted_v2_status_b:
+.str "STATUS B OK\\n"
+mth_weighted_v2_oracle_b:
+.str "ORACLE B OK\\n"
+mth_weighted_v2_atomicity:
+.str "ATOMICITY OK\\n"
