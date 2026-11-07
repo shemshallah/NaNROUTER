@@ -478,6 +478,18 @@ jobs:
           cat build/mth/pair-tile16.err
           grep -q '^MTH PAIR TILE16 F32 PASS' build/mth/pair-tile16.out
 
+
+      - name: Assemble full 16-slice pair tile driver fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas > build/mth/pair-tile16-driver.nan
+
+      - name: Execute full 16-slice pair tile driver fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/pair-tile16-driver.nan --steps 12000000 --serial > build/mth/pair-tile16-driver.out 2> build/mth/pair-tile16-driver.err
+          cat build/mth/pair-tile16-driver.out
+          cat build/mth/pair-tile16-driver.err
+          grep -q '^MTH PAIR TILE16 K16 DRIVER PASS' build/mth/pair-tile16-driver.out
+
       - name: Assemble bounded K16 pair tile fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_tile16_k16_f32_test.nas > build/mth/pair-tile16-k16.nan
