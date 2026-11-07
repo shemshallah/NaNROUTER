@@ -1,6 +1,9 @@
 import os
 import tempfile
 import unittest
+from http.server import ThreadingHTTPServer
+from threading import Thread
+from unittest.mock import patch
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -17,6 +20,7 @@ from runner_riddle.n16t_http import N16THttpAdapter
 from runner_riddle.wave_http import WaveHttpServer
 from runner_riddle.wave_service import WaveService
 from runner_riddle.wave_store import WaveStore
+from runner_riddle.http_service import RiddleService, make_handler
 
 
 _REQUIRED = ("NAN16_LIBRARY", "N16T_GUEST_IMAGE", "N16T_GUEST_LABELS")
@@ -224,6 +228,63 @@ class N16TGuestRuntimeTests(unittest.TestCase):
                 client.close()
                 server.stop()
                 pool.close()
+
+
+    def test_primary_riddle_service_mounts_authenticated_n16t_peer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env = {
+                "RIDDLE_DATA_DIR": directory,
+                "RIDDLE_INTAKE_TOKEN": "intake-token-primary-n16t-000000",
+                "RIDDLE_WORKER_TOKEN": "worker-token-primary-n16t-111111",
+                "RIDDLE_FEEDBACK_HMAC_KEY": "feedback-key-primary-n16t-222222",
+                "RIDDLE_N16T_SUBMIT_TOKEN": "submit-token-primary-n16t-333333",
+                "NAN16_LIBRARY": os.environ["NAN16_LIBRARY"],
+                "N16T_GUEST_IMAGE": os.environ["N16T_GUEST_IMAGE"],
+                "N16T_GUEST_LABELS": os.environ["N16T_GUEST_LABELS"],
+            }
+            with patch.dict(os.environ, env):
+                service = RiddleService()
+            server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(service))
+            thread = Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            client = self.make_client(bytes(range(97, 113)))
+            try:
+                request_frame = self.send_hello(client)
+                base = f"http://127.0.0.1:{server.server_address[1]}/n16t"
+                unauthorized = Request(
+                    base,
+                    data=request_frame,
+                    headers={"Content-Type": "application/x-n16t"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(unauthorized, timeout=5)
+                self.assertEqual(caught.exception.code, 401)
+                caught.exception.close()
+
+                authorized = Request(
+                    base,
+                    data=request_frame,
+                    headers={
+                        "Content-Type": "application/x-n16t",
+                        "Authorization": "Bearer " + env["RIDDLE_N16T_SUBMIT_TOKEN"],
+                    },
+                    method="POST",
+                )
+                with urlopen(authorized, timeout=5) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(response.headers.get_content_type(), "application/x-n16t")
+                    peer_frame = response.read()
+                client.write_bytes(REQUEST_BASE, peer_frame)
+                client.call("n16_android_route", {1: REQUEST_BASE, 2: len(peer_frame)})
+                self.assertEqual(client.reg(3), 2)
+                self.assertEqual(client.reg(4), 0xA001)
+            finally:
+                client.close()
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+                service.close()
 
     def test_opaque_session_affinity_keeps_guest_states_separate(self):
         pool = N16TGuestPool(
