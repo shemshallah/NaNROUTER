@@ -2034,6 +2034,10 @@ class MathExecutionBridge:
         token = worker_token if worker_token is not None else self.worker_token
         if token is None:
             raise MathExecutionConfigError("execute requires a worker token")
+        service = getattr(self.system, "service", None)
+        authorize = getattr(service, "_authorize", None)
+        if callable(authorize):
+            authorize(token, ("worker",))
         return job
 
     def execute(
