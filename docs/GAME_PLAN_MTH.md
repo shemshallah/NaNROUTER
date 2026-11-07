@@ -924,3 +924,10 @@ Next: implement **weighted CSR v2** with an explicit weight scale, signed wide i
 The next operator is specified separately in `docs/MTH_WEIGHTED_CSR_ABI_V2.md`. It preserves the v1 Q16.16 state range but makes edge weights explicit U8 integer multipliers (1..255) and widens output/row accumulation to signed I64 Q16.16. No fractional weight scaling, rounding, saturation, or wrap is implicit. The proved row bound is 545,469,235,200 (<2^40), so I64 is sufficient. The planned weighted path oracles are [-2,-7,-16,25] for weights [2,3,5] and state [0,1,4,9], and [-1,-20,11,10] for weights [1,7,2].
 
 **Status:** native_verified. The Q16.16/I32 state + U8 integer-weight + I64 Q16.16 output kernel and exact weighted path fixtures passed canonical NaN16 CI run #107 (41,253 guest steps; expected HALT). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. The fixture verifies two distinct weighted path oracles and zero-weight rejection with output atomicity. Next: independent energy and component/nullity kernels, then pair-space only after those invariants pass.
+
+
+### 20.6 Connected components native verification
+
+The native `mth_graph_components_256` kernel now preflights canonical CSR and uses a caller-owned union-find parent array to emit deterministic component labels and component count. Canonical NaN16 CI run #119 passed the path fixture (253 components), disconnected fixture (254 components), and invalid-first-offset output atomicity (29,931 guest steps; expected HALT). Kernel SHA-256: `064d6b52cf2d0dda561de020da25575225568999635bcad6dd117f4b0355c13b`.
+
+This verifies topological component counting, not an eigensystem. Next: bounded weighted graph energy, then an independently verified nullspace/nullity fixture. Pair-space remains gated behind those checks.
