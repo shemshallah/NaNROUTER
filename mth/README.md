@@ -172,3 +172,20 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_radial_energy.nas`: radial quadratic energy and localization; local canonical execution PASS (61,373 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and passed canonical CI run 42396090387. GLT-enforced 1 MiB page-limit loading remains the separate pending gate.
+
+
+## Typed mathematical preflight
+
+- `nan16/mth_preflight.nas`: NaN16-only applicability gate for concrete typed leaf descriptors against a caller-supplied canonical operator contract. Checks kind, rank, domain, shape rule, payload capacity, required execution capabilities, and declared preconditions; output metadata is committed only after all checks pass.
+- `tests/mth_preflight_test.nas`: native guest regression for vector-dot success, dimension mismatch, missing capability, zero-divisor precondition, successful scalar preflight, and output-capacity rejection with atomic output metadata.
+- The gate is not a second function registry. The MC0/NaN0S registry owns operator identity and contracts; the gate checks whether a resolved contract applies to these concrete leaves. A failed preflight is not numerical zero, execution failure, or mathematical undefinedness.
+
+
+## Composed native mathematical admission
+
+- `nan16/mth_preflight_gate.nas`: exact rule/candidate admission against the authoritative 8-word rule digest, epoch, operator signature, domain, shape policy, capability subset, proof level, and enabled policy.
+- `nan16/mth_preflight.nas`: typed leaf applicability, shape/capacity/precondition checks, and atomic output metadata publication.
+- `nan16/mth_admission.nas`: composes the two guest gates in that order. ABI: candidate, rule, left descriptor, right descriptor, operator contract, available capability bits, caller-reserved output descriptor, and a 48-word caller-owned scratch frame. Return 0 only when both gates pass; 16+status identifies rule/candidate denial; 32+status identifies typed applicability denial.
+- `tests/mth_admission_test.nas`: canonical guest fixture for allow, stale-epoch denial, typed-shape denial, and output-metadata atomicity.
+
+The composed routine does not grant ACL authority, prove the mathematical claim, or execute a kernel. It establishes a necessary admission boundary that the later NMP/lease/worker path must bind to the exact candidate and rule snapshot. All checks execute in NaN16 guest code.
