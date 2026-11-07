@@ -60,6 +60,45 @@ class WaveRingSchedulerTests(unittest.TestCase):
                 with self.assertRaises(WaveRingSchedulerError):
                     resolve_slot(value)
 
+    def test_export_and_restore_preserve_epoch_and_continue_from_it(self):
+        scheduler = self.make()
+        scheduler.start(0)
+        scheduler.reserve_memory(4096)
+        scheduler.register_lease(2)
+        state = scheduler.export_state()
+        restored = WaveRingScheduler.restore_state(state)
+        before = restored.snapshot(0)
+        self.assertEqual(before["epoch"], 1)
+        self.assertEqual(before["active_slot"], 0)
+        self.assertEqual(before["active_memory_bytes"], 4096)
+        self.assertEqual(before["active_lease_count"], 2)
+
+        restored.release_lease(2)
+        restored.release_memory(4096)
+        after = restored.cycle(1)
+        self.assertEqual(after["epoch"], 2)
+        self.assertEqual(after["active_slot"], 1)
+
+    def test_restore_rejects_tampered_or_incomplete_state(self):
+        scheduler = self.make()
+        state = scheduler.export_state()
+        bad_schema = dict(state, schema="nanrouter.bad.v1")
+        with self.assertRaises(WaveRingSchedulerError):
+            WaveRingScheduler.restore_state(bad_schema)
+        missing_slot = dict(state, slots=state["slots"][:-1])
+        with self.assertRaises(WaveRingSchedulerError):
+            WaveRingScheduler.restore_state(missing_slot)
+        started_without_active = dict(
+            state, started=True, active_index=None, epoch=1,
+        )
+        with self.assertRaises(WaveRingSchedulerError):
+            WaveRingScheduler.restore_state(started_without_active)
+        wrong_alias = dict(state)
+        wrong_alias["slots"] = [dict(slot) for slot in state["slots"]]
+        wrong_alias["slots"][0]["alias"] = "NANROUTER-9"
+        with self.assertRaises(WaveRingSchedulerError):
+            WaveRingScheduler.restore_state(wrong_alias)
+
     def test_start_activates_exactly_one_slot(self):
         scheduler = self.make()
         snapshot = scheduler.start(0)

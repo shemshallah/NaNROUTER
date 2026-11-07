@@ -38,6 +38,7 @@ DEFAULT_CYCLE_TICKS = 64
 DEFAULT_MAX_ACTIVE_MEMORY_BYTES = 7 * 1024 ** 3
 MAX_ACTIVE_MEMORY_BYTES = DEFAULT_MAX_ACTIVE_MEMORY_BYTES
 SNAPSHOT_SCHEMA = "nanrouter.wave-ring-scheduler.v1"
+RESTORE_SCHEMA = "nanrouter.wave-ring-restore.v1"
 
 # JAHS is the owner's initials and a real handoff gate, not a cosmetic label.
 # "Just A Handoff Seal" is a mandatory domain separator in every checkpoint
@@ -448,6 +449,157 @@ class WaveRingScheduler:
                 "slots": slots,
             }
 
+    # -- durable state export / restore ------------------------------------
+
+    def export_state(self) -> dict[str, Any]:
+        """Export the full in-process scheduler state as plain data."""
+        with self._lock:
+            return {
+                "schema": RESTORE_SCHEMA,
+                "cycle_ticks": self.cycle_ticks,
+                "max_active_memory_bytes": self.max_active_memory_bytes,
+                "last_tick": self._last_tick,
+                "started": self._started,
+                "active_index": self._active_index,
+                "epoch": self._epoch,
+                "last_checkpoint": (
+                    dict(self._last_checkpoint)
+                    if self._last_checkpoint is not None else None
+                ),
+                "last_failover_reason": self._last_failover_reason,
+                "last_failover_tick": self._last_failover_tick,
+                "slots": [{
+                    "index": slot.index,
+                    "slot_id": slot.slot_id,
+                    "alias": slot.alias,
+                    "status": slot.status,
+                    "heartbeat_tick": slot.heartbeat_tick,
+                    "memory_reserved_bytes": slot.memory_reserved_bytes,
+                    "lease_count": slot.lease_count,
+                    "checkpoint_digest": slot.checkpoint_digest,
+                    "activated_epoch": slot.activated_epoch,
+                } for slot in self._slots],
+            }
+
+    @classmethod
+    def restore_state(
+        cls,
+        state: Any,
+        *,
+        checkpoint_store: Callable[[str], Any] | None = None,
+    ) -> "WaveRingScheduler":
+        """Rebuild a scheduler from a validated exported state.
+
+        The epoch is restored exactly; the next handoff advances from it rather
+        than restarting at 1.
+        """
+        if not isinstance(state, dict):
+            raise WaveRingSchedulerError("restore state must be an object")
+        if state.get("schema") != RESTORE_SCHEMA:
+            raise WaveRingSchedulerError("unsupported restore-state schema")
+        cycle_ticks = _require_int(
+            "cycle_ticks", state.get("cycle_ticks"), minimum=1
+        )
+        max_memory = _require_int(
+            "max_active_memory_bytes",
+            state.get("max_active_memory_bytes"), minimum=1,
+        )
+        last_tick = _require_int("last_tick", state.get("last_tick"))
+        started = state.get("started")
+        if not isinstance(started, bool):
+            raise WaveRingSchedulerError("started must be a boolean")
+        active_index = state.get("active_index")
+        if active_index is not None and (
+            not isinstance(active_index, int)
+            or isinstance(active_index, bool)
+            or not 0 <= active_index < SLOT_COUNT
+        ):
+            raise WaveRingSchedulerError("active_index is out of range")
+        epoch = _require_int("epoch", state.get("epoch"))
+        if started and (active_index is None or epoch < 1):
+            raise WaveRingSchedulerError(
+                "a started scheduler requires an active slot and epoch >= 1"
+            )
+        if not started and (active_index is not None or epoch != 0):
+            raise WaveRingSchedulerError(
+                "an unstarted scheduler must have no active slot and epoch 0"
+            )
+        slots = state.get("slots")
+        if not isinstance(slots, list) or len(slots) != SLOT_COUNT:
+            raise WaveRingSchedulerError("restore state must contain six slots")
+        scheduler = cls(
+            cycle_ticks,
+            max_active_memory_bytes=max_memory,
+            now_tick=last_tick,
+            checkpoint_store=checkpoint_store,
+        )
+        active_count = 0
+        for expected, raw in enumerate(slots):
+            if not isinstance(raw, dict):
+                raise WaveRingSchedulerError("slot state must be an object")
+            if raw.get("index") != expected:
+                raise WaveRingSchedulerError("slot indices must be 0..5 in order")
+            if raw.get("slot_id") != MC0_SLOTS[expected]:
+                raise WaveRingSchedulerError("slot_id does not match its index")
+            if raw.get("alias") != NANROUTER_ALIASES[expected]:
+                raise WaveRingSchedulerError("slot alias does not match its index")
+            status = raw.get("status")
+            if status not in {"standby", "active", "draining", "degraded",
+                              "revoked"}:
+                raise WaveRingSchedulerError(f"unknown slot status: {status!r}")
+            if status == "active":
+                active_count += 1
+                if expected != active_index:
+                    raise WaveRingSchedulerError(
+                        "active slot status/index disagree"
+                    )
+            slot = scheduler._slots[expected]
+            slot.status = status
+            heartbeat = raw.get("heartbeat_tick")
+            if heartbeat is not None:
+                heartbeat = _require_int("heartbeat_tick", heartbeat)
+            slot.heartbeat_tick = heartbeat
+            slot.memory_reserved_bytes = _require_int(
+                "memory_reserved_bytes", raw.get("memory_reserved_bytes")
+            )
+            slot.lease_count = _require_int(
+                "lease_count", raw.get("lease_count")
+            )
+            checkpoint_digest = raw.get("checkpoint_digest")
+            if checkpoint_digest is not None:
+                if not isinstance(checkpoint_digest, str) or len(checkpoint_digest) != 64:
+                    raise WaveRingSchedulerError(
+                        "checkpoint_digest must be lowercase SHA-256 hex"
+                    )
+            slot.checkpoint_digest = checkpoint_digest
+            slot.activated_epoch = _require_int(
+                "activated_epoch", raw.get("activated_epoch")
+            )
+        if started and active_count != 1:
+            raise WaveRingSchedulerError(
+                "a started scheduler requires exactly one active slot"
+            )
+        if not started and active_count:
+            raise WaveRingSchedulerError(
+                "an unstarted scheduler cannot contain an active slot"
+            )
+        scheduler._started = started
+        scheduler._active_index = active_index
+        scheduler._epoch = epoch
+        scheduler._last_tick = last_tick
+        scheduler._last_checkpoint = (
+            dict(state["last_checkpoint"])
+            if isinstance(state.get("last_checkpoint"), dict) else None
+        )
+        scheduler._last_failover_reason = state.get("last_failover_reason")
+        failover_tick = state.get("last_failover_tick")
+        scheduler._last_failover_tick = (
+            None if failover_tick is None else _require_int(
+                "last_failover_tick", failover_tick
+            )
+        )
+        return scheduler
+
     # -- internal state transitions ---------------------------------------
 
     def _read_tick(self, now_tick: int | None) -> int:
@@ -582,6 +734,7 @@ __all__ = [
     "SLOT_COUNT",
     "SLOT_STATUSES",
     "SNAPSHOT_SCHEMA",
+    "RESTORE_SCHEMA",
     "WaveRingScheduler",
     "WaveRingSchedulerError",
     "resolve_slot",
