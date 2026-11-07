@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 from pathlib import Path
 import unittest
 
@@ -98,6 +99,34 @@ def vector_registry():
 
 
 class MathLinkerCandidateTests(unittest.TestCase):
+    def test_scratch_is_invisible_unless_opted_in_and_quarantine_is_never_linkable(self):
+        scratch = replace(vector_leaf(1), status="scratch")
+        right = vector_leaf(2)
+        with self.assertRaises(LinkError) as raised:
+            propose(
+                [scratch, right],
+                registry=vector_registry(),
+                snapshot_id=SNAPSHOT_ID,
+            )
+        self.assertIn("scratch", str(raised.exception).lower())
+
+        opted = propose(
+            [scratch, right],
+            registry=vector_registry(),
+            snapshot_id=SNAPSHOT_ID,
+            allow_scratch=True,
+        )
+        self.assertGreater(opted.candidate_count, 0)
+
+        quarantined = replace(vector_leaf(1), status="quarantined")
+        with self.assertRaises(LinkError):
+            propose(
+                [quarantined, right],
+                registry=vector_registry(),
+                snapshot_id=SNAPSHOT_ID,
+                allow_scratch=True,
+            )
+
     def test_vector_vector_generates_multiple_candidates(self):
         left = vector_leaf(1)
         right = vector_leaf(2)

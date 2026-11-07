@@ -69,6 +69,7 @@ class MathRuntime:
         linker: Any = None,
         validity: MathValidityEngine | None = None,
         leaves: Mapping[str, MathLeaf] | None = None,
+        rule_provider: Any = None,
     ) -> None:
         if not isinstance(functions, MathFunctionRegistry):
             raise MathRuntimeConfigError("functions must be a MathFunctionRegistry")
@@ -76,12 +77,21 @@ class MathRuntime:
             raise MathRuntimeConfigError("store must be a MathStore")
         if system is not None and not isinstance(system, MthSystem):
             raise MathRuntimeConfigError("system must be an MthSystem")
+        if rule_provider is not None and not (
+            callable(rule_provider) or callable(
+                getattr(rule_provider, "active_rules", None)
+            )
+        ):
+            raise MathRuntimeConfigError(
+                "rule_provider must be callable or expose active_rules()"
+            )
         self.functions = functions
         self.store = store
         self.system = system
         self.linker = linker
         self.validity = validity or MathValidityEngine()
         self._leaves = dict(leaves or {})
+        self.rule_provider = rule_provider
 
     # -- leaves --------------------------------------------------------------
 
@@ -131,6 +141,15 @@ class MathRuntime:
             pins.append(pin)
         return tuple(pins)
 
+    def _active_rules(self) -> tuple[Any, ...]:
+        if self.rule_provider is None:
+            return ()
+        if callable(self.rule_provider):
+            rules = self.rule_provider()
+        else:
+            rules = self.rule_provider.active_rules()
+        return tuple(rules or ())
+
     def snapshot_for(self, candidate: MathCandidate,
                      *, snapshot_id: str | None = None) -> MathSnapshot:
         function = self.functions.require(
@@ -144,6 +163,7 @@ class MathRuntime:
         return MathSnapshot(
             snapshot_id=sid,
             functions=(function,),
+            rules=self._active_rules(),
             leaf_pins=self._leaf_pins(candidate),
             capabilities=(),
         )

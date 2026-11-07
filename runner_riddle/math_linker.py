@@ -898,10 +898,21 @@ def _call_resolver(resolver: Any, ref: MathRef) -> Any:
     return _call_first(resolver, signature, attempts)
 
 
-def classify_leaf(leaf: MathLeaf) -> LeafClass:
+def classify_leaf(leaf: MathLeaf, *, allow_scratch: bool = False) -> LeafClass:
     """Classify type/domain/shape/layout without evaluating any content."""
     if not isinstance(leaf, MathLeaf):
         raise LinkError("invalid_leaf", "classify_leaf requires a MathLeaf")
+    status = str(leaf.status).lower()
+    if status == "scratch" and not allow_scratch:
+        raise LinkError(
+            "leaf_not_linkable",
+            "scratch leaf is invisible to the linker without explicit opt-in",
+        )
+    if status in {"quarantined", "tombstoned", "superseded"}:
+        raise LinkError(
+            "leaf_not_linkable",
+            f"leaf status {status!r} is not linkable",
+        )
     type_record = dict(leaf.type)
     kind = str(leaf.kind)
     shape_declared = type_record.get("shape") is not None
@@ -2155,6 +2166,7 @@ def propose(
     bounds: Any = None,
     aliases: Mapping[str, Any] | None = None,
     execute: bool = False,
+    allow_scratch: bool = False,
 ) -> LinkResult:
     """Return a deterministic candidate set for a conjoin/transform query.
 
@@ -2214,7 +2226,9 @@ def propose(
         if reference.content_digest is not None and leaf.content_digest != reference.content_digest:
             raise LinkError("digest_mismatch", "alias leaf content digest does not match its pin")
         resolved.append(leaf)
-    classes = tuple(classify_leaf(leaf) for leaf in resolved)
+    classes = tuple(
+        classify_leaf(leaf, allow_scratch=allow_scratch) for leaf in resolved
+    )
     input_records = tuple(_input_record(item) for item in classes)
 
     raw_registry = _invoke_registry(registry, classes, effective)

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from runner_riddle.math_objects import MathLeaf
+from runner_riddle.math_objects import MathLeaf, MathRule
 from runner_riddle.math_registry import MathFunctionRegistry
 from runner_riddle.math_runtime import (
     MathRuntime,
@@ -103,6 +103,44 @@ class MathEndToEndTests(unittest.TestCase):
             snapshot_id="snp:" + "e" * 64,
         )
         self.assertNotIn("math.vector.dot", [item.function_id for item in result.items])
+
+    def test_rule_provider_binds_active_rules_into_preflight_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            math_store = MathStore(root / "bs0.sqlite3", root / "mc0.sqlite3")
+            a = math_store.put_leaf(make_leaf(1, "a"))
+            b = math_store.put_leaf(make_leaf(2, "b"))
+            rule = MathRule(
+                rule_id="math.rule.runtime.test",
+                version=1,
+                level=1,
+                contract={"claims": {}},
+                proof_status="verified",
+                status="active",
+                scope={"function_ids": ["math.vector.dot"]},
+            )
+
+            class Provider:
+                @staticmethod
+                def active_rules(*, include_isolated=False):
+                    return (rule,) if not include_isolated else (rule,)
+
+            runtime = MathRuntime(
+                self.functions, store=math_store, rule_provider=Provider(),
+            )
+            result = runtime.propose(
+                [f"{a.leaf_id}@v1", f"{b.leaf_id}@v1"],
+                snapshot_id="snp:" + "e" * 64,
+                max_candidates=8,
+            )
+            candidate = next(
+                item for item in result.items
+                if item.function_id == "math.vector.dot"
+            )
+            snap = runtime.snapshot_for(candidate)
+            self.assertEqual(snap.rules, (rule,))
+            admission = runtime.preflight(candidate)
+            self.assertEqual(admission.rule_snapshot_id, snap.rule_snapshot_id)
 
     def test_store_backed_runtime_and_submit(self):
         with tempfile.TemporaryDirectory() as temp:
