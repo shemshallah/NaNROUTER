@@ -739,3 +739,21 @@ jobs:
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
           grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
+
+      - name: Assemble and execute Boolean, bitwise, integer, shift, multiply, divide fixtures
+        run: |
+          for entry in \
+            "mth_bool2_test bool2 'MTH BOOL2 ALL 16 PASS'" \
+            "mth_bitwise_test bitwise 'MTH BITWISE/COMPARE PASS'" \
+            "mth_integer_test integer 'MTH INT32 CHECKED PASS'" \
+            "mth_shift_test shift 'MTH SHIFT PASS'" \
+            "mth_multiply_test multiply 'MTH MUL WIDE PASS'" \
+            "mth_divide_test divide 'MTH DIVMOD PASS'"; do
+            set -- $entry
+            fixture="$1"; name="$2"; marker="$3"
+            awk -f nan0s/tools/nmk.awk -v CMD=emit "mth/tests/${fixture}.nas" > "build/mth/${name}.nan"
+            nan0s/aarch64/android/nan_cli --img "build/mth/${name}.nan" --steps 100000 --serial > "build/mth/${name}.out" 2> "build/mth/${name}.err"
+            cat "build/mth/${name}.out"
+            cat "build/mth/${name}.err"
+            grep -q "^${marker}" "build/mth/${name}.out"
+          done
