@@ -1295,7 +1295,21 @@ class NmpPacket:
 
         There is no unchecked queue path in this API.
         """
-        decision = gate if gate is not None else execution_gate(self, **gate_kwargs)
+        # Native receipts require a fresh live gate evaluation; a previously
+        # computed decision must not survive a ruleset/capability/ring change.
+        if _packet_requires_native_receipt(self):
+            decision = execution_gate(self, **gate_kwargs)
+            if gate is not None and (
+                gate.packet_id != self.packet_id or gate.from_state != self.state
+            ):
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="supplied gate decision is stale for native receipt queueing",
+                ))
+        else:
+            decision = gate if gate is not None else execution_gate(self, **gate_kwargs)
         if not decision.ok:
             raise NmpGateError(decision)
         if decision.packet_id != self.packet_id:
