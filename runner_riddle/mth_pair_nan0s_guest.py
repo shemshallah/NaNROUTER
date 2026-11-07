@@ -116,7 +116,7 @@ class NaN0SCLIPairTileGuest:
         snapshot.validate(); u=self._full_u(snapshot)
         li=self._row(snapshot,"L",descriptor.i_base); lj=self._row(snapshot,"L",descriptor.j_base)
         src=[
-            ".org 0","JMP @pair_ref_entry",'.include "../nan16/mth_graph_pair_tile16_f32.nas',
+            ".org 0","JMP @pair_ref_entry",'.include "../nan16/mth_graph_pair_tile16_f32.nas"',
             "pair_ref_entry:","LA r1,@pair_u","LA r2,@pair_li","LA r3,@pair_lj","LA r4,@pair_y",
             f"MOVI r5,{descriptor.i_base}",f"MOVI r6,{descriptor.j_base}","LA r7,@pair_scratch","MOVI r13,1",
             "CALL @mth_graph_pair_tile16_f32","MOVI r2,1","CMP r1,r2","JMP[NE] @pair_ref_fail",
