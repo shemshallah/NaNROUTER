@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 682 Python tests pass (1 skipped).
+- [x] 749 Python tests pass (1 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -40,7 +40,7 @@
 - [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, deep-frozen content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` with opt-in strict content-digest enforcement (8 object tests + 17 store tests). MOA/cell-pair binding remains deferred.
 - [x] **P2 — Semantic function registry.** `math_registry` + `spec/math-functions.v1.json`; 19 contracts/8 implementation bindings; composition tests (17).
 - [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); native NaN16 rule and typed-object admission gates are integrated, capability-to-lease admission is wired through P5, and unverified numeric certificates now fail closed (`UNKNOWN`/`CERTIFICATE_NOT_PINNED`). Authorization/ACL remains a separate orthogonal verdict by design.
-- [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 26 tests; does not execute.
+- [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 27 tests; does not execute. Scratch is invisible unless explicitly allowed; quarantined/tombstoned/superseded leaves are rejected; typed null metadata carries failure class, linker ID, rule snapshot, and candidate count.
 - [ ] **P5 — NMP + execution bridge.** Host control plane is implemented; native receipt production, native operator dispatch, and numeric end-to-end execution remain external gates.
   - [x] P5.a Native NaN16 rule gate + typed operand preflight; exact epoch, signature, domain, shape, capability subset, proof level, enabled state, and 256-bit rule digest.
   - [x] P5.b Canonical NaN0S `::op:` expression resolution returns the authoritative MC0 contract pointer; NaNROUTER consumes that exact pointer (no reconstructed contract).
@@ -48,14 +48,14 @@
   - [x] P5.d NMP validates immutable native-admission receipts (candidate/rule/preflight digests, epoch, operands, guest ALLOW, receipt digest) and binds them to one live job/lease/ring/JAHS snapshot; 3 dedicated tests. Receipt production remains the native `mth_admit` caller's responsibility.
   - [ ] P5.e Add native NaN16 operator dispatch after admission; dispatch only allowlisted program IDs to matching kernel ABI, with output commit only after success.
   - [x] P5.f Host bridge binds packet/admission/active-ring incarnation/epoch/JAHS/capability/durable job/one lease and denies stale generation, replay, duplicate, cancellation, and restart violations before executor or commit. Point-0 HTTP remains a transport ingress, not a second execution authority.
-  - [x] P5.g Host control-plane execution, immutable result commit, provenance, and output feedback are implemented in `MathExecutionBridge` and the P12 demo. Admission is candidate/snapshot/function-version/implementation-bound, direct `MathRuntime.submit()` is disabled, executor dispatch is pre-validated against the active lease/cancel/deadline, and bearer tokens are redacted from serialized evidence. Native numeric execution remains external.
-- [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 17 tests.
+  - [x] P5.g Host control-plane execution, immutable result commit, provenance, and output feedback are implemented in `MathExecutionBridge` and the P12 demo. Admission is candidate/snapshot/function-version/selected-kernel-bound, direct `MathRuntime.submit()` is disabled, executor dispatch is pre-validated against the active lease/cancel/deadline, re-reads the durable job row, revalidates the rule snapshot, and redacts bearer tokens from serialized evidence. Negative tests A06/A09–A12 are green. Native numeric execution remains external.
+- [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 17 tests. Crash-consistent cross-store intent/finalize and recovery are implemented (12 tests, `docs/MATH_STORE_CROSS.md`).
 - [x] **P7 — Null/void/undefined algebra.** Typed `ZERO/NULL/VOID/EMPTY/UNDEFINED/INFINITY/UNKNOWN/ERROR/CANCELLED` states, explicit conjunction semantics, missing-reference dominance; 59 tests (`docs/MATH_ABSENCE_ALGEBRA.md`).
 - [x] **P8 — Relations/hyperedges/hypergraphs.** Typed schema/roles/arity/duplicate policy, immutable relation versions, incidence, bounded nested traversal, digest stability; 9 tests (`docs/MATH_RELATIONS_HYPERGRAPHS.md`).
-- [x] **P9 — Learning/rule discovery.** Five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transactional promotion, negative memory, audit chain, Boolean-head utility-only governance; 20 tests (`docs/MATH_RULE_LIFECYCLE.md`).
+- [x] **P9 — Learning/rule discovery.** Five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transactional promotion, negative memory, audit chain, Boolean-head utility-only governance; 20 tests (`docs/MATH_RULE_LIFECYCLE.md`). Typed principal/role/capability policy with separation-of-duty checks is implemented in `math_auth` (9 tests, `docs/MATH_AUTHORIZATION.md`); full wiring into every learning mutator and the five discovery mechanisms remain open.
 - [x] **P10 — Scratch/oscillation/pruning.** Typed retention features/scoring, tier policy, deterministic plans, protected proof objects, shadow/apply/rollback/restore, oscillation budgets, duplicate and rewrite-cycle stops; 10 tests (`docs/MATH_RETENTION_AND_OSCILLATION.md`).
-- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5.
-- [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The demo is control-plane only: its digest is not a claimed numeric dot product (`docs/MATH_DEMO.md`).
+- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5. Bounded work queues and capability-safe work stealing are implemented in `lane_work` (8 tests, `docs/LANE_WORK_QUEUES.md`); remote/process stealing and durable ring epoch remain open.
+- [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The output leaf carries input parents, function/version, ruleset snapshot, plan digest, JAHS/ring/job/runner provenance, and the report labels its digest as evidence, not a numeric dot product (`docs/MATH_DEMO.md`).
 - [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB, native numeric executor delivery; blocked pending real model/data/credentials/guest runtime. Machine-readable blocked ledger: `spec/p13-gates.json`; explanation: `docs/P13_GATES.md`. No fabricated claims.
 
 ## R0 — Contract and storage freeze
@@ -208,7 +208,7 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -q
-Ran 682 tests
+Ran 749 tests
 OK (skipped=1)
 ```
 

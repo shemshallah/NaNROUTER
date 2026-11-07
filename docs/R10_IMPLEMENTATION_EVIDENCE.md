@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 682 Python tests passed (1 skipped).
+**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 749 Python tests passed (1 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -80,7 +80,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 682 tests in 68.528s
+Ran 749 tests in 68.528s
 OK (skipped=1)
 ```
 
@@ -106,8 +106,14 @@ Covered:
 - retention/oscillation/pruning (P10, 10 tests);
 - lane registry (P11, 18 tests);
 - NMP and native admission-receipt binding (P5, 60 tests);
-- authority-hardened host execution bridge with candidate/snapshot/implementation binding, pre-dispatch lease validation, disabled direct runtime submit, and token redaction (P5, 11 tests);
-- end-to-end control-plane demo (P12, 2 tests).
+- authority-hardened host execution bridge with candidate/snapshot/function-version/selected-kernel binding, rule-snapshot revalidation, durable-job reread, pre-dispatch lease/deadline validation, disabled direct runtime submit, and token redaction (P5, 12 tests);
+- negative execution suite A06/A09–A12 (8 tests);
+- cross-store math commit intent/finalize and crash recovery (P6, 12 tests);
+- `NmpPlan` v2 context wrapper around the frozen `MthPlan` v1 (5 tests);
+- bounded lane work queues and capability-safe stealing (P11, 8 tests);
+- typed math authorization policy with separation-of-duty (P9/§15, 9 tests);
+- standard-library `/v1/math/health|link|execute` ingress with 2 MiB bounds and token redaction (21 tests);
+- end-to-end control-plane demo with complete output-leaf provenance (P12, 2 tests).
 
 ## Math integration evidence (P0–P12)
 
@@ -115,7 +121,11 @@ Covered:
 - Authority/JAHS binding: `MathExecutionBridge` refuses inactive/stale/unsealed rings, missing capability coverage, tampered candidate/admission bindings, and stale generations; it leases only the active slot and releases ring resources exactly once.
 - NMP validates native NaN16 admission receipts against packet candidate/rule/preflight digests, epoch, operands, capability snapshot, guest ALLOW status, and receipt digest, then binds the receipt to one live job/lease/ring/JAHS snapshot before execution. Receipt production remains the native `mth_admit` caller's responsibility.
 - NMP packets bind admission candidates/snapshots/preflight digests and are projected back from WaveStore job/lease rows after restart.
-- The demo runs leaf → `::` → preflight → NMP queue → lease → execute completion → commit → output feedback. Its executor callback returns an evidence digest, not a numeric dot product; the report labels this explicitly.
+- The runtime accepts optional rule/capability providers and binds them into preflight snapshots. The bridge revalidates the current rule snapshot at submit, lease, and pre-dispatch; a post-lease rule change blocks the executor.
+- The math store implements a crash-consistent BS0DB/MC0DB intent/evidence/finalize protocol with idempotent recovery and no partial active mapping.
+- `MathStore.health()` and `MathRuntime.health()` provide token-free schema/version/count/status projections; `MthSystem.health(math_health=...)` composes them.
+- Scratch leaves are invisible to the linker unless explicitly allowed; quarantined/tombstoned/superseded leaves are never linkable.
+- The demo runs leaf → `::` → preflight → NMP queue → lease → execute completion → commit → output feedback. Its output leaf carries parents, function/version, ruleset snapshot, plan digest, and JAHS/ring/job/runner provenance. Its executor callback returns an evidence digest, not a numeric dot product; the report labels this explicitly.
 
 ## Fixture runner
 

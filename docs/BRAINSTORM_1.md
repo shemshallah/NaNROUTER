@@ -529,8 +529,9 @@ The first parallel implementation batch landed after this brainstorm:
 | `7328075` | 1 MiB/2 MiB/4 MiB adjustable live budgets; corrected `--guest-workspace-mib` conversion; exact 262,144/+1 boundary; optional math health in `MthSystem.health()` | `tests/test_wave_capabilities.py`, `test_guest_budget.py`, `test_live_preflight.py`, `test_mth_system.py` |
 | `539f6f5` | Runtime `rule_provider` binds active learned rules into preflight snapshots; scratch leaves invisible unless `allow_scratch=True`; quarantined/tombstoned/superseded leaves never linkable | `tests/test_math_end_to_end.py` 5 tests; `tests/test_math_linker.py` 27 tests |
 | pending | Machine-readable P13 blocked-gate ledger (`spec/p13-gates.json`) with eight explicit gates and no fabricated result fields | `tests/test_p13_gates.py` 2 tests; `docs/P13_GATES.md` |
+| pending | Cross-store intent/evidence/finalize recovery; math health; NmpPlan wrapper; lane work stealing; typed authorization; math HTTP ingress; A06/A09-A12 negative suite | 12 + 9 + 5 + 8 + 9 + 21 + 8 tests; docs `MATH_STORE_CROSS.md`, `LANE_WORK_QUEUES.md`, `MATH_AUTHORIZATION.md`, `MATH_HTTP.md` |
 
-**Current full-suite result:** 682 tests, 1 skipped, OK.
+**Current full-suite result:** 749 tests, 1 skipped, OK.
 
 Still open from the audits:
 
