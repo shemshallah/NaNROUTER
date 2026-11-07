@@ -2,7 +2,7 @@
 ; ABI:
 ;   r1..r4 = four strip bases, each 16 K-slices x 256 words
 ;   r5=acc_LU (256), r6=acc_ULt (256), r7=6-word K16 scratch
-;   r8=output tile (256)
+;   no output pointer: caller finalizes after validating the accumulators
 ; r13 must contain 1. Driver state is private static guest scratch.
 ; Each strip is laid out as 16 contiguous 16x16 blocks in increasing K order.
 ; Driver executes all K=0,16,...,240 and finalizes the output tile.
