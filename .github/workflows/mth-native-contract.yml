@@ -685,7 +685,7 @@ jobs:
 
       - name: Execute typed mathematical preflight fixture
         run: |
-          nan0s/aarch64/android/nan_cli --img build/mth/preflight.nan --steps 2000000 --serial --peek 1328:1 > build/mth/preflight.out 2> build/mth/preflight.err
+          nan0s/aarch64/android/nan_cli --img build/mth/preflight.nan --steps 2000000 --serial --peek 1328:1,30304:1 > build/mth/preflight.out 2> build/mth/preflight.err
           cat build/mth/preflight.out
           cat build/mth/preflight.err
           grep -q '^MTH TYPED PREFLIGHT PASS' build/mth/preflight.out
