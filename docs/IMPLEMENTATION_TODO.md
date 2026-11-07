@@ -96,7 +96,7 @@
 - [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
-- [x] Add 256×256 tiled dense product action — 16×16 NaN16 tile kernel and exact L=2I fixture native_verified in CI run 201; page-window orchestration and atomic publication remain open.
+- [x] Add 256×256 tiled dense product action — 16×16 NaN16 tile kernel and exact L=2I fixture native_verified in CI run 218 with two tile origins; page-window orchestration and atomic publication remain open.
 
 ## R7 — Tunneling and creativity
 
