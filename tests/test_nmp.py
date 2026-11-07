@@ -165,6 +165,10 @@ def make_native_receipt(packet):
         "capability_digest": packet.capability_set_digest,
         "preflight_digest": packet.preflight_digest,
         "generation": packet.generation,
+        "output_generation": packet.generation + 1,
+        "output_descriptor_digest": digest_object([3, 0, 1, 1, 1, 9000, 3, 0]),
+        "guest_source_digest": "b" * 64,
+        "guest_image_digest": "c" * 64,
         "program_id": 900,
         "guest_status": 0,
         "producer": "nan16_guest",
@@ -176,7 +180,15 @@ class NativeAdmissionReceiptTests(unittest.TestCase):
     def make_preflighted(self):
         packet = make_packet(
             state=nmp.PROPOSED,
-            metadata={"native_admission_required": True},
+            metadata={
+                "native_admission_required": True,
+                "program_id": 900,
+                "rule_epoch": 7,
+                "rule_digest": "a" * 64,
+                "output_descriptor_digest": digest_object([3, 0, 1, 1, 1, 9000, 3, 0]),
+                "guest_source_digest": "b" * 64,
+                "guest_image_digest": "c" * 64,
+            },
         )
         receipt = make_native_receipt(packet)
         return packet.mark_preflight(
