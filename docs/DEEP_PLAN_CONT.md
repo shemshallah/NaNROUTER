@@ -430,6 +430,17 @@ Rules:
 
 The point-0 bridge is a distinct object from the address parser and from the scheduler. The scheduler chooses the active slot; the bridge only encodes/decodes and enforces the epoch.
 
+| Object | Identity | Role |
+|---|---|---|
+| Point 0 | `BS0:0` / wire `BSR0` | Stable runner-ring ingress/translation |
+| Active runner slot | `MC0:0/R0..R5` | Internal execution identity |
+| NANNET0 | one logical node per universe | Universe network endpoint |
+| Head | local 0..254 | Wave/state identity |
+| Durable page | content digest | Versioned storage, not an address |
+
+Point 0 is not NANNET0, not a runner slot, and not a head. NANNET0 may use point 0 as its ring ingress; the active slot remains internal.
+
+
 
 ---
 
@@ -938,3 +949,23 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.dft255.f32` | `float32` | 6,666,266 | yes |
 | `mth.graph.couple128.f32` | `float32` | 8,637 | yes |
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
+
+## Appendix C — Point-0 trace example
+
+A single ring request, in order:
+
+```text
+1. client builds NaN16 frame: request_id, route=point 0, words[]
+2. point 0 encodes binary envelope:
+     magic/version, request_id, word_count, payload bytes, SHA-256
+3. scheduler reports active slot (for example R2, epoch 7)
+4. point 0 routes envelope to R2; R2 does not appear in the client address
+5. R2 executes the NaN16 plan/work and returns binary result bytes
+6. point 0 validates result digest and decodes NaN16 words
+7. point 0 writes trace: request_id, point0, active_slot, epoch,
+     binary_digest, result_digest, status
+8. client receives NaN16 result; active slot remains internal
+```
+
+A later request after a slot cycle uses the same point-0 address and reaches the new active slot. Stale slot/epoch envelopes are rejected.
+
