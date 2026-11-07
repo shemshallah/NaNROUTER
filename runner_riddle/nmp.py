@@ -2363,15 +2363,15 @@ def prepare(
     request_id: str | None = None,
     jahs: str | None = JAHS_SEAL,
     metadata: Mapping[str, Any] | None = None,
+    defer_preflight: bool = False,
     tick: int = 0,
 ) -> NmpPacket:
-    """Build a packet from a selected candidate and preflight record.
+    """Build an NMP packet from a selected candidate.
 
-    With a VALID preflight the returned packet has walked the control chain to
-    PREFLIGHTED and can be passed to :meth:`NmpPacket.queue` with the gate
-    inputs.  A non-VALID preflight produces the corresponding typed failure
-    (REJECTED for INVALID/UNSUPPORTED/UNKNOWN, UNDEFINED, UNAVAILABLE,
-    UNAUTHORIZED, STALE, NULL) rather than a generic null.
+    Set defer_preflight=True when the packet must be staged as PROPOSED and
+    evaluated by the NaN16 guest before mark_preflight(receipt=...) is called.
+    Without deferral, a VALID supplied preflight yields PREFLIGHTED and an
+    invalid/missing result yields its specific typed terminal state.
     """
     candidate_data = _candidate_fields(candidate)
     candidate_id = candidate_data.get("candidate_id") or candidate_data.get("candidate")
@@ -2493,6 +2493,8 @@ def prepare(
             tick=tick,
         )
     packet = packet.transition(PROPOSED, reason="candidate selected", tick=tick)
+    if defer_preflight and control_result is None:
+        return packet
     return packet.transition(PREFLIGHTED, reason="preflight VALID", tick=tick)
 
 
