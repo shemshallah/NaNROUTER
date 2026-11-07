@@ -269,6 +269,14 @@ class NativePreflightLeaseBinding:
         return {**self._payload(), "binding_digest": self.binding_digest}
 
     @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "NativePreflightLeaseBinding":
+        if not isinstance(value, Mapping) or value.get("schema") != LEASE_BINDING_SCHEMA:
+            raise NativePreflightReceiptError("unknown native preflight lease-binding schema")
+        fields = dict(value)
+        fields.pop("schema", None)
+        return cls(**fields)
+
+    @classmethod
     def from_live_lease(
         cls,
         packet: Any,
