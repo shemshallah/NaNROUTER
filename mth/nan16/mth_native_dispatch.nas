@@ -20,7 +20,6 @@
 ; Scratch layout: [0] return, [1..5] saved args, [6..9] cosine scratch,
 ; [10] saved r14. Caller owns the complete frame; no shared static state.
 
-.include "mth_dot256_f32.nas"
 .include "mth_cosine256_f32.nas"
 
 mth_native_dispatch:
