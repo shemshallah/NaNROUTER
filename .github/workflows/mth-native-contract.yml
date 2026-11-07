@@ -739,3 +739,14 @@ jobs:
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
           grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
+
+      - name: Assemble native MTH dispatch fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_native_dispatch_test.nas > build/mth/native-dispatch.nan
+
+      - name: Execute native MTH dispatch fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/native-dispatch.nan --steps 4000000 --serial > build/mth/native-dispatch.out 2> build/mth/native-dispatch.err
+          cat build/mth/native-dispatch.out
+          cat build/mth/native-dispatch.err
+          grep -q '^MTH NATIVE DISPATCH PASS' build/mth/native-dispatch.out
