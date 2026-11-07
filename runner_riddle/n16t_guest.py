@@ -235,8 +235,8 @@ class N16TGuestPool:
         max_sessions: int = 8,
         max_steps: int = 12_000_000,
     ) -> None:
-        if max_sessions < 1 or max_sessions > 128:
-            raise ValueError("max_sessions must be between 1 and 128")
+        if max_sessions < 1 or max_sessions > 32:
+            raise ValueError("max_sessions must be between 1 and 32")
         self._library_path = os.fspath(library_path)
         self._image_path = os.fspath(image_path)
         self._labels_path = os.fspath(labels_path)
