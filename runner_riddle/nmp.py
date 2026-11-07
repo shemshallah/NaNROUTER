@@ -486,11 +486,11 @@ def _native_lease_binding(packet: Any, job: Any, lease: Any) -> dict[str, Any]:
     lease_job_id = _row_get(lease, "job_id", job_id)
     lease_token = _row_get(lease, "lease_token")
     job_token = _row_get(job, "lease_token", lease_token)
-    lease_owner = _row_get(lease, "lease_owner", _row_get(job, "lease_owner"))
+    lease_owner = _row_get(lease, "lease_owner", _row_get(lease, "worker_id", _row_get(job, "lease_owner", _row_get(job, "worker_id"))))
     lease_epoch = _row_get(lease, "lease_epoch", _row_get(job, "lease_epoch"))
     if not isinstance(job_id, str) or not job_id or lease_job_id != job_id:
         raise NmpTransitionError("native admission lease must bind the packet to one job")
-    if _row_get(job, "state") != "leased" or _row_get(lease, "state") != "active":
+    if str(_row_get(job, "state", "")).lower() != "leased" or str(_row_get(lease, "state", "")).lower() != "active":
         raise NmpTransitionError("native admission requires a live leased job and active lease")
     if not isinstance(lease_token, str) or len(lease_token) < 16 or lease_token != job_token:
         raise NmpTransitionError("native admission lease token is missing or inconsistent")
@@ -1356,8 +1356,15 @@ class NmpPacket:
         lease_epoch = gate_kwargs.pop("lease_epoch", None)
         ring_incarnation = gate_kwargs.get("ring_incarnation", self.ring_incarnation)
         ring_epoch = gate_kwargs.get("ring_epoch", self.ring_epoch)
-        decision = gate if gate is not None else execution_gate(
-            self, job=job, lease=lease, **gate_kwargs,
+        native_required = bool(self.metadata.get("native_admission_required"))
+        # Native packets must always re-evaluate the concrete job/lease rows;
+        # a previously accepted side-effect-free gate cannot substitute for
+        # the current worker lease.
+        decision = (
+            execution_gate(self, job=job, lease=lease, **gate_kwargs)
+            if native_required
+            else gate if gate is not None
+            else execution_gate(self, job=job, lease=lease, **gate_kwargs)
         )
         if not decision.ok:
             raise NmpGateError(decision)
