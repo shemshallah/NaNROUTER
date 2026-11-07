@@ -35,8 +35,10 @@ mth_sparse_graph_laplacian_q16_16:
   ; Complete state-range preflight.
   ADD r6,r3,r0
   MOVI r7,256
-  LA r8,0x00400000
-  LA r9,0xFFC00000
+  MOVI r8,0
+  MOVHI r8,0x0040
+  MOVI r9,0
+  MOVHI r9,0xFFC0
 mth_sparse_graph_validate_x:
   LD r10,r6,0
   CMP r10,r9
