@@ -1,9 +1,7 @@
 ; MTH typed-object preflight gate — NaN16 only.
-;
-; This is an execution gate, NOT a second function registry. The caller passes
-; the canonical operator contract resolved by the existing MC0/NaN0S registry
-; and concrete typed leaf descriptors. The gate checks applicability and
-; reserves no memory. The output descriptor is committed only after all checks.
+; The operator contract is resolved upstream by the single canonical registry.
+; This module validates concrete leaf descriptors against that contract; it
+; does not create or duplicate a function/operator registry.
 ;
 ; Object descriptor (8 words):
 ;   [0] kind [1] rank [2] dim0 [3] dim1 [4] domain
@@ -11,9 +9,8 @@
 ; Contract descriptor (10 words):
 ;   [0] left_kind [1] right_kind [2] output_kind
 ;   [3] left_rank [4] right_rank [5] output_rank
-;   [6] domain [7] shape_rule [8] required_capability_bits
-;   [9] precondition_bits
-; Output descriptor uses the same layout. Its payload address and capacity at
+;   [6] domain [7] shape_rule [8] required_capability_bits [9] precondition_bits
+; Output descriptor uses the object layout; its payload address/capacity at
 ; [5]/[6] must be reserved by the caller before preflight.
 ;
 ; Shape rules: 0 equal-shape, 1 vector-dot, 2 matrix-vector, 3 matrix-matrix,
@@ -23,7 +20,7 @@
 ;
 ; ABI: r1=left descriptor, r2=right descriptor, r3=contract,
 ;      r4=available capability bits, r5=output descriptor,
-;      r12=caller-owned 35-word scratch, r13=1.
+;      r12=caller-owned 39-word scratch, r13=1.
 ; Returns r1=0 success; rejection codes:
 ;   1 descriptor, 2 missing payload, 3 kind, 4 rank, 5 domain,
 ;   6 shape, 7 capability, 8 precondition, 9 capacity.
@@ -49,7 +46,7 @@ mth_preflight:
   ST r5,r12,3
   ST r4,r12,4
 
-  ; Contract is supplied by the one authoritative operator registry.
+  ; Contract fields remain separate from concrete descriptor fields.
   LD r6,r3,0
   ST r6,r12,10
   LD r6,r3,1
@@ -71,7 +68,7 @@ mth_preflight:
   LD r6,r3,9
   ST r6,r12,9
 
-  ; Save the caller-reserved output payload/capacity without modifying it.
+  ; Preserve caller-reserved output storage without modifying its descriptor.
   LD r6,r5,5
   LD r7,r5,6
   CMP r6,r0
@@ -90,7 +87,7 @@ mth_preflight:
   LD r3,r1,6
   LD r4,r1,7
   ST r6,r12,21
-  ST r7,r12,13
+  ST r7,r12,22
   ST r8,r12,5
   ST r9,r12,6
   ST r10,r12,33
@@ -110,31 +107,31 @@ mth_preflight:
   LD r11,r1,5
   LD r3,r1,6
   LD r4,r1,7
-  ST r6,r12,22
-  ST r7,r12,14
+  ST r6,r12,34
+  ST r7,r12,35
   ST r8,r12,23
   ST r9,r12,24
-  ST r10,r12,34
+  ST r10,r12,36
   ST r11,r12,17
   ST r3,r12,27
   ST r4,r12,25
   CMP r11,r0
   JMP[EQ] @mth_pf_bad_payload
 
-  ; Exact kind/rank/domain compatibility.
+  ; Exact kind, rank, and domain compatibility.
   LD r6,r12,21
   LD r7,r12,10
   CMP r6,r7
   JMP[NE] @mth_pf_bad_kind
-  LD r6,r12,22
+  LD r6,r12,34
   LD r7,r12,11
   CMP r6,r7
   JMP[NE] @mth_pf_bad_kind
-  LD r6,r12,13
+  LD r6,r12,22
   LD r7,r12,13
   CMP r6,r7
   JMP[NE] @mth_pf_bad_rank
-  LD r6,r12,14
+  LD r6,r12,35
   LD r7,r12,14
   CMP r6,r7
   JMP[NE] @mth_pf_bad_rank
@@ -142,7 +139,7 @@ mth_preflight:
   LD r7,r12,19
   CMP r6,r7
   JMP[NE] @mth_pf_bad_domain
-  LD r6,r12,34
+  LD r6,r12,36
   LD r7,r12,19
   CMP r6,r7
   JMP[NE] @mth_pf_bad_domain
@@ -154,8 +151,8 @@ mth_preflight:
   CMP r8,r7
   JMP[NE] @mth_pf_bad_capability
 
-  ; Derive element counts for the concrete input shapes.
-  LD r6,r12,13
+  ; Compute the element count for each rank (0, 1, or 2).
+  LD r6,r12,22
   CMP r6,r0
   JMP[EQ] @mth_pf_left_scalar
   MOVI r7,1
@@ -167,13 +164,13 @@ mth_preflight:
   JMP @mth_pf_bad_rank
 mth_pf_left_scalar:
   MOVI r6,1
-  ST r6,r12,26
+  ST r6,r12,37
   JMP @mth_pf_left_done
 mth_pf_left_vector:
   LD r6,r12,5
   CMP r6,r0
   JMP[EQ] @mth_pf_bad_shape
-  ST r6,r12,26
+  ST r6,r12,37
   JMP @mth_pf_left_done
 mth_pf_left_matrix:
   LD r6,r12,5
@@ -183,9 +180,9 @@ mth_pf_left_matrix:
   CMP r7,r0
   JMP[EQ] @mth_pf_bad_shape
   MUL r6,r6,r7
-  ST r6,r12,26
+  ST r6,r12,37
 mth_pf_left_done:
-  LD r6,r12,14
+  LD r6,r12,35
   CMP r6,r0
   JMP[EQ] @mth_pf_right_scalar
   MOVI r7,1
@@ -197,13 +194,13 @@ mth_pf_left_done:
   JMP @mth_pf_bad_rank
 mth_pf_right_scalar:
   MOVI r6,1
-  ST r6,r12,27
+  ST r6,r12,38
   JMP @mth_pf_right_done
 mth_pf_right_vector:
   LD r6,r12,23
   CMP r6,r0
   JMP[EQ] @mth_pf_bad_shape
-  ST r6,r12,27
+  ST r6,r12,38
   JMP @mth_pf_right_done
 mth_pf_right_matrix:
   LD r6,r12,23
@@ -213,43 +210,14 @@ mth_pf_right_matrix:
   CMP r7,r0
   JMP[EQ] @mth_pf_bad_shape
   MUL r6,r6,r7
-  ST r6,r12,27
+  ST r6,r12,38
 mth_pf_right_done:
   LD r6,r12,26
-  LD r7,r12,26
-  LD r8,r12,26
-  LD r9,r12,26
-  LD r10,r12,26
-  LD r11,r12,26
-  LD r6,r12,26
-  LD r7,r12,26
-  LD r8,r12,26
-  LD r9,r12,26
-  LD r10,r12,26
-  LD r11,r12,26
-  ; Input capacities are independent from their dimensions.
-  LD r6,r12,26
-  LD r7,r12,26
-  LD r8,r12,26
-  LD r9,r12,26
-  LD r10,r12,26
-  LD r11,r12,26
-  LD r6,r12,26
-  LD r7,r12,26
-  LD r8,r12,26
-  LD r9,r12,26
-  LD r10,r12,26
-  LD r11,r12,26
-  ; Capacity words are descriptor field [6], saved in slots 26/27 above only
-  ; after computing counts; retrieve original values from the descriptors.
-  LD r1,r12,0
-  LD r6,r1,6
-  LD r7,r12,26
+  LD r7,r12,37
   CMP r6,r7
   JMP[LT] @mth_pf_bad_capacity
-  LD r1,r12,1
-  LD r6,r1,6
-  LD r7,r12,27
+  LD r6,r12,27
+  LD r7,r12,38
   CMP r6,r7
   JMP[LT] @mth_pf_bad_capacity
 
@@ -272,8 +240,8 @@ mth_pf_right_done:
   JMP @mth_pf_bad_shape
 
 mth_pf_shape_equal:
-  LD r6,r12,13
-  LD r7,r12,14
+  LD r6,r12,22
+  LD r7,r12,35
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
   LD r6,r12,5
@@ -284,7 +252,7 @@ mth_pf_shape_equal:
   LD r7,r12,24
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
-  LD r6,r12,13
+  LD r6,r12,22
   ST r6,r12,28
   LD r6,r12,5
   ST r6,r12,29
@@ -293,11 +261,11 @@ mth_pf_shape_equal:
   JMP @mth_pf_shape_done
 
 mth_pf_shape_dot:
-  LD r6,r12,13
+  LD r6,r12,22
   MOVI r7,1
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
-  LD r6,r12,14
+  LD r6,r12,35
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
   LD r6,r12,5
@@ -312,11 +280,11 @@ mth_pf_shape_dot:
   JMP @mth_pf_shape_done
 
 mth_pf_shape_matvec:
-  LD r6,r12,13
+  LD r6,r12,22
   MOVI r7,2
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
-  LD r6,r12,14
+  LD r6,r12,35
   MOVI r7,1
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
@@ -333,11 +301,11 @@ mth_pf_shape_matvec:
   JMP @mth_pf_shape_done
 
 mth_pf_shape_matmul:
-  LD r6,r12,13
+  LD r6,r12,22
   MOVI r7,2
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
-  LD r6,r12,14
+  LD r6,r12,35
   CMP r6,r7
   JMP[NE] @mth_pf_bad_shape
   LD r6,r12,6
@@ -353,10 +321,10 @@ mth_pf_shape_matmul:
   JMP @mth_pf_shape_done
 
 mth_pf_shape_scalar:
-  LD r6,r12,13
+  LD r6,r12,22
   CMP r6,r0
   JMP[NE] @mth_pf_bad_shape
-  LD r6,r12,14
+  LD r6,r12,35
   CMP r6,r0
   JMP[NE] @mth_pf_bad_shape
   MOVI r6,0
@@ -366,13 +334,12 @@ mth_pf_shape_scalar:
   ST r6,r12,30
 
 mth_pf_shape_done:
-  ; The derived output rank must match the registered output contract.
   LD r6,r12,28
   LD r7,r12,15
   CMP r6,r7
   JMP[NE] @mth_pf_bad_rank
 
-  ; Output capacity is checked before any descriptor write.
+  ; Verify the caller-reserved output payload can hold the derived shape.
   LD r6,r12,28
   CMP r6,r0
   JMP[EQ] @mth_pf_output_scalar
@@ -445,21 +412,28 @@ mth_pf_finite:
   CMP r8,r0
   JMP[EQ] @mth_pf_bad_precondition
 mth_pf_nonempty:
-  ; bit 3: nonzero dimensions for vector/matrix inputs.
+  ; bit 3: dimensions are nonzero for all non-scalar inputs.
   LD r6,r12,9
   MOVI r7,8
   BOOL.8 r8,r6,r7
   CMP r8,r0
   JMP[EQ] @mth_pf_commit
+  LD r6,r12,22
+  CMP r6,r0
+  JMP[EQ] @mth_pf_nonempty_right
   LD r6,r12,5
   CMP r6,r0
   JMP[EQ] @mth_pf_bad_precondition
+mth_pf_nonempty_right:
+  LD r6,r12,35
+  CMP r6,r0
+  JMP[EQ] @mth_pf_commit
   LD r6,r12,23
   CMP r6,r0
   JMP[EQ] @mth_pf_bad_precondition
 
 mth_pf_commit:
-  ; Commit only output metadata. Reserved payload pointer/capacity are kept.
+  ; Commit output metadata only after all validation succeeds.
   LD r6,r12,3
   LD r7,r12,12
   ST r7,r6,0
