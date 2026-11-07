@@ -190,3 +190,24 @@ The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted
 Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
 
 This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
+
+
+## 14. Connected components and Laplacian nullity v1
+
+A native NaN16 minimum-label propagation kernel is source-written at
+mth/nan16/mth_graph_components_nullity_v1.nas, with ABI
+docs/MTH_GRAPH_COMPONENTS_NULLITY_ABI_V1.md and fixture
+mth/tests/mth_graph_components_nullity_v1_test.nas.
+
+For a caller-validated undirected symmetric CSR graph, labels initialize to
+vertex IDs and synchronously propagate the minimum neighboring label. The
+minimum ID converges across each component in at most 255 rounds on K256.
+The count of fixed-point labels equals connected-component count and hence
+the nullity of the combinatorial Laplacian. The fixture checks a graph with
+two nontrivial components plus 250 isolated vertices (nullity 252), and the
+empty graph (nullity 256).
+
+The kernel checks CSR offset monotonicity, maximum degree, and U8 endpoint
+encoding/range. Reciprocity, row ordering/uniqueness, no-self-loop policy,
+and topology digest remain caller/runner preconditions. Native verification
+is pending until canonical NaN16 CI assembles and executes the fixture.
