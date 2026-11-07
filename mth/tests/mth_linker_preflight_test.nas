@@ -5,6 +5,8 @@ JMP @mth_link_pf_main
 .include "../../nan0s/src/nannet/object_key_decode.nas"
 .include "../../nan0s/src/nannet/math_registry.nas"
 .include "../../nan0s/src/nannet/route_object_resolve.nas"
+.include "../../nan0s/src/nannet/vector_ops.nas"
+.include "../../nan0s/src/nannet/mc0db_scratch.nas"
 .include "../../nan0s/src/nannet/math_expression.nas"
 
 mth_link_pf_main:
