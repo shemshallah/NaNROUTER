@@ -15,6 +15,7 @@ from test_nmp_http_adapter import (
     RULES,
     admission,
     preflighted_packet,
+    execution_evidence,
 )
 
 
@@ -65,7 +66,10 @@ class NmpServerContextProviderTests(unittest.TestCase):
             epoch=1,
         )
         self.provider = make_context_provider(self.service)
-        self.adapter = NmpHttpAdapter(self.service, self.provider)
+        self.adapter = NmpHttpAdapter(
+            self.service, self.provider,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
 
     def submit(self):
         packet = preflighted_packet()
@@ -96,20 +100,24 @@ class NmpServerContextProviderTests(unittest.TestCase):
             result_digest="e" * 64,
             now_tick=120,
             result_generation=8,
+            execution_evidence=execution_evidence(
+                packet, lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A",
+            ),
         )
         self.assertEqual(completed["packet"]["state"], nmp.COMPLETED)
         self.assertEqual(completed["job"]["state"], "done")
 
     def test_unqualified_worker_cannot_consume_or_strand_queued_job(self):
         _, job_id = self.submit()
-        result = self.adapter.lease(
-            self.worker_token,
-            "worker-B",
-            now_tick=110,
-            lease_ticks=64,
-            job_id=job_id,
-        )
-        self.assertIsNone(result)
+        with self.assertRaisesRegex(Exception, "credential is not bound"):
+            self.adapter.lease(
+                self.worker_token,
+                "worker-B",
+                now_tick=110,
+                lease_ticks=64,
+                job_id=job_id,
+            )
         queued = self.store.get_job(job_id)
         self.assertEqual(queued["state"], "queued")
         self.assertIsNone(queued.get("lease_owner"))

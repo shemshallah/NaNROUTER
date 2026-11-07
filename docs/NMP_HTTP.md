@@ -65,7 +65,12 @@ context = WaveStoreNmpContextProvider(
     ring_provider=current_ring_state,
     cancel_epoch_provider=current_cancel_epoch,
 )
-nmp = NmpHttpAdapter(service, context)
+def verify_worker_identity(token, owner):
+    # Compare the authenticated credential principal with the capability owner.
+    # Use a trusted credential registry; never log or persist bearer-token text.
+    return authenticated_worker_owner(token) == owner
+
+nmp = NmpHttpAdapter(service, context, verify_worker_identity)
 server = WaveHttpServer(service, host="127.0.0.1", port=8080, nmp_adapter=nmp)
 server.start()
 ~~~
@@ -88,6 +93,12 @@ alone is not a capability identity.
 The adapter fails closed if the provider is absent or does not return a mapping.
 The server still needs a TLS-terminating reverse proxy for non-loopback use.
 
+The adapter also requires a trusted worker-identity callback that binds the
+presented credential to the requested native capability owner before leasing
+and rechecks it at completion. The context provider must return the
+server-owned `expected_program_id` at queue, lease and completion stages.
+A worker-supplied program number is not authoritative.
+
 ## Security and evidence boundaries
 
 - Submission requires a PREFLIGHTED packet, native_admission_required metadata,
@@ -107,3 +118,23 @@ The server still needs a TLS-terminating reverse proxy for non-loopback use.
 The current adapter returns the canonical packet at each stage. NMP state is
 reconstructed from the job payload plus the worker's returned execution packet;
 the durable job/lease rows remain authoritative for queue and lease state.
+
+## NaN16 worker dispatch and binary pins
+
+The server-side function registry must resolve only the two worker ABI mappings
+`math.vector.add.v1 → 78` and `math.vector.dot.v1 → 79`.
+The adapter independently checks that mapping at queue, lease, and completion.
+A program ID merely belonging to the allowlist is not sufficient.
+
+At completion, deployments may also return server-controlled
+`expected_guest_image_digest` and `expected_guest_source_digest` from the
+trusted context provider. When present, these full SHA-256 hashes must match
+the execution-evidence envelope; mismatches reject completion before durable
+`complete_job`. These pins are intentionally consumed only by the completion
+adapter and are not forwarded to the packet gate.
+
+Without configured pins, guest digests remain *self-reported execution
+evidence*, not server-certified binary identity. Operators should pin
+approved artifacts for production deployments. A digest pin alone also does
+not prove a remote host executed the binary; a separately established
+attestation mechanism would be required for that stronger guarantee.

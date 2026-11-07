@@ -21,6 +21,12 @@ from .wave_service import WaveService
 
 NMP_JOB_KIND = "nmp"
 NMP_PAYLOAD_KEY = "nmp_packet"
+# Keep admission aligned with the Android NaN16 worker and completion ABI.
+NMP_WORKER_PROGRAM_IDS = frozenset({78, 79})
+NMP_WORKER_FUNCTION_PROGRAMS = {
+    "math.vector.add.v1": 78,
+    "math.vector.dot.v1": 79,
+}
 
 
 class NmpHttpError(ValueError):
@@ -28,6 +34,7 @@ class NmpHttpError(ValueError):
 
 
 ContextProvider = Callable[..., Mapping[str, Any]]
+WorkerIdentityProvider = Callable[[str, str], bool]
 
 
 def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
@@ -40,7 +47,106 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
     forbidden = {"job", "lease", "tick", "now_tick", "gate"}
     if forbidden.intersection(result):
         raise NmpHttpError("context provider returned reserved gate fields")
+    # Binary trust pins are completion-only; never leak them as kwargs into
+    # the separate queue / execution-gate contract signatures.
+    if stage != "complete":
+        result.pop("expected_guest_image_digest", None)
+        result.pop("expected_guest_source_digest", None)
     return result
+
+
+
+def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) -> int:
+    """Bind the guest-echoed program ID to the server-owned function registry."""
+    expected = context.pop("expected_program_id", None)
+    if isinstance(expected, bool) or not isinstance(expected, int) or expected not in NMP_WORKER_PROGRAM_IDS:
+        raise NmpHttpError("server admission context has no supported NaN16 worker program_id")
+    canonical_program = NMP_WORKER_FUNCTION_PROGRAMS.get(packet.function_id)
+    if canonical_program is None or expected != canonical_program:
+        raise NmpHttpError("server registry program_id does not match the NaN16 worker function ABI")
+    receipt = packet.admission_receipt
+    if not isinstance(receipt, Mapping) or receipt.get("program_id") != expected:
+        raise NmpHttpError("native receipt program_id does not match the server-owned function registry")
+    return expected
+
+
+def _validate_execution_evidence(
+    evidence: Any, *, packet: NmpPacket, expected_program_id: int,
+    result_digest: str, lease_epoch: int, lease_owner: str,
+    expected_image_digest: str | None = None,
+    expected_source_digest: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(evidence, Mapping):
+        raise NmpHttpError("native kernel execution evidence is required")
+    if evidence.get("schema") != "nanrouter.native-kernel-execution.v1":
+        raise NmpHttpError("native kernel execution evidence schema is invalid")
+    if evidence.get("packet_id") != packet.packet_id:
+        raise NmpHttpError("kernel execution evidence is bound to another packet")
+    if evidence.get("function_id") != packet.function_id:
+        raise NmpHttpError("kernel execution evidence function does not match the packet")
+    program_id = evidence.get("program_id")
+    if isinstance(program_id, bool) or not isinstance(program_id, int) or program_id != expected_program_id:
+        raise NmpHttpError("kernel execution program_id does not match the server-owned function registry")
+    epoch = evidence.get("lease_epoch")
+    if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch != lease_epoch:
+        raise NmpHttpError("kernel execution evidence lease epoch mismatch")
+    if evidence.get("lease_owner") != lease_owner:
+        raise NmpHttpError("kernel execution evidence worker does not match the durable lease owner")
+    guest_steps = evidence.get("guest_steps")
+    if isinstance(guest_steps, bool) or not isinstance(guest_steps, int) or guest_steps < 1:
+        raise NmpHttpError("kernel execution evidence must include positive guest_steps")
+    dimension = evidence.get("dimension")
+    if isinstance(dimension, bool) or not isinstance(dimension, int) or not 1 <= dimension <= 16:
+        raise NmpHttpError("kernel execution dimension is outside the worker allowlist")
+    output_kind = evidence.get("output_kind")
+    output_count = evidence.get("output_count")
+    expected_kind = {78: 4, 79: 3}.get(expected_program_id)
+    expected_count = dimension if expected_program_id == 78 else 1
+    if (
+        isinstance(output_kind, bool) or not isinstance(output_kind, int)
+        or output_kind != expected_kind
+        or isinstance(output_count, bool) or not isinstance(output_count, int)
+        or output_count != expected_count
+    ):
+        raise NmpHttpError("kernel execution output descriptor does not match the allowlisted program")
+    for field in ("output_digest", "guest_image_digest", "guest_source_digest"):
+        value = evidence.get(field)
+        if not isinstance(value, str) or len(value) != 64:
+            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex")
+        try:
+            int(value, 16)
+        except ValueError as exc:
+            raise NmpHttpError(f"kernel execution evidence {field} must be SHA-256 hex") from exc
+    for field, expected_digest in (
+        ("guest_image_digest", expected_image_digest),
+        ("guest_source_digest", expected_source_digest),
+    ):
+        if expected_digest is not None:
+            if not isinstance(expected_digest, str) or len(expected_digest) != 64:
+                raise NmpHttpError(f"server-pinned {field} is invalid")
+            try:
+                int(expected_digest, 16)
+            except ValueError as exc:
+                raise NmpHttpError(f"server-pinned {field} is invalid") from exc
+            if evidence[field].lower() != expected_digest.lower():
+                raise NmpHttpError(f"kernel execution {field} differs from server-pinned guest")
+    if evidence["output_digest"].lower() != result_digest.lower():
+        raise NmpHttpError("kernel execution output digest does not match result_digest")
+    return {
+        "schema": evidence["schema"],
+        "packet_id": packet.packet_id,
+        "function_id": packet.function_id,
+        "program_id": program_id,
+        "output_kind": output_kind,
+        "dimension": dimension,
+        "output_count": output_count,
+        "output_digest": evidence["output_digest"].lower(),
+        "guest_steps": guest_steps,
+        "guest_image_digest": evidence["guest_image_digest"].lower(),
+        "guest_source_digest": evidence["guest_source_digest"].lower(),
+        "lease_epoch": lease_epoch,
+        "lease_owner": lease_owner,
+    }
 
 
 def _native_packet(record: Any) -> NmpPacket:
@@ -157,6 +263,9 @@ class WaveStoreNmpContextProvider:
             ]
             if not context["capability"]:
                 return False
+            # Reject an unsupported or receipt-mismatched NaN16 program before
+            # acquiring any durable lease, not merely after reserving the job.
+            _require_server_program_binding(packet, context)
             decision = packet.execution_gate(
                 job=job,
                 lease=None,
@@ -184,6 +293,9 @@ class WaveStoreNmpContextProvider:
         _, rows, workspace, _, required = self._operator_capabilities(
             packet, owner=owner
         )
+        expected_program_id = NMP_WORKER_FUNCTION_PROGRAMS.get(packet.function_id)
+        if expected_program_id is None:
+            raise NmpHttpError("no supported NaN16 worker dispatch for registered function")
         evidence: dict[str, Any] = {}
         for key, provider in self._providers.items():
             try:
@@ -221,6 +333,7 @@ class WaveStoreNmpContextProvider:
             "capability": rows,
             "required_capability": required,
             "workspace": workspace,
+            "expected_program_id": expected_program_id,
         }
         if owner is not None:
             result["expected_worker_owner"] = owner
@@ -237,13 +350,25 @@ class NmpHttpAdapter:
     """
 
     def __init__(self, service: WaveService,
-                 context_provider: ContextProvider) -> None:
+                 context_provider: ContextProvider,
+                 worker_identity_provider: WorkerIdentityProvider) -> None:
         if not hasattr(service, "submit_job") or not hasattr(service, "lease_job"):
             raise TypeError("service must implement the WaveService job/lease API")
         if not callable(context_provider):
             raise TypeError("context_provider must be callable")
+        if not callable(worker_identity_provider):
+            raise TypeError("worker_identity_provider must be callable")
         self.service = service
         self.context_provider = context_provider
+        self.worker_identity_provider = worker_identity_provider
+
+    def _verify_worker_identity(self, token: str, owner: str) -> None:
+        try:
+            verified = self.worker_identity_provider(token, owner)
+        except Exception as exc:
+            raise NmpHttpError("worker credential identity could not be verified") from exc
+        if verified is not True:
+            raise NmpHttpError("worker credential is not bound to the requested capability owner")
 
     def submit(self, token: str, packet_record: Mapping[str, Any],
                *, now_tick: int = 0) -> dict[str, Any]:
@@ -251,6 +376,7 @@ class NmpHttpAdapter:
         if packet.state != "PREFLIGHTED":
             raise NmpHttpError("only PREFLIGHTED NMP packets may be submitted")
         gate_context = _context(self.context_provider, packet, "queue")
+        _require_server_program_binding(packet, gate_context)
         queued = packet.queue(tick=now_tick, **gate_context)
         job_id = "nmp:" + packet.packet_id
         queued = replace(queued, job_id=job_id)
@@ -290,6 +416,11 @@ class NmpHttpAdapter:
               lease_ticks: int = 64, job_id: str | None = None,
               expected_generation: int | None = None,
               max_attempts: int = 8) -> dict[str, Any] | None:
+        # Authenticate both the worker role and its concrete capability identity
+        # before acquiring a durable lease. A role-only token must not let a
+        # caller reserve work under another worker's owner string.
+        self.service._authorize(token, ("worker",))
+        self._verify_worker_identity(token, owner)
         # Providers that can preselect a runner do so before lease_job writes a
         # durable lease. A worker with no verified capability must not strand a
         # queued job in leased state.
@@ -347,6 +478,7 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "lease", job=job, lease=lease
         )
+        _require_server_program_binding(packet, gate_context)
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != owner:
             raise NmpHttpError("worker owner is not bound to the current verified capability")
@@ -367,6 +499,7 @@ class NmpHttpAdapter:
     def complete(self, token: str, packet_record: Mapping[str, Any],
                  *, job_id: str, lease_token: str, lease_epoch: int,
                  result_digest: str, now_tick: int,
+                 execution_evidence: Mapping[str, Any] | None = None,
                  result_generation: int | None = None,
                  lease_owner: str | None = None) -> dict[str, Any]:
         packet = _native_packet(packet_record)
@@ -396,8 +529,21 @@ class NmpHttpAdapter:
         ):
             raise NmpHttpError("completion lease does not match the durable worker lease")
         lease_owner = lease.get("lease_owner")
+        self._verify_worker_identity(token, str(lease_owner or ""))
         gate_context = _context(
             self.context_provider, packet, "complete", job=job, lease=lease
+        )
+        expected_program_id = _require_server_program_binding(packet, gate_context)
+        # Optional trusted pins from server-side deployment context. Packet
+        # metadata and worker-provided evidence are never digest authorities.
+        expected_image_digest = gate_context.pop("expected_guest_image_digest", None)
+        expected_source_digest = gate_context.pop("expected_guest_source_digest", None)
+        native_execution = _validate_execution_evidence(
+            execution_evidence, packet=packet, expected_program_id=expected_program_id,
+            result_digest=result_digest, lease_epoch=lease_epoch,
+            lease_owner=str(lease_owner or ""),
+            expected_image_digest=expected_image_digest,
+            expected_source_digest=expected_source_digest,
         )
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != lease_owner:
@@ -413,7 +559,10 @@ class NmpHttpAdapter:
             tick=now_tick,
             job_id=job_id,
             lease_epoch=lease_epoch,
-            evidence={"completion_gate": decision.to_dict()},
+            evidence={
+                "completion_gate": decision.to_dict(),
+                "native_kernel_execution": native_execution,
+            },
         )
         job_record = self.service.complete_job(
             token, job_id, lease_token, lease_epoch, result_digest,
@@ -427,4 +576,4 @@ class NmpHttpAdapter:
         }
 
 
-__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NmpHttpAdapter", "NmpHttpError", "WaveStoreNmpContextProvider"]
+__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NMP_WORKER_PROGRAM_IDS", "NmpHttpAdapter", "NmpHttpError", "WaveStoreNmpContextProvider"]

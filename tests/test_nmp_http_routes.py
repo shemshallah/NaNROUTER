@@ -104,12 +104,17 @@ class NmpHttpRouteTests(unittest.TestCase):
                 "lease_epoch": 1,
                 "lease_owner": "worker-A",
                 "result_digest": "a" * 64,
+                "execution_evidence": {"schema": "nanrouter.native-kernel-execution.v1"},
                 "now_tick": 60,
             },
             self.worker_token,
         )
         self.assertEqual(status, 200)
         self.assertEqual(body["packet"]["state"], "COMPLETED")
+        self.assertEqual(
+            self.adapter.calls[-1][3]["execution_evidence"],
+            {"schema": "nanrouter.native-kernel-execution.v1"},
+        )
 
     def test_wave_service_can_lease_only_nmp_jobs(self):
         digest = "a" * 64
