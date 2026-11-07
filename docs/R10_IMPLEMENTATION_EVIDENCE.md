@@ -51,9 +51,9 @@
 | 38 | 128×128 SVD top pair | `mth/tests/mth_svd_top128_test.nas` | 1,311,632 | PASS | yes |
 | 39 | 255 odd certificate | `mth/tests/mth_centrosymmetry255_block15_test.nas` | 653,687 | PASS | yes |
 | 40 | Bounded K16 streaming pair tile | `mth/tests/mth_graph_pair_tile16_k16_f32_test.nas` | 283,436 | PASS (CI run 242) | yes |
-| 41 | Two-level spectrum | `mth/tests/mth_two_level_spectrum_test.nas` | 390 | PASS | pending |
-| 42 | 128 phase coherence | `mth/tests/mth_phase_coherence_128_test.nas` | 11,381 | PASS | pending |
-| 43 | 256-block adapter residual | `mth/tests/mth_adapter_residual_256_block16_test.nas` | 113,055 | PASS | pending |
+| 41 | Two-level spectrum | `mth/tests/mth_two_level_spectrum_test.nas` | 390 | PASS | yes |
+| 42 | 128 phase coherence | `mth/tests/mth_phase_coherence_128_test.nas` | 11,381 | PASS | yes |
+| 43 | 256-block adapter residual | `mth/tests/mth_adapter_residual_256_block16_test.nas` | 113,055 | PASS | yes |
 
 ## Python tests
 

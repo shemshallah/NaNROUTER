@@ -137,7 +137,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures pass local `nan_cli`; the prior GitHub Actions run passed 81 steps, and the combined 42-fixture/87-step run is pending. The CI workflow includes all 42 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures pass local `nan_cli`; the combined GitHub Actions run passed all 87 steps for the 42-fixture set. The CI workflow includes all 42 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space

@@ -145,6 +145,5 @@ The step budget is 1,000,000; the fixture finishes far below it.
   in fixed order.
 - Large `half` or `eta*c` can overflow the squared terms to infinity, and
   extremely small terms can underflow to zero under IEEE-754 rules.
-- The routine is not reentrant state: it is stateless and leaf, but it is not
-  a caller-register-preserving full function; callers must respect the
-  clobber list above.
+- The routine is stateless and leaf, but it is not a caller-register-preserving
+  full function; callers must respect the clobber list above.

@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **43 native MTH kernels with fixtures**: 41 pass in the local harness and all prior fixtures pass canonical CI; the two-level, phase-coherence, and 256-block adapter fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **43 native MTH kernels with fixtures**: 41 pass in the local harness and all prior fixtures pass canonical CI; all fixtures pass the combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -76,14 +76,14 @@ The 255 + 1 rule remains:
 | `tools/register_wave_capabilities.py` | registers 40 kernels into MC0DB |
 | `spec/wave-capabilities.json` | 43-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 87 steps, 42 fixtures; combined run pending |
+| `.github/workflows/mth-native-contract.yml` | 87 steps, 42 fixtures, all passing |
 
 ### 1.3 Evidence baseline
 
 ```
 41/41 locally runnable fixtures pass; K256 pair passed canonical CI
 42/42 total native fixtures; 235/235 Python tests pass
-Prior GitHub Actions run 42389138279: 81/81 steps; combined 42-fixture/87-step run pending
+GitHub Actions run 42389738332: 87/87 steps passed (42-fixture set)
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -921,6 +921,7 @@ The shortest correct sentence is:
 
 
 
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -956,9 +957,9 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
 | `mth.svd.top128.f32` | `float32` | 1,311,632 | yes |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
-| `mth.adapter.residual.256.block16.f32` | `float32` | 113,055 | pending |
-| `mth.phase.coherence.128.f32` | `float32` | 11,381 | pending |
-| `mth.two_level.spectrum.f32` | `float32` | 390 | pending |
+| `mth.adapter.residual.256.block16.f32` | `float32` | 113,055 | yes |
+| `mth.phase.coherence.128.f32` | `float32` | 11,381 | yes |
+| `mth.two_level.spectrum.f32` | `float32` | 390 | yes |
 | `mth.decode.128_256.f32` | `float32` | 996,358 | yes |
 | `mth.encode.256_128.f32` | `float32` | 996,358 | yes |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |

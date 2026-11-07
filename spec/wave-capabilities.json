@@ -433,7 +433,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.phase.coherence.128.f32",
@@ -447,7 +447,7 @@
         128
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.two_level.spectrum.f32",
@@ -461,7 +461,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.decode.128_256.f32",
