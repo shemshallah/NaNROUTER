@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 33/33 locally runnable fixtures passed; 34/34 total pass including CI-only K256 pair; 189 Python tests passed.
+**Result:** 33/33 locally runnable fixtures passed; 35/35 total pass including CI-only K256 pair and pair-tile16; 189 Python tests passed.
 **CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
 
 ## Native fixtures
@@ -44,7 +44,7 @@
 | 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | yes |
 | 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,711 | PASS (CI run 180) | yes |
 
-## Python tests
+| 35 | General dense 256 pair-space tile16 | `mth/tests/mth_graph_pair_tile16_f32_test.nas` | 2,301,554 | PASS (CI run 201) | yes |\n\n## Python tests
 
 ```
 python3 -m unittest discover -s tests -v
@@ -70,20 +70,20 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-33/33 local fixtures passed; 34/34 total
+33/33 local fixtures passed; 35/35 total
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 34 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 35 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
 - No full aperture SVD/top-k or Lanczos deflation; the 128 power iteration and primitive compositions exist.
-- K256 closed-form 256×256 pair exists; generic 256×256 paged/tiled pair remains open.
+- K256 closed-form pair and the general dense 256×256 16×16 tile action are native-verified; the page-window orchestrator, full 256-tile end-to-end publication, and generic sparse-CSR pair action remain open.
 - Wave HTTP adapter exists; live Koyeb/NANNET0 deployment remains open.
 - The 128 adapter residual exists, but no LM ablation or held-out result exists; the adapter remains disabled.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.
