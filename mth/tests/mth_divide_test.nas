@@ -18,6 +18,25 @@ mth_div_test_main:
   CMP r3,r13
   JMP[NE] @mth_div_fail
 
+  ; Quotient-only and remainder-only wrappers preserve the caller link.
+  MOVI r1,100
+  MOVI r2,7
+  CALL @mth_u32_div
+  MOVI r4,14
+  CMP r1,r4
+  JMP[NE] @mth_div_fail
+  CMP r2,r13
+  JMP[NE] @mth_div_fail
+
+  MOVI r1,100
+  MOVI r2,7
+  CALL @mth_u32_mod
+  MOVI r4,2
+  CMP r1,r4
+  JMP[NE] @mth_div_fail
+  CMP r2,r13
+  JMP[NE] @mth_div_fail
+
   ; UINT32_MAX / 3 = 0x55555555 remainder 0.
   MOVI r1,0xFFFF
   MOVHI r1,0xFFFF
