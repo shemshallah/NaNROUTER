@@ -43,7 +43,7 @@ from .wave_service import WaveServiceAuthError
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 0
-MAX_BODY_BYTES = 1_048_576
+MAX_BODY_BYTES = MAX_FRAME_WORDS * WORD_BYTES + 65_536
 # Alias matching the wave HTTP adapter's request-size naming.
 MAX_REQUEST_BYTES = MAX_BODY_BYTES
 MAX_WORDS = MAX_FRAME_WORDS

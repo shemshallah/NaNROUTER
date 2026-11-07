@@ -47,8 +47,9 @@ MAX_REGISTRY_BYTES = 16 * 1024 * 1024
 UNIVERSE_PAGES = 256
 PAGE_BYTES = 32_768
 UNIVERSE_BYTES = UNIVERSE_PAGES * PAGE_BYTES  # 8 MiB
-GUEST_BUDGET_BYTES = 1_048_576  # 1 MiB
-GUEST_PAGES = GUEST_BUDGET_BYTES // PAGE_BYTES  # 32
+GUEST_BUDGET_BYTES = 2 * 1024 * 1024  # 2 MiB default
+LEGACY_GUEST_BUDGET_BYTES = 1_048_576
+GUEST_PAGES = GUEST_BUDGET_BYTES // PAGE_BYTES  # 64
 ACTIVE_SLOT_POLICY = "single-active"
 
 _HTTP_SCHEMES = frozenset(("http", "https"))
@@ -1152,17 +1153,19 @@ def preflight_report(
         ))
 
     guest_ok = False
+    runtime_guest_bytes = GUEST_BUDGET_BYTES
     try:
         guest = _as_int(raw.get("guest_budget_bytes"))
-        guest_ok = guest == GUEST_BUDGET_BYTES
+        runtime_guest_bytes = guest
+        guest_ok = guest in (GUEST_BUDGET_BYTES, LEGACY_GUEST_BUDGET_BYTES)
         message = (
-            "guest budget matches the 1 MiB / 131072-word target"
+            "guest budget matches the 2 MiB / 262144-word target (or 1 MiB legacy)"
             if guest_ok
-            else f"guest_budget_bytes must be {GUEST_BUDGET_BYTES} (1 MiB)"
+            else f"guest_budget_bytes must be {GUEST_BUDGET_BYTES} (2 MiB) or {LEGACY_GUEST_BUDGET_BYTES} (legacy)"
         )
         checks.append(_check(
             "universe.guest_budget", "pass" if guest_ok else "fail", message,
-            value=guest, required=GUEST_BUDGET_BYTES, guest_pages=GUEST_PAGES,
+            value=guest, required=GUEST_BUDGET_BYTES, guest_pages=(guest + PAGE_BYTES - 1) // PAGE_BYTES,
             word_bytes=8, guest_words=guest // 8,
             source=sources.get("guest_budget_bytes"),
         ))
@@ -1175,10 +1178,14 @@ def preflight_report(
 
     if pages_ok and page_bytes_ok and guest_ok:
         universe_bytes = pages * page_size
+        guest_pages = guest // page_size if page_size else None
         budget_consistent = (
             universe_bytes == UNIVERSE_BYTES
             and guest % page_size == 0
-            and guest // page_size == GUEST_PAGES
+            and guest_pages in (
+                GUEST_PAGES,
+                LEGACY_GUEST_BUDGET_BYTES // PAGE_BYTES,
+            )
         )
         checks.append(_check(
             "universe.budget_consistency",
@@ -1189,9 +1196,9 @@ def preflight_report(
                 else "universe/page/guest budget is inconsistent"
             ),
             universe_bytes=universe_bytes,
-            guest_pages=guest // page_size if page_size else None,
+            guest_pages=guest_pages,
             expected_universe_bytes=UNIVERSE_BYTES,
-            expected_guest_pages=GUEST_PAGES,
+            expected_guest_pages=[GUEST_PAGES, LEGACY_GUEST_BUDGET_BYTES // PAGE_BYTES],
         ))
     else:
         checks.append(_check(
@@ -1427,9 +1434,9 @@ def preflight_report(
                 "universe_pages": UNIVERSE_PAGES,
                 "page_bytes": PAGE_BYTES,
                 "universe_bytes": UNIVERSE_BYTES,
-                "guest_budget_bytes": GUEST_BUDGET_BYTES,
-                "guest_pages": GUEST_PAGES,
-                "guest_words": GUEST_BUDGET_BYTES // 8,
+                "guest_budget_bytes": runtime_guest_bytes,
+                "guest_pages": (runtime_guest_bytes + PAGE_BYTES - 1) // PAGE_BYTES,
+                "guest_words": runtime_guest_bytes // 8,
                 "ring_slot_count": SLOT_COUNT,
                 "ring_slots": list(MC0_SLOTS),
                 "active_memory_ceiling_bytes": MAX_ACTIVE_MEMORY_BYTES,

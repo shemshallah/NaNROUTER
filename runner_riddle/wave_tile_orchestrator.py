@@ -50,7 +50,7 @@ TILE_WORDS = TILE_ROWS * TILE_COLS
 
 # NaN16 words are 64-bit in the point-0 framing contract.
 NAN16_WORD_BYTES = 8
-GUEST_BUDGET_BYTES = 1024 * 1024
+GUEST_BUDGET_BYTES = 2 * 1024 * 1024
 GUEST_BUDGET_WORDS = GUEST_BUDGET_BYTES // NAN16_WORD_BYTES
 # Reference only: the orchestrator never allocates against this ceiling.
 RUNNER_CEILING_BYTES = 7 * 1024 ** 3

@@ -254,14 +254,18 @@ class MthSystemTests(unittest.TestCase):
             self.submit(plan, system=system)
         self.assertEqual(self.store.health()["jobs"]["queued"], 0)
 
-    def test_default_guest_budget_is_1_mib_and_overridable(self):
+    def test_default_guest_budget_is_2_mib_and_overridable(self):
         self.assertEqual(self.system.guest_budget_bytes, DEFAULT_GUEST_BUDGET_BYTES)
-        self.assertEqual(DEFAULT_GUEST_BUDGET_BYTES, 1024 * 1024)
-        self.assertEqual(self.system.workspace_budget_bytes, 1024 * 1024)
-        larger = self.make_system(guest_budget_bytes=2 * 1024 * 1024)
-        self.assertEqual(larger.workspace_budget_bytes, 2 * 1024 * 1024)
+        self.assertEqual(DEFAULT_GUEST_BUDGET_BYTES, 2 * 1024 * 1024)
+        self.assertEqual(self.system.guest_budget_words, 262_144)
+        self.assertEqual(self.system.guest_budget_pages, 64)
+        self.assertEqual(self.system.workspace_budget_bytes, 2 * 1024 * 1024)
+        larger = self.make_system(guest_budget_bytes=4 * 1024 * 1024)
+        self.assertEqual(larger.workspace_budget_bytes, 4 * 1024 * 1024)
+        by_words = self.make_system(guest_budget_words=131_072)
+        self.assertEqual(by_words.guest_budget_bytes, 1024 * 1024)
 
-    def test_1_mib_default_admits_full_u_and_512_kib_override_rejects(self):
+    def test_2_mib_default_admits_full_u_and_512_kib_override_rejects(self):
         words = 73_990
         descriptor = MthKernelDescriptor(
             kernel_id="mth.test.full_u.f32",
@@ -431,9 +435,9 @@ class MthSystemTests(unittest.TestCase):
         )
         self.assertEqual(health["budgets"]["workspace_word_bytes"], 8)
         self.assertEqual(health["budgets"]["page_bytes"], 32 * 1024)
-        self.assertEqual(health["budgets"]["guest_budget_words"], 131072)
-        self.assertEqual(health["budgets"]["guest_budget_pages"], 32)
-        self.assertEqual(health["budgets"]["workspace_budget_words"], 131072)
+        self.assertEqual(health["budgets"]["guest_budget_words"], 262144)
+        self.assertEqual(health["budgets"]["guest_budget_pages"], 64)
+        self.assertEqual(health["budgets"]["workspace_budget_words"], 262144)
         self.assertEqual(health["store"]["jobs"]["done"], 1)
 
         rendered = json.dumps(health, sort_keys=True)

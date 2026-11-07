@@ -38,10 +38,16 @@ POINT_ZERO_WIRE = "BSR0"
 # this if their plan workspace is expressed in a different word width.
 DEFAULT_WORKSPACE_WORD_BYTES = 8
 
-# The announced 1 MiB guest target.  Callers may override this per plan or
-# deployment; the effective budget is still min(guest, runner-ceiling).
-DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024
-DEFAULT_PAGE_BYTES = 32 * 1024
+from .budget import (
+    DEFAULT_GUEST_BUDGET_BYTES,
+    DEFAULT_GUEST_BUDGET_PAGES,
+    DEFAULT_GUEST_BUDGET_WORDS,
+    LEGACY_GUEST_BUDGET_BYTES,
+    PAGE_BYTES as DEFAULT_PAGE_BYTES,
+    GuestBudget,
+    STANDARD_2MIB,
+    from_bytes,
+)
 
 
 class MthSystemError(ValueError):
@@ -94,6 +100,7 @@ class MthSystem:
         scheduler: WaveRingScheduler,
         *,
         guest_budget_bytes: int | None = None,
+        guest_budget_words: int | None = None,
         workspace_word_bytes: int = DEFAULT_WORKSPACE_WORD_BYTES,
         enforce_active_slot: bool = True,
     ) -> None:
@@ -120,11 +127,31 @@ class MthSystem:
             "workspace_word_bytes", workspace_word_bytes, minimum=1
         )
         self.runner_budget_bytes = scheduler.max_active_memory_bytes
+        if guest_budget_words is not None:
+            words_budget = _require_int(
+                "guest_budget_words", guest_budget_words, minimum=1
+            )
+            if guest_budget_bytes is not None:
+                if guest_budget_bytes != words_budget * self.workspace_word_bytes:
+                    raise MthSystemConfigError(
+                        "guest_budget_words and guest_budget_bytes disagree"
+                    )
+            guest_budget_bytes = words_budget * self.workspace_word_bytes
         if guest_budget_bytes is None:
             guest_budget_bytes = DEFAULT_GUEST_BUDGET_BYTES
         self.guest_budget_bytes = _require_int(
             "guest_budget_bytes", guest_budget_bytes, minimum=0
         )
+        if self.workspace_word_bytes != 8:
+            raise MthSystemConfigError(
+                "guest byte/word budget requires 8-byte NaN16 words"
+            )
+        self.guest_budget = from_bytes(
+            self.guest_budget_bytes,
+            name=("standard-2mib" if self.guest_budget_bytes == DEFAULT_GUEST_BUDGET_BYTES else "custom"),
+        )
+        self.guest_budget_words = self.guest_budget.words
+        self.guest_budget_pages = self.guest_budget.pages
         self.workspace_budget_bytes = min(
             self.guest_budget_bytes, self.runner_budget_bytes
         )
@@ -465,13 +492,12 @@ class MthSystem:
             "budgets": {
                 "workspace_word_bytes": self.workspace_word_bytes,
                 "page_bytes": DEFAULT_PAGE_BYTES,
+                "budget_profile": self.guest_budget.name,
+                "glt_enforced": self.guest_budget.glt_enforced,
                 "guest_budget_bytes": self.guest_budget_bytes,
-                "guest_budget_words": (
-                    self.guest_budget_bytes // self.workspace_word_bytes
-                ),
-                "guest_budget_pages": (
-                    self.guest_budget_bytes // DEFAULT_PAGE_BYTES
-                ),
+                "guest_budget_words": self.guest_budget_words,
+                "guest_budget_pages": self.guest_budget_pages,
+                "guest_budget_slack_words": self.guest_budget.slack_words,
                 "runner_budget_bytes": self.runner_budget_bytes,
                 "workspace_budget_bytes": self.workspace_budget_bytes,
                 "workspace_budget_words": (
@@ -484,7 +510,10 @@ class MthSystem:
 
 __all__ = [
     "DEFAULT_GUEST_BUDGET_BYTES",
+    "DEFAULT_GUEST_BUDGET_PAGES",
+    "DEFAULT_GUEST_BUDGET_WORDS",
     "DEFAULT_PAGE_BYTES",
+    "LEGACY_GUEST_BUDGET_BYTES",
     "DEFAULT_WORKSPACE_WORD_BYTES",
     "HEALTH_SCHEMA",
     "MthSystem",

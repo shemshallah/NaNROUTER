@@ -18,7 +18,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 DEFAULT_MANIFEST = REPO_ROOT / "spec" / "wave-capabilities.json"
 # MTH guest working-set ceiling: 1 MiB / 8 bytes per NaN16 word.
-DEFAULT_GUEST_WORKSPACE_WORDS = 131_072
+DEFAULT_GUEST_WORKSPACE_WORDS = 262_144
 
 
 def sha256_file(path: Path) -> str:
@@ -125,7 +125,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     budget.add_argument("--guest-workspace-words", type=int,
                         help="available guest workspace in NaN16 words")
     budget.add_argument("--guest-workspace-mib", type=int,
-                        help="available guest workspace in MiB (1 MiB = 131072 NaN16 words)")
+                        help="available guest workspace in MiB (2 MiB = 262144 NaN16 words)")
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--tick", type=int, default=0)
     parser.add_argument("--dry-run", action="store_true")
@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.guest_workspace_words is not None:
         guest_workspace_words = args.guest_workspace_words
     elif args.guest_workspace_mib is not None:
-        guest_workspace_words = args.guest_workspace_mib * 131_072
+        guest_workspace_words = args.guest_workspace_mib * 262_144
     else:
         guest_workspace_words = DEFAULT_GUEST_WORKSPACE_WORDS
     if guest_workspace_words < 0:

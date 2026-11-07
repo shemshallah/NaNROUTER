@@ -94,11 +94,17 @@ class FakePageStore:
 
 
 class PairTileGenerationExecutorTests(unittest.TestCase):
-    def make_executor(self, *, guest=None, source=None, store=None, workers=3):
-        return PairTileGenerationExecutor(
-            source=source or FakeSource(), guest=guest or FakeGuest(),
-            page_store=store or FakePageStore(), max_workers=workers,
-        )
+    def make_executor(self, *, guest=None, source=None, store=None, workers=3,
+                      guest_budget_words=None):
+        kwargs = {
+            "source": source or FakeSource(),
+            "guest": guest or FakeGuest(),
+            "page_store": store or FakePageStore(),
+            "max_workers": workers,
+        }
+        if guest_budget_words is not None:
+            kwargs["guest_budget_words"] = guest_budget_words
+        return PairTileGenerationExecutor(**kwargs)
 
     def test_all_256_tiles_stage_compare_and_publish_one_generation(self):
         source, guest, store = FakeSource(), FakeGuest(), FakePageStore()
@@ -137,7 +143,11 @@ class PairTileGenerationExecutorTests(unittest.TestCase):
 
     def test_workspace_budget_limits_parallel_guest_workers(self):
         with self.assertRaises(PairTileExecutionError):
-            self.make_executor(workers=4)
+            self.make_executor(workers=4, guest_budget_words=131_072)
+        # The default 2 MiB profile permits 10 K16 workers + the dense reference.
+        self.make_executor(workers=10)
+        with self.assertRaises(PairTileExecutionError):
+            self.make_executor(workers=11)
 
     def test_wrong_expected_operator_digest_fails_before_candidate_creation(self):
         store = FakePageStore()

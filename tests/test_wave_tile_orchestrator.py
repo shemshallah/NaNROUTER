@@ -132,12 +132,12 @@ class TilePageWindowTests(unittest.TestCase):
         self.assertEqual(window.window_words, 2 * TILE_WORDS + 1)
         self.assertEqual(window.window_bytes, window.window_words * 8)
 
-    def test_window_stays_inside_the_one_mib_guest_budget(self):
+    def test_window_stays_inside_the_two_mib_guest_budget(self):
         window = TilePageWindow()
         self.assertEqual(window.guest_budget_bytes, GUEST_BUDGET_BYTES)
         self.assertEqual(window.guest_budget_words, GUEST_BUDGET_WORDS)
-        self.assertEqual(window.guest_budget_bytes, 1024 * 1024)
-        self.assertEqual(window.guest_budget_words, 131072)
+        self.assertEqual(window.guest_budget_bytes, 2 * 1024 * 1024)
+        self.assertEqual(window.guest_budget_words, 262144)
         self.assertTrue(window.within_guest_budget)
         self.assertLessEqual(window.window_bytes, GUEST_BUDGET_BYTES)
 
