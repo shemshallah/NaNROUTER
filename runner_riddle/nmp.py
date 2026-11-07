@@ -2270,18 +2270,20 @@ def _native_preflight_receipt_gate(
         return False, f"native preflight receipt is stale or malformed: {exc}"
     if packet.preflight_result != "VALID" or packet.preflight_digest != receipt.receipt_digest:
         return False, "packet preflight fields do not match the native receipt"
-    if ruleset_snapshot is not None:
-        snapshot_data = _object_dict(ruleset_snapshot)
-        current_epoch = snapshot_data.get("rule_epoch", snapshot_data.get("epoch"))
-        current_digest = snapshot_data.get("rule_digest", snapshot_data.get("digest"))
-        if current_epoch is not None and current_epoch != receipt.rule_epoch:
-            return False, "native receipt rule epoch differs from the live ruleset snapshot"
-        if current_digest is not None:
-            try:
-                if normalize_digest(current_digest, "rule_digest") != receipt.rule_digest:
-                    return False, "native receipt rule digest differs from the live ruleset snapshot"
-            except NmpValidationError:
-                return False, "live ruleset rule digest is malformed"
+    if ruleset_snapshot is None:
+        return False, "live ruleset snapshot is required for native receipt verification"
+    snapshot_data = _object_dict(ruleset_snapshot)
+    current_epoch = snapshot_data.get("rule_epoch", snapshot_data.get("epoch"))
+    current_digest = snapshot_data.get("rule_digest", snapshot_data.get("digest"))
+    if current_epoch is None or current_digest is None:
+        return False, "live ruleset snapshot must expose rule epoch and 256-bit digest"
+    if current_epoch != receipt.rule_epoch:
+        return False, "native receipt rule epoch differs from the live ruleset snapshot"
+    try:
+        if normalize_digest(current_digest, "rule_digest") != receipt.rule_digest:
+            return False, "native receipt rule digest differs from the live ruleset snapshot"
+    except NmpValidationError:
+        return False, "live ruleset rule digest is malformed"
     return True, None
 
 
