@@ -49,7 +49,7 @@ mth_pf_test_main:
   MOVI r5,1
   MOVI r6,1
   MOVI r7,1
-  MOVI r8,0
+  MOVI r8,2
   CALL @nmr_contract_put
   CMP r3,r0
   JMP[NE] @mth_pf_fail_6
