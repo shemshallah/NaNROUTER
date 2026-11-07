@@ -65,6 +65,10 @@ mth_sparse_graph_x_valid:
 
   ; Validate all 257 CSR offsets before output is touched.
   ADD r6,r1,r0
+  ; CSR canonical form requires offsets[0] == 0.
+  LD r10,r6,0
+  CMP r10,r0
+  JMP[NE] @mth_sparse_graph_invalid_offsets
   MOVI r7,257
   MOVI r8,0
 mth_sparse_graph_validate_offsets:
