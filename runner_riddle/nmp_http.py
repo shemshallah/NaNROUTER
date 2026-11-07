@@ -189,6 +189,7 @@ class WaveStoreNmpContextProvider:
         ruleset_provider: ContextProvider,
         ring_provider: ContextProvider,
         cancel_epoch_provider: ContextProvider,
+        guest_binary_pin_provider: ContextProvider | None = None,
     ) -> None:
         if not hasattr(service, "store"):
             raise TypeError("service must expose its WaveStore")
@@ -202,8 +203,11 @@ class WaveStoreNmpContextProvider:
         for name, provider in providers.items():
             if not callable(provider):
                 raise TypeError(f"{name} must be callable")
+        if guest_binary_pin_provider is not None and not callable(guest_binary_pin_provider):
+            raise TypeError("guest_binary_pin_provider must be callable")
         self.service = service
         self._providers = providers
+        self._guest_binary_pin_provider = guest_binary_pin_provider
 
     def _operator_capabilities(
         self, packet: NmpPacket, *, owner: str | None = None
@@ -337,6 +341,23 @@ class WaveStoreNmpContextProvider:
         }
         if owner is not None:
             result["expected_worker_owner"] = owner
+        if stage == "complete" and self._guest_binary_pin_provider is not None:
+            try:
+                pins = self._guest_binary_pin_provider(
+                    packet=packet, stage=stage, job=job, lease=lease
+                )
+            except Exception:
+                raise NmpHttpError("trusted guest binary pins are unavailable") from None
+            if not isinstance(pins, Mapping):
+                raise NmpHttpError("trusted guest binary pins are unavailable")
+            for key in ("expected_guest_image_digest", "expected_guest_source_digest"):
+                value = pins.get(key)
+                if (
+                    not isinstance(value, str) or len(value) != 64
+                    or any(ch not in "0123456789abcdefABCDEF" for ch in value)
+                ):
+                    raise NmpHttpError(f"trusted {key} must be a SHA-256 digest")
+                result[key] = value.lower()
         return result
 
 
