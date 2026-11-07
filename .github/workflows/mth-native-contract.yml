@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [main, mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-k256-pair-space-v1-rebased]
+    branches: [main, 'mth-*', mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-k256-pair-space-v1-rebased]
   pull_request:
   workflow_dispatch:
 
