@@ -111,32 +111,32 @@ mth_pair_driver_puts_byte:
   JMP @mth_pair_driver_puts_word
 
 ; Four 16-slice strips = 4 * 4096 words.
-.org 512
+.org 1024
 mth_driver_li:
-.org 531
+.org 1043
 .word 0x40000000
-.org 4608
+.org 5120
 mth_driver_ukj:
-.org 4658
+.org 5170
 .word 0x40000000
-.org 8704
+.org 9216
 mth_driver_uik:
-.org 12565
+.org 13077
 .word 0x40000000
-.org 12800
+.org 13312
 mth_driver_ljk:
-.org 16677
+.org 17189
 .word 0x40000000
-.org 16896
+.org 17408
 mth_driver_acc_lu:
 .word 0
-.org 17152
+.org 17664
 mth_driver_acc_ult:
 .word 0
-.org 17408
+.org 17920
 mth_driver_y:
 .word 0
-.org 17664
+.org 18176
 mth_driver_scratch:
 .word 0
 .word 0
@@ -144,7 +144,7 @@ mth_driver_scratch:
 .word 0
 .word 0
 .word 0
-.org 18000
+.org 18512
 mth_pair_driver_pass:
 .str "MTH PAIR TILE16 K16 DRIVER PASS\\n"
 mth_pair_driver_bad:
