@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files]
+    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-components-nullity-v1]
   pull_request:
   workflow_dispatch:
 
@@ -59,3 +59,14 @@ jobs:
           cat build/mth/weighted-sparse.out
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
+
+      - name: Assemble graph components/nullity fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_components_nullity_v1_test.nas > build/mth/components-nullity.nan
+
+      - name: Execute graph components/nullity fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/components-nullity.nan --steps 12000000 --serial > build/mth/components-nullity.out 2> build/mth/components-nullity.err
+          cat build/mth/components-nullity.out
+          cat build/mth/components-nullity.err
+          grep -q '^MTH GRAPH COMPONENTS NULLITY V1 PASS' build/mth/components-nullity.out
