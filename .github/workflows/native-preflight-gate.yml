@@ -1,0 +1,34 @@
+name: native-preflight-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main, "nan16-preflight-native-gate"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-guest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout canonical NaN16 toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: main
+          path: nan0s
+      - name: Build NaN16 execution harness
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble native preflight fixture
+        run: |
+          mkdir -p build/preflight
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_preflight_gate_test.nas > build/preflight/gate.nan
+      - name: Execute native preflight fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/preflight/gate.nan --steps 200000 --serial > build/preflight/gate.out 2> build/preflight/gate.err
+          cat build/preflight/gate.out
+          cat build/preflight/gate.err
+          grep -q '^MTH PREFLIGHT GATE PASS' build/preflight/gate.out
