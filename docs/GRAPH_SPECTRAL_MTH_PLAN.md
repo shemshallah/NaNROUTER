@@ -249,3 +249,28 @@ For the exact K256 baseline `L=256I-J`, the kernel applies `L_pair(U)=LU+UL^T=51
 Canonical NaN16 CI workflow run 180 passed the assembler and runtime fixture. The fixture checks the exact E00 response (510 at [0,0], −1 at [0,1] and [1,0], zero at [1,1]) and row/column sums of 1.
 
 Scope boundary: this verifies the K256 closed-form special case only. It does not establish generic sparse-CSR pair-space support for arbitrary L.
+
+
+## 14. General dense pair-space tiled action v1
+
+A general dense real-matrix action is now source-written as
+`mth/nan16/mth_graph_pair_tile16_f32.nas`, with ABI
+`docs/MTH_GRAPH_PAIR_TILE16_ABI_V1.md` and fixture
+`mth/tests/mth_graph_pair_tile16_f32_test.nas`.
+
+For each 16×16 output tile, the kernel computes
+`Y[i,j] = sum_k L[i,k]U[k,j] + sum_k U[i,k]L[j,k]`.
+It stages the full 256×256 U matrix and two 16×256 row windows of L.
+The declared working set is below the 512 KiB guest ceiling. The full
+65,536×65,536 Kronecker operator is never formed.
+
+The two sums use separate accumulators and increasing-k order, with an
+explicit final FADD. The caller supplies row windows from one immutable L
+digest and invokes 256 tiles to complete Y. The L=2I fixture checks every
+cell of the first tile against Y=4U.
+
+**Evidence status: SOURCE-WRITTEN.** The canonical NaN16 CI workflow step
+has been added, but this kernel is not native_verified until the workflow
+assembles and executes the fixture. This does not yet verify paged
+orchestration, cancellation, cross-tile publication atomicity, or a
+generic sparse-CSR pair action.
