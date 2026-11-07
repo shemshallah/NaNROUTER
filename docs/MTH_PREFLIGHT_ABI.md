@@ -95,7 +95,7 @@ A capability rejection is not a mathematical null. A failed precondition is not 
 
 ## Evidence boundary
 
-The fixture checks representative success and rejection paths, including output-descriptor atomicity. It is not a theorem prover, a general tensor-shape engine, or a proof of all operator contracts. The canonical NaN16 workflow must assemble and execute the fixture before the source is marked native-verified.
+The native fixture includes a partial-overlap case with a full-capacity output range, so the range predicate—not an earlier capacity check—must reject it.\n\nThe fixture checks representative success and rejection paths, including output-descriptor atomicity. It is not a theorem prover, a general tensor-shape engine, or a proof of all operator contracts. The canonical NaN16 workflow must assemble and execute the fixture before the source is marked native-verified.
 
 
 ## Linker integration
