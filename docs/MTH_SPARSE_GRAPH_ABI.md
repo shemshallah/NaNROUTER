@@ -1,6 +1,6 @@
 # MTH sparse graph Laplacian ABI v1
 
-Status: **frozen implementation contract**; NaN16 kernel source is written and awaiting canonical assembly/execution.
+Status: **frozen implementation contract; native_verified** by canonical NaN16 CI run #58.
 
 ## Scope
 
@@ -74,7 +74,7 @@ The kernel is leaf-only, uses no shared static return slots, and completes all v
 2. Disconnected graph (0--1) + (2--3), with vertices 4..255 isolated, tests component-local action and zero rows.
 3. Out-of-range Q16.16 input tests failure atomicity: output remains unchanged.
 
-The fixtures are assembled and executed only by the canonical NaN16 source assembler and NaN0S guest harness. Source presence alone is not a pass. The sparse kernel remains **source_written / not yet native_verified** until that workflow succeeds.
+The fixtures are assembled and executed only by the canonical NaN16 source assembler and NaN0S guest harness. Source presence alone is not a pass. The sparse kernel is **native_verified** for this exact unweighted Q16.16/I32 v1 contract. CI run #58 assembled the fixture and executed the path, disconnected, and invalid-input atomicity checks successfully (20,737 guest steps; expected HALT). Kernel SHA-256: `013048435c1026643554fb20e3434934cf059dd47cf2857577cac13ed5be6b8f`. This evidence does not extend to weighted CSR or wave evolution.
 
 ## Next
 
