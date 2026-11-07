@@ -33,6 +33,30 @@ mth_bit_test_main:
 
   MOVI r1,0xF0F0
   MOVHI r1,0xF0F0
+  MOVI r2,0x0F0F
+  MOVHI r2,0x0F0F
+  CALL @mth_u32_nand
+  CMP r1,r3
+  JMP[NE] @mth_bit_fail
+
+  MOVI r1,0xF0F0
+  MOVHI r1,0xF0F0
+  MOVI r2,0x0F0F
+  MOVHI r2,0x0F0F
+  CALL @mth_u32_nor
+  CMP r1,r0
+  JMP[NE] @mth_bit_fail
+
+  MOVI r1,0xF0F0
+  MOVHI r1,0xF0F0
+  MOVI r2,0x0F0F
+  MOVHI r2,0x0F0F
+  CALL @mth_u32_xnor
+  CMP r1,r0
+  JMP[NE] @mth_bit_fail
+
+  MOVI r1,0xF0F0
+  MOVHI r1,0xF0F0
   CALL @mth_u32_not
   MOVI r3,0x0F0F
   MOVHI r3,0x0F0F
