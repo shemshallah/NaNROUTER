@@ -28,6 +28,7 @@ class NmpHttpError(ValueError):
 
 
 ContextProvider = Callable[..., Mapping[str, Any]]
+WorkerIdentityProvider = Callable[[str, str], bool]
 
 
 def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
@@ -75,13 +76,25 @@ class NmpHttpAdapter:
     """
 
     def __init__(self, service: WaveService,
-                 context_provider: ContextProvider) -> None:
+                 context_provider: ContextProvider,
+                 worker_identity_provider: WorkerIdentityProvider) -> None:
         if not hasattr(service, "submit_job") or not hasattr(service, "lease_job"):
             raise TypeError("service must implement the WaveService job/lease API")
         if not callable(context_provider):
             raise TypeError("context_provider must be callable")
+        if not callable(worker_identity_provider):
+            raise TypeError("worker_identity_provider must be callable")
         self.service = service
         self.context_provider = context_provider
+        self.worker_identity_provider = worker_identity_provider
+
+    def _verify_worker_identity(self, token: str, owner: str) -> None:
+        try:
+            verified = self.worker_identity_provider(token, owner)
+        except Exception as exc:
+            raise NmpHttpError("worker credential identity could not be verified") from exc
+        if verified is not True:
+            raise NmpHttpError("worker credential is not bound to the requested capability owner")
 
     def submit(self, token: str, packet_record: Mapping[str, Any],
                *, now_tick: int = 0) -> dict[str, Any]:
@@ -128,6 +141,11 @@ class NmpHttpAdapter:
               lease_ticks: int = 64, job_id: str | None = None,
               expected_generation: int | None = None,
               max_attempts: int = 8) -> dict[str, Any] | None:
+        # Authenticate both the worker role and its concrete capability identity
+        # before acquiring a durable lease. A role-only token must not let a
+        # caller reserve work under another worker's owner string.
+        self.service._authorize(token, ("worker",))
+        self._verify_worker_identity(token, owner)
         job = self.service.lease_job(
             token, owner, now_tick, lease_ticks,
             expected_generation=expected_generation,
@@ -200,6 +218,7 @@ class NmpHttpAdapter:
         ):
             raise NmpHttpError("completion lease does not match the durable worker lease")
         lease_owner = lease.get("lease_owner")
+        self._verify_worker_identity(token, str(lease_owner or ""))
         gate_context = _context(
             self.context_provider, packet, "complete", job=job, lease=lease
         )
