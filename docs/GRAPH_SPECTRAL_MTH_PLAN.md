@@ -207,6 +207,7 @@ The deep plan (`docs/game_plan_deep.md`) and ledger (`docs/IMPLEMENTATION_TODO.m
 | Wave velocity-Verlet step | `mth/nan16/mth_graph_wave.nas` | local PASS |
 | Step energy metric | `mth/nan16/mth_graph_step_energy_256.nas` | local PASS |
 | Harmonic wave energy | `mth/nan16/mth_harmonic_accel_256.nas` + fixture | local PASS |
+| 128×128 matvec | `mth/nan16/mth_matvec128_f32.nas` | local PASS |
 | Dense 128×128 pair action | `mth/nan16/mth_graph_pair.nas` | local PASS |
 | Rank-1 128 pair action | `mth/nan16/mth_graph_pair_rank1_128.nas` | local PASS |
 | 256-point DFT reference | `mth/nan16/mth_graph_dft256.nas` | local PASS |
@@ -220,7 +221,7 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-21/21 fixtures passed
+22/22 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests

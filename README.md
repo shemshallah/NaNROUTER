@@ -118,7 +118,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `spec/wave-capabilities.json` — 20-kernel capability manifest.
 - `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 21 fixtures and 111 Python tests pass locally; GitHub Actions run `42382439616` passed all 45 native steps.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 22 fixtures and 111 Python tests pass locally; GitHub Actions run `42382439616` passed all 45 native steps.
 
 ## Runner Riddle
 

@@ -192,6 +192,17 @@ jobs:
           cat build/mth/dft256.err
           grep -q '^MTH GRAPH DFT256 PASS' build/mth/dft256.out
 
+      - name: Assemble 128-matvec fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_matvec128_test.nas > build/mth/matvec128.nan
+
+      - name: Execute 128-matvec fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/matvec128.nan --steps 10000000 --serial > build/mth/matvec128.out 2> build/mth/matvec128.err
+          cat build/mth/matvec128.out
+          cat build/mth/matvec128.err
+          grep -q '^MTH MATVEC128 PASS' build/mth/matvec128.out
+
       - name: Assemble full pair-space fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_test.nas > build/mth/pairfull.nan
