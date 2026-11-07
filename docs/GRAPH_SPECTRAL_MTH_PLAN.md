@@ -279,7 +279,11 @@ Fixture: mth/tests/mth_graph_pair_tile16_k16_f32_test.nas.
 
 Each call stages four 16×16 blocks and updates two independent 16×16
 partial sums. K slices are processed in increasing order, then finalized.
-Workspace is 1,542 NaN16 words (12,336 bytes), below the 65,536-word guest
-ceiling. Canonical CI run 242 passed the two-slice L=2I oracle in 283,436
-guest steps. Full 16-slice orchestration, page retrieval, and atomic
-publication remain open. The full-U tile reference is over budget.
+Workspace is 1,542 NaN16 words (12,336 bytes). Canonical CI run 242 passed
+the two-slice L=2I oracle in 283,436 guest steps. The full 16-slice guest
+driver is now native-verified in CI run 338 (2,224,303 steps; 17,170-word
+full working set), including contributions in the first and last K slices.
+The driver consumes four pre-staged strips; page-window retrieval/staging,
+256-tile scheduling, digest validation, dense-reference comparison, and
+atomic publication remain open. The full-U reference fits the default 1 MiB
+MTH guest budget but is rejected by 512 KiB runners.
