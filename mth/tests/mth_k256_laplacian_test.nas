@@ -11,30 +11,22 @@ mth_k256_test_main:
   CALL @mth_k256_laplacian_u16
   CMP r1,r13
   JMP[NE] @mth_k256_test_fail
-  MOVI r6,65
-  PUTC r6
 
   MOVI r3,@mth_k256_output
   LD r4,r3,0
   MOVI r5,255
   CMP r4,r5
   JMP[NE] @mth_k256_test_fail
-  MOVI r6,66
-  PUTC r6
 
   LD r4,r3,1
   MOVI r5,0xFFFF
   MOVHI r5,0xFFFF
   CMP r4,r5
   JMP[NE] @mth_k256_test_fail
-  MOVI r6,67
-  PUTC r6
 
   LD r4,r3,255
   CMP r4,r5
   JMP[NE] @mth_k256_test_fail
-  MOVI r6,68
-  PUTC r6
 
   ; Put a value outside the U16 input contract at input[1].
   ; The preflight must reject it without changing output[0].
