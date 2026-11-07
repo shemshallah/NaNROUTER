@@ -237,7 +237,7 @@ Ran 235 tests
 OK
 ```
 
-The expanded workflow passed canonical run `42395520794` (121 steps, 59 fixtures); GLT 1 MiB page-limit enforcement remains open. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
+The expanded workflow passed canonical run `42395852453` (121 steps, 59 fixtures); GLT 1 MiB page-limit enforcement remains open. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
 
 
 ## K256 closed-form pair-space v1 — native verified

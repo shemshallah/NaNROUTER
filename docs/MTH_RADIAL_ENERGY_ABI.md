@@ -1,9 +1,12 @@
 # MTH radial energy and localization (float32 v1)
 
-Status: source-written and **locally native-verified** for the exact fixture in
-this document with the canonical NaN0S `nmk.awk` / `nan_cli` toolchain on
-2026-11-07. The fixture passes in 61,373 guest steps. This is local execution
-evidence; canonical CI run 42395520794 executed it, while GLT page-limit enforcement remains separate.
+Status: source-written and **locally native-verified** for the exact
+working-tree fixture in this document with the canonical NaN0S `nmk.awk` /
+`nan_cli` toolchain on 2026-11-07. The current fixture passes in 61,373 guest
+steps. Canonical CI run `42395520794` (head `4b823e5`) executed the previous
+fixture revision (61,355 steps, fixture SHA-256 `b089d0...`) successfully; the
+ABI-preservation revision documented here is local-only and awaits the next CI
+run. GLT page-limit enforcement remains separate.
 
 ## 1. Scope
 
@@ -244,8 +247,16 @@ reproduced the two tolerance-checked localization ratios bit-for-bit. That
 model was used only to audit the fixture mathematics; it is not part of the
 kernel, fixture, oracle, or guest execution.
 
-This task did not modify shared files. The evidence above is local
-`nmk.awk` / `nan_cli` execution; canonical CI run 42395520794 executed it, while GLT page-limit enforcement remains separate.
+The shared `.github/workflows/mth-native-contract.yml` already contains
+assemble/execute steps for this fixture (maintained outside this task and not
+edited here). Canonical CI run `42395520794` (head `4b823e5`, 2026-11-07)
+executed the previous committed fixture revision at 61,355 steps; its fixture
+SHA-256 was
+`b089d0044762e3b3616b848d52d8431819ea2d1fcfbbf6298fb0a18cd1e008ba`. The current
+revision adds the `r2`-`r5`/`r13` preservation checks and is local-only at
+61,373 steps, pending the next CI run. GLT page-limit enforcement remains
+separate. This task did not modify shared files; the evidence above is local
+`nmk.awk` / `nan_cli` execution plus the cited CI run for the prior revision.
 
 ## 8. Limitations
 
@@ -269,5 +280,6 @@ This task did not modify shared files. The evidence above is local
 - The constant-vector path fixture has energy `2.0`, not `0.0`; section 4
   records why. A zero-energy constant mode requires a periodic ring
   representation that is outside this ABI.
-- Local evidence plus canonical CI run 42395520794; GLT 1 MiB page-limit
+- Local evidence for the current revision; canonical CI run 42395520794
+  covered the prior fixture revision (`b089d0...`). GLT 1 MiB page-limit
   enforcement remains pending.

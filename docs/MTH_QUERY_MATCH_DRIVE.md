@@ -55,10 +55,12 @@ The caller/runner must enforce the energy, rate, and ACL budget before dispatch.
 
 Use `centrosymmetry128` to certify a 128×128 matrix before applying the fold. The full 255/256 certificate needs a paged/streaming ABI. A mathematical symmetry is not an authorization symmetry.
 
-## 7. Next gates
+## 7. Gate status
 
-1. Native top-k selection with stable tie-breaking.
-2. Aperture power iteration/SVD.
-3. Complex phase-sensitive MATCH.
-4. Bounded inverse DRIVE with pseudoinverse.
-5. Full 255/256 fold certificate.
+1. Native stable top-k — done (`mth_topk_256.nas`).
+2. Aperture power iteration/SVD — done (full 256 top pair, top-2, Lanczos).
+3. Full 255/256 fold certificate — done (`mth_centrosymmetry_255_full.nas`).
+4. Complex phase-sensitive MATCH — open.
+5. Bounded inverse DRIVE with pseudoinverse — open.
+6. Full QUERY/MATCH/FILTER/DRIVE controller composition — open; the primitive
+   inventory above is not a controller claim.

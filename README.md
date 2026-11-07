@@ -123,6 +123,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/MTH_JAHS_GATE_ABI.md` — native "Just A Handoff Seal" gate.
 - `docs/MTH_MEMORY_1MIB.md` — 1 MiB guest-budget migration.
 - `docs/R7_EXPERIMENT_RUNNER.md` — held-out association protocol and evidence gate.
+- `docs/R5_CAPACITY_SNR_PLAN.md` — capacity-versus-SNR experiment plan and gates.
 - `spec/ring-255.json` — deterministic C255 CSR and 255+1 page map.
 - `spec/wave-capabilities.json` — 61-kernel capability manifest.
 - `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
@@ -139,7 +140,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 58 locally runnable fixtures and 342 Python tests pass; all 59 fixtures pass canonical CI run `42395520794` (121 steps). GLT-enforced 1 MiB page-limit verification remains a separate gate.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 58 locally runnable fixtures and 342 Python tests pass; all 59 fixtures pass canonical CI run `42395852453` (121 steps). GLT-enforced 1 MiB page-limit verification remains a separate gate.
 
 ## Runner Riddle
 

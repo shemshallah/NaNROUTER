@@ -21,7 +21,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 342 Python tests pass.
-- [x] Canonical GitHub Actions native workflow run `42395520794` passed 121 steps for the 59-fixture set.
+- [x] Canonical GitHub Actions native workflow run `42395852453` passed 121 steps for the 59-fixture set.
 
 ## R0 — Contract and storage freeze
 
@@ -86,10 +86,10 @@
 - [x] Add 128×128 dense matvec primitive.
 - [x] Add aperture descriptor and decomposition selector (`runner_riddle/wave_aperture.py`; 9 tests).
 - [x] Add 128×128 power-iteration kernel.
-- [ ] Add QUERY / MATCH / FILTER / DRIVE composition.
-- [ ] Add observability/reachability metric kernel.
-- [ ] Add capacity-vs-SNR test plan.
-- [ ] Add colored-noise generator kernel.
+- [ ] Add full QUERY / MATCH / FILTER / DRIVE controller composition (primitive set complete).
+- [x] Add observability/reachability metric kernel (native BFS, 2,489,116 steps).
+- [x] Add capacity-vs-SNR test plan (`docs/R5_CAPACITY_SNR_PLAN.md`).
+- [x] Add colored-noise generator kernel (72,318 steps).
 
 ## R6 — Product space
 
@@ -177,7 +177,7 @@ Ran 235 tests
 OK
 ```
 
-CI: `42395520794` — 121/121 steps for the 59-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42395852453` — 121/121 steps for the 59-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
