@@ -1107,11 +1107,17 @@ class NativePreflightReceiptTests(unittest.TestCase):
             "digest": receipt.receipt_digest,
             "rule_snapshot_id": RULES,
         }
+        live_ruleset = {
+            "snapshot_id": RULES,
+            "rule_epoch": receipt.rule_epoch,
+            "rule_digest": receipt.rule_digest,
+        }
         decision = nmp.execution_gate(
             preflighted,
             admission=admission,
             preflight=preflight,
             capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
             ring_incarnation="ring-inc-1",
             ring_epoch=1,
         )
@@ -1147,6 +1153,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
             admission=admission,
             preflight=preflight,
             capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
             ring_incarnation="ring-inc-1",
             ring_epoch=1,
         )
@@ -1163,10 +1170,16 @@ class NativePreflightReceiptTests(unittest.TestCase):
             "digest": receipt.receipt_digest,
             "rule_snapshot_id": RULES,
         }
+        live_ruleset = {
+            "snapshot_id": RULES,
+            "rule_epoch": receipt.rule_epoch,
+            "rule_digest": receipt.rule_digest,
+        }
         queued = preflighted.queue(
             admission=admission,
             preflight=preflight,
             capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
             ring_incarnation="ring-inc-1",
             ring_epoch=1,
         )
@@ -1186,6 +1199,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
                 admission=admission,
                 preflight=preflight,
                 capability=make_capability(),
+                ruleset_snapshot=live_ruleset,
                 ring_incarnation="ring-inc-1",
                 ring_epoch=1,
             )
@@ -1201,6 +1215,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
             admission=admission,
             preflight=preflight,
             capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
             ring_incarnation="ring-inc-1",
             ring_epoch=1,
             job=job,
