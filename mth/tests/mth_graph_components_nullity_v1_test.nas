@@ -1198,7 +1198,7 @@ mth_comp_tmp:
 .word 0
 .word 0
 .word 0
-.org 3584
+.org 2300
 mth_comp_count:
 .word 0
 mth_comp_scratch:
