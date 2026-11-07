@@ -88,8 +88,7 @@ mth_pair_sum_col:
   ADD r1,r1,r8
   ST r6,r1,0
   ADD r8,r8,r13
-  CMP r8,r1
-  ; r1 is a row-sum address now, so compare against an immediate bound.
+  ; Compare the completed row count against 256.
   MOVI r2,256
   CMP r8,r2
   JMP[LT] @mth_pair_sum_row
