@@ -1,11 +1,11 @@
 # R10 implementation evidence ledger
 
-**Date:** 2026-11-06
+**Date:** 2026-11-07
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
 **Result:** 50/50 locally runnable fixtures passed; 51/51 total including CI-only K256 pair; 319 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 81 steps on `main` for commit `777673f`.
+**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 51-fixture/105-step run is pending (local 1 MiB text-loader execution passed).
 
 ## Native fixtures
 
@@ -105,8 +105,8 @@ Run it after any kernel change.
 ## What is not yet proven
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
-- No full aperture SVD/top-k or Lanczos deflation; the 128 power iteration and primitive compositions exist.
-- K256 closed-form 256×256 pair exists; general dense 256×256 16×16 pair tile is native_verified in CI run 218 (4,643,414 guest steps; tile origins (0,0) and (16,32)); full page-window orchestration and generic sparse-CSR pair action remain open.
-- Wave HTTP adapter exists; live Koyeb/NANNET0 deployment remains open.
-- The 128 adapter residual exists, but no LM ablation or held-out result exists; the adapter remains disabled.
+- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, JAHS gate, and avoided-crossing sweep pass locally; canonical 1 MiB CI and Lanczos remain open.
+- K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
+- Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
+- Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

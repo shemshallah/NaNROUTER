@@ -237,7 +237,7 @@ Ran 235 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42389738332` (87/87 steps); the 51-fixture/105-step run is pending. Generic 256-tile page orchestration, Lanczos/top-k deflation, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42389738332` (87/87 steps); the 51-fixture/105-step run is pending. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full-grid driver, Lanczos, live NANNET deployment, and real LM ablations remain open gates.
 
 
 ## K256 closed-form pair-space v1 — native verified

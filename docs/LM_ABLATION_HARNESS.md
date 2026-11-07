@@ -222,7 +222,8 @@ spec=None)` is a convenience wrapper that constructs and runs the harness.
 
 The label control shifts accepted answers by
 `label_control_shift % task_count` in task-ID order. The shift is deterministic.
-An effective shift of zero is reported as a degenerate control and cannot pass.
+An effective shift of zero, or a shift that leaves every task's accepted-answer
+set unchanged, is reported as a degenerate control and cannot pass.
 
 ### Call counts
 
@@ -306,16 +307,17 @@ The report is JSON-serializable and does not contain opaque model states.
 4. `len(seeds) >= min_seeds`;
 5. `residual_scale > 0`;
 6. the frozen model ID matches `base_model_id`;
-7. the effective shuffled-label shift is nonzero;
+7. the shuffled-label control is non-degenerate;
 8. every comparison has `mean_delta > min_effect`;
 9. every comparison's bootstrap lower bound is `> min_effect`;
 10. every comparison's per-seed mean is `> min_effect`.
 
-If any check definitively fails (for example, no improvement over base or a
-control), the status is `rejected`. If the evidence is insufficient or
-unstable (for example, the CI includes zero or one seed does not improve), the
-status is `inconclusive`. A missing or empty dataset is always `inconclusive`
-with zero model calls.
+For an admissible dataset, if any check definitively fails (for example, no
+improvement over base or a control), the status is `rejected`. If the evidence
+is insufficient or unstable (for example, the CI includes zero or one seed
+does not improve), the status is `inconclusive`. A synthetic, underpowered,
+missing, or empty dataset is always `inconclusive`; a missing or empty dataset
+also makes zero model calls.
 
 Status semantics:
 
@@ -375,6 +377,10 @@ report = harness.run(
   seed, repeated runs demonstrate repeatability, not independent replication.
   The caller must supply genuinely seed-varying frozen behaviour for a stronger
   reproducibility claim.
+- **No training-contamination proof.** The harness can reject caller-declared
+  task-ID/prompt overlap, but it cannot prove the frozen model never saw the
+  held-out prompts or answers during training. Dataset hygiene still depends on
+  caller-supplied provenance.
 - **Bootstrap scope.** The CI resamples the supplied held-out tasks. It does not
   establish generalization to other tasks, datasets, models, or prompts.
 - **Synthetic and underpowered data cannot pass.** A toy dataset is never

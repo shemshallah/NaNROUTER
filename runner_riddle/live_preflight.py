@@ -455,9 +455,13 @@ def _read_registry_document(path: str | Path) -> dict[str, Any] | None:
 
 
 def _classify_registry_failure(
-    exc: BaseException, path: str | Path
+    exc: BaseException,
+    path: str | Path | None,
+    *,
+    document: Mapping[str, Any] | None = None,
 ) -> LivePreflightError:
-    document = _read_registry_document(path)
+    if document is None:
+        document = _read_registry_document(path) if path is not None else None
     if document is None:
         return LivePreflightError(
             "registry_unavailable",
@@ -745,7 +749,7 @@ def preflight_report(
     minimum_generation: int | str | None = None,
     max_observation_age_ticks: int | str | None = None,
     now_tick: int | str | None = None,
-    registry: VolumeRegistry | None = None,
+    registry: VolumeRegistry | Mapping[str, Any] | None = None,
     probe_transport: ProbeTransport | None = None,
 ) -> dict[str, Any]:
     """Return a deterministic, JSON-safe deployment preflight report.
@@ -885,13 +889,16 @@ def preflight_report(
                 source=sources.get("volume_key_id"), configured=True,
             ))
         else:
+            fingerprint = _digest_secret(key_bytes)
             checks.append(_check(
                 "volume.registry.key", "pass",
                 "volume registry signing key is configured",
                 source=sources.get("volume_hmac_key"),
                 authority="hmac-sha256",
-                key_reference=key_id or None,
-                key_fingerprint=_digest_secret(key_bytes),
+                key_reference=(
+                    key_id if key_id else f"hmac-sha256:{fingerprint[:16]}"
+                ),
+                key_fingerprint=fingerprint,
                 **_secret_evidence(key_value),
             ))
 
@@ -902,7 +909,7 @@ def preflight_report(
         path_ok = True
         checks.append(_check(
             "volume.registry.path", "pass",
-            "in-memory verified registry supplied",
+            "in-memory registry supplied",
             source="argument", injected=True,
         ))
     elif "volume_registry_path" in issues:
@@ -991,14 +998,23 @@ def preflight_report(
             "registry signature not evaluated: registry path is invalid",
         ))
     else:
+        document_in: Mapping[str, Any] | None = None
         try:
             if registry is not None:
-                if key_bytes:
-                    registry_obj = VolumeRegistry(registry.document, key_bytes)
-                else:
+                if not key_bytes:
                     raise LivePreflightError(
                         "invalid_key", "volume registry key is required"
                     )
+                if isinstance(registry, VolumeRegistry):
+                    document_in = registry.document
+                elif isinstance(registry, Mapping):
+                    document_in = dict(registry)
+                else:
+                    raise LivePreflightError(
+                        "invalid_registry",
+                        "in-memory registry must be a VolumeRegistry or mapping",
+                    )
+                registry_obj = VolumeRegistry(dict(document_in), key_bytes)
                 source = "argument"
             else:
                 registry_obj = load_signed_registry(str(registry_path), key_bytes)
@@ -1020,10 +1036,19 @@ def preflight_report(
                 code=exc.code,
             ))
         except VolumeRegistryError as exc:
+            classified = _classify_registry_failure(
+                exc, registry_path, document=document_in
+            ) if document_in is not None else None
             checks.append(_check(
                 "volume.registry.signature", "fail",
-                f"invalid volume registry: {_bounded(str(exc), 180)}",
-                code="invalid_registry",
+                (
+                    classified.message if classified is not None
+                    else f"invalid volume registry: {_bounded(str(exc), 180)}"
+                ),
+                code=(
+                    classified.code if classified is not None
+                    else "invalid_registry"
+                ),
             ))
 
     if epoch_config_error is not None:

@@ -77,6 +77,8 @@ LIMITATIONS = (
     "Seed replicates are independent only if the caller's hooks vary with "
     "seed. Deterministic hooks demonstrate repeatability, not independent "
     "replication.",
+    "The harness cannot prove the frozen model never saw the held-out prompts "
+    "or answers; dataset hygiene depends on caller-supplied provenance.",
     "The paired bootstrap resamples held-out tasks from this task set; it "
     "does not establish generalization beyond the supplied tasks.",
     "Synthetic, underpowered, or missing datasets are never admissible "
@@ -223,6 +225,12 @@ def _accepted_answers(task: "AblationTask") -> tuple[str, ...]:
             )
         result.append(value)
     return tuple(result)
+
+
+def _normalized_answer_set(task: "AblationTask") -> frozenset[str]:
+    return frozenset(
+        _normalize_text(answer) for answer in task.accepted_answers()
+    )
 
 
 def _validate_task_identity(task: "AblationTask") -> None:
@@ -620,6 +628,11 @@ class LMAdapterAblation:
         task_count = len(tasks)
         seed_count = len(self.spec.seeds)
         shift = self.spec.label_control_shift % task_count
+        label_control_degenerate = all(
+            _normalized_answer_set(tasks[index])
+            == _normalized_answer_set(tasks[(index + shift) % task_count])
+            for index in range(task_count)
+        )
         encoder_calls = 0
         predict_calls = 0
         executor_calls = 0
@@ -709,6 +722,7 @@ class LMAdapterAblation:
                     {
                         "source_task_id": shuffled_task.task_id,
                         "shift": shift,
+                        "degenerate": label_control_degenerate,
                     }
                 )
                 deltas = {
@@ -794,7 +808,7 @@ class LMAdapterAblation:
                 COMPARISON_SHUFFLED,
                 lambda run: run["conditions"][ADAPTER_ON],
                 lambda run: run["shuffled_labels"],
-                degenerate=shift == 0,
+                degenerate=label_control_degenerate,
             ),
         }
 
@@ -805,7 +819,12 @@ class LMAdapterAblation:
         )
 
         checks = self._gate_checks(
-            task_set, dataset, delta_aggregates, shift, task_count
+            task_set,
+            dataset,
+            delta_aggregates,
+            shift,
+            label_control_degenerate,
+            task_count,
         )
         status, reasons = self._combine_checks(checks)
         if not dataset["admissible"]:
@@ -853,6 +872,7 @@ class LMAdapterAblation:
                 "controls": list(CONTROLS),
                 "comparisons": list(COMPARISONS),
                 "label_control_shift_effective": shift,
+                "label_control_degenerate": label_control_degenerate,
                 "normalization": (
                     "strip, collapse whitespace, and casefold before matching"
                 ),
@@ -1187,8 +1207,8 @@ class LMAdapterAblation:
         if degenerate:
             return (
                 CHECK_INCONCLUSIVE,
-                f"{name}: label control is degenerate because the effective "
-                "shuffle shift is zero",
+                f"{name}: shuffled-label control is degenerate because the "
+                "shifted accepted-answer sets do not differ from the true sets",
             )
         if mean_delta <= float(self.spec.min_effect):
             return (
@@ -1237,6 +1257,7 @@ class LMAdapterAblation:
         dataset: Mapping[str, Any],
         deltas: Mapping[str, Mapping[str, Any]],
         shift: int,
+        label_control_degenerate: bool,
         task_count: int,
     ) -> list[dict[str, Any]]:
         checks: list[dict[str, Any]] = []
@@ -1298,8 +1319,11 @@ class LMAdapterAblation:
         )
         add(
             "label_control_non_degenerate",
-            CHECK_PASS if shift != 0 else CHECK_INCONCLUSIVE,
-            f"effective label shift={shift} across {task_count} tasks",
+            CHECK_PASS
+            if not label_control_degenerate
+            else CHECK_INCONCLUSIVE,
+            f"effective label shift={shift}, degenerate="
+            f"{label_control_degenerate}, tasks={task_count}",
         )
         add(
             "dataset_split_binding",

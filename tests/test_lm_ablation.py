@@ -356,7 +356,7 @@ class LMAdapterAblationTests(unittest.TestCase):
             deltas["adapter_on_vs_shuffled_labels"]["mean_delta"], 1.0
         )
 
-    def test_shuffled_label_control_blocks_pass_when_labels_are_identical(self):
+    def test_degenerate_shuffled_label_control_blocks_pass(self):
         tasks = tuple(
             AblationTask(
                 task_id=f"t{index:02d}",
@@ -372,15 +372,16 @@ class LMAdapterAblationTests(unittest.TestCase):
         model = FakeFrozenModel(answers)
         report, _, _, _, _ = self.run_case(task_set=task_set, model=model)
 
-        self.assertEqual(report["status"], "rejected")
+        self.assertEqual(report["status"], "inconclusive")
         self.assertFalse(report["passed"])
+        self.assertTrue(report["protocol"]["label_control_degenerate"])
         shuffled = report["aggregates"]["deltas"][
             "adapter_on_vs_shuffled_labels"
         ]
         self.assertEqual(shuffled["mean_delta"], 0.0)
-        self.assertEqual(shuffled["status"], "fail")
+        self.assertEqual(shuffled["status"], "inconclusive")
         self.assertIn(
-            "beats_shuffled_labels", " ".join(report["gate"]["reasons"])
+            "degenerate", " ".join(report["gate"]["reasons"])
         )
 
     def test_non_reproducible_seed_effect_is_inconclusive(self):
@@ -435,7 +436,13 @@ class LMAdapterAblationTests(unittest.TestCase):
         self.assertEqual(missing["call_counts"]["residual_executor"], 0)
 
         empty = AblationTaskSet("empty-unit", ())
-        empty_report = harness.run(empty)
+        empty_model = FakeFrozenModel(self.answers)
+        empty_executor = FakeResidualExecutor()
+        empty_report = harness.run(
+            empty,
+            frozen_model=empty_model,
+            residual_executor=empty_executor,
+        )
         self.assertEqual(empty_report["status"], "inconclusive")
         self.assertFalse(empty_report["passed"])
         self.assertTrue(empty_report["dataset"]["missing"])
@@ -443,6 +450,9 @@ class LMAdapterAblationTests(unittest.TestCase):
         self.assertEqual(empty_report["call_counts"]["encode"], 0)
         self.assertEqual(empty_report["per_task"], [])
         self.assertEqual(empty_report["aggregates"]["deltas"], {})
+        self.assertEqual(empty_model.encode_calls, 0)
+        self.assertEqual(empty_model.predict_calls, 0)
+        self.assertEqual(empty_executor.calls, 0)
 
     # -- Split integrity ------------------------------------------------------
 

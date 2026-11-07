@@ -55,7 +55,7 @@ Conflicting values across aliases fail closed.
 | NANNET0 endpoint | `NANNET0_ENDPOINT` | `http`/`https` endpoint |
 | Volume registry path | `RIDDLE_VOLUME_REGISTRY_PATH` | absolute path to signed JSON |
 | Volume registry key | `RIDDLE_VOLUME_HMAC_KEY` | at least 32 bytes |
-| Volume key reference | `RIDDLE_VOLUME_KEY_ID` | optional safe label |
+| Volume key reference | `RIDDLE_VOLUME_KEY_ID` | optional safe label; a derived fingerprint is reported when absent |
 | Universe pages | `NANROUTER_UNIVERSE_PAGES` | `256` |
 | Page bytes | `NANROUTER_PAGE_BYTES` | `32768` |
 | Guest budget | `NANROUTER_GUEST_BUDGET_BYTES` | `1048576` (1 MiB) |

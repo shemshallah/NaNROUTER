@@ -45,7 +45,24 @@ The 8 MiB universe still has 256 × 32 KiB pages: 255 head pages + 1 NANNET node
 - BS0DB/MC0DB remain durable control/evidence, not the canonical universe.
 - The 8 MiB universe remains the persistent page store.
 
-## 5. Required gates
+## 5. Implemented 1 MiB kernels (local execution, CI pending)
+
+| Kernel | Local evidence | Working set |
+|---|---|---|
+| `mth_matvec256_full` | 2,978,362 steps PASS | 66,048 words |
+| `mth_svd_top256` | 11,002,235 steps PASS | ~66,305 words |
+| `mth_svd_top2_256` | 40,216,927 steps PASS | ~68,878-word image |
+| `mth_encode256_full` / `mth_decode256_full` | 1,655,853 steps PASS | 66,304 words |
+| `mth_adapter_residual_256_full` | 2,839,172 steps PASS | 66,304 words |
+| `mth_centrosymmetry_255_full` | 2,700,726 steps PASS | 65,025-word input |
+| `mth_topk_256` | 1,158,106 steps PASS | 1,024 words |
+
+The runner facade now defaults to an adjustable 1 MiB guest budget, exposes
+`guest_budget_words`/`guest_budget_pages`, and still allows a caller to set a
+larger or smaller budget. The 1 MiB default is policy, not a claim that the GLT
+page-limit harness has already enforced it.
+
+## 6. Required gates
 
 1. Canonical NaN16 CI reports a 131,072-word guest.
 2. A >65,536-word fixture assembles, loads, and executes.

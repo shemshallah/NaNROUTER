@@ -94,10 +94,10 @@ GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 
 | R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
-| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); default MTH guest budget raised to 1 MiB (131,072 words); full-U reference requires 73,990 words and is dispatchable on 1 MiB runners but not 512 KiB runners; page-window orchestration and full 256-tile atomic publication still open; K256 closed-form 256×256 done |
-| R7 | avoided-crossing sweep driver, held-out creativity/association experiment; two-level spectrum and phase metric done |
-| R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
-| R9 | frozen-base ablations, measured LM benefit; full 256×256 ENCODE/DECODE and 256-block residual done |
+| R6 | bounded K16 pair-tile native_verified; 256-tile page-window/atomic-publication orchestrator implemented with 31 tests; default MTH guest budget 1 MiB; native full-grid driver still open; K256 closed form done |
+| R7 | two-level spectrum, phase metric, and native avoided-crossing sweep done; held-out creativity/association protocol harness in progress |
+| R8 | Point-0 HTTP ingress, offline live preflight, and signed-volume gate done; live Koyeb/NANNET0 deployment blocked on credentials |
+| R9 | full 256×256 ENCODE/DECODE and adapter residual done; frozen-base ablation harness done; real LM/data ablation blocked |
 | R10 | production digest registration, capability promotion |
 
 ---

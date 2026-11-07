@@ -21,6 +21,10 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.graph.couple128.f32", ids)
         self.assertIn("mth.graph.pair.tile16.f32", ids)
         self.assertIn("mth.graph.pair.full.128.f32", ids)
+        self.assertIn("mth.jahs.gate.u64", ids)
+        self.assertIn("mth.matvec256.full.f32", ids)
+        self.assertIn("mth.svd.top2.256.f32", ids)
+        self.assertIn("mth.topk.256.f32", ids)
         self.assertEqual(len(ids), 53)
 
     def test_dry_run_does_not_need_a_store(self):
