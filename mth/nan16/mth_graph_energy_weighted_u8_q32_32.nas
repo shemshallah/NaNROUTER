@@ -167,8 +167,8 @@ mth_energy_process_edge:
   LD r3,r1,0
   LD r4,r11,9
   SUB r1,r4,r3
-  CMP r1,r0
-  JMP[GT] @mth_energy_abs_ready
+  SHR r2,r1,31
+  CMP r2,r0
   JMP[EQ] @mth_energy_abs_ready
   SUB r1,r0,r1
 mth_energy_abs_ready:
