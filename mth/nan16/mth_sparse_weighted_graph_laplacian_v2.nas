@@ -59,6 +59,9 @@ mth_weighted_v2_x_ok:
 
   ; Validate 257 monotone offsets, degree <=255, final == edge_count.
   LD r8,r11,0
+  LD r12,r8,0
+  CMP r12,r0
+  JMP[NE] @mth_weighted_v2_invalid_offsets
   MOVI r9,257
   MOVI r10,0
 mth_weighted_v2_validate_offsets:
