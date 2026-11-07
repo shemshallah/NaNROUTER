@@ -263,7 +263,9 @@ class WaveStoreNmpContextProvider:
             ]
             if not context["capability"]:
                 return False
-            context.pop("expected_program_id", None)
+            # Reject an unsupported or receipt-mismatched NaN16 program before
+            # acquiring any durable lease, not merely after reserving the job.
+            _require_server_program_binding(packet, context)
             decision = packet.execution_gate(
                 job=job,
                 lease=None,
