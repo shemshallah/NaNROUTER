@@ -69,4 +69,4 @@ jobs:
           nan0s/aarch64/android/nan_cli --img build/mth/components-nullity.nan --steps 12000000 --serial > build/mth/components-nullity.out 2> build/mth/components-nullity.err
           cat build/mth/components-nullity.out
           cat build/mth/components-nullity.err
-          grep -q '^MTH GRAPH COMPONENTS NULLITY V1 PASS' build/mth/components-nullity.out
+          grep -q '^ABCDMTH GRAPH COMPONENTS NULLITY V1 PASS' build/mth/components-nullity.out
