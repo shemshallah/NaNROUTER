@@ -15,6 +15,7 @@ from .wave_service import WaveService, WaveServiceError
 from .wave_http import WaveHttpServer
 from .nmp_http import NmpHttpAdapter, NmpHttpError
 from .n16t_http import N16THttpAdapter, N16TWorkerError
+from .n16t_guest import N16TGuestPool, N16TGuestRuntimeError
 from .mth_registry import MthKernelDescriptor, MthPlan, MthPlanError, MthRegistry, MthRegistryError
 from .wave_ring_scheduler import WaveRingScheduler, WaveRingSchedulerError, RingCapacityError, RingBusyError, RingCheckpointError, RingStateError
 from .point0_bridge import Point0Bridge, Point0Error, Point0Result, Point0Router, NanFrame, BinaryEnvelope
@@ -37,6 +38,7 @@ __all__ = [
     "WaveHttpServer",
     "NmpHttpAdapter", "NmpHttpError",
     "N16THttpAdapter", "N16TWorkerError",
+    "N16TGuestPool", "N16TGuestRuntimeError",
     "MthKernelDescriptor", "MthPlan", "MthPlanError", "MthRegistry", "MthRegistryError",
     "WaveRingScheduler", "WaveRingSchedulerError", "RingCapacityError", "RingBusyError", "RingCheckpointError", "RingStateError",
     "Point0Bridge", "Point0Error", "Point0Result", "Point0Router", "NanFrame", "BinaryEnvelope",
