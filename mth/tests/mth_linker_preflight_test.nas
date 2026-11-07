@@ -72,7 +72,7 @@ mth_link_pf_main:
   MOVI r2,1
   MOVI r3,1
   MOVI r4,0
-  MOVI r5,1
+  MOVI r5,2
   MOVI r6,1
   MOVI r7,1
   MOVI r8,0
@@ -130,7 +130,7 @@ mth_link_pf_main:
   CMP r6,r7
   JMP[NE] @mth_link_pf_fail
   LD r6,r5,4
-  MOVI r7,1
+  MOVI r7,2
   CMP r6,r7
   JMP[NE] @mth_link_pf_fail
 
@@ -222,15 +222,15 @@ mth_link_pf_puts_byte:
 
 .org 30000
 mth_link_pf_left:
-.word 4,1,3,1,1,@mth_link_pf_left_payload,3,1
+.word 4,1,3,1,2,@mth_link_pf_left_payload,3,1
 mth_link_pf_right:
-.word 4,1,3,1,1,@mth_link_pf_right_payload,3,1
+.word 4,1,3,1,2,@mth_link_pf_right_payload,3,1
 mth_link_pf_output:
 .word 0,0,0,0,0,@mth_link_pf_output_payload,1,0
 mth_link_pf_candidate:
-.word 1,7,4,4,3,1,1,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,1,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
 mth_link_pf_rule:
-.word 1,7,4,4,3,1,1,1,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
 
 .org 30256
 mth_link_pf_left_payload:
