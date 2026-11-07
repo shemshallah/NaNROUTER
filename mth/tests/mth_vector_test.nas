@@ -21,8 +21,10 @@ mth_vec_test_main:
   MOVI r2,8200
   MOVI r1,2
   STW r1,r2,r0
+  MOVI r3,1
   MOVI r1,1
   STW r1,r2,r3
+  MOVI r3,2
   MOVI r1,4
   STW r1,r2,r3
 
@@ -30,10 +32,11 @@ mth_vec_test_main:
   MOVI r2,8210
   MOVI r1,77
   STW r1,r2,r0
+  MOVI r3,1
   MOVI r1,88
   STW r1,r2,r3
-  MOVI r1,99
   MOVI r3,2
+  MOVI r1,99
   STW r1,r2,r3
 
   MOVI r1,8192
