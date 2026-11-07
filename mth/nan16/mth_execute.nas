@@ -26,6 +26,11 @@ mth_execute:
   MOVI r9,900
   CMP r8,r9
   JMP[NE] @mth_execute_unsupported
+  ; Program 900 is bound only to canonical operator 77 (vector dot).
+  LD r10,r1,1
+  MOVI r9,77
+  CMP r10,r9
+  JMP[NE] @mth_execute_unsupported
 
   ADD r14,r12,r0
   ST r15,r14,56
