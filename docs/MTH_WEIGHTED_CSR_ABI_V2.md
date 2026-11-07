@@ -1,6 +1,6 @@
 # MTH weighted CSR Laplacian ABI v2
 
-Status: **source-written; canonical native verification pending**. This contract is separate from the frozen unweighted Q16.16/I32 v1 operator.
+Status: **native_verified** by canonical NaN16 CI run #107. This contract is separate from the frozen unweighted Q16.16/I32 v1 operator.
 
 ## 1. Mathematical operator
 
@@ -77,7 +77,7 @@ Planned inputs:
 
 Return status must distinguish success, invalid state/count, invalid offsets, invalid endpoints, and invalid weights. All descriptor and numeric validation must finish before the first output write. Output must be deterministic and exact.
 
-The register/scratch ABI is specified and implemented: the routine saves all long-lived pointers and row state in the 16-word caller frame, retaining its base in r11 across the wide-multiply helper. The source is **source_written**, not native_verified. Do not dispatch this operator until canonical NaN16 CI passes.
+The register/scratch ABI is specified and implemented: the routine saves all long-lived pointers and row state in the 16-word caller frame, retaining its base in r11 across the wide-multiply helper. Canonical NaN16 CI run #107 assembled and executed the weighted path fixtures and invalid-zero-weight atomicity check successfully (41,253 guest steps; expected HALT). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. The kernel is **native_verified** for this exact v2 ABI. This evidence does not verify fractional weights, energy, component/nullity, pair-space, or wave evolution.
 
 ## 5. Exact native fixtures required
 
@@ -109,6 +109,6 @@ The native test suite must verify exact row-sum/nullspace behavior on fixtures a
 ## 7. Evidence boundary and next gates
 
 - v1 remains the only native-verified sparse graph Laplacian.
-- v2 is a specified ABI only.
-- Next: freeze scratch/call ABI, implement the NaN16 weighted kernel and fixture, add it to the canonical assembler/guest workflow, then record the exact source digest and execution evidence.
-- Only after v2 native verification: add energy and component/nullity kernels; then pair-space action. Void potential, Lanczos, filters and wave evolution remain behind those gates.
+- v2 is native_verified for U8 integer weights 1..255 and I64 Q16.16 output; kernel digest is recorded above.
+- Next: implement independent graph energy and connected-component/nullity fixtures, including symmetry and reciprocal-weight validation.
+- Only after those invariants pass: implement pair-space action. Void potential, Lanczos, filters and wave evolution remain behind those gates.
