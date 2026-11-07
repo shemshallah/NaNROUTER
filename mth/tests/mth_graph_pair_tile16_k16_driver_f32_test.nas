@@ -26,6 +26,16 @@ mth_pair_driver_test_main:
   ADD r4,r4,r6
   ST r5,r4,0
 
+  ; Verify the staged source strip contains the expected float32 payload.
+  LA r4,@mth_driver_li
+  MOVI r6,19
+  ADD r4,r4,r6
+  LD r7,r4,0
+  MOVI r8,0
+  MOVHI r8,0x4000
+  CMP r7,r8
+  JMP[NE] @mth_pair_driver_test_fail
+
   LA r1,@mth_driver_li
   LA r2,@mth_driver_ukj
   LA r3,@mth_driver_uik
@@ -57,6 +67,14 @@ mth_pair_driver_lu_zero:
   PUTC r11
 mth_pair_driver_lu_checked:
   CMP r7,r8
+  JMP[EQ] @mth_pair_driver_lu_four
+  MOVI r11,63
+  PUTC r11
+  JMP @mth_pair_driver_lu_done
+mth_pair_driver_lu_four:
+  MOVI r11,52
+  PUTC r11
+mth_pair_driver_lu_done:
   JMP[NE] @mth_pair_driver_test_fail
   LA r4,@mth_driver_acc_ult
   MOVI r6,18
