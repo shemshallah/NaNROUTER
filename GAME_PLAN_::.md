@@ -1562,6 +1562,8 @@ These are actual seams in the current code, not hypothetical risks:
 | math health absent | `MthSystem.health()` can be green if math engine is broken | add optional math/linker/validity health and degrade if unavailable |
 | page-backed executor is not wired to a real guest | `mth_pair_tile_executor` has fake-boundary tests only; file pages are local | provide `NativePairTileGuest`/`CandidatePageStore` adapters, run K16 + full-U, prove atomic publication |
 | 2 MiB worker budget is aggregate | page executor's 10-worker arithmetic is not a VM memory fence | declare independent worker slots, pin memory, and test 10/11/12 worker admission |
+| covariance descriptor is not forced Hermitian | `wave_aperture` can select eigendecomposition for `covariance` without `hermitian=True` | validity must require `role=covariance ⇒ hermitian=True` or select a general decomposition |
+| point-0 doc byte arithmetic | docs say 131,072 words = 524,288 bytes; code uses 8-byte words = 1,048,576 | fix docs; 2 MiB target is 262,144 words |
 
 These are P0/P1 integration tests, not implementation details to defer.
 
