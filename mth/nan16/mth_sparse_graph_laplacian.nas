@@ -8,7 +8,7 @@
 ;   r3 = x, 256 signed I32 Q16.16 words
 ;   r4 = output, 256 signed I32 Q16.16 words
 ;   r5 = edge_count, 0..65280 (each undirected edge is stored twice)
-;   returns r1=1 on success, r1=0 on invalid descriptor/state
+;   returns r1=1 success, 0 invalid state/count, 2 invalid offsets, 3 invalid endpoints
 ;   requires r13=1; clobbers r1-r12; leaf routine, no static scratch.
 ;
 ; Numeric contract:
@@ -83,7 +83,7 @@ mth_sparse_graph_validate_neighbors:
   JMP[NE] @mth_sparse_graph_invalid_neighbors
   CMP r9,r8
   JMP[LT] @mth_sparse_graph_neighbor_ok
-  JMP @mth_sparse_graph_invalid
+  JMP @mth_sparse_graph_invalid_neighbors
 mth_sparse_graph_neighbor_ok:
   ADD r6,r6,r13
   SUB r7,r7,r13
