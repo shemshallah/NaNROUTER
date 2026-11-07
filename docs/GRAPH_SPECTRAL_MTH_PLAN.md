@@ -1,6 +1,6 @@
 # MTH Graph-Spectral Implementation Plan
 
-Status: implementation contract and ordered kernel plan. The mathematical foundation is specified in NaNLMind/docs/GRAPH_SPECTRAL_FOUNDATION.md. This document translates it into MTH-native NaN16 work. No host-language math implementation is permitted.
+Status: implementation contract and ordered kernel plan. The research-level source of truth is [game_plan_foundations.md](game_plan_foundations.md); the system-level translation is NaNLMind/docs/GRAPH_SPECTRAL_FOUNDATION.md. This document translates those foundations into MTH-native NaN16 work. No host-language math implementation is permitted.
 
 ## 1. Scope
 
