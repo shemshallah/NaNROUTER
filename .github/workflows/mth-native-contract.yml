@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [main, mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-k256-pair-space-v1-rebased]
+    branches: [main, 'mth-*', mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-k256-pair-space-v1-rebased]
   pull_request:
   workflow_dispatch:
 
@@ -400,3 +400,14 @@ jobs:
           cat build/mth/k256-pair-space.out
           cat build/mth/k256-pair-space.err
           grep -q '^MTH K256 PAIR SPACE V1 PASS' build/mth/k256-pair-space.out
+
+      - name: Assemble 256 pair-space tile16 fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_tile16_f32_test.nas > build/mth/pair-tile16.nan
+
+      - name: Execute 256 pair-space tile16 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/pair-tile16.nan --steps 30000000 --serial > build/mth/pair-tile16.out 2> build/mth/pair-tile16.err
+          cat build/mth/pair-tile16.out
+          cat build/mth/pair-tile16.err
+          grep -q '^MTH PAIR TILE16 F32 PASS' build/mth/pair-tile16.out

@@ -876,3 +876,14 @@ Both new fixtures are source-level checks only. Until assembled and executed, th
 4. Add vector copy/fill, elementwise checked add/subtract, dot product with a two-word accumulator, squared norm, and normalization status.
 5. Add exact rational primitives only after the integer kernel has differential fixtures.
 6. Build attention from explicit dot-product, scale, mask, stable-softmax, and weighted-sum operations; do not add an opaque attention opcode.
+
+
+## 20. Tiled pair-space matrix operation
+
+A NaN16-only dense 256×256 pair-space tile operation is source-written:
+`Y_tile = (LU + UL^T)_tile`, with 16×16 output tiles and two independent,
+ordered float32 accumulators per output cell. Its register ABI and working
+set are frozen in `docs/MTH_GRAPH_PAIR_TILE16_ABI_V1.md`. The L=2I
+fixture checks all 256 outputs in one tile. Canonical NaN16 CI run 218
+passed (4,643,414 guest steps), including a nonzero tile-origin case.
+Full page-window orchestration remains open.
