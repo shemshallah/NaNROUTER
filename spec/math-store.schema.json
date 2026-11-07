@@ -50,7 +50,8 @@
                 "math_schema",
                 "math_payload",
                 "math_event",
-                "math_certificate"
+                "math_certificate",
+                "math_commit_evidence"
               ],
               "properties": {
                 "math_schema": {
@@ -64,6 +65,9 @@
                 },
                 "math_certificate": {
                   "$ref": "#/$defs/math_certificate"
+                },
+                "math_commit_evidence": {
+                  "$ref": "#/$defs/math_commit_evidence"
                 }
               }
             }
@@ -96,7 +100,8 @@
                 "math_candidate",
                 "math_admission",
                 "math_mapping",
-                "math_preflight_cache"
+                "math_preflight_cache",
+                "math_commit_intent"
               ],
               "properties": {
                 "math_schema": {
@@ -137,6 +142,9 @@
                 },
                 "math_preflight_cache": {
                   "$ref": "#/$defs/math_preflight_cache"
+                },
+                "math_commit_intent": {
+                  "$ref": "#/$defs/math_commit_intent"
                 }
               }
             }
@@ -183,6 +191,7 @@
         "verdict",
         "mapping_object_type",
         "mapping_status",
+        "commit_intent_state",
         "event_type"
       ],
       "properties": {
@@ -278,6 +287,13 @@
             "active",
             "rolled_back",
             "disabled"
+          ]
+        },
+        "commit_intent_state": {
+          "const": [
+            "pending",
+            "finalized",
+            "failed"
           ]
         },
         "event_type": {
@@ -1101,6 +1117,152 @@
         "constraints": {
           "const": [
             "disposable: eviction never deletes canonical math data"
+          ]
+        }
+      }
+    },
+    "math_commit_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "intent_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "intent_id",
+            "mapping_id",
+            "object_type",
+            "object_id",
+            "target_version",
+            "target_digest",
+            "evidence_digest",
+            "base_version",
+            "base_generation",
+            "state",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "intent_id": "TEXT",
+            "mapping_id": "TEXT",
+            "object_type": "TEXT",
+            "object_id": "TEXT",
+            "target_version": "INTEGER",
+            "target_digest": "TEXT",
+            "evidence_digest": "TEXT",
+            "base_version": "INTEGER",
+            "base_generation": "INTEGER",
+            "base_mapping_digest": "TEXT",
+            "state": "TEXT",
+            "evidence_ref": "TEXT",
+            "failure_reason": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER",
+            "finalized_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "base_mapping_digest",
+            "evidence_ref",
+            "failure_reason",
+            "finalized_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "target_digest",
+            "evidence_digest",
+            "base_mapping_digest",
+            "evidence_ref"
+          ]
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "pending",
+            "finalized",
+            "failed"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "one pending intent binds an immutable target version/digest to a BS0DB evidence digest",
+            "base_version and base_generation are the expected mapping CAS base; 0/0 means no mapping yet",
+            "finalize verifies evidence and CASes the mapping in one MC0DB transaction",
+            "missing or mismatched evidence marks the intent failed without changing the active mapping",
+            "recovery is idempotent; finalized intents never move the mapping again"
+          ]
+        }
+      }
+    },
+    "math_commit_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "intent_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "intent_id",
+            "evidence_digest",
+            "mapping_id",
+            "object_type",
+            "object_id",
+            "target_version",
+            "target_digest",
+            "evidence_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "intent_id": "TEXT",
+            "evidence_digest": "TEXT",
+            "mapping_id": "TEXT",
+            "object_type": "TEXT",
+            "object_id": "TEXT",
+            "target_version": "INTEGER",
+            "target_digest": "TEXT",
+            "evidence_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "evidence_digest",
+            "target_digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "evidence_digest is SHA-256 over the canonical evidence JSON",
+            "appending the same intent evidence twice is idempotent",
+            "the stored mapping/object/target bindings must match the MC0DB intent",
+            "UPDATE and DELETE are rejected by triggers"
           ]
         }
       }

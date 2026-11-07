@@ -39,11 +39,13 @@ from .math_objects import (
 
 MATH_SCHEMA_VERSION = 1
 MATH_STORE_SCHEMA = "nanrouter.math-store.v1"
+MATH_STORE_HEALTH_SCHEMA = "nanrouter.math-store-health.v1"
 
 DEFAULT_CHUNK_BYTES = 1_048_576          # 1 MiB, the existing wave payload bound
 DEFAULT_MAX_PAYLOAD_BYTES = 2_097_152    # 2 MiB total math payload bound
 
 MAPPING_OBJECT_TYPES = frozenset({"leaf", "function", "rule", "relation"})
+COMMIT_INTENT_STATES = frozenset({"pending", "finalized", "failed"})
 EVENT_TYPES = frozenset({
     "propose", "preflight", "execute", "commit", "null", "void", "rollback",
     "mapping", "admission", "candidate", "leaf", "function", "rule",
@@ -65,6 +67,10 @@ class MathConflictError(MathStoreError):
 
 class StaleGenerationError(MathStoreError):
     """A compare-and-swap used a stale version or generation."""
+
+
+class MathCommitError(MathConflictError):
+    """A cross-store commit intent cannot be finalized as requested."""
 
 
 class MathReferenceError(MathStoreError):
@@ -354,6 +360,33 @@ CREATE TABLE IF NOT EXISTS math_preflight_cache (
 );
 CREATE INDEX IF NOT EXISTS math_preflight_cache_snapshot
     ON math_preflight_cache(snapshot_id, candidate_id, updated_tick);
+
+CREATE TABLE IF NOT EXISTS math_commit_intent (
+    intent_id TEXT PRIMARY KEY,
+    mapping_id TEXT NOT NULL,
+    object_type TEXT NOT NULL
+        CHECK(object_type IN ('leaf','function','rule','relation')),
+    object_id TEXT NOT NULL,
+    target_version INTEGER NOT NULL CHECK(target_version >= 1),
+    target_digest TEXT NOT NULL CHECK(length(target_digest) = 64),
+    evidence_digest TEXT NOT NULL CHECK(length(evidence_digest) = 64),
+    base_version INTEGER NOT NULL CHECK(base_version >= 0),
+    base_generation INTEGER NOT NULL CHECK(base_generation >= 0),
+    base_mapping_digest TEXT
+        CHECK(base_mapping_digest IS NULL OR length(base_mapping_digest) = 64),
+    state TEXT NOT NULL DEFAULT 'pending'
+        CHECK(state IN ('pending','finalized','failed')),
+    evidence_ref TEXT
+        CHECK(evidence_ref IS NULL OR length(evidence_ref) = 64),
+    failure_reason TEXT,
+    created_tick INTEGER NOT NULL CHECK(created_tick >= 0),
+    updated_tick INTEGER NOT NULL CHECK(updated_tick >= 0),
+    finalized_tick INTEGER CHECK(finalized_tick IS NULL OR finalized_tick >= 0)
+);
+CREATE INDEX IF NOT EXISTS math_commit_intent_state
+    ON math_commit_intent(state, created_tick, intent_id);
+CREATE INDEX IF NOT EXISTS math_commit_intent_target
+    ON math_commit_intent(mapping_id, target_version, intent_id);
 """
 
 _BS0_MATH_SCHEMA = """
@@ -427,6 +460,27 @@ CREATE TRIGGER IF NOT EXISTS math_certificate_no_update
 CREATE TRIGGER IF NOT EXISTS math_certificate_no_delete
     BEFORE DELETE ON math_certificate
     BEGIN SELECT RAISE(ABORT, 'math_certificate is append-only'); END;
+
+CREATE TABLE IF NOT EXISTS math_commit_evidence (
+    intent_id TEXT PRIMARY KEY,
+    evidence_digest TEXT NOT NULL CHECK(length(evidence_digest) = 64),
+    mapping_id TEXT NOT NULL,
+    object_type TEXT NOT NULL
+        CHECK(object_type IN ('leaf','function','rule','relation')),
+    object_id TEXT NOT NULL,
+    target_version INTEGER NOT NULL CHECK(target_version >= 1),
+    target_digest TEXT NOT NULL CHECK(length(target_digest) = 64),
+    evidence_json TEXT NOT NULL,
+    created_tick INTEGER NOT NULL CHECK(created_tick >= 0)
+);
+CREATE INDEX IF NOT EXISTS math_commit_evidence_target
+    ON math_commit_evidence(mapping_id, target_version, intent_id);
+CREATE TRIGGER IF NOT EXISTS math_commit_evidence_no_update
+    BEFORE UPDATE ON math_commit_evidence
+    BEGIN SELECT RAISE(ABORT, 'math_commit_evidence is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS math_commit_evidence_no_delete
+    BEFORE DELETE ON math_commit_evidence
+    BEGIN SELECT RAISE(ABORT, 'math_commit_evidence is append-only'); END;
 """
 
 
@@ -524,6 +578,45 @@ class MathStore:
     def _table_count(self, path: str, table: str) -> int:
         with self._connect(path) as db:
             return int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+
+    def health(self) -> dict[str, Any]:
+        """Token-free, read-only health projection of the math schema."""
+        try:
+            bs0_version = self._schema_version(self.bs0_path, "BS0DB")
+            mc0_version = self._schema_version(self.mc0_path, "MC0DB")
+            counts = {
+                "leaves": self._table_count(self.mc0_path, "math_leaf"),
+                "leaf_versions": self._table_count(
+                    self.mc0_path, "math_leaf_version"
+                ),
+                "functions": self._table_count(self.mc0_path, "math_function"),
+                "rules": self._table_count(self.mc0_path, "math_rule"),
+                "mappings": self._table_count(self.mc0_path, "math_mapping"),
+                "commit_intents": self._table_count(
+                    self.mc0_path, "math_commit_intent"
+                ),
+                "commit_evidence": self._table_count(
+                    self.bs0_path, "math_commit_evidence"
+                ),
+                "events": self._table_count(self.bs0_path, "math_event"),
+                "payloads": self._table_count(self.bs0_path, "math_payload"),
+            }
+            status = "green"
+            error = None
+        except Exception as exc:
+            bs0_version = None
+            mc0_version = None
+            counts = {}
+            status = "unhealthy"
+            error = type(exc).__name__
+        return {
+            "schema": MATH_STORE_HEALTH_SCHEMA,
+            "status": status,
+            "versions": {"bs0": bs0_version, "mc0": mc0_version},
+            "counts": counts,
+            "error": error,
+            "strict_content_digest": self.strict_content_digest,
+        }
 
     @staticmethod
     def _mapping_id(object_type: str, object_id: str) -> str:
@@ -2111,6 +2204,687 @@ class MathStore:
             )
         return removed
 
+    # -- cross-store commit intents -----------------------------------------
+    #
+    # BS0DB and MC0DB are separate SQLite databases, so this is not a
+    # distributed transaction.  A commit is crash-consistent instead:
+    #
+    #   1. MC0DB records an intent with the expected base mapping and the
+    #      evidence digest that must be present in BS0DB.
+    #   2. BS0DB appends that evidence idempotently.
+    #   3. MC0DB verifies both stores under BEGIN IMMEDIATE, CASes the active
+    #      mapping, and marks the intent finalized in one local transaction.
+    #
+    # A pending intent with matching evidence can be finalized by recovery.
+    # Missing/mismatched evidence or a stale base fails the intent without
+    # changing the active mapping.  Replays are idempotent.
+
+    @staticmethod
+    def _commit_intent_id(object_type: str, object_id: str, mapping_id: str,
+                          target_version: int, target_digest: str,
+                          evidence_digest: str, base_version: int,
+                          base_generation: int,
+                          base_mapping_digest: str | None) -> str:
+        return sha256_text(canonical_json({
+            "object_type": object_type,
+            "object_id": object_id,
+            "mapping_id": mapping_id,
+            "target_version": target_version,
+            "target_digest": target_digest,
+            "evidence_digest": evidence_digest,
+            "base_version": base_version,
+            "base_generation": base_generation,
+            "base_mapping_digest": base_mapping_digest,
+        }))
+
+    @staticmethod
+    def _intent_matches(row: sqlite3.Row | Mapping[str, Any],
+                        **fields: Any) -> bool:
+        for name, value in fields.items():
+            if value is not None and row[name] != value:
+                return False
+        return True
+
+    def begin_commit_intent(
+        self, object_type: str, object_id: str,
+        target_version: int | None = None,
+        target_digest: str | None = None,
+        evidence_digest: str | None = None, *,
+        expected_version: int | None = None,
+        expected_generation: int | None = None,
+        expected_mapping_digest: str | None = None,
+        mapping_id: str | None = None,
+        intent_id: str | None = None,
+        tick: int = 0,
+        version: int | None = None,
+        digest: str | None = None,
+        base_version: int | None = None,
+        base_generation: int | None = None,
+        base_digest: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a pending cross-store commit intent in MC0DB.
+
+        ``expected_version``/``expected_generation`` (aliases ``base_*``)
+        default to the current mapping pointer, or 0/0 when no mapping exists.
+        The target immutable version need not exist yet; finalization verifies
+        it.  Repeating the same intent is idempotent.
+        """
+        if object_type not in MAPPING_OBJECT_TYPES:
+            raise MathStoreError(
+                f"object_type must be one of: "
+                f"{', '.join(sorted(MAPPING_OBJECT_TYPES))}"
+            )
+        _require_text("object_id", object_id, maximum=200)
+        if target_version is None:
+            target_version = version
+        if target_digest is None:
+            target_digest = digest
+        if target_version is None:
+            raise MathStoreError("target_version is required")
+        if target_digest is None:
+            raise MathStoreError("target_digest is required")
+        if evidence_digest is None:
+            raise MathStoreError("evidence_digest is required")
+        _require_int("target_version", target_version, minimum=1)
+        _require_digest("target_digest", target_digest)
+        _require_digest("evidence_digest", evidence_digest)
+        _require_int("tick", tick)
+        if expected_version is None:
+            expected_version = base_version
+        if expected_generation is None:
+            expected_generation = base_generation
+        if expected_mapping_digest is None:
+            expected_mapping_digest = base_digest
+        if expected_version is not None:
+            _require_int("expected_version", expected_version, minimum=0)
+        if expected_generation is not None:
+            _require_int(
+                "expected_generation", expected_generation, minimum=0
+            )
+        if expected_mapping_digest is not None:
+            _require_digest(
+                "expected_mapping_digest", expected_mapping_digest
+            )
+        if mapping_id is None:
+            mapping_id = self._mapping_id(object_type, object_id)
+        _require_text("mapping_id", mapping_id, maximum=300)
+        if intent_id is not None:
+            _require_text("intent_id", intent_id, maximum=300)
+
+        with self._write(self.mc0_path) as db:
+            if intent_id is not None:
+                existing = db.execute(
+                    "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                    (intent_id,),
+                ).fetchone()
+                if existing is not None:
+                    if not self._intent_matches(
+                        existing, object_type=object_type,
+                        object_id=object_id, mapping_id=mapping_id,
+                        target_version=target_version,
+                        target_digest=target_digest,
+                        evidence_digest=evidence_digest,
+                        base_version=expected_version,
+                        base_generation=expected_generation,
+                        base_mapping_digest=expected_mapping_digest,
+                    ):
+                        raise MathConflictError(
+                            f"commit intent {intent_id!r} already exists with "
+                            "different bindings"
+                        )
+                    return _row_record(existing)
+
+            mapping = db.execute(
+                "SELECT * FROM math_mapping WHERE mapping_id=?",
+                (mapping_id,),
+            ).fetchone()
+            if mapping is None:
+                if expected_version is None:
+                    expected_version = 0
+                if expected_generation is None:
+                    expected_generation = 0
+                if expected_mapping_digest is None:
+                    expected_mapping_digest = None
+            else:
+                if (str(mapping["object_type"]) != object_type
+                        or str(mapping["object_id"]) != object_id):
+                    raise MathConflictError(
+                        f"mapping {mapping_id!r} names a different object"
+                    )
+                if expected_version is None:
+                    expected_version = int(mapping["current_version"])
+                if expected_generation is None:
+                    expected_generation = int(mapping["generation"])
+                if expected_mapping_digest is None:
+                    expected_mapping_digest = str(mapping["target_digest"])
+            if intent_id is None:
+                intent_id = self._commit_intent_id(
+                    object_type, object_id, mapping_id, target_version,
+                    target_digest, evidence_digest, expected_version,
+                    expected_generation, expected_mapping_digest,
+                )
+            existing = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            if existing is not None:
+                if not self._intent_matches(
+                    existing, object_type=object_type, object_id=object_id,
+                    mapping_id=mapping_id, target_version=target_version,
+                    target_digest=target_digest,
+                    evidence_digest=evidence_digest,
+                    base_version=expected_version,
+                    base_generation=expected_generation,
+                    base_mapping_digest=expected_mapping_digest,
+                ):
+                    raise MathConflictError(
+                        f"commit intent {intent_id!r} already exists with "
+                        "different bindings"
+                    )
+                return _row_record(existing)
+
+            db.execute(
+                "INSERT INTO math_commit_intent(intent_id, mapping_id, "
+                "object_type, object_id, target_version, target_digest, "
+                "evidence_digest, base_version, base_generation, "
+                "base_mapping_digest, state, created_tick, updated_tick) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
+                (intent_id, mapping_id, object_type, object_id,
+                 target_version, target_digest, evidence_digest,
+                 expected_version, expected_generation,
+                 expected_mapping_digest, tick, tick),
+            )
+            row = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+        return _row_record(row)
+
+    def _load_commit_evidence(self,
+                              intent_id: str) -> dict[str, Any] | None:
+        with self._connect(self.bs0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_commit_evidence WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+        return None if row is None else _row_record(row)
+
+    def append_commit_evidence(self, intent_id: str,
+                               evidence: Any = None, *,
+                               payload: Any = None,
+                               tick: int = 0) -> dict[str, Any]:
+        """Append canonical evidence to BS0DB for an existing intent.
+
+        The evidence digest must equal the digest declared by the intent.  A
+        byte-identical replay returns the stored row without appending again.
+        """
+        _require_text("intent_id", intent_id, maximum=300)
+        _require_int("tick", tick)
+        if evidence is None:
+            evidence = payload
+        if evidence is None:
+            raise MathStoreError("evidence is required")
+        evidence_json = _canonical(evidence, "commit evidence")
+        evidence_digest = sha256_text(evidence_json)
+
+        with self._connect(self.mc0_path) as db:
+            intent_row = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+        if intent_row is None:
+            raise MathReferenceError(f"unknown commit intent {intent_id!r}")
+        intent = _row_record(intent_row)
+        if evidence_digest != str(intent["evidence_digest"]):
+            raise MathConflictError(
+                f"evidence digest {evidence_digest} does not match commit "
+                f"intent {intent_id!r} evidence digest "
+                f"{intent['evidence_digest']}"
+            )
+
+        with self._write(self.bs0_path) as db:
+            existing = db.execute(
+                "SELECT * FROM math_commit_evidence WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            if existing is not None:
+                same = (
+                    str(existing["evidence_digest"]) == evidence_digest
+                    and str(existing["evidence_json"]) == evidence_json
+                    and str(existing["mapping_id"]) == str(intent["mapping_id"])
+                    and str(existing["object_type"])
+                    == str(intent["object_type"])
+                    and str(existing["object_id"]) == str(intent["object_id"])
+                    and int(existing["target_version"])
+                    == int(intent["target_version"])
+                    and str(existing["target_digest"])
+                    == str(intent["target_digest"])
+                )
+                if not same:
+                    raise MathConflictError(
+                        f"commit evidence for intent {intent_id!r} already "
+                        "exists with different content"
+                    )
+                record = _row_record(existing)
+                record["reused"] = True
+                return record
+            db.execute(
+                "INSERT INTO math_commit_evidence(intent_id, evidence_digest, "
+                "mapping_id, object_type, object_id, target_version, "
+                "target_digest, evidence_json, created_tick) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (intent_id, evidence_digest, str(intent["mapping_id"]),
+                 str(intent["object_type"]), str(intent["object_id"]),
+                 int(intent["target_version"]), str(intent["target_digest"]),
+                 evidence_json, tick),
+            )
+            row = db.execute(
+                "SELECT * FROM math_commit_evidence WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            record = _row_record(row)
+            record["reused"] = False
+            return record
+
+    def get_commit_intent(self, intent_id: str) -> dict[str, Any]:
+        _require_text("intent_id", intent_id, maximum=300)
+        with self._connect(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+        if row is None:
+            raise MathReferenceError(f"unknown commit intent {intent_id!r}")
+        return _row_record(row)
+
+    def get_intent(self, intent_id: str) -> dict[str, Any]:
+        """Alias for :meth:`get_commit_intent`."""
+        return self.get_commit_intent(intent_id)
+
+    def list_commit_intents(self, *, state: str | None = None,
+                            limit: int = 1024) -> list[dict[str, Any]]:
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathStoreError("limit must be <= 65536")
+        query = "SELECT * FROM math_commit_intent"
+        args: list[Any] = []
+        if state is not None:
+            if state not in COMMIT_INTENT_STATES:
+                raise MathStoreError(
+                    f"state must be one of: "
+                    f"{', '.join(sorted(COMMIT_INTENT_STATES))}"
+                )
+            query += " WHERE state=?"
+            args.append(state)
+        query += " ORDER BY created_tick ASC, intent_id ASC LIMIT ?"
+        args.append(limit)
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(query, args).fetchall()
+        return [_row_record(row) for row in rows]
+
+    def list_pending_intents(self, *, limit: int = 1024) -> list[dict[str, Any]]:
+        """List pending intents in recovery order."""
+        return self.list_commit_intents(state="pending", limit=limit)
+
+    def get_commit_evidence(self, intent_id: str) -> dict[str, Any]:
+        _require_text("intent_id", intent_id, maximum=300)
+        record = self._load_commit_evidence(intent_id)
+        if record is None:
+            raise MathReferenceError(
+                f"commit evidence for intent {intent_id!r} is missing"
+            )
+        actual = sha256_text(str(record["evidence_json"]))
+        if actual != str(record["evidence_digest"]):
+            raise MathReferenceError(
+                f"commit evidence for intent {intent_id!r} is corrupt"
+            )
+        return record
+
+    def get_evidence(self, intent_id: str) -> dict[str, Any]:
+        """Alias for :meth:`get_commit_evidence`."""
+        return self.get_commit_evidence(intent_id)
+
+    def list_commit_evidence(self, *, limit: int = 1024) -> list[dict[str, Any]]:
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathStoreError("limit must be <= 65536")
+        with self._connect(self.bs0_path) as db:
+            rows = db.execute(
+                "SELECT * FROM math_commit_evidence "
+                "ORDER BY created_tick ASC, intent_id ASC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        records = []
+        for row in rows:
+            record = _row_record(row)
+            if sha256_text(str(record["evidence_json"])) != str(
+                    record["evidence_digest"]):
+                raise MathReferenceError(
+                    f"commit evidence for intent {record['intent_id']!r} "
+                    "is corrupt"
+                )
+            records.append(record)
+        return records
+
+    @staticmethod
+    def _verify_commit_evidence_record(intent: Mapping[str, Any],
+                                       evidence: Mapping[str, Any]) -> None:
+        if str(evidence["evidence_digest"]) != str(intent["evidence_digest"]):
+            raise MathCommitError(
+                f"commit intent {intent['intent_id']!r} evidence digest "
+                "does not match the intent"
+            )
+        if (str(evidence["mapping_id"]) != str(intent["mapping_id"])
+                or str(evidence["object_type"]) != str(intent["object_type"])
+                or str(evidence["object_id"]) != str(intent["object_id"])
+                or int(evidence["target_version"])
+                != int(intent["target_version"])
+                or str(evidence["target_digest"])
+                != str(intent["target_digest"])):
+            raise MathCommitError(
+                f"commit evidence for intent {intent['intent_id']!r} names "
+                "different target bindings"
+            )
+        actual = sha256_text(str(evidence["evidence_json"]))
+        if actual != str(evidence["evidence_digest"]):
+            raise MathReferenceError(
+                f"commit evidence for intent {intent['intent_id']!r} is "
+                "corrupt"
+            )
+
+    def verify_commit_evidence(self, intent_id: str, *,
+                               evidence_digest: str | None = None) -> bool:
+        """Verify that BS0DB evidence matches the MC0DB intent bindings."""
+        _require_text("intent_id", intent_id, maximum=300)
+        if evidence_digest is not None:
+            _require_digest("evidence_digest", evidence_digest)
+        intent = self.get_commit_intent(intent_id)
+        evidence = self._load_commit_evidence(intent_id)
+        if evidence is None:
+            raise MathReferenceError(
+                f"commit evidence for intent {intent_id!r} is missing"
+            )
+        if (evidence_digest is not None
+                and str(evidence["evidence_digest"]) != evidence_digest):
+            raise MathCommitError(
+                f"commit evidence for intent {intent_id!r} has digest "
+                f"{evidence['evidence_digest']}, not {evidence_digest}"
+            )
+        self._verify_commit_evidence_record(intent, evidence)
+        return True
+
+    def verify_evidence(self, intent_id: str, *,
+                        evidence_digest: str | None = None) -> bool:
+        """Alias for :meth:`verify_commit_evidence`."""
+        return self.verify_commit_evidence(
+            intent_id, evidence_digest=evidence_digest
+        )
+
+    def _check_commit_base_tx(self, intent: Mapping[str, Any],
+                              mapping: sqlite3.Row | None) -> None:
+        base_version = int(intent["base_version"])
+        base_generation = int(intent["base_generation"])
+        base_digest = intent["base_mapping_digest"]
+        if mapping is None:
+            if base_version != 0 or base_generation != 0:
+                raise StaleGenerationError(
+                    f"mapping {intent['mapping_id']!r} is absent, not at "
+                    f"version {base_version} generation {base_generation}"
+                )
+            if base_digest is not None:
+                raise StaleGenerationError(
+                    f"mapping {intent['mapping_id']!r} is absent, not at "
+                    f"digest {base_digest}"
+                )
+            return
+        if (str(mapping["object_type"]) != str(intent["object_type"])
+                or str(mapping["object_id"]) != str(intent["object_id"])):
+            raise MathConflictError(
+                f"mapping {intent['mapping_id']!r} names a different object"
+            )
+        if (int(mapping["current_version"]) != base_version
+                or int(mapping["generation"]) != base_generation):
+            raise StaleGenerationError(
+                f"mapping {intent['mapping_id']!r} is at version "
+                f"{mapping['current_version']} generation "
+                f"{mapping['generation']}, not version {base_version} "
+                f"generation {base_generation}"
+            )
+        if (base_digest is not None
+                and str(mapping["target_digest"]) != str(base_digest)):
+            raise StaleGenerationError(
+                f"mapping {intent['mapping_id']!r} is at digest "
+                f"{mapping['target_digest']}, not {base_digest}"
+            )
+
+    def _finalize_commit_intent_tx(
+        self, intent_id: str, tick: int,
+    ) -> tuple[dict[str, Any], MathStoreError | None]:
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(
+                    f"unknown commit intent {intent_id!r}"
+                )
+            intent = _row_record(row)
+            if intent["state"] == "finalized":
+                return intent, None
+            if intent["state"] == "failed":
+                return intent, MathCommitError(
+                    f"commit intent {intent_id!r} already failed: "
+                    f"{intent.get('failure_reason') or 'unknown reason'}"
+                )
+
+            try:
+                target = self._object_version_digest_tx(
+                    db, str(intent["object_type"]), str(intent["object_id"]),
+                    int(intent["target_version"]),
+                )
+                if target is None:
+                    raise MathReferenceError(
+                        f"{intent['object_type']} {intent['object_id']!r} "
+                        f"version {intent['target_version']} is missing"
+                    )
+                if target != str(intent["target_digest"]):
+                    raise MathCommitError(
+                        f"target {intent['object_type']} "
+                        f"{intent['object_id']!r} version "
+                        f"{intent['target_version']} digest is {target}, "
+                        f"not {intent['target_digest']}"
+                    )
+                evidence = self._load_commit_evidence(intent_id)
+                if evidence is None:
+                    raise MathReferenceError(
+                        f"commit evidence for intent {intent_id!r} is missing"
+                    )
+                self._verify_commit_evidence_record(intent, evidence)
+                mapping = db.execute(
+                    "SELECT * FROM math_mapping WHERE mapping_id=?",
+                    (str(intent["mapping_id"]),),
+                ).fetchone()
+                self._check_commit_base_tx(intent, mapping)
+            except MathStoreError as exc:
+                reason = str(exc) or type(exc).__name__
+                db.execute(
+                    "UPDATE math_commit_intent SET state='failed', "
+                    "failure_reason=?, updated_tick=? "
+                    "WHERE intent_id=? AND state='pending'",
+                    (reason[:512], tick, intent_id),
+                )
+                failed = db.execute(
+                    "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                    (intent_id,),
+                ).fetchone()
+                return _row_record(failed), exc
+
+            if mapping is None:
+                new_generation = 1
+                db.execute(
+                    "INSERT INTO math_mapping(mapping_id, object_type, "
+                    "object_id, current_version, generation, target_digest, "
+                    "storage_tier, route, status, created_tick, updated_tick) "
+                    "VALUES (?, ?, ?, ?, 1, ?, 'BS0DB', 'local', 'active', "
+                    "?, ?)",
+                    (str(intent["mapping_id"]),
+                     str(intent["object_type"]), str(intent["object_id"]),
+                     int(intent["target_version"]),
+                     str(intent["target_digest"]), tick, tick),
+                )
+            else:
+                same_target = (
+                    int(mapping["current_version"])
+                    == int(intent["target_version"])
+                    and str(mapping["target_digest"])
+                    == str(intent["target_digest"])
+                )
+                if same_target:
+                    new_generation = int(mapping["generation"])
+                else:
+                    new_generation = int(mapping["generation"]) + 1
+                    db.execute(
+                        "UPDATE math_mapping SET current_version=?, "
+                        "generation=?, target_digest=?, status='active', "
+                        "updated_tick=? WHERE mapping_id=?",
+                        (int(intent["target_version"]), new_generation,
+                         str(intent["target_digest"]), tick,
+                         str(intent["mapping_id"])),
+                    )
+            db.execute(
+                "UPDATE math_commit_intent SET state='finalized', "
+                "evidence_ref=?, failure_reason=NULL, updated_tick=?, "
+                "finalized_tick=? WHERE intent_id=? AND state='pending'",
+                (str(intent["evidence_digest"]), tick, tick, intent_id),
+            )
+            finalized = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            return _row_record(finalized), None
+
+    def finalize_commit_intent(self, intent_id: str, *,
+                               tick: int = 0) -> dict[str, Any]:
+        """Atomically verify evidence/base state, CAS the mapping, finalize.
+
+        A pending intent whose evidence and base generation match is committed
+        in one MC0DB transaction.  Any mismatch fails the intent and leaves the
+        previous active mapping untouched.  Replaying a finalized intent is a
+        no-op that returns the finalized record.
+        """
+        _require_text("intent_id", intent_id, maximum=300)
+        _require_int("tick", tick)
+        record, failure = self._finalize_commit_intent_tx(intent_id, tick)
+        if failure is not None:
+            raise failure
+        return record
+
+    def finalize_intent(self, intent_id: str, *,
+                        tick: int = 0) -> dict[str, Any]:
+        """Alias for :meth:`finalize_commit_intent`."""
+        return self.finalize_commit_intent(intent_id, tick=tick)
+
+    def fail_commit_intent(self, intent_id: str, reason: str = "aborted", *,
+                           tick: int = 0) -> dict[str, Any]:
+        """Mark a pending intent failed without touching the active mapping."""
+        _require_text("intent_id", intent_id, maximum=300)
+        _require_text("reason", reason, maximum=512)
+        _require_int("tick", tick)
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(
+                    f"unknown commit intent {intent_id!r}"
+                )
+            intent = _row_record(row)
+            if intent["state"] == "finalized":
+                raise MathCommitError(
+                    f"commit intent {intent_id!r} is already finalized"
+                )
+            if intent["state"] == "failed":
+                return intent
+            db.execute(
+                "UPDATE math_commit_intent SET state='failed', "
+                "failure_reason=?, updated_tick=? WHERE intent_id=?",
+                (reason, tick, intent_id),
+            )
+            failed = db.execute(
+                "SELECT * FROM math_commit_intent WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+        return _row_record(failed)
+
+    def abort_commit_intent(self, intent_id: str, reason: str = "aborted", *,
+                            tick: int = 0) -> dict[str, Any]:
+        """Alias for :meth:`fail_commit_intent`."""
+        return self.fail_commit_intent(intent_id, reason, tick=tick)
+
+    def recover_pending_intents(self, *, tick: int = 0,
+                                limit: int = 1024) -> list[dict[str, Any]]:
+        """Finalize or fail every pending intent, returning the outcomes.
+
+        Matching evidence commits the mapping; missing/mismatched evidence or
+        a stale base marks that intent failed and leaves the mapping intact.
+        """
+        _require_int("tick", tick)
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathStoreError("limit must be <= 65536")
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(
+                "SELECT intent_id FROM math_commit_intent "
+                "WHERE state='pending' ORDER BY created_tick ASC, "
+                "intent_id ASC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        results: list[dict[str, Any]] = []
+        for row in rows:
+            intent_id = str(row["intent_id"])
+            try:
+                record, failure = self._finalize_commit_intent_tx(
+                    intent_id, tick
+                )
+            except MathStoreError as exc:
+                results.append({
+                    "intent_id": intent_id,
+                    "state": "pending",
+                    "recovered": False,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                })
+                continue
+            outcome = dict(record)
+            outcome["recovered"] = failure is None
+            if failure is not None:
+                outcome["error"] = str(failure)
+                outcome["error_type"] = type(failure).__name__
+            results.append(outcome)
+        return results
+
+    def recover_intents(self, *, tick: int = 0,
+                        limit: int = 1024) -> list[dict[str, Any]]:
+        """Alias for :meth:`recover_pending_intents`."""
+        return self.recover_pending_intents(tick=tick, limit=limit)
+
+    # Aliases kept intentionally small and explicit for callers that use the
+    # shorter §9.7 vocabulary.
+    begin_intent = begin_commit_intent
+    begin_commit = begin_commit_intent
+    append_evidence = append_commit_evidence
+    append_intent_evidence = append_commit_evidence
+    verify_intent_evidence = verify_commit_evidence
+    finalize_commit = finalize_commit_intent
+    fail_intent = fail_commit_intent
+    list_intents = list_commit_intents
+    pending_intents = list_pending_intents
+    list_evidence = list_commit_evidence
+    recover_commit_intents = recover_pending_intents
+    recover = recover_pending_intents
+
     # -- events --------------------------------------------------------------
 
     def append_event(self, event_type: str, object_type: str, object_id: str,
@@ -2295,6 +3069,12 @@ class MathStore:
                 "math_preflight_cache": self._table_count(
                     self.mc0_path, "math_preflight_cache"
                 ),
+                "math_commit_intent": self._table_count(
+                    self.mc0_path, "math_commit_intent"
+                ),
+                "math_commit_evidence": self._table_count(
+                    self.bs0_path, "math_commit_evidence"
+                ),
                 "math_event": self._table_count(
                     self.bs0_path, "math_event"
                 ),
@@ -2396,8 +3176,9 @@ class MathStore:
 
 
 __all__ = [
-    "DEFAULT_CHUNK_BYTES", "DEFAULT_MAX_PAYLOAD_BYTES", "EVENT_TYPES",
-    "MAPPING_OBJECT_TYPES", "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA",
+    "COMMIT_INTENT_STATES", "DEFAULT_CHUNK_BYTES",
+    "DEFAULT_MAX_PAYLOAD_BYTES", "EVENT_TYPES", "MAPPING_OBJECT_TYPES",
+    "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA", "MathCommitError",
     "MathConflictError", "MathPayloadError", "MathReferenceError",
     "MathSchemaError", "MathStore", "MathStoreError", "StaleGenerationError",
 ]

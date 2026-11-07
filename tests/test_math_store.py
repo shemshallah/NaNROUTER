@@ -607,6 +607,19 @@ class MathStoreTests(unittest.TestCase):
 
     # -- append-only evidence ----------------------------------------------
 
+    def test_store_health_reports_schema_and_counts_without_secrets(self):
+        self.store.put_leaf(self.make_leaf())
+        health = self.store.health()
+        self.assertEqual(
+            health["schema"], "nanrouter.math-store-health.v1"
+        )
+        self.assertEqual(health["status"], "green")
+        self.assertEqual(health["versions"], {"bs0": 1, "mc0": 1})
+        self.assertGreaterEqual(health["counts"]["leaves"], 1)
+        rendered = json.dumps(health, sort_keys=True)
+        self.assertNotIn("token", rendered.lower())
+        self.assertNotIn("secret", rendered.lower())
+
     def test_events_and_payloads_are_append_only(self):
         propose = self.store.append_event(
             "propose", "candidate", "cnd:event-test", version=1,
