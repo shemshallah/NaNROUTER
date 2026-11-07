@@ -73,7 +73,7 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 33 kernels into MC0DB |
+| `tools/register_wave_capabilities.py` | registers 34 kernels into MC0DB |
 | `spec/wave-capabilities.json` | 34-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 69 steps, 33 fixtures, all passing |
@@ -558,7 +558,7 @@ The plan validator rejects unknown/stale/unverified kernels, unsafe workspace, d
 
 ### 6.4 Executor contract
 
-The executor:
+The runtime facade is `runner_riddle/mth_system.py` (`MthSystem`, 11 tests). The executor:
 
 1. validates the plan against the registry;
 2. submits a bounded job through WaveService/NaNROUTER;
