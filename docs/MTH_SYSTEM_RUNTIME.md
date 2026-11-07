@@ -47,7 +47,7 @@ system = MthSystem(
     store,
     service,
     scheduler,
-    guest_budget_bytes=512 * 1024,   # separately declared guest budget
+    guest_budget_bytes=1024 * 1024,  # 1 MiB target; override per deployment
     workspace_word_bytes=8,           # 64-bit NaN16 word
     enforce_active_slot=True,
 )
@@ -58,14 +58,16 @@ The constructor does not start the scheduler. The caller still owns ring
 startup, heartbeat, cycle, failover, and checkpoint policy.
 
 `guest_budget_bytes` is separate from the plan bound and from the runner
-ceiling. If it is omitted, the scheduler's declared
-`max_active_memory_bytes` is used. The effective workspace budget is:
+ceiling. If it is omitted, the 1 MiB target
+(`DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024`) is used. The effective workspace
+budget is:
 
 ```text
 workspace_budget_bytes = min(guest_budget_bytes, scheduler.max_active_memory_bytes)
 ```
 
-No hardware size is invented by this module. `workspace_word_bytes` defaults
+The value is adjustable through the constructor; the 1 MiB default is policy,
+not a hardware measurement. No hardware size is invented by this module. `workspace_word_bytes` defaults
 to `8` because the point-0 framing contract counts 64-bit NaN16 words; a caller
 using a different workspace word width must declare it.
 

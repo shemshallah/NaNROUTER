@@ -38,6 +38,10 @@ POINT_ZERO_WIRE = "BSR0"
 # this if their plan workspace is expressed in a different word width.
 DEFAULT_WORKSPACE_WORD_BYTES = 8
 
+# The announced 1 MiB guest target.  Callers may override this per plan or
+# deployment; the effective budget is still min(guest, runner-ceiling).
+DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024
+
 
 class MthSystemError(ValueError):
     """Base class for runtime-facade validation and state failures."""
@@ -75,9 +79,10 @@ class MthSystem:
     ring they passed in.  The facade only reads the ring snapshot.
 
     ``guest_budget_bytes`` is the separately declared guest working-set budget.
-    When omitted, the scheduler's declared ``max_active_memory_bytes`` is used.
-    The effective workspace budget is the smaller of the guest budget and the
-    runner budget.  No hardware size is assumed beyond those declared values.
+    When omitted, :data:`DEFAULT_GUEST_BUDGET_BYTES` (1 MiB) is used.  The
+    effective workspace budget is the smaller of the guest budget and the
+    runner ceiling.  Callers can override both values; no hardware size is
+    inferred from the 7 GiB runner ceiling.
     """
 
     def __init__(
@@ -115,7 +120,7 @@ class MthSystem:
         )
         self.runner_budget_bytes = scheduler.max_active_memory_bytes
         if guest_budget_bytes is None:
-            guest_budget_bytes = self.runner_budget_bytes
+            guest_budget_bytes = DEFAULT_GUEST_BUDGET_BYTES
         self.guest_budget_bytes = _require_int(
             "guest_budget_bytes", guest_budget_bytes, minimum=0
         )
@@ -461,6 +466,7 @@ class MthSystem:
 
 
 __all__ = [
+    "DEFAULT_GUEST_BUDGET_BYTES",
     "DEFAULT_WORKSPACE_WORD_BYTES",
     "HEALTH_SCHEMA",
     "MthSystem",

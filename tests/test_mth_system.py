@@ -12,6 +12,7 @@ from runner_riddle.mth_registry import (
     MthRegistry,
 )
 from runner_riddle.mth_system import (
+    DEFAULT_GUEST_BUDGET_BYTES,
     POINT_ZERO_ADDRESS,
     MthSystem,
     MthSystemConfigError,
@@ -240,6 +241,13 @@ class MthSystemTests(unittest.TestCase):
             self.submit(plan, system=system)
         self.assertEqual(self.store.health()["jobs"]["queued"], 0)
 
+    def test_default_guest_budget_is_1_mib_and_overridable(self):
+        self.assertEqual(self.system.guest_budget_bytes, DEFAULT_GUEST_BUDGET_BYTES)
+        self.assertEqual(DEFAULT_GUEST_BUDGET_BYTES, 1024 * 1024)
+        self.assertEqual(self.system.workspace_budget_bytes, 1024 * 1024)
+        larger = self.make_system(guest_budget_bytes=2 * 1024 * 1024)
+        self.assertEqual(larger.workspace_budget_bytes, 2 * 1024 * 1024)
+
     def test_separately_declared_guest_budget_is_enforced(self):
         plan = self.make_plan()
         guest_system = self.make_system(guest_budget_bytes=16)
@@ -365,7 +373,7 @@ class MthSystemTests(unittest.TestCase):
         )
         self.assertEqual(
             health["budgets"]["guest_budget_bytes"],
-            self.scheduler.max_active_memory_bytes,
+            DEFAULT_GUEST_BUDGET_BYTES,
         )
         self.assertEqual(health["budgets"]["workspace_word_bytes"], 8)
         self.assertEqual(health["store"]["jobs"]["done"], 1)

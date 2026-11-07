@@ -3,9 +3,10 @@
 Status: source-written and locally executed PASS with the canonical NaN0S
 `nan_cli` as a `nan-text` image (67,597 NaN16 words; 11,002,235 guest
 steps). The image is larger than the historical 65,536-word / 512 KiB
-declared guest budget, so plan-level promotion is **pending the 1 MiB
-GLT guest** (131,072 NaN16 words). The local text loader accepted the
-full image; see §6.
+declared guest budget, so it is a 1 MiB-target fixture: scheduling it
+under the old declared budget requires the pending GLT limit increase
+(131,072 NaN16 words). The local text loader accepted the full image;
+see §6.
 
 ## 1. Scope
 
@@ -152,6 +153,15 @@ MTH SVD TOP256 PASS
 
 `awk -f ... -v CMD=check` on the emitted image reports `check: 0
 mismatches`.
+
+The existing repository fixture harness also reports:
+
+```
+[PASS] svd256: PASS steps=11002235 marker=MTH SVD TOP256 PASS
+```
+
+That harness entry is outside this change's owned file set and was not
+edited here.
 
 The local `nan_cli` accepts this image through its `nan-text` loader,
 which uses the 4M-word VM and is not capped at the historical 65,536

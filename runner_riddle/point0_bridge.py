@@ -52,7 +52,9 @@ POINT_ZERO_LABEL = "point-0"
 WIRE_ENDIAN = "big"
 WORD_BITS = 64
 WORD_BYTES = WORD_BITS // 8
-MAX_FRAME_WORDS = 65536
+# 1 MiB / 8-byte NaN16 word = 131,072 words.  Bridge instances may set a
+# smaller per-frame limit; this is only the hard ceiling.
+MAX_FRAME_WORDS = 131072
 MAX_PAYLOAD_BYTES = MAX_FRAME_WORDS * WORD_BYTES
 
 MAGIC = b"N16B"

@@ -86,7 +86,7 @@ not a whole number of 64-bit words, an out-of-range slot/epoch, and any digest
 mismatch. It also rejects truncated envelopes and envelopes with trailing
 bytes.
 
-The hard length bound is `MAX_FRAME_WORDS == 65536`, therefore
+The hard length bound is `MAX_FRAME_WORDS == 131072` (1 MiB / 8 bytes), therefore
 `MAX_PAYLOAD_BYTES == 524288`. A custom bridge may use a smaller `max_words`
 bound.
 
@@ -254,7 +254,7 @@ and `OversizedFrameError` are aliases for compatibility.
 python3 -m unittest tests.test_point0_bridge -v
 ```
 
-The suite covers 0/1/65536-word round trips, boundary lengths, big-endian
+The suite covers 0/1/131072-word round trips, boundary lengths, big-endian
 layout, bad magic/version/length/digest, truncation/trailing bytes, stable
 point-0 identity, active-slot routing, a scheduler cycle reaching the new slot
 through the same point-0 address, stale/inactive rejection before executor
