@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/wave-seal.schema.json",
+  "title": "NaNROUTER wave state seal/cartridge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "seal_id",
+    "universe_id",
+    "generation",
+    "topology_digest",
+    "operator_digest",
+    "precision",
+    "ring_signature",
+    "evidence_level",
+    "provenance",
+    "signature"
+  ],
+  "properties": {
+    "schema": {"const": "nanrouter.wave-seal.v1"},
+    "seal_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "generation": {"type": "integer", "minimum": 0},
+    "topology_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "operator_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "embedding_version": {"type": "string"},
+    "precision": {
+      "type": "string",
+      "enum": ["q16.16", "q32.32", "float32", "complex-float32"]
+    },
+    "coefficients_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ring_signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "values"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["phase_invariant_power", "phase_sensitive", "raw"]},
+        "values": {
+          "type": "array",
+          "items": {"type": "number"},
+          "maxItems": 256
+        },
+        "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "evidence_level": {
+      "type": "string",
+      "enum": ["defined", "assembled", "executed", "regression_tested", "differentially_checked", "property_tested", "proved", "promoted"]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "nanclock_tick"],
+      "properties": {
+        "producer": {"type": "string", "minLength": 1},
+        "nanclock_tick": {"type": "integer", "minimum": 0},
+        "source_ref": {"type": "string"},
+        "notes": {"type": "string", "maxLength": 4096}
+      }
+    },
+    "signature": {"type": "string", "minLength": 1, "maxLength": 4096}
+  }
+}

@@ -1,0 +1,909 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shemshallah/NaNROUTER/spec/wave-store.schema.json",
+  "title": "NaNROUTER wave store storage contract",
+  "description": "Versioned contract for the MC0DB control/lease/registry store and the BS0DB append-only evidence store. The stores never hold dense wave arrays, host-computed mathematics, or secret key material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "stores",
+    "status_enums"
+  ],
+  "properties": {
+    "schema": {
+      "const": "nanrouter.wave-store.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "stores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "BS0DB",
+        "MC0DB"
+      ],
+      "properties": {
+        "BS0DB": {
+          "$ref": "#/$defs/BS0DB"
+        },
+        "MC0DB": {
+          "$ref": "#/$defs/MC0DB"
+        }
+      }
+    },
+    "status_enums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wave_job_state",
+        "wave_lease_state",
+        "wave_operator_status",
+        "wave_capability_status",
+        "wave_feedback_state",
+        "evidence_level"
+      ],
+      "properties": {
+        "wave_job_state": {
+          "const": [
+            "queued",
+            "leased",
+            "done",
+            "failed",
+            "dead"
+          ]
+        },
+        "wave_lease_state": {
+          "const": [
+            "active",
+            "expired",
+            "completed",
+            "failed"
+          ]
+        },
+        "wave_operator_status": {
+          "const": [
+            "candidate",
+            "active",
+            "deprecated",
+            "revoked"
+          ]
+        },
+        "wave_capability_status": {
+          "const": [
+            "declared",
+            "native_verified",
+            "degraded",
+            "revoked"
+          ]
+        },
+        "wave_feedback_state": {
+          "const": [
+            "pending",
+            "acked"
+          ]
+        },
+        "evidence_level": {
+          "const": [
+            "declared",
+            "measured",
+            "replayed",
+            "native_verified",
+            "certified"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "nullable_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "digest_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "columns": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "enum": [
+              "TEXT",
+              "INTEGER",
+              "BLOB"
+            ]
+          }
+        },
+        "status_field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status_enum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "append_only": {
+          "type": "boolean"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "MC0DB": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "tables"
+      ],
+      "properties": {
+        "role": {
+          "const": "control/meta: jobs, leases, operators, capabilities, fold certificates, match index"
+        },
+        "tables": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wave_job",
+            "wave_lease",
+            "wave_operator",
+            "wave_capability",
+            "wave_fold_certificate",
+            "wave_match_index"
+          ],
+          "properties": {
+            "wave_job": {
+              "$ref": "#/$defs/wave_job"
+            },
+            "wave_lease": {
+              "$ref": "#/$defs/wave_lease"
+            },
+            "wave_operator": {
+              "$ref": "#/$defs/wave_operator"
+            },
+            "wave_capability": {
+              "$ref": "#/$defs/wave_capability"
+            },
+            "wave_fold_certificate": {
+              "$ref": "#/$defs/wave_fold_certificate"
+            },
+            "wave_match_index": {
+              "$ref": "#/$defs/wave_match_index"
+            }
+          }
+        }
+      }
+    },
+    "BS0DB": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "tables"
+      ],
+      "properties": {
+        "role": {
+          "const": "durable evidence: append-only traces, seals, signatures, and feedback"
+        },
+        "tables": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wave_trace",
+            "wave_seal",
+            "wave_signature",
+            "wave_feedback"
+          ],
+          "properties": {
+            "wave_trace": {
+              "$ref": "#/$defs/wave_trace"
+            },
+            "wave_seal": {
+              "$ref": "#/$defs/wave_seal"
+            },
+            "wave_signature": {
+              "$ref": "#/$defs/wave_signature"
+            },
+            "wave_feedback": {
+              "$ref": "#/$defs/wave_feedback"
+            }
+          }
+        }
+      }
+    },
+    "wave_job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "job_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "job_id",
+            "universe_id",
+            "generation",
+            "operator_digest",
+            "workspace",
+            "kind",
+            "payload_json",
+            "state",
+            "attempts",
+            "lease_epoch",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "operator_id",
+            "precision",
+            "lease_owner",
+            "lease_token",
+            "deadline_tick",
+            "result_digest",
+            "result_generation",
+            "error"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "operator_digest",
+            "result_digest"
+          ]
+        },
+        "columns": {
+          "const": {
+            "job_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "operator_digest": "TEXT",
+            "operator_id": "TEXT",
+            "precision": "TEXT",
+            "workspace": "INTEGER",
+            "kind": "TEXT",
+            "payload_json": "TEXT",
+            "state": "TEXT",
+            "attempts": "INTEGER",
+            "lease_owner": "TEXT",
+            "lease_token": "TEXT",
+            "lease_epoch": "INTEGER",
+            "deadline_tick": "INTEGER",
+            "result_digest": "TEXT",
+            "result_generation": "INTEGER",
+            "error": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "queued",
+            "leased",
+            "done",
+            "failed",
+            "dead"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "job_id is idempotent and bound to one generation/operator digest",
+            "queued -> leased -> done/failed/dead",
+            "completion and failure require the current unexpired lease token and epoch",
+            "expired leases return to queued or dead"
+          ]
+        }
+      }
+    },
+    "wave_lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "lease_token"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "lease_token",
+            "job_id",
+            "lease_owner",
+            "lease_epoch",
+            "acquired_tick",
+            "deadline_tick",
+            "state"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "released_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "lease_token": "TEXT",
+            "job_id": "TEXT",
+            "lease_owner": "TEXT",
+            "lease_epoch": "INTEGER",
+            "acquired_tick": "INTEGER",
+            "deadline_tick": "INTEGER",
+            "state": "TEXT",
+            "released_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "active",
+            "expired",
+            "completed",
+            "failed"
+          ]
+        }
+      }
+    },
+    "wave_operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "operator_id",
+            "version"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "operator_id",
+            "version",
+            "digest",
+            "shape_json",
+            "precision",
+            "evidence_level",
+            "workspace",
+            "status",
+            "created_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest"
+          ]
+        },
+        "columns": {
+          "const": {
+            "operator_id": "TEXT",
+            "version": "INTEGER",
+            "digest": "TEXT",
+            "shape_json": "TEXT",
+            "precision": "TEXT",
+            "evidence_level": "TEXT",
+            "workspace": "INTEGER",
+            "status": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "candidate",
+            "active",
+            "deprecated",
+            "revoked"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "identical registration is idempotent",
+            "a conflicting duplicate operator digest or version is rejected"
+          ]
+        }
+      }
+    },
+    "wave_capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "kernel_id",
+            "runner_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "kernel_id",
+            "runner_id",
+            "verified_digest",
+            "workspace",
+            "precision",
+            "status",
+            "epoch",
+            "updated_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "verified_digest"
+          ]
+        },
+        "columns": {
+          "const": {
+            "kernel_id": "TEXT",
+            "runner_id": "TEXT",
+            "verified_digest": "TEXT",
+            "workspace": "INTEGER",
+            "precision": "TEXT",
+            "status": "TEXT",
+            "epoch": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "declared",
+            "native_verified",
+            "degraded",
+            "revoked"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "dispatch requires status native_verified",
+            "dispatch requires an exact verified_digest match",
+            "dispatch requires capability workspace greater than or equal to the job workspace",
+            "epoch is monotonic and stale epoch updates are rejected"
+          ]
+        }
+      }
+    },
+    "wave_fold_certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "certificate_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "certificate_id",
+            "universe_id",
+            "generation",
+            "operator_digest",
+            "basis_digest",
+            "residual_q16",
+            "evidence_level",
+            "producer",
+            "nanclock_tick",
+            "payload_json",
+            "signature",
+            "created_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "operator_digest",
+            "basis_digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "certificate_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "operator_digest": "TEXT",
+            "basis_digest": "TEXT",
+            "residual_q16": "INTEGER",
+            "evidence_level": "TEXT",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "signature": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        }
+      }
+    },
+    "wave_match_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "match_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "match_id",
+            "universe_id",
+            "kind",
+            "signature_id",
+            "digest",
+            "producer",
+            "nanclock_tick",
+            "payload_json",
+            "created_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "score_q16"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest"
+          ]
+        },
+        "columns": {
+          "const": {
+            "match_id": "TEXT",
+            "universe_id": "TEXT",
+            "kind": "TEXT",
+            "signature_id": "TEXT",
+            "digest": "TEXT",
+            "score_q16": "INTEGER",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        }
+      }
+    },
+    "wave_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "trace_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "trace_id",
+            "universe_id",
+            "generation",
+            "digest",
+            "producer",
+            "nanclock_tick",
+            "signature",
+            "created_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "job_id",
+            "payload_json",
+            "payload_blob"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "trace_id": "TEXT",
+            "job_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "digest": "TEXT",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "payload_blob": "BLOB",
+            "signature": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "payload_json or payload_blob is required",
+            "no secret key material is stored"
+          ]
+        }
+      }
+    },
+    "wave_seal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "seal_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "seal_id",
+            "universe_id",
+            "generation",
+            "digest",
+            "producer",
+            "nanclock_tick",
+            "signature",
+            "created_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "job_id",
+            "payload_json",
+            "payload_blob"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "seal_id": "TEXT",
+            "job_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "digest": "TEXT",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "payload_blob": "BLOB",
+            "signature": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "payload_json or payload_blob is required",
+            "a state seal does not transfer authority"
+          ]
+        }
+      }
+    },
+    "wave_signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "signature_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "signature_id",
+            "universe_id",
+            "generation",
+            "kind",
+            "digest",
+            "producer",
+            "nanclock_tick",
+            "signature",
+            "created_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "payload_json",
+            "payload_blob"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "signature_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "kind": "TEXT",
+            "digest": "TEXT",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "payload_blob": "BLOB",
+            "signature": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "search is top-k ordered by nanclock_tick descending then signature_id ascending",
+            "payload_json or payload_blob is required"
+          ]
+        }
+      }
+    },
+    "wave_feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "feedback_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "feedback_id",
+            "universe_id",
+            "generation",
+            "candidate_digest",
+            "producer",
+            "nanclock_tick",
+            "payload_json",
+            "signature",
+            "state",
+            "created_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "acked_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "candidate_digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "feedback_id": "TEXT",
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "candidate_digest": "TEXT",
+            "producer": "TEXT",
+            "nanclock_tick": "INTEGER",
+            "payload_json": "TEXT",
+            "signature": "TEXT",
+            "state": "TEXT",
+            "created_tick": "INTEGER",
+            "acked_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "pending",
+            "acked"
+          ]
+        }
+      }
+    }
+  }
+}

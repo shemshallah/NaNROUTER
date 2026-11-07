@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/wave-adapter.schema.json",
+  "title": "NaNLMind wave adapter descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "adapter_id",
+    "universe_id",
+    "base_model_id",
+    "readout_dim",
+    "residual_scale",
+    "mode",
+    "enabled",
+    "evidence_level",
+    "ablations"
+  ],
+  "properties": {
+    "schema": {"const": "nanrouter.wave-adapter.v1"},
+    "adapter_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "base_model_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "readout_dim": {"type": "integer", "minimum": 1, "maximum": 256},
+    "residual_scale": {"type": "number", "minimum": 0, "maximum": 1},
+    "mode": {
+      "type": "string",
+      "enum": ["spectral_filter", "ring_readout", "memory_match", "product_residual"]
+    },
+    "enabled": {"type": "boolean"},
+    "evidence_level": {
+      "type": "string",
+      "enum": ["declared", "source_written", "assembled", "native_verified", "ablation_passed", "promoted", "rejected"]
+    },
+    "ablations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["void_on_off", "ring_on_off", "product_on_off", "real_complex", "phase_magnitude", "fold_on_off"]
+      },
+      "uniqueItems": true
+    },
+    "operator_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "notes": {"type": "string", "maxLength": 4096}
+  }
+}

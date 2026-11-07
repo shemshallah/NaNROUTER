@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/wave-aperture.schema.json",
+  "title": "NaNROUTER wave aperture descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "aperture_id",
+    "universe_id",
+    "rows",
+    "cols",
+    "role",
+    "precision",
+    "hermitian",
+    "centrosymmetric",
+    "status"
+  ],
+  "properties": {
+    "aperture_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "rows": {"type": "integer", "enum": [255, 256]},
+    "cols": {"type": "integer", "enum": [255, 256]},
+    "role": {"type": "string", "enum": ["state", "filter", "coupling", "scattering", "memory", "covariance"]},
+    "precision": {"type": "string", "enum": ["float32", "complex-float32", "q16.16"]},
+    "hermitian": {"type": "boolean"},
+    "centrosymmetric": {"type": "boolean"},
+    "rank": {"type": ["integer", "null"], "minimum": 0, "maximum": 256},
+    "operator_digest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "status": {"type": "string", "enum": ["specified", "source_written", "native_verified", "promoted", "rejected"]}
+  }
+}

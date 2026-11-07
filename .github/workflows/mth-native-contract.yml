@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files]
+    branches: [main, mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files]
   pull_request:
   workflow_dispatch:
 
@@ -38,6 +38,39 @@ jobs:
           cat build/mth/k256.err
           grep -q '^MTH K256 LAPLACIAN PASS' build/mth/k256.out
 
+      - name: Assemble K255 fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_k255_laplacian_test.nas > build/mth/k255.nan
+
+      - name: Execute K255 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/k255.nan --steps 4000000 --serial > build/mth/k255.out 2> build/mth/k255.err
+          cat build/mth/k255.out
+          cat build/mth/k255.err
+          grep -q '^MTH K255 LAPLACIAN PASS' build/mth/k255.out
+
+      - name: Assemble C255 ring fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_ring255_laplacian_test.nas > build/mth/ring255.nan
+
+      - name: Execute C255 ring fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/ring255.nan --steps 4000000 --serial > build/mth/ring255.out 2> build/mth/ring255.err
+          cat build/mth/ring255.out
+          cat build/mth/ring255.err
+          grep -q '^MTH RING255 LAPLACIAN PASS' build/mth/ring255.out
+
+      - name: Assemble 255+1 port assembly fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_ring255_port_test.nas > build/mth/ring255-port.nan
+
+      - name: Execute 255+1 port assembly fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/ring255-port.nan --steps 4000000 --serial > build/mth/ring255-port.out 2> build/mth/ring255-port.err
+          cat build/mth/ring255-port.out
+          cat build/mth/ring255-port.err
+          grep -q '^MTH RING255 PORT ASSEMBLE PASS' build/mth/ring255-port.out
+
       - name: Assemble sparse graph fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_sparse_graph_laplacian_test.nas > build/mth/sparse.nan
@@ -59,3 +92,157 @@ jobs:
           cat build/mth/weighted-sparse.out
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
+
+      - name: Assemble step-energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_step_energy_256_test.nas > build/mth/step-energy.nan
+
+      - name: Execute step-energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/step-energy.nan --steps 4000000 --serial > build/mth/step-energy.out 2> build/mth/step-energy.err
+          cat build/mth/step-energy.out
+          cat build/mth/step-energy.err
+          grep -q '^MTH GRAPH STEP ENERGY PASS' build/mth/step-energy.out
+
+      - name: Assemble graph-wave-step fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_wave_test.nas > build/mth/wave.nan
+
+      - name: Execute graph-wave-step fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/wave.nan --steps 4000000 --serial > build/mth/wave.out 2> build/mth/wave.err
+          cat build/mth/wave.out
+          cat build/mth/wave.err
+          grep -q '^MTH GRAPH WAVE STEP PASS' build/mth/wave.out
+
+      - name: Assemble void-potential fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_void_test.nas > build/mth/void.nan
+
+      - name: Execute void-potential fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/void.nan --steps 4000000 --serial > build/mth/void.out 2> build/mth/void.err
+          cat build/mth/void.out
+          cat build/mth/void.err
+          grep -q '^MTH GRAPH VOID POTENTIAL PASS' build/mth/void.out
+
+      - name: Assemble graph-fold fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_fold_test.nas > build/mth/fold.nan
+
+      - name: Execute graph-fold fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/fold.nan --steps 4000000 --serial > build/mth/fold.out 2> build/mth/fold.err
+          cat build/mth/fold.out
+          cat build/mth/fold.err
+          grep -q '^MTH GRAPH FOLD VECTOR PASS' build/mth/fold.out
+
+      - name: Assemble 256-dot fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_dot256_test.nas > build/mth/dot256.nan
+
+      - name: Execute 256-dot fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/dot256.nan --steps 4000000 --serial > build/mth/dot256.out 2> build/mth/dot256.err
+          cat build/mth/dot256.out
+          cat build/mth/dot256.err
+          grep -q '^MTH DOT256 PASS' build/mth/dot256.out
+
+      - name: Assemble two-region transmission fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_transmission_128_test.nas > build/mth/transmission128.nan
+
+      - name: Execute two-region transmission fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/transmission128.nan --steps 4000000 --serial > build/mth/transmission128.out 2> build/mth/transmission128.err
+          cat build/mth/transmission128.out
+          cat build/mth/transmission128.err
+          grep -q '^MTH GRAPH TRANSMISSION 128 PASS' build/mth/transmission128.out
+
+      - name: Assemble two-region coupling fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_couple_128_test.nas > build/mth/couple128.nan
+
+      - name: Execute two-region coupling fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/couple128.nan --steps 4000000 --serial > build/mth/couple128.out 2> build/mth/couple128.err
+          cat build/mth/couple128.out
+          cat build/mth/couple128.err
+          grep -q '^MTH GRAPH COUPLE 128 PASS' build/mth/couple128.out
+
+      - name: Assemble 256-point DFT fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_dft256_test.nas > build/mth/dft256.nan
+
+      - name: Execute 256-point DFT fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/dft256.nan --steps 50000000 --serial > build/mth/dft256.out 2> build/mth/dft256.err
+          cat build/mth/dft256.out
+          cat build/mth/dft256.err
+          grep -q '^MTH GRAPH DFT256 PASS' build/mth/dft256.out
+
+      - name: Assemble full pair-space fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_test.nas > build/mth/pairfull.nan
+
+      - name: Execute full pair-space fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/pairfull.nan --steps 100000000 --serial > build/mth/pairfull.out 2> build/mth/pairfull.err
+          cat build/mth/pairfull.out
+          cat build/mth/pairfull.err
+          grep -q '^MTH GRAPH PAIR FULL 128 PASS' build/mth/pairfull.out
+
+      - name: Assemble rank-1 pair-space fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_rank1_128_test.nas > build/mth/pair128.nan
+
+      - name: Execute rank-1 pair-space fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/pair128.nan --steps 30000000 --serial > build/mth/pair128.out 2> build/mth/pair128.err
+          cat build/mth/pair128.out
+          cat build/mth/pair128.err
+          grep -q '^MTH GRAPH PAIR RANK1 128 PASS' build/mth/pair128.out
+
+      - name: Assemble 256-axpy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_axpy256_test.nas > build/mth/axpy256.nan
+
+      - name: Execute 256-axpy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/axpy256.nan --steps 4000000 --serial > build/mth/axpy256.out 2> build/mth/axpy256.err
+          cat build/mth/axpy256.out
+          cat build/mth/axpy256.err
+          grep -q '^MTH AXPY256 PASS' build/mth/axpy256.out
+
+      - name: Assemble 256-norm fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_norm256_test.nas > build/mth/norm256.nan
+
+      - name: Execute 256-norm fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/norm256.nan --steps 4000000 --serial > build/mth/norm256.out 2> build/mth/norm256.err
+          cat build/mth/norm256.out
+          cat build/mth/norm256.err
+          grep -q '^MTH NORM256 PASS' build/mth/norm256.out
+
+      - name: Assemble weighted graph energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_energy_weighted_u8_q32_32_test.nas > build/mth/energy.nan
+
+      - name: Execute weighted graph energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/energy.nan --steps 8000000 --serial > build/mth/energy.out 2> build/mth/energy.err
+          cat build/mth/energy.out
+          cat build/mth/energy.err
+          grep -q '^MTH WEIGHTED GRAPH ENERGY PASS' build/mth/energy.out
+
+      - name: Assemble graph components fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_components_256_test.nas > build/mth/components.nan
+
+      - name: Execute graph components fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/components.nan --steps 8000000 --serial > build/mth/components.out 2> build/mth/components.err
+          cat build/mth/components.out
+          cat build/mth/components.err
+          grep -q '^MTH GRAPH COMPONENTS PASS' build/mth/components.out

@@ -7,6 +7,10 @@ from .macro import (
 )
 from .inbox import InboxError, InboxFull, LeasedSource, RunnerRiddleWorker, SQLiteSourceInbox
 from .volume_registry import VolumeRegistry, VolumeRegistryError
+from .wave_store import WaveStore, WaveStoreError
+from .wave_adapter import WaveAdapterConfig, WaveAdapterError
+from .wave_node import NannetNodeBinding, NannetNodeError, NannetNodeRegistry
+from .wave_aperture import ApertureDescriptor, ApertureError
 from .http_service import RiddleService, ServiceConfigError
 
 __all__ = [
@@ -17,5 +21,9 @@ __all__ = [
     "MacroJob", "PolicyError", "SignedRangeManifest", "verify_feedback_signature",
     "InboxError", "InboxFull", "LeasedSource", "RunnerRiddleWorker", "SQLiteSourceInbox",
     "VolumeRegistry", "VolumeRegistryError",
+    "WaveStore", "WaveStoreError",
+    "WaveAdapterConfig", "WaveAdapterError",
+    "NannetNodeBinding", "NannetNodeError", "NannetNodeRegistry",
+    "ApertureDescriptor", "ApertureError",
     "RiddleService", "ServiceConfigError",
 ]

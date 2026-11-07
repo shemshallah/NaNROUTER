@@ -1,0 +1,161 @@
+# Implementation TODO — Ring / Void / NANNET
+
+**Status:** active implementation ledger.
+**Canonical plan:** `docs/game_plan_deep.md`.
+**Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
+**Rule:** math kernels are NaN16; host code is transport/scheduling/storage only. A source file is not CI-verified until the canonical GitHub Actions workflow runs.
+
+## Current baseline
+
+- [x] K256 U16 Laplacian — native_verified.
+- [x] Sparse unweighted Q16.16 Laplacian — native_verified.
+- [x] Weighted CSR v2 Q16.16/I64 Laplacian — native_verified.
+- [x] Weighted graph energy Q32.32 — local native_verified.
+- [x] Connected-components 256 — local native_verified.
+- [x] 255 heads + 1 NANNET node convention frozen.
+- [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
+- [x] 20/20 native MTH fixtures pass locally with `nan_cli`.
+- [x] 111 Python tests pass.
+- [ ] Expanded GitHub Actions native workflow has not yet run.
+
+## R0 — Contract and storage freeze
+
+- [x] Freeze 255 heads + 1 NANNET node = 256 ring positions.
+- [x] Freeze 8 MiB = 255 head pages + 1 NANNET page.
+- [x] Freeze BS0DB/MC0DB/universe/runner ownership.
+- [x] Add machine-readable wave-store schema (`spec/wave-store.schema.json`).
+- [x] Add `runner_riddle/wave_store.py` with BS0DB/MC0DB tables, idempotent jobs, leases, seals, signatures, capabilities.
+- [x] Add storage tests (12 tests).
+- [x] Add page-map / ring-binding descriptor (`spec/ring-255.json`).
+- [x] Add R0 evidence ledger entry.
+
+## R1 — Geometry and page map
+
+- [x] Define C255 head ring + NANNET port attachment policy.
+- [x] Generate canonical C255 CSR (head-only ring).
+- [x] Generate port coupling vector / port row.
+- [x] Add K255 exact oracle.
+- [x] Add C255 ring Laplacian fixture.
+- [x] Add 256-position readout layout descriptor.
+- [x] Add page map: 255 head pages + 1 NANNET page.
+- [x] Native verification of K255, C255, and port-assembly fixtures.
+- [x] Add dot/norm/axpy float32 primitives.
+
+## R2 — Void and radial blocks
+
+- [x] Import weighted graph energy and connected components.
+- [x] Add native regularized inverse-square void potential kernel.
+- [x] Add α = 0 and α > 0 fixtures.
+- [ ] Add radial block descriptor / tridiagonal layout.
+- [ ] Add inner Dirichlet/Robin boundary contract as a native descriptor.
+- [ ] Add radial energy/localization fixture.
+
+## R3 — Spectral engine
+
+- [x] Add 256-point complex float32 DFT reference with caller-supplied twiddle table.
+- [ ] Add a separate 255-point head-only DFT reference.
+- [x] Add even 256-position fold vector kernel.
+- [x] Add odd 255-head fold vector kernel.
+- [ ] Add streaming 255/256 centrosymmetry certificate.
+- [ ] Add Lanczos/power-iteration top-k kernel.
+- [ ] Add residual/orthogonality fixture for a real operator.
+
+## R4 — Wave dynamics
+
+- [x] Add float32 velocity-Verlet wave-step kernel.
+- [x] Add step-energy metric kernel.
+- [x] Add invalid dt/gamma/layout rejection atomicity.
+- [ ] Add repeated-step undamped energy-conservation fixture with actual `H` application.
+- [ ] Add repeated-step damped-energy-decrease fixture.
+- [ ] Add bounded DRIVE source fixture.
+- [ ] Add CFL / λ_max guard fixture.
+- [x] Add deterministic trace fields in storage schema.
+
+## R5 — Aperture
+
+- [x] Add float32 dot, norm, and axpy primitives.
+- [x] Add aperture descriptor and decomposition selector (`runner_riddle/wave_aperture.py`; 9 tests).
+- [ ] Add top singular-vector / power-iteration kernel.
+- [ ] Add QUERY / MATCH / FILTER / DRIVE composition.
+- [ ] Add observability/reachability metric kernel.
+- [ ] Add capacity-vs-SNR test plan.
+- [ ] Add colored-noise generator kernel.
+
+## R6 — Product space
+
+- [x] Add dense 128×128 pair-space action `LU + ULᵀ`.
+- [x] Add rank-1 128 pair-space prototype.
+- [x] Add small explicit fixture (L=2I) and zero-state fixture.
+- [ ] Add low-rank coupling descriptor `Σ B_r ⊗ C_r`.
+- [x] Add 65,536-mode accounting in the plan.
+- [x] Reject dense 65,536² materialization in the plan and memory budget.
+- [ ] Add 256×256 paged/tiled product action.
+
+## R7 — Tunneling and creativity
+
+- [x] Add block-coupling `eta` primitive.
+- [x] Add transmission metric primitive.
+- [x] Add experiment protocol with conditions, metrics, baselines, kill criteria.
+- [ ] Add avoided-crossing sweep fixture.
+- [ ] Add phase-coherence metric kernel.
+- [ ] Run held-out creativity/association experiment.
+- [ ] Record supported/rejected/inconclusive result.
+
+## R8 — NANNET node and storage
+
+- [x] Add BS0DB/MC0DB storage with one-NANNET-node ring binding.
+- [x] Add per-universe NANNET node binding registry (`runner_riddle/wave_node.py`; 8 tests).
+- [x] Persist ingress/egress, traces, seals, signatures in BS0DB.
+- [x] Add phase-invariant signature record.
+- [x] Add state-seal/cartridge schema.
+- [x] Add job/lease/capability state machine.
+- [x] Add stale/unauthorized/replay rejection tests.
+- [ ] Add NANNET HTTP node endpoints and live Koyeb integration.
+- [ ] Run signed Koyeb volume-registry integration check.
+
+## R9 — LM adapter
+
+- [x] Freeze adapter descriptor `h + β C u`.
+- [x] Add adapter mode and ablation descriptor.
+- [x] Add frozen-base ablation labels and safety gate.
+- [ ] Add typed ENCODE/DECODE composition.
+- [ ] Add NaN16 residual composition.
+- [ ] Run retrieval/memory adapter and frozen-base ablations.
+- [ ] Enable only after measured held-out benefit.
+
+## R10 — Promotion
+
+- [x] Add capability manifest with 20 kernels (`spec/wave-capabilities.json`).
+- [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
+- [x] Expand native CI workflow for 20 fixtures.
+- [x] Add `mth/README.md` inventory updates.
+- [x] Add `docs/GRAPH_SPECTRAL_MTH_PLAN.md` implementation update.
+- [x] Add `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
+- [ ] Run the expanded CI workflow on GitHub Actions.
+- [ ] Register final CI digests and promote CI-verified capabilities.
+
+## Agent dispatch board
+
+| Agent | Scope | Files | Status |
+|---|---|---|---|
+| A1 | Storage/control plane | `runner_riddle/wave_store.py`, `spec/wave-store.schema.json`, `tests/test_wave_store.py` | done — 12/12 tests |
+| A2 | Void potential | `mth/nan16/mth_graph_void.nas`, fixture, ABI | done — native PASS |
+| A3 | Fold | `mth/nan16/mth_graph_fold.nas`, fixture, ABI | done — native PASS |
+| A4 | Wave step | `mth/nan16/mth_graph_wave.nas`, fixture, ABI | done — native PASS |
+| A5 | Pair space | `mth/nan16/mth_graph_pair.nas`, fixture, ABI | done — full 128×128 PASS |
+| A6 | DFT | `mth/nan16/mth_graph_dft256.nas`, fixture, ABI | done — native PASS |
+| A7 | Ring/page map | `tools/gen_ring_csr.py`, `spec/ring-255.json`, tests | done — 9/9 tests |
+| A8 | CI/capability | workflow, `tools/register_wave_capabilities.py`, tests | done locally |
+
+## Final local evidence
+
+```
+python3 tools/run_mth_fixtures.py
+20/20 fixtures passed
+
+python3 -m unittest discover -s tests -v
+Ran 111 tests
+OK
+```
+
+See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.

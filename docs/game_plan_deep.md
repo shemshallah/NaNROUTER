@@ -8,6 +8,10 @@
 **Canonical routing home:** NaNROUTER.  
 **Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`.
 
+**Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
+
+**Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
+
 This document does not create a second universe, a second runner ring, a second task ledger, or a second owner of state. It is a synthesis: it takes the mathematical substrate from MTH, the graph-spectral research foundations, and the proposed void/ring architecture, and turns them into one coherent NaN16-native design with explicit claims, interfaces, memory budgets, and gates. The NANNET node is the only network endpoint per universe; the old noosphere/JAHS language is preserved only as a non-normative easter egg at the end.
 
 ---

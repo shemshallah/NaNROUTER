@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/wave-operator.schema.json",
+  "title": "NaNROUTER wave operator descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operator_id",
+    "operator_version",
+    "kind",
+    "shape",
+    "precision",
+    "source_digest",
+    "workspace_words",
+    "status",
+    "generation"
+  ],
+  "properties": {
+    "schema": {"const": "nanrouter.wave-operator.v1"},
+    "operator_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "operator_version": {"type": "integer", "minimum": 1},
+    "kind": {
+      "type": "string",
+      "enum": ["laplacian", "void", "wave", "aperture", "filter", "fold", "pair", "dft", "port", "other"]
+    },
+    "shape": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1},
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "precision": {
+      "type": "string",
+      "enum": ["u16", "u32", "i32", "i64", "q16.16", "q32.32", "float32", "complex-float32"]
+    },
+    "roles": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "source_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "topology_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "workspace_words": {"type": "integer", "minimum": 0, "maximum": 65536},
+    "status": {
+      "type": "string",
+      "enum": ["specified", "source_written", "assembled", "native_verified", "promoted", "rejected"]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref"],
+        "properties": {
+          "kind": {"type": "string"},
+          "ref": {"type": "string"},
+          "step_count": {"type": "integer", "minimum": 0},
+          "result": {"type": "string"}
+        }
+      }
+    },
+    "generation": {"type": "integer", "minimum": 0},
+    "created_tick": {"type": "integer", "minimum": 0},
+    "notes": {"type": "string", "maxLength": 4096}
+  }
+}

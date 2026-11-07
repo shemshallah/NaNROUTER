@@ -107,6 +107,19 @@ The initial native slice includes the 16-way Boolean transform, all four NaN fac
 
 MTH does not add a second execution universe, runner ring, math service, or task ledger. It uses the existing canonical topology and router authorization boundaries.
 
+## Ring / Void / NANNET implementation
+
+The 255-head + one-NANNET-node architecture and its NaN16-native implementation are tracked in:
+
+- `docs/game_plan_deep.md` — full ring/void/NANNET game plan.
+- `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
+- `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
+- `spec/ring-255.json` — deterministic C255 CSR and 255+1 page map.
+- `spec/wave-capabilities.json` — 20-kernel capability manifest.
+- `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
+
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 20 fixtures and 111 Python tests pass locally; the expanded GitHub Actions run is still pending.
+
 ## Runner Riddle
 
 See [runner-riddle/README.md](runner-riddle/README.md). The listener is designed as a persistent service, not a short-lived scheduled GitHub Action. It continuously ingests permitted NaN source, learns Boolean and routing maps first, and emits bounded trace/delta records. Language learning is a later curriculum stage, disabled until the logic/routing gates pass.

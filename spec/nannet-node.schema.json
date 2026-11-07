@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/nannet-node.schema.json",
+  "title": "NaNROUTER per-universe NANNET node binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "universe_id",
+    "node_id",
+    "node_point",
+    "public_key_fingerprint",
+    "generation",
+    "status"
+  ],
+  "properties": {
+    "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "node_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "node_point": {"type": "integer", "minimum": 1, "maximum": 255},
+    "public_key_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "generation": {"type": "integer", "minimum": 0},
+    "status": {"type": "string", "enum": ["declared", "active", "degraded", "revoked"]},
+    "route": {"type": "string", "maxLength": 512}
+  }
+}
