@@ -1,0 +1,304 @@
+# Master completion TODO — all game plans
+
+**Date:** 2026-11-07
+**Baseline:** 812 Python tests, 1 skipped, OK; 63 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
+**Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
+
+Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
+
+---
+
+## 0. Baseline already landed
+
+- [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
+- [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
+- [x] Native 63-kernel manifest and 61-fixture canonical CI workflow.
+- [x] `math_objects`, `math_store`, `math_registry`, `math_validity`, `math_linker`, NMP, execution bridge, demo.
+- [x] Typed absence algebra, relations/hypergraphs, rule lifecycle, retention/pruning.
+- [x] Cross-store commit intent/evidence/finalize recovery.
+- [x] Durable NMP packet/transition ledger store layer.
+- [x] Five discovery mechanisms (proposal layer).
+- [x] Typed authorization and Boolean-head gate.
+- [x] Math HTTP health/link/execute seam.
+- [x] Work queues/stealing contract and ring epoch export/restore.
+- [x] A06/A09–A12/A20 and extended A/T negative tests.
+- [x] P13 blocked gate ledger.
+
+---
+
+# A. `GAME_PLAN_::` completion
+
+## A1. Evidence/vocabulary freeze
+
+- [x] `A-01` Freeze authority, validity, truth, proof, lifecycle, capability, and utility as separate axes. Keep production validity capped at V2.
+- [x] `A-02` Explicit blocked P13 ledger (`spec/p13-gates.json`, `docs/P13_GATES.md`).
+- [ ] `A-03` Enumerate A01–A20 formally in the plan/TODO (currently proposed from phase exits; tests exist for A01–A16/A20, A17–A19 remain partial).
+- [ ] `A-04` Enumerate T01–T20 oracle expectations in one table and mark each test ID done/partial/missing.
+- [ ] `A-05` Resolve T12 vocabulary: unknown function currently yields `UNSUPPORTED` before NMP maps it to `REJECTED`; freeze whether the preflight verdict is `UNSUPPORTED` and gate failure is `REJECTED`.
+- [ ] `A-06` Freeze the void/potential formula: plan says `α/(r+ε)²`; kernel implements `α/(r²+ε²)`.
+- [ ] `A-07` Decide/defer the MOA 65,536-cell bit layout and XFSC365 function-reference resolver.
+- [ ] `A-08` Unify evidence ladders or explicitly map MTH §10 8 levels, wave_adapter 7, wave_store 5, and math V0–V3.
+
+## A2. Admission/execution spine
+
+- [x] `A-10` Candidate/snapshot/function-version/selected-kernel admission binding.
+- [x] `A-11` Direct `MathRuntime.submit()` disabled; bridge is the path.
+- [x] `A-12` Fail-closed numeric certificates.
+- [x] `A-13` Pre-dispatch lease/deadline/cancel/job/rule revalidation.
+- [x] `A-14` Worker-token authentication before executor.
+- [x] `A-15` Bearer-token redaction from serialized evidence.
+- [x] `A-16` Stale lease replay cannot re-execute/re-commit.
+- [x] `A-17` Negative suite A06/A09–A12/A20 and extended A01–A05/A13–A16/T07/T08/T19.
+- [ ] `A-18` Wire durable NMP packet/transition rows into `MathExecutionBridge` submit/lease/complete/cancel (store layer exists; runtime wiring does not).
+- [ ] `A-19` Revalidate the complete admission object at lease/complete (current rule-snapshot and lease checks are not a full `require_admission`).
+- [ ] `A-20` Add an end-to-end rejection test for a rule/capability/auth change between submit and complete.
+- [ ] `A-21` Make math admission binding mandatory for direct `MthSystem.submit_plan` in math mode (alternate-path guard).
+- [ ] `A-22` Add typed result fields beyond digest: runner/kernel identity, residual/error bound, saturation/iterations/status.
+- [ ] `A-23` Implement native receipt production (`mth_admit` caller) and native operator dispatch.
+- [ ] `A-24` Make the demo use the real native executor when the NaN0S toolchain is available, while retaining the evidence-digest fallback.
+
+## A3. Identity/storage
+
+- [x] `A-30` Deep-frozen leaf/function/rule objects.
+- [x] `A-31` Opt-in strict declared content-digest equality.
+- [x] `A-32` Optional `metadata_version` and result provenance checks.
+- [x] `A-33` Cross-store intent/finalize/recovery.
+- [x] `A-34` Disposable canonical-backed cache.
+- [x] `A-35` Durable NMP packet/transition ledger.
+- [ ] `A-36` Add `math_nmp_packet`/transition counts and runtime wiring to health/evidence.
+- [ ] `A-37` Enforce content-digest equality by default for all new versioned records (legacy compatibility clearly fenced).
+- [ ] `A-38` Enforce full result provenance: input IDs/versions/digests, function/rule snapshot, candidate/linker, runner/lease, native source/fixture digest, numerical policy, output digest, signature.
+- [ ] `A-39` Add durable universe page-record table/versioning and cache invalidation tied to operator version.
+- [ ] `A-40` Add missing/corrupt/evicted cache generation tests and audit-digest-set preservation.
+- [ ] `A-41` Add durable alias record/schema/ACL (HW0 aliases currently caller-supplied).
+
+## A4. Linker/registry/validity
+
+- [x] `A-50` Linker rejects nan:// context, unbound HW refs, raw offsets; router rejects math:// with `route_context_mismatch`.
+- [x] `A-51` Scratch/quarantined/tombstoned/superseded leaf isolation.
+- [x] `A-52` Typed null metadata includes failure class, linker ID, rule snapshot, candidate count.
+- [x] `A-53` Linker 27 tests; runtime rule/capability providers.
+- [ ] `A-54` Add `contract_digest` to candidates/NMP dedupe keys; recompute/compare rather than trust caller.
+- [ ] `A-55` Add rule catalog/schema (`spec/math-rule.schema.json`) with pre/postconditions, invariants, undefined conditions, numerical policy, test/certificate refs.
+- [ ] `A-56` Implement a real compatibility index keyed by types/domains/shape class with versioned invalidation.
+- [ ] `A-57` Make composition create a function leaf and preserve composition provenance.
+- [ ] `A-58` Add relation shared-domain/cross-domain permission and rule-snapshot fields; hypergraph leaf kind.
+- [ ] `A-59` Add XFSC365 resolver or explicit deferral.
+- [ ] `A-60` Fix preflight order/resource verdict ambiguity (`WORKSPACE_EXCEEDED` vs capacity/unavailable).
+- [ ] `A-61` Add native certificate verifier or explicitly return `UNKNOWN`/`UNSUPPORTED` for all numeric predicates without one.
+- [ ] `A-62` Add `NmpPlan` integration into bridge/submission evidence (wrapper exists and tests pass).
+- [ ] `A-63` Add authorization context to preflight/admission identity; include preflight/auth/capability context in `admission_id_for`.
+- [ ] `A-64` Restore/re-verify persisted admissions after restart; `_issued` is process-local.
+
+## A5. NMP/ring/lanes
+
+- [x] `A-70` Core NMP states/transitions/dedupe/batch/receipt validation.
+- [x] `A-71` Ring/JAHS/epoch lease binding and restart projection.
+- [x] `A-72` 255 lane registry, pass schedule, page budget.
+- [x] `A-73` Work queues/stealing contract.
+- [x] `A-74` Ring epoch export/restore.
+- [ ] `A-75` Wire NMP durable ledger into bridge transitions.
+- [ ] `A-76` Wire lane work queues/stealing into the bridge/scheduler (currently contract-only).
+- [ ] `A-77` Implement durable ring incarnation/epoch recovery in the bridge path.
+- [ ] `A-78` Add remote worker/peer protocol with selected-step-only payloads, quotas, timeouts.
+- [ ] `A-79` Add packet/input/history/evidence total size bounds.
+- [ ] `A-80` Add network/clock drift model and phase/delay/jitter behavior.
+
+## A6. Learning/retention/security
+
+- [x] `A-90` Five discovery mechanisms (proposal layer).
+- [x] `A-91` Learning authorization fail-closed enforcement.
+- [x] `A-92` Boolean-head 1,024/1,024 + leakage/control/shuffled gate.
+- [x] `A-93` Retention/pruning/shadow/rollback/oscillation.
+- [x] `A-94` Deep immutability/content digest.
+- [ ] `A-95` Persist/wire discovery proposals into linker/validity/learning lifecycle.
+- [ ] `A-96` Wire Boolean-head results into `MathLearningService.record_experiment` as utility-only evidence.
+- [ ] `A-97` Add Class C self-modification guard: checker/policy/schema/ACL root/control head require signed separate policy transition.
+- [ ] `A-98` Add `rule.activate`/`rule.prune` capabilities to all learning mutators (policy exists; wiring exists for learning; verify store/retention paths).
+- [ ] `A-99` Add authenticated principal/ACL to all `MathStore` mutations.
+- [ ] `A-100` Add durable denied-operation audit rows for validity/execution denials.
+- [ ] `A-101` Add refutation/counterexample retention and audit-digest protection.
+- [ ] `A-102` Add subsumption-aware negative memory.
+- [ ] `A-103` Add scratch lifecycle/budget/compaction/visibility/promotion gate.
+- [ ] `A-104` Add full oscillation OBSERVE→…→EVALUATE cycle integration.
+- [ ] `A-105` Implement learned retention weights rather than static defaults.
+- [ ] `A-106` Add cross-store crash-injection through the bridge/learning path.
+
+## A7. HTTP/demo/observability
+
+- [x] `A-120` 2 MiB point-0 frames and bounded HTTP bodies.
+- [x] `A-121` `/v1/math/health|link|execute` seam with JAHS/auth/token redaction.
+- [x] `A-122` Math health in `MthSystem.health(math_health=...)` and `MathRuntime.health()`.
+- [x] `A-123` Demo output provenance and hypergraph relation.
+- [ ] `A-124` Wire `/v1/math/execute` to a real prepared-packet/lease service (currently typed `UNAVAILABLE` seam).
+- [ ] `A-125` Add math HTTP submit/lease/complete routes or explicitly document point-0-only ingress.
+- [ ] `A-126` Add path-wide no-host-math runtime audit.
+- [ ] `A-127` Add demo negative-suite orchestration (mismatch/stale/unavailable/unauthorized together).
+- [ ] `A-128` Add complete math health probes for store/cache/linker/validity/executor.
+
+---
+
+# B. `GAME_PLAN_MTH.md` completion
+
+## B1. Stage 0/1 native substrate
+
+- [ ] `B-01` Machine-readable NaN16 word/ISA layout with class, face, payload, legal/illegal pairs.
+- [ ] `B-02` Add Stage 0 kernels/fixtures to canonical CI: `mth_stage0`, `mth_double_endian`, `mth_core`.
+- [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
+- [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`; currently 11 sources are unregistered, including `mth_negate256_f32`, `mth_preflight`, arithmetic primitives.
+- [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
+- [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
+- [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
+- [ ] `B-08` Rational/gcd/lcm/exact-root/finite-field/fixed-point scalar layer.
+- [ ] `B-09` Typed scalar/array descriptor: element type, stride, layout, units, rank, shape, domain, context.
+- [ ] `B-10` Pair codec regressions: byte/face/payload/inverse/missing-member/corruption.
+- [ ] `B-11` Resolve `mth_negate256_f32` registration so `DEEP_PLAN_CONT` ring-wave plan resolves.
+
+## B2. Tier 2–3 numeric/array operations
+
+- [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
+- [ ] `B-21` Float vector add/sub/broadcast/mean/squared norm/normalize/distance.
+- [ ] `B-22` Argmin/argmax/masks/permutation/prefix sums.
+- [ ] `B-23` Matrix transpose/reshape/multiply/elementwise/axis reductions/diagonal/identity/zero/normalization.
+- [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
+- [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
+- [ ] `B-26` General sparse-CSR pair action and full-grid 256-tile native execution.
+- [ ] `B-27` Add typed shape/precision/layout handoff checks in plan validator.
+
+## B3. Tier 4–5 stable numerics/ML
+
+- [ ] `B-30` Stable softmax/log-softmax/log-sum-exp.
+- [ ] `B-31` exp/log/sqrt/rsqrt/sigmoid/tanh/ReLU.
+- [ ] `B-32` Entropy/cross-entropy/KL/CDF/inverse-CDF.
+- [ ] `B-33` Seeded PRNG and categorical sampling.
+- [ ] `B-34` Attention vertical slice: QK dot, scaling, masks, stable softmax, weighted sum, head concat/projection.
+- [ ] `B-35` Loss/gradient/optimizer primitives, clipping, moving averages, Adam, finite-difference checks.
+- [ ] `B-36` Token/sequence operations: embedding gather, positions, slicing, masks, n-grams.
+- [ ] `B-37` Output/sampling: temperature/top-p/penalties/greedy tie-break.
+
+## B4. Semantics/evidence/layers
+
+- [ ] `B-40` Exact/approximate/warning/resource-exhaustion status model.
+- [ ] `B-41` Transformation record with evidence list, measured cost, hardware, lineage.
+- [ ] `B-42` Shared-subexpression/incremental-recompute dependency graph.
+- [ ] `B-43` Unified evidence ladder per operation (Defined→…→Promoted).
+- [ ] `B-44` L0–L7 layer manifest proving every math op is NaN16 and host is boundary-only.
+- [ ] `B-45` Stage 2–6 gates and typed descriptors.
+- [ ] `B-46` Tier 6 expression algebra/SAT/polynomial/proof checker.
+- [ ] `B-47` Data-word allocation gate and unknown-pattern behavior.
+
+---
+
+# C. `game_plan_foundations.md` completion
+
+- [ ] `C-01` Directed relation matrix `W`, symmetric/antisymmetric split.
+- [ ] `C-02` K256 spectrum/multiplicity/eigenpair oracles and random PSD tests.
+- [ ] `C-03` Annular embedding: `(r,θ)`, shells, `r_min/r_max`, boundary-band metric.
+- [ ] `C-04` Freeze void formula and add alpha/shell sweep.
+- [ ] `C-05` Dense/symmetric 256 eigensolver with residual/orthogonality certificates.
+- [ ] `C-06` Modal reconstruction and long-run/multi-dt/scale stability tests.
+- [ ] `C-07` Centrosymmetry folded eigensolve and 128+128 basis.
+- [ ] `C-08` Bit-reversal address mapping and transpose convention.
+- [ ] `C-09` Circulant detector/FFT path and guarded fallback.
+- [ ] `C-10` Product-space separable potential `V_x⊗I+I⊗V_y`.
+- [ ] `C-11` General Kronecker oracle and product eigenpair tests.
+- [ ] `C-12` Standing-wave expansion/mode accounting/adaptive selection.
+- [ ] `C-13` Topology256/WaveOperator/SpectralModel/WaveState/ProductWaveState records.
+- [ ] `C-14` ExperimentRecord with embedding version, parameters, precision, normalization, seed.
+- [ ] `C-15` Network peer auth, quotas/timeouts, provenance, untrusted-result validation.
+- [ ] `C-16` Clock/drift/phase/delay model.
+- [ ] `C-17` NaN payload/tag codec and FP64 reference.
+- [ ] `C-18` LM adapter real integration; FILTER/spectral response; context/memory/multi-path/contradiction/novelty modules.
+
+---
+
+# D. `GRAPH_SPECTRAL_MTH_PLAN.md` completion
+
+- [ ] `D-01` Register missing graph core modules: `mth_rss_contract`, `mth_graph_degree`, `mth_graph_laplacian`.
+- [ ] `D-02` Implement `mth_graph_filter` Chebyshev/polynomial g(H).
+- [ ] `D-03` Implement `mth_graph_pattern` degree/shell/motif/neighborhood/delta signatures.
+- [ ] `D-04` Implement RSS verb controller: ENCODE/QUERY/MATCH/FILTER/DRIVE/PROPAGATE/FOLD/DECODE.
+- [ ] `D-05` K256 degree/all-ones/sum-zero/spectrum oracle tests.
+- [ ] `D-06` Explicit small-Kronecker oracle tests.
+- [ ] `D-07` C256/non-circulant Lanczos Ritz residual/orthogonality.
+- [ ] `D-08` Plan-composition equivalence and paged-vs-dense equivalence.
+- [ ] `D-09` Native full 256-tile grid and atomic publication.
+- [ ] `D-10` Radial descriptor/ABI artifact and α/β sweep.
+- [ ] `D-11` NANNET0 persistence/signature exchange/page refs/output-digest check.
+- [ ] `D-12` Full-grid guest/reference equality on all 256 tiles.
+- [ ] `D-13` Update stale step counts/digests, kernel count (63), and 1 MiB references.
+
+---
+
+# E. `DEEP_PLAN_CONT.md` completion
+
+- [ ] `E-01` Page-record table with owner/pin/digest/version/generation/atomic publication.
+- [ ] `E-02` Executor paging + native dispatch + evidence capture.
+- [ ] `E-03` Result/evidence contract beyond digest.
+- [ ] `E-04` Plan validator shape/precision/layout/alias/domain/fuel/cancel checks.
+- [ ] `E-05` NANNET0 point-0 envelope fields (`point_zero`, `nan_word_count`, `result_status`) and expected-output verification.
+- [ ] `E-06` Page-map digest and page-map digest in descriptor.
+- [ ] `E-07` NANNET0 MC0DB persistence and signature exchange.
+- [ ] `E-08` Capacity-vs-SNR synthetic harness with six gate conditions; real measurement blocked.
+- [ ] `E-09` Complete Appendix A to 63 rows (missing preflight/admission).
+- [ ] `E-10` Fix stale kernel/test counts and 1 MiB references.
+
+---
+
+# F. `R5_CAPACITY_SNR_PLAN.md` completion
+
+- [ ] `F-01` Define SNR/seed manifest and sweep configuration.
+- [ ] `F-02` Build deterministic synthetic frozen-model stub harness.
+- [ ] `F-03` Implement matched control, coupled candidate, zero/random coupling, shuffled memory, matched-variance noise.
+- [ ] `F-04` Implement capacity-at-SNR, paired delta CI, false-match rate, steps/memory metrics.
+- [ ] `F-05` Enforce all six `supported` gate conditions.
+- [ ] `F-06` Real frozen-model/data measurement — **BLOCKED** until model/data available.
+- [ ] `F-07` Live Koyeb/NANNET0 — **BLOCKED**.
+- [ ] `F-08` Signed volume registry — **BLOCKED**.
+- [ ] `F-09` Production MC0DB — **BLOCKED**.
+- [ ] `F-10` GLT-enforced 2 MiB loading — **BLOCKED**; text-loader is not enforcement.
+
+---
+
+# G. Immediate execution order
+
+## Batch 1 — native substrate truth
+1. `B-04` register all existing native kernels (including `mth_negate256`).
+2. `B-01` machine-readable Stage 0 layout.
+3. `B-02` add Stage 0/double-endian/vector/arithmetic fixtures to CI.
+4. `B-20`–`B-22` typed vector operations or explicitly freeze a smaller v1.
+5. `A-03`/`A-04` enumerate A/T tests and freeze vocabulary.
+
+## Batch 2 — execution/storage closure
+1. `A-18`/`A-75` wire NMP ledger into bridge.
+2. `A-19`/`A-20` full admission and rule/auth revalidation tests.
+3. `A-21` alternate submit-path guard.
+4. `A-36` ledger health/evidence.
+5. `A-39`/`E-01` page records.
+6. `A-54` contract digest/dedupe.
+
+## Batch 3 — graph/spectral foundations
+1. `C-01`–`C-04` directed/annulus/void.
+2. `C-05`–`C-07` eigensolver/fold/residual.
+3. `D-01`–`D-04` graph core/filter/pattern/RSS controller.
+4. `D-05`–`D-09` oracles/equivalence/native grid.
+
+## Batch 4 — learning/security
+1. `A-95` discovery persistence/wiring.
+2. `A-96` Boolean-head learning integration.
+3. `A-97`–`A-105` Class C/ACL/scratch/audit/refutation.
+4. `A-124` real execute HTTP service.
+
+## Batch 5 — blocked/external
+1. `F-06`–`F-10`, `A-23`, `D-11` only with real evidence.
+2. Keep `spec/p13-gates.json` blocked until then.
+
+---
+
+## Definition of done
+
+- Every unchecked item either has passing code/tests or an explicit blocked record with required evidence.
+- No source-only kernel is described as CI/native-verified.
+- No host arithmetic or alternate execution path bypasses NMP/admission/ring/JAHS.
+- Full suite green; native fixtures and canonical CI status reflected accurately.
+- Docs, counts, and evidence ladders agree with the code.
