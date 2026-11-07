@@ -116,6 +116,7 @@ mth_link_pf_main:
   MOVI r6,77
   CMP r3,r6
   JMP[NE] @mth_link_pf_fail
+  ST r3,r0,@mth_link_pf_operator_id
   MOVI r6,3
   CMP r4,r6
   JMP[NE] @mth_link_pf_fail
@@ -223,6 +224,7 @@ mth_link_pf_admit_ok:
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
   LD r8,r0,@mth_link_pf_program_id
+  LD r9,r0,@mth_link_pf_operator_id
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   CMP r1,r0
@@ -255,6 +257,7 @@ mth_link_pf_admit_ok:
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
   LD r8,r0,@mth_link_pf_program_id
+  LD r9,r0,@mth_link_pf_operator_id
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   MOVI r9,18
@@ -272,10 +275,8 @@ mth_link_pf_admit_ok:
   MOVI r9,7
   ST r9,r8,9
 
-  ; A mismatched operator/program pair is also rejected before admission.
-  MOVI r8,@mth_link_pf_candidate
-  MOVI r9,78
-  ST r9,r8,1
+  ; A mismatched operator/program pair is rejected before admission.
+  ; Keep the admitted rule epoch intact; pass the wrong linker operator ID.
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0x1234
   SHL r9,r9,16
@@ -290,6 +291,7 @@ mth_link_pf_admit_ok:
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
   LD r8,r0,@mth_link_pf_program_id
+  MOVI r9,78
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   MOVI r9,64
@@ -303,10 +305,6 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
-  MOVI r8,@mth_link_pf_candidate
-  MOVI r9,77
-  ST r9,r8,1
-
   ; Unknown program IDs are rejected before preflight or output publication.
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0x1234
@@ -325,6 +323,7 @@ mth_link_pf_admit_ok:
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
   MOVI r8,902
+  MOVI r9,77
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   MOVI r9,64
@@ -384,6 +383,7 @@ mth_link_pf_admit_ok:
   MOVI r6,78
   CMP r3,r6
   JMP[NE] @mth_link_pf_fail
+  ST r3,r0,@mth_link_pf_operator_id
   MOVI r6,901
   CMP r5,r6
   JMP[NE] @mth_link_pf_fail
@@ -394,11 +394,6 @@ mth_link_pf_admit_ok:
   JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
   ST r5,r0,@mth_link_pf_program_id
-  MOVI r8,@mth_link_pf_candidate
-  MOVI r9,78
-  ST r9,r8,1
-  MOVI r8,@mth_link_pf_rule
-  ST r9,r8,1
   MOVI r8,@mth_link_pf_output_payload
   ST r0,r8,0
   MOVI r1,@mth_link_pf_candidate
@@ -409,6 +404,7 @@ mth_link_pf_admit_ok:
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
   LD r8,r0,@mth_link_pf_program_id
+  LD r9,r0,@mth_link_pf_operator_id
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   CMP r1,r0
@@ -421,11 +417,8 @@ mth_link_pf_admit_ok:
   JMP[NE] @mth_link_pf_fail
 
   ; Restore dot operator/rule/contract for the negative-path checks below.
-  MOVI r8,@mth_link_pf_candidate
   MOVI r9,77
-  ST r9,r8,1
-  MOVI r8,@mth_link_pf_rule
-  ST r9,r8,1
+  ST r9,r0,@mth_link_pf_operator_id
   LD r10,r0,@mth_link_pf_dot_contract
   ST r10,r0,@mth_link_pf_contract
   MOVI r8,900
@@ -483,9 +476,9 @@ mth_link_pf_right:
 mth_link_pf_output:
 .word 0,0,0,0,0,@mth_link_pf_output_payload,1,0
 mth_link_pf_candidate:
-.word 1,77,4,4,3,2,2,256,256,7,1,1,2,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,2,256,256,7,1,1,2,1,100,101,102,103,104,105,106,107
 mth_link_pf_rule:
-.word 1,77,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
 
 .org 30256
 mth_link_pf_left_payload:
@@ -557,6 +550,8 @@ mth_link_pf_contract:
 mth_link_pf_dot_contract:
 .word 0
 mth_link_pf_program_id:
+.word 0
+mth_link_pf_operator_id:
 .word 0
 mth_link_pf_expression:
 .str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:77::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
