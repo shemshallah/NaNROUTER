@@ -27,10 +27,10 @@
 
 mth_sparse_graph_laplacian_q16_16:
   CMP r5,r0
-  JMP[LT] @mth_sparse_graph_invalid
+  JMP[LT] @mth_sparse_graph_invalid_input
   MOVI r6,65280
   CMP r5,r6
-  JMP[GT] @mth_sparse_graph_invalid
+  JMP[GT] @mth_sparse_graph_invalid_input
 
   ; Complete state-range preflight.
   ADD r6,r3,r0
@@ -40,9 +40,9 @@ mth_sparse_graph_laplacian_q16_16:
 mth_sparse_graph_validate_x:
   LD r10,r6,0
   CMP r10,r9
-  JMP[LT] @mth_sparse_graph_invalid
+  JMP[LT] @mth_sparse_graph_invalid_input
   CMP r10,r8
-  JMP[GT] @mth_sparse_graph_invalid
+  JMP[GT] @mth_sparse_graph_invalid_input
   ADD r6,r6,r13
   SUB r7,r7,r13
   CMP r7,r0
@@ -55,20 +55,20 @@ mth_sparse_graph_validate_x:
 mth_sparse_graph_validate_offsets:
   LD r10,r6,0
   CMP r10,r8
-  JMP[LT] @mth_sparse_graph_invalid
+  JMP[LT] @mth_sparse_graph_invalid_offsets
   CMP r10,r5
-  JMP[GT] @mth_sparse_graph_invalid
+  JMP[GT] @mth_sparse_graph_invalid_offsets
   SUB r11,r10,r8
   MOVI r12,255
   CMP r11,r12
-  JMP[GT] @mth_sparse_graph_invalid
+  JMP[GT] @mth_sparse_graph_invalid_offsets
   ADD r8,r10,r0
   ADD r6,r6,r13
   SUB r7,r7,r13
   CMP r7,r0
   JMP[GT] @mth_sparse_graph_validate_offsets
   CMP r8,r5
-  JMP[NE] @mth_sparse_graph_invalid
+  JMP[NE] @mth_sparse_graph_invalid_offsets
 
   ; Validate every endpoint is a canonical U8 value.
   ADD r6,r2,r0
@@ -80,7 +80,7 @@ mth_sparse_graph_validate_neighbors:
   LD r9,r6,0
   SHR r10,r9,8
   CMP r10,r0
-  JMP[NE] @mth_sparse_graph_invalid
+  JMP[NE] @mth_sparse_graph_invalid_neighbors
   CMP r9,r8
   JMP[LT] @mth_sparse_graph_neighbor_ok
   JMP @mth_sparse_graph_invalid
@@ -126,6 +126,12 @@ mth_sparse_graph_store_row:
   MOVI r1,1
   RET
 
-mth_sparse_graph_invalid:
+mth_sparse_graph_invalid_input:
   MOVI r1,0
+  RET
+mth_sparse_graph_invalid_offsets:
+  MOVI r1,2
+  RET
+mth_sparse_graph_invalid_neighbors:
+  MOVI r1,3
   RET
