@@ -286,8 +286,7 @@ mth_link_pf_fail_pre_30:
   JMP @mth_link_pf_fail_print
 mth_link_pf_fail_1:
   MOVI r12,@mth_link_pf_scratch
-  MOVI r8,1
-  ST r8,r12,47
+  ST r1,r12,47
   JMP @mth_link_pf_fail_print
 mth_link_pf_fail_2:
   MOVI r12,@mth_link_pf_scratch
