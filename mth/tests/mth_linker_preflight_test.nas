@@ -223,6 +223,35 @@ mth_link_pf_main:
   MOVI r9,7
   ST r9,r8,9
 
+  ; A mismatched operator/program pair is also rejected before admission.
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,78
+  ST r9,r8,1
+  MOVI r8,@mth_link_pf_output_payload
+  MOVI r9,0x12345678
+  ST r9,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  LD r8,r0,@mth_link_pf_program_id
+  MOVI r12,@mth_link_pf_scratch
+  CALL @mth_execute
+  MOVI r9,64
+  CMP r1,r9
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_output_payload
+  LD r9,r8,0
+  MOVI r10,0x12345678
+  CMP r9,r10
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,77
+  ST r9,r8,1
+
   ; Unknown program IDs are rejected before preflight or output publication.
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0x12345678
