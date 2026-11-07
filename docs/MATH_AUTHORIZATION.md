@@ -32,5 +32,6 @@ constructing a `Principal`.
 - It does not make a rule mathematically valid, execute a kernel, or grant a
   runner capability. Validity, capability admission, ring/JAHS, and lifecycle
   remain separate axes.
-- Wiring every `MathLearningService` mutator to this policy is tracked as a
-  remaining integration item; the policy contract and tests are in place.
+- `MathLearningService` optionally enforces this policy (`authorizer=` plus
+  `principal=`); with no authorizer, legacy behavior is preserved. Denied
+  lifecycle mutations fail closed before any store write.

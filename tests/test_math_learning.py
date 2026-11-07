@@ -9,7 +9,8 @@ Coverage:
 * stale generation CAS, duplicate proposal, negative memory;
 * rollback through the MathStore mapping pointer;
 * experiment outcomes as utility-only evidence;
-* append-only audit/evidence and proof-status discipline.
+* append-only audit/evidence and proof-status discipline;
+* optional authorization enforcement, fail-closed denials, and legacy behavior.
 """
 from __future__ import annotations
 
@@ -18,12 +19,20 @@ import tempfile
 import unittest
 from contextlib import closing
 
+from runner_riddle.math_auth import (
+    ACTIVATE,
+    PRUNE,
+    AuthorizationDenied,
+    MathAuthorizer,
+    Principal,
+)
 from runner_riddle.math_learning import (
     AuditError,
     ContradictionError,
     DuplicateProposalConflict,
     ExperimentPromotionDenied,
     InconclusiveEvidence,
+    LearningAuthorizationDenied,
     Level0ImmutableError,
     Level3IsolationError,
     LifecycleStateError,
@@ -121,6 +130,14 @@ class MathLearningLifecycleTests(unittest.TestCase):
     def rule_digest(self, rule_id, version):
         rule = self.store.get_rule(rule_id, version)
         return sha256_text(canonical_json(rule.to_dict()))
+
+    def authorized_service(self, principal, *, authorizer=None):
+        return MathLearningService(
+            self.store,
+            trusted_checkers={"checker:trusted"},
+            authorizer=authorizer or MathAuthorizer(),
+            principal=principal,
+        )
 
     # -- lifecycle ----------------------------------------------------------
 
@@ -912,6 +929,158 @@ class MathLearningLifecycleTests(unittest.TestCase):
         self.assertEqual(
             self.service.axes("math.rule.inconclusive").validity["earned"],
             "V1",
+        )
+
+    # -- optional authorization enforcement ---------------------------------
+
+    def test_authorization_denied_activation_is_fail_closed(self):
+        rule_id = "math.rule.auth.activate"
+        self.to_committed(rule_id)
+        before = self.store.get_rule_meta(rule_id)
+        events_before = len(self.service.audit(rule_id)["events"])
+        activator = Principal(
+            "worker:carol", roles=frozenset({"activator"}),
+        )
+        service = self.authorized_service(activator)
+
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            service.activate(rule_id, actor="worker:carol")
+        self.assertEqual(raised.exception.reason, "CAPABILITY_REQUIRED")
+        self.assertEqual(raised.exception.action, ACTIVATE)
+        self.assertIsInstance(raised.exception, AuthorizationDenied)
+        self.assertEqual(
+            self.service.lifecycle(rule_id)["state"], "committed",
+        )
+        after = self.store.get_rule_meta(rule_id)
+        self.assertEqual(
+            before["current_version"], after["current_version"],
+        )
+        self.assertEqual(before["generation"], after["generation"])
+        self.assertEqual(
+            len(self.service.audit(rule_id)["events"]), events_before,
+        )
+
+        no_role = Principal("worker:dave")
+        denied = self.authorized_service(no_role)
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            denied.activate(rule_id, actor="worker:dave")
+        self.assertEqual(raised.exception.reason, "ROLE_NOT_PERMITTED")
+
+    def test_pruning_requires_capability_and_terminal_gate(self):
+        rule_id = "math.rule.auth.prune"
+        active = self.to_active(rule_id)
+        before = self.store.get_rule_meta(rule_id)
+        events_before = len(self.service.audit(rule_id)["events"])
+        pruner = Principal("worker:pruner", roles=frozenset({"pruner"}))
+        service = self.authorized_service(pruner)
+
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            service._authorize(
+                PRUNE, {"rule_id": rule_id, "transition": "prune"},
+            )
+        self.assertEqual(raised.exception.reason, "CAPABILITY_REQUIRED")
+        self.assertEqual(raised.exception.action, PRUNE)
+
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            service.revoke(rule_id, actor="worker:pruner", reason="prune")
+        self.assertEqual(raised.exception.reason, "CAPABILITY_REQUIRED")
+        self.assertEqual(raised.exception.action, PRUNE)
+        self.assertEqual(
+            self.service.lifecycle(rule_id)["state"], "active",
+        )
+        self.assertEqual(
+            self.store.get_rule_meta(rule_id)["current_version"],
+            before["current_version"],
+        )
+        self.assertEqual(
+            len(self.service.audit(rule_id)["events"]), events_before,
+        )
+
+        capable = Principal(
+            "worker:supervisor", roles=frozenset({"pruner"}),
+            capabilities=frozenset({"rule.prune"}),
+        )
+        revoked = self.authorized_service(capable).revoke(
+            rule_id, actor="worker:supervisor", reason="capability granted",
+        )
+        self.assertEqual(revoked.state, "revoked")
+        self.assertGreater(revoked.version, active.version)
+        self.assertIsNotNone(revoked.mapping)
+
+    def test_revoked_principal_is_denied_before_any_write(self):
+        rule_id = "math.rule.auth.revoked"
+        revoked = Principal(
+            "worker:mallory", roles=frozenset({"proposer"}), revoked=True,
+        )
+        service = self.authorized_service(revoked)
+
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            service.propose(self.proposal(rule_id), proposer="worker:mallory")
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REVOKED")
+        self.assertEqual(raised.exception.principal_id, "worker:mallory")
+        with self.assertRaises(MathReferenceError):
+            self.store.get_rule_meta(rule_id)
+
+    def test_missing_principal_fails_closed_before_any_write(self):
+        rule_id = "math.rule.auth.missing"
+        service = MathLearningService(
+            self.store,
+            trusted_checkers={"checker:trusted"},
+            authorizer=MathAuthorizer(),
+        )
+
+        with self.assertRaises(LearningAuthorizationDenied) as raised:
+            service.propose(self.proposal(rule_id), proposer=PROPOSER)
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REQUIRED")
+        with self.assertRaises(MathReferenceError):
+            self.store.get_rule_meta(rule_id)
+
+    def test_legacy_service_without_authorizer_is_unchanged(self):
+        rule_id = "math.rule.auth.legacy"
+        inert = Principal(
+            "worker:mallory", roles=frozenset({"proposer"}), revoked=True,
+        )
+        service = MathLearningService(
+            self.store,
+            trusted_checkers={"checker:trusted"},
+            principal=inert,
+        )
+        self.assertIsNone(service.authorizer)
+
+        service.propose(self.proposal(rule_id), proposer=PROPOSER)
+        service.hash_proposal(rule_id, actor=PROPOSER)
+        service.validate(rule_id, validator=VALIDATOR)
+        service.test(
+            rule_id, tester=TESTER, harness="harness:bounded-1",
+            cases=[{"outcome": "pass"}],
+        )
+        service.approve(rule_id, approver=APPROVER)
+        service.commit(rule_id, actor=COMMITTER)
+        active = service.activate(rule_id, actor=ACTIVATOR)
+        self.assertEqual(active.state, "active")
+        self.assertEqual(
+            [rule.rule_id for rule in service.active_rules()], [rule_id],
+        )
+
+    def test_authorized_admin_can_run_the_full_lifecycle(self):
+        rule_id = "math.rule.auth.admin"
+        admin = Principal("worker:root", roles=frozenset({"admin"}))
+        service = self.authorized_service(admin)
+
+        service.propose(self.proposal(rule_id), proposer=PROPOSER)
+        service.hash_proposal(rule_id, actor=PROPOSER)
+        service.validate(rule_id, validator=VALIDATOR)
+        service.test(
+            rule_id, tester=TESTER, harness="harness:bounded-1",
+            cases=[{"outcome": "pass"}],
+        )
+        service.approve(rule_id, approver=APPROVER)
+        service.commit(rule_id, actor=COMMITTER)
+        active = service.activate(rule_id, actor=ACTIVATOR)
+        self.assertEqual(active.state, "active")
+        self.assertEqual(active.version, 7)
+        self.assertEqual(
+            [rule.rule_id for rule in service.active_rules()], [rule_id],
         )
 
 

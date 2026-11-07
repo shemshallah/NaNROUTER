@@ -9,6 +9,12 @@ version and moves it through validation, testing, approval, commit, and
 activation. It does not evaluate mathematics, execute a kernel, build a route,
 or grant execution authority.
 
+Authorization is an optional, separate policy layer. When configured, the
+existing `MathAuthorizer` from `runner_riddle/math_auth.py` gates every
+store-mutating lifecycle action before any version, mapping, or event is
+written. When no authorizer is configured, the service keeps its original
+behavior exactly.
+
 Persistence uses only the existing `MathStore` tables created by
 `runner_riddle/math_store.py`:
 
@@ -165,7 +171,7 @@ print(service.active_rules())          # production snapshot candidates
 
 | Member | Purpose |
 |---|---|
-| `MathLearningService(store, *, trusted_checkers=(), level0_rules=(), max_test_cases=4096)` | bind the store and proof policy |
+| `MathLearningService(store, *, trusted_checkers=(), level0_rules=(), max_test_cases=4096, authorizer=None, principal=None)` | bind the store, proof policy, and optional authorization policy |
 | `propose(proposal, *, proposer, expected_generation=None, tick=0)` | write proposal v1 (or a superseding version) |
 | `hash_proposal(rule_id, *, actor=None, expected_generation=None, tick=0)` | freeze/hash the proposal |
 | `validate(rule_id, *, validator, proof_digest=None, checker=None, expected_generation=None, tick=0)` | structural validation and optional proof submission |
@@ -190,6 +196,47 @@ is checked against the current rule head; stale callers receive
 `math_store.StaleGenerationError` before any version is written. When omitted,
 the service still reads the current head and passes it to `MathStore.put_rule`
 as the CAS expectation, so a concurrent writer cannot be silently overwritten.
+
+### Optional authorization enforcement
+
+`authorizer` is a `runner_riddle.math_auth.MathAuthorizer`; `principal` is an
+already-authenticated `runner_riddle.math_auth.Principal`. The service does not
+authenticate callers, issue tokens, or store credentials.
+
+* With `authorizer=None`, the service is unchanged: no role, capability, or
+  revocation check runs, and `principal` is inert.
+* With an authorizer configured, every store-mutating lifecycle action first
+  calls the private `_authorize(action, context)`. A missing principal, a
+  revoked principal, a missing role, or a missing capability raises
+  `LearningAuthorizationDenied` before any rule version, mapping pointer, or
+  `math_event` row is written. This error is both a `MathLearningError` and an
+  `AuthorizationDenied`, and carries `reason`, `action`, `principal_id`, and the
+  typed decision.
+* Authorization denials do not append `denied_*` events because that would
+  mutate the store. Existing service-level denials (self-validation, negative
+  memory, contradictions) still append their events as before.
+* The existing separation-of-duty checks remain in force. The authorizer also
+  receives the current lifecycle `proposer_id` in its context, so its own
+  separation rule applies to approval, commit, activation, and promotion.
+
+Action mapping:
+
+| Lifecycle method | Authorization action | Capability |
+|---|---|---|
+| `propose`, `hash_proposal` | `rule.propose` | — |
+| `validate` | `rule.validate` | — |
+| `test`, `record_experiment` | `rule.test` | — |
+| `approve` | `rule.approve` | — |
+| `commit` | `rule.commit` | — |
+| `activate`, `rollback` | `rule.activate` | `rule.activate` |
+| `promote` | `rule.promote` | `rule.promote` |
+| `deprecate`, `revoke`, `archive` | `rule.prune` | `rule.prune` |
+
+This module has no `prune()` lifecycle method; structural prune plans remain in
+`runner_riddle/math_retention.py`. `register_level0()` is intentionally not
+authorized because it only pins an in-memory baseline and does not mutate the
+store. `promote_by_experiment()` is intentionally not authorized because it
+always raises `ExperimentPromotionDenied` and never writes.
 
 ### Test cases
 
@@ -418,6 +465,7 @@ triggers that reject `UPDATE` and `DELETE`; the test suite verifies this.
 | same identity, different content | `DuplicateProposalConflict` | no write |
 | unchanged negative memory | `NegativeMemoryError` | denial event only |
 | level-3 activation without isolation | `Level3IsolationError` | denial event only |
+| authorization missing/revoked/denied | `LearningAuthorizationDenied` | no write and no event |
 | experiment used for promotion | `ExperimentPromotionDenied` | no write |
 | wrong lifecycle stage | `LifecycleStateError` | no write |
 | audit chain failure | `AuditError` | read-only failure |
@@ -435,7 +483,7 @@ Run:
 python3 -m unittest tests.test_math_learning -v
 ```
 
-The 20 tests cover:
+The 26 tests cover:
 
 | Test | Acceptance link |
 |---|---|
@@ -459,9 +507,20 @@ The 20 tests cover:
 | ordered append-only audit | S-05, D-04 |
 | inconclusive test non-promotion | G-05 |
 | non-level-3 isolation rejection | G-01 |
+| authorization-denied activation fails closed | §15 |
+| prune capability required for terminal transitions | §15 |
+| revoked principal denied before any write | §15 |
+| missing principal fails closed before any write | §15 |
+| legacy no-authorizer behavior preserved | §15 |
+| authorized admin completes the full lifecycle | §15 |
 
 The module deliberately does not claim:
 
+* that the optional authorizer authenticates the principal, issues sessions,
+  or stores secrets — the caller must authenticate before constructing a
+  `Principal`;
+* that an authorization decision proves mathematical validity, truth, or
+  execution authority;
 * that a bounded test proves a universal theorem;
 * that a Boolean head, R7 result, or LM ablation is validity evidence;
 * that an active rule is mathematically true;

@@ -31,6 +31,12 @@ Lifecycle::
 Level 0 rules are immutable and cannot be proposed, validated, promoted, or
 activated by this service.  Level 3 proposals are isolation-only: activation
 requires ``isolated=True`` and they are excluded from production snapshots.
+
+An optional :class:`runner_riddle.math_auth.MathAuthorizer` plus an
+already-authenticated :class:`runner_riddle.math_auth.Principal` can gate every
+store-mutating lifecycle action.  Authorization is a separate policy decision:
+it fails closed before any write, and it never substitutes for validity, proof,
+or capability admission.
 """
 from __future__ import annotations
 
@@ -38,6 +44,20 @@ from dataclasses import dataclass, field
 import json
 from typing import Any, Iterable, Mapping
 
+from .math_auth import (
+    ACTIVATE,
+    APPROVE,
+    COMMIT,
+    PROPOSE,
+    PROMOTE,
+    PRUNE,
+    TEST,
+    VALIDATE,
+    AuthorizationDecision,
+    AuthorizationDenied,
+    MathAuthorizer,
+    Principal,
+)
 from .math_objects import (
     MathObjectError,
     MathRule,
@@ -181,6 +201,29 @@ class ExperimentPromotionDenied(MathLearningError):
 
 class AuditError(MathLearningError):
     """The append-only evidence chain could not be verified."""
+
+
+class LearningAuthorizationDenied(MathLearningError, AuthorizationDenied):
+    """A lifecycle action is not authorized for the configured principal.
+
+    This is deliberately both a learning error and the authorization policy's
+    typed denial, so callers may catch either layer.  Authorization denials are
+    raised before a lifecycle version, mapping, or evidence row is written.
+    """
+
+    def __init__(self, reason: str, *, principal_id: str | None = None,
+                 action: str | None = None,
+                 decision: AuthorizationDecision | None = None) -> None:
+        MathLearningError.__init__(self, reason)
+        self.reason = reason
+        self.principal_id = principal_id
+        self.action = action
+        self.decision = decision
+
+
+# Both names are exported for callers that prefer the shorter or longer form.
+LearningAuthorizationError = LearningAuthorizationDenied
+MathLearningAuthorizationError = LearningAuthorizationDenied
 
 
 # ---------------------------------------------------------------------------
@@ -523,10 +566,20 @@ class MathLearningService:
     def __init__(self, store: MathStore, *,
                  trusted_checkers: Iterable[str] = (),
                  level0_rules: Iterable[MathRule] = (),
-                 max_test_cases: int = 4096) -> None:
+                 max_test_cases: int = 4096,
+                 authorizer: MathAuthorizer | None = None,
+                 principal: Principal | None = None) -> None:
         if not isinstance(store, MathStore):
             raise LearningConfigError("store must be a MathStore")
+        if authorizer is not None and not isinstance(authorizer, MathAuthorizer):
+            raise LearningConfigError(
+                "authorizer must be a MathAuthorizer or None"
+            )
+        if principal is not None and not isinstance(principal, Principal):
+            raise LearningConfigError("principal must be a Principal or None")
         self.store = store
+        self.authorizer = authorizer
+        self.principal = principal
         checkers = set()
         for checker in trusted_checkers:
             checkers.add(_require_text(checker, "trusted checker", maximum=256))
@@ -539,6 +592,40 @@ class MathLearningService:
             level0_rules = (level0_rules,)
         for rule in level0_rules:
             self.register_level0(rule)
+
+    # -- authorization ------------------------------------------------------
+
+    def _authorize(self, action: str,
+                   context: Mapping[str, Any] | None = None, *,
+                   actor: str | None = None
+                   ) -> AuthorizationDecision | None:
+        """Fail closed before a lifecycle mutation when policy is configured.
+
+        With no authorizer the service keeps its legacy behavior and returns
+        ``None``.  With an authorizer, a missing/revoked/denied principal raises
+        :class:`LearningAuthorizationDenied` before any version, mapping, or
+        event is written.
+        """
+        if self.authorizer is None:
+            return None
+        if self.principal is None:
+            raise LearningAuthorizationDenied(
+                "PRINCIPAL_REQUIRED", action=action,
+            )
+        request_context = dict(context or {})
+        if actor is not None:
+            request_context.setdefault("actor", actor)
+        decision = self.authorizer.authorize(
+            self.principal, action, context=request_context,
+        )
+        if not decision.allowed:
+            raise LearningAuthorizationDenied(
+                decision.reason,
+                principal_id=decision.principal_id,
+                action=decision.action,
+                decision=decision,
+            )
+        return decision
 
     # -- level-0 baseline ---------------------------------------------------
 
@@ -1159,6 +1246,16 @@ class MathLearningService:
                 tick: int = 0) -> LifecycleRecord:
         _require_text(proposer, "proposer", maximum=128)
         _require_int(tick, "tick")
+        context_rule_id = proposal.rule_id \
+            if isinstance(proposal, RuleProposal) else None
+        self._authorize(
+            PROPOSE,
+            {
+                "rule_id": context_rule_id,
+                "proposer_id": proposer,
+            },
+            actor=proposer,
+        )
         normalised = self._normalise_proposal(proposal, proposer, tick)
         rule_id = normalised["rule_id"]
         self._assert_not_level0(rule_id)
@@ -1285,12 +1382,20 @@ class MathLearningService:
                       tick: int = 0) -> LifecycleRecord:
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        actor = actor or str(axes.lifecycle.get("proposer") or "")
+        _require_text(actor, "actor", maximum=128)
+        self._authorize(
+            PROPOSE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+            },
+            actor=actor,
+        )
         if axes.state != "proposed":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not proposed"
             )
-        actor = actor or str(axes.lifecycle.get("proposer") or "")
-        _require_text(actor, "actor", maximum=128)
         stored, evidence, _ = self._transition(
             rule_id, action="hash", actor=actor, state="hashed", tick=tick,
             expected_generation=expected_generation,
@@ -1313,6 +1418,15 @@ class MathLearningService:
         head, _ = self._head(rule_id)
         self._assert_not_level0(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            VALIDATE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "validator_id": validator,
+            },
+            actor=validator,
+        )
         if axes.state != "hashed":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not hashed"
@@ -1443,6 +1557,16 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            TEST,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "validator_id": axes.lifecycle.get("validator"),
+                "tester_id": tester,
+            },
+            actor=tester,
+        )
         if axes.state != "validated":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not validated"
@@ -1619,6 +1743,14 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            APPROVE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+            },
+            actor=approver,
+        )
         if axes.state != "tested":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not tested"
@@ -1698,6 +1830,14 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            COMMIT,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+            },
+            actor=actor,
+        )
         if axes.state != "approved":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not approved"
@@ -1750,6 +1890,15 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            ACTIVATE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "isolated": bool(isolated),
+            },
+            actor=actor,
+        )
         if axes.state != "committed":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not committed"
@@ -1834,6 +1983,15 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            PRUNE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "transition": "deprecate",
+            },
+            actor=actor,
+        )
         if axes.state != "active":
             raise LifecycleStateError(
                 f"rule {rule_id!r} is {axes.state}, not active"
@@ -1859,6 +2017,15 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            PRUNE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "transition": "revoke",
+            },
+            actor=actor,
+        )
         if axes.state not in {
             "active", "deprecated", "approved", "committed", "tested",
             "validated",
@@ -1887,6 +2054,15 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            PRUNE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "transition": "archive",
+            },
+            actor=actor,
+        )
         if axes.state == "archived":
             return self._record(
                 head, {}, duplicate=True,
@@ -1920,6 +2096,16 @@ class MathLearningService:
         _require_int(tick, "tick")
         head, meta = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            ACTIVATE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "transition": "rollback",
+                "target_version": target_version,
+            },
+            actor=actor,
+        )
         history = self._history(rule_id)
         try:
             current_mapping = self.store.get_mapping(
@@ -2063,6 +2249,15 @@ class MathLearningService:
             )
         head, _ = self._head(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            TEST,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "transition": "experiment",
+            },
+            actor=actor,
+        )
         if axes.state == "archived":
             raise LifecycleStateError("archived rules cannot receive experiments")
         record = self._normalise_experiment(outcome)
@@ -2226,6 +2421,15 @@ class MathLearningService:
         head, _ = self._head(rule_id)
         self._assert_not_level0(rule_id)
         axes = self._axes_of(head)
+        self._authorize(
+            PROMOTE,
+            {
+                "rule_id": rule_id,
+                "proposer_id": axes.lifecycle.get("proposer"),
+                "target_level": target_level,
+            },
+            actor=actor,
+        )
         proposer = str(axes.lifecycle.get("proposer") or "")
         if actor == proposer:
             self._deny(
@@ -2404,11 +2608,14 @@ __all__ = [
     "InconclusiveEvidence",
     "LEARNING_SCHEMA",
     "LIFECYCLE_STATES",
+    "LearningAuthorizationDenied",
+    "LearningAuthorizationError",
     "LearningConfigError",
     "Level0ImmutableError",
     "Level3IsolationError",
     "LifecycleRecord",
     "LifecycleStateError",
+    "MathLearningAuthorizationError",
     "MathLearningError",
     "MathLearningService",
     "NEGATIVE_STATES",
