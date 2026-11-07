@@ -59,7 +59,7 @@ mth_link_pf_main:
   MOVI r5,256
   CALL @nmr_shape_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_shape_fail
   MOVI r1,@mth_link_pf_stage_shape1
   CALL @mth_link_pf_puts
   MOVI r1,234
@@ -338,6 +338,11 @@ mth_link_pf_main:
   CALL @mth_link_pf_puts
   HALT
 
+mth_link_pf_shape_fail:
+  MOVI r1,@mth_link_pf_shape_bad
+  CALL @mth_link_pf_puts
+  HALT
+
 mth_link_pf_dispatch_status_fail:
   MOVI r1,@mth_link_pf_dispatch_status_bad
   CALL @mth_link_pf_puts
@@ -485,3 +490,5 @@ mth_link_pf_stage_bind2:
 .str "STAGE BIND2\n"
 mth_link_pf_stage_before_shape:
 .str "STAGE BEFORE SHAPE\n"
+mth_link_pf_shape_bad:
+.str "MTH SHAPE REGISTRATION FAIL\n"
