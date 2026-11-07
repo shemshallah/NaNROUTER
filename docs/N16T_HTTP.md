@@ -66,6 +66,24 @@ does **not** advertise corpus ingestion, training, candidate evaluation, or
 merge capabilities. Other message types fail closed until their NaN16 guest
 handlers and NMP worker handoff are implemented.
 
+## Primary service deployment
+
+The repository's primary `python -m runner_riddle.http_service` entrypoint also
+mounts `POST /n16t` directly on `RiddleService`; it does not require the
+separate `WaveHttpServer` test/embedded server. Enable the endpoint with:
+
+- `RIDDLE_N16T_SUBMIT_TOKEN`: dedicated bearer credential, at least 32
+  characters. This is separate from the intake and worker credentials.
+- `NAN16_LIBRARY`: shared library built from the canonical NaN0S C core.
+- `N16T_GUEST_IMAGE`: compiled NaN16 guest image.
+- `N16T_GUEST_LABELS`: label map emitted from the same image build.
+
+When the N16T submit token is absent, the primary service returns 503 for
+`/n16t` and does not allocate guest VMs. When the token is configured, startup
+requires all three runtime artifacts; a partial or invalid runtime
+configuration fails service startup rather than silently falling back.
+The service closes the persistent guest pool during shutdown.
+
 ## HTTP security and protocol boundaries
 
 The route requires the existing submit-role bearer token, rejects non-N16T
