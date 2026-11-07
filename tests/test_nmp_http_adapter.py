@@ -65,6 +65,7 @@ def make_packet(*, metadata=None):
         capability_set=({
             "required": "vector.dot",
             "workspace": 256,
+        "expected_program_id": 900,
             "precision": "float32",
         },),
         capability_epoch=1,
@@ -181,6 +182,20 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
         self.assertEqual(completed["packet"]["state"], nmp.COMPLETED)
         self.assertEqual(completed["job"]["state"], "done")
         self.assertEqual(completed["job"]["result_digest"], "e" * 64)
+
+    def test_submission_rejects_guest_echoed_program_id_not_in_server_registry(self):
+        packet = preflighted_packet()
+        def wrong_program_context(**kwargs):
+            context = gate_context(**kwargs)
+            context["expected_program_id"] = 901
+            return context
+        adapter = NmpHttpAdapter(
+            self.service, wrong_program_context,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        with self.assertRaises(NmpHttpError):
+            adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        self.assertEqual(self.store.stats()["jobs"]["queued"], 0)
 
     def test_submission_rejects_packet_without_native_receipt(self):
         packet = make_packet(metadata={"native_admission_required": True})
