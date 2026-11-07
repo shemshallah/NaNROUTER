@@ -1218,8 +1218,3 @@ mth_comp_scratch:
 .word 0
 .word 0
 .word 0
-.org 3300
-mth_comp_pass:
-.str "MTH GRAPH COMPONENTS NULLITY V1 PASS\n"
-mth_comp_bad:
-.str "MTH GRAPH COMPONENTS NULLITY V1 FAIL\n"
