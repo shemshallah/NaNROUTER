@@ -58,13 +58,16 @@ mth_pair_driver_slice:
   LD r1,r12,9
   ADD r1,r1,r13
   ST r1,r12,9
-  MOVI r11,46
+  MOVI r11,48
+  ADD r11,r11,r1
   PUTC r11
   MOVI r2,16
   CMP r1,r2
   JMP[LT] @mth_pair_driver_slice
 
   ; Finalize only after all sixteen slices have returned successfully.
+  MOVI r11,70
+  PUTC r11
   LA r12,@mth_pair_driver_state
   LD r1,r12,4
   LD r2,r12,5
