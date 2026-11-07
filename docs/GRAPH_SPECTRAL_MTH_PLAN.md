@@ -260,13 +260,32 @@ A general dense real-matrix action is now native_verified for the stated tile AB
 For each 16×16 output tile, the kernel computes
 `Y[i,j] = sum_k L[i,k]U[k,j] + sum_k U[i,k]L[j,k]`.
 It stages the full 256×256 U matrix and two 16×256 row windows of L.
-The declared working set is below the 512 KiB guest ceiling. The full
-65,536×65,536 Kronecker operator is never formed.
+The declared working set is 73,990 NaN16 words (591,920 bytes), exceeding the 512 KiB guest ceiling. This remains a CI-verified mathematical reference, not a dispatchable 512 KiB operation. The full 65,536×65,536 Kronecker operator is never formed.
 
 The two sums use separate accumulators and increasing-k order, with an
 explicit final FADD. The caller supplies row windows from one immutable L
 digest and invokes 256 tiles to complete Y. The L=2I fixture checks every cell in two tiles against Y=4U, at global origins (0,0) and (16,32).
 
-**Evidence status: NATIVE_VERIFIED for two tile origins.** Canonical NaN16 CI run
+**Evidence status: NATIVE_VERIFIED reference only; over budget for the 512 KiB guest.** Canonical NaN16 CI run
 218 assembled and executed the L=2I fixture (4,643,414 guest steps); all 256 output cells matched Y=4U at both tile origins (0,0) and (16,32). This does not yet verify full 256-tile paged orchestration, cancellation, cross-tile publication atomicity, or a
 generic sparse-CSR pair action.
+
+
+## 15. Bounded K16 streaming pair action v1
+
+The dispatchable memory-bounded path is now source-written and native-verified:
+mth/nan16/mth_graph_pair_tile16_k16_f32.nas, ABI
+docs/MTH_GRAPH_PAIR_TILE16_K16_ABI_V1.md, fixture
+mth/tests/mth_graph_pair_tile16_k16_f32_test.nas.
+
+Each invocation stages four 16×16 K-blocks and updates two independent
+16×16 partial-sum tiles. The caller supplies K slices in increasing order
+(0,16,...,240), then invokes the finalizer to combine the two sums.
+Workspace is 1,542 NaN16 words (12,336 bytes), comfortably below the
+65,536-word / 512 KiB guest ceiling.
+
+Canonical NaN16 CI run 242 passed the two-slice L=2I oracle in 283,436
+guest steps. It verifies the first term accumulated in K=16..31, the
+second term accumulated in K=32..47, and the final output tile. This does
+not yet verify the 16-slice full-K driver, page-window retrieval, or
+atomic publication of all 256 output tiles.
