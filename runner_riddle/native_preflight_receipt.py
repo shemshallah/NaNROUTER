@@ -299,11 +299,13 @@ class NativePreflightLeaseBinding:
         if packet.job_id is not None and packet.job_id != job_id:
             raise NativePreflightReceiptError("job does not match packet")
         lease_job_id = lease.get("job_id")
-        if lease_job_id is not None and lease_job_id != job_id:
-            raise NativePreflightReceiptError("lease belongs to another job")
+        if lease_job_id != job_id:
+            raise NativePreflightReceiptError("lease must name the exact bound job")
         if str(lease.get("state", "")).lower() != "active":
             raise NativePreflightReceiptError("worker lease is not active")
         lease_epoch = _integer(lease.get("lease_epoch"), "lease_epoch", minimum=1)
+        if job.get("lease_epoch") is not None and job.get("lease_epoch") != lease_epoch:
+            raise NativePreflightReceiptError("job and lease epochs do not match")
         lease_owner = _required_text(lease.get("lease_owner") or lease.get("owner"), "lease_owner")
         lease_token = _required_text(lease.get("lease_token"), "lease_token")
         ring_epoch = _integer(ring_snapshot.get("epoch"), "ring_epoch", minimum=1)
