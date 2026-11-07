@@ -126,6 +126,12 @@ def gate(packet, **overrides):
         "ring_incarnation": "ring-inc-1",
         "ring_epoch": 1,
     }
+    if packet.metadata.get("native_admission_required"):
+        inputs["ruleset_snapshot"] = {
+            "snapshot_id": RULES,
+            "rule_epoch": 7,
+            "rule_digest": "a" * 64,
+        }
     inputs.update(overrides)
     return nmp.execution_gate(packet, **inputs)
 
@@ -225,7 +231,15 @@ class NativeAdmissionReceiptTests(unittest.TestCase):
 
     def test_native_receipt_is_bound_to_active_worker_lease(self):
         packet = self.make_preflighted()
-        packet = packet.queue(gate=gate(packet))
+        packet = packet.queue(
+            gate=gate(packet),
+            admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
+            capability=make_capability(),
+            ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 7, "rule_digest": "a" * 64},
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
         token = "lease-token-" + "a" * 32
         job = {
             "job_id": "job-native", "state": "leased", "generation": packet.generation,
@@ -239,7 +253,7 @@ class NativeAdmissionReceiptTests(unittest.TestCase):
             job=job, lease=lease,
             admission=make_admission(),
             preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
-            capability=make_capability(), ruleset_snapshot=RULES,
+            capability=make_capability(), ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 7, "rule_digest": "a" * 64},
             ring_incarnation="ring-inc-1", ring_epoch=1, now_tick=20,
         )
         self.assertEqual(started.job_id, "job-native")
