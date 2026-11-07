@@ -93,7 +93,9 @@ mth_weighted_v2_validate_neighbors:
   JMP[NE] @mth_weighted_v2_invalid_neighbors
   MOVI r1,256
   CMP r10,r1
-  JMP[GE] @mth_weighted_v2_invalid_neighbors
+  JMP[LT] @mth_weighted_v2_neighbor_valid
+  JMP @mth_weighted_v2_invalid_neighbors
+mth_weighted_v2_neighbor_valid:
   ADD r8,r8,r13
   SUB r9,r9,r13
   JMP @mth_weighted_v2_validate_neighbors
