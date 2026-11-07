@@ -130,7 +130,13 @@ A spectral signature is lossy. It must point back to exact source relations and 
 
 A .nas file is source-written, not verified. A fixture is source-written, not passed, until the canonical toolchain assembles and executes it. Python/C++ tests may validate descriptors, routing, or independent small reference expectations, but they cannot be reported as validation of NaN16 mathematical kernels.
 
-Current gate: architecture specified. Existing MTH has checked U32 arithmetic, shifts, multiplication/division, and a raw U32 span-add primitive, but the native spectral ABI is not yet frozen. The immediate next step is to establish signed fixed-point/vector ABI and canonical assembler availability, then implement K256 degree/Lx before any eigensolver or void/wave kernel.
+Current gate: the K256 U16-input Laplacian is native_verified by the canonical
+NaN16 toolchain. Existing MTH also has checked U32 arithmetic, shifts,
+multiplication/division, and a raw U32 span-add primitive. The signed
+fixed-point ABI for wave/void/filter kernels remains unfrozen. The next
+implementation step is a sparse weighted-graph Lx kernel with explicit
+symmetric-edge input and a small exact path-graph oracle; do not jump to
+Lanczos or wave evolution yet.
 
 
 ## 10. First native kernel: K256 Laplacian over U16 payloads
@@ -156,8 +162,10 @@ unchanged. Input and output spans must not overlap.
 The fixture checks the impulse oracle `[1,0,...,0] -> [255,-1,...,-1]`
 and invalid-input atomicity. A new GitHub Actions workflow checks out the
 canonical NaN0S source assembler and execution harness, assembles this
-fixture, and runs it. Until that workflow completes successfully, this
-kernel remains **source-written / execution-unverified**.
+fixture, and runs it. The workflow passed on 2026-11-07 (run #9): the canonical source assembler
+assembled the fixture, and the NaN0S execution harness produced
+`MTH K256 LAPLACIAN PASS` after 5,391 guest steps (rc=3/HALT). The kernel
+is therefore **native_verified** for this exact U16-input K256 operator.
 
 This does not yet establish the signed fixed-point ABI for graph waves,
 void potentials or spectral iteration. It is a narrow exact K256 baseline
