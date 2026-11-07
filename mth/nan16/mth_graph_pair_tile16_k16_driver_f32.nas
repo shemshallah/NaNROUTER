@@ -17,7 +17,6 @@ mth_graph_pair_tile16_k16_driver_f32:
   ST r5,r12,4
   ST r6,r12,5
   ST r7,r12,6
-  ST r8,r12,7
   ST r0,r12,8
   ST r0,r12,9
 
@@ -62,8 +61,7 @@ mth_pair_driver_slice:
   CMP r1,r2
   JMP[LT] @mth_pair_driver_slice
 
-  ; Finalize only after all sixteen slices have returned successfully.
-  LA r12,@mth_pair_driver_state
+  ; Return the completed pair of accumulators to the caller for finalization.
   MOVI r1,1
   RET
 
