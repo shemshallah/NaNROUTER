@@ -67,3 +67,15 @@ The caller writes output tiles to a candidate generation and publishes only afte
 ## Fixture
 
 mth/tests/mth_graph_pair_tile16_k16_f32_test.nas uses two K slices for L=2I and U[17,34]=2. It verifies acc_LU=4 after the first slice, acc_ULt=4 after the second, and the complete output tile Y[1,2]=8 with all other cells zero.
+
+## Full 16-slice guest driver
+
+Native driver: `mth/nan16/mth_graph_pair_tile16_k16_driver_f32.nas`
+
+Fixture: `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas`
+
+The driver accepts four strips, each containing sixteen consecutive 16×16 blocks (4,096 words per strip), followed by two 256-word accumulators and a six-word K16 scratch area. It invokes the K16 accumulator for offsets 0, 256, ..., 3,840 in strictly increasing order. It preserves the caller's return/frame registers across the nested kernel calls and returns the two partial-sum tiles; finalization remains an explicit caller operation after the caller validates the accumulators.
+
+The native fixture places the first product in K-slice 0 and the second product in K-slice 15. It verifies both independent accumulators equal 4.0 at local cell [1,2], finalizes them, then verifies the output is 8.0 at that cell and zero elsewhere.
+
+Canonical CI evidence: run 338, 2,224,303 guest steps. Capability ID: `mth.graph.pair.tile16.k16.driver.f32`. Declared workspace: 17,170 NaN16 words (137,360 bytes), including the four 16-slice strips, both accumulators, output tile, scratch, and private driver frame.
