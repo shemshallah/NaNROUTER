@@ -1,6 +1,6 @@
 # MTH 256x256 pair-space tile ABI v1
 
-Status: NATIVE_VERIFIED for the stated tile ABI by canonical NaN16 CI run 201 (2,301,554 guest steps).
+Status: NATIVE_VERIFIED for the stated tile ABI by canonical NaN16 CI run 218 (4,643,414 guest steps).
 
 ## Operation
 
@@ -53,4 +53,4 @@ Total declared payload is below 290 KiB, within the 512 KiB guest working-set ce
 
 ## Fixture
 
-mth/tests/mth_graph_pair_tile16_f32_test.nas uses L=2I and a two-entry U. The exact oracle is Y=4U. It checks all 256 outputs in the first tile. Canonical NaN16 workflow run 201 assembled and executed the fixture successfully; output marker: MTH PAIR TILE16 F32 PASS. This verifies one 16×16 tile for the L=2I oracle, not full 256-tile orchestration or generic sparse-CSR integration.
+mth/tests/mth_graph_pair_tile16_f32_test.nas uses L=2I and a two-entry U. The exact oracle is Y=4U. It checks all 256 outputs in the two tiles. Canonical NaN16 workflow run 218 assembled and executed the fixture successfully; output marker: MTH PAIR TILE16 F32 PASS. This verifies one 16×16 tile for the L=2I oracle, not full 256-tile orchestration or generic sparse-CSR integration.
