@@ -94,7 +94,7 @@ def native_receipt(packet):
         "capability_digest": packet.capability_set_digest,
         "preflight_digest": packet.preflight_digest,
         "generation": packet.generation,
-        "program_id": 900,
+        "program_id": 79,
         "guest_status": 0,
         "producer": "nan16_guest",
     }
@@ -110,6 +110,25 @@ def preflighted_packet():
     )
 
 
+
+def execution_evidence(packet, *, lease_epoch, lease_owner, result_digest="e" * 64,
+                       program_id=79, output_digest=None):
+    return {
+        "schema": "nanrouter.native-kernel-execution.v1",
+        "packet_id": packet.packet_id,
+        "function_id": packet.function_id,
+        "program_id": program_id,
+        "output_kind": 3,
+        "dimension": 4,
+        "output_count": 1,
+        "output_digest": output_digest or result_digest,
+        "guest_steps": 4096,
+        "guest_image_digest": "b" * 64,
+        "guest_source_digest": "c" * 64,
+        "lease_epoch": lease_epoch,
+        "lease_owner": lease_owner,
+    }
+
 def gate_context(*, packet, stage, job, lease):
     context = {
         "admission": admission(),
@@ -123,7 +142,7 @@ def gate_context(*, packet, stage, job, lease):
         "ring_incarnation": "ring-inc-1",
         "ring_epoch": 1,
         "workspace": 256,
-        "expected_program_id": 900,
+        "expected_program_id": 79,
     }
     if stage in {"lease", "complete"}:
         context["expected_worker_owner"] = lease["lease_owner"]
@@ -177,11 +196,58 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
             lease_owner="worker-A",
             result_digest="e" * 64,
             now_tick=120,
+            execution_evidence=execution_evidence(
+                packet, lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64,
+            ),
             result_generation=8,
         )
         self.assertEqual(completed["packet"]["state"], nmp.COMPLETED)
         self.assertEqual(completed["job"]["state"], "done")
         self.assertEqual(completed["job"]["result_digest"], "e" * 64)
+        native_execution = completed["packet"]["evidence"]["native_kernel_execution"]
+        self.assertEqual(native_execution["program_id"], 79)
+        self.assertEqual(native_execution["guest_steps"], 4096)
+        self.assertEqual(native_execution["output_digest"], "e" * 64)
+
+
+    def test_completion_rejects_execution_evidence_for_another_program(self):
+        packet = preflighted_packet()
+        submitted = self.adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        job_id = submitted["job"]["job_id"]
+        leased = self.adapter.lease(self.worker_token, "worker-A", now_tick=110,
+                                    lease_ticks=64, job_id=job_id)
+        evidence = execution_evidence(
+            packet, lease_epoch=leased["lease"]["epoch"], lease_owner="worker-A",
+            program_id=78,
+        )
+        with self.assertRaisesRegex(NmpHttpError, "program_id"):
+            self.adapter.complete(
+                self.worker_token, leased["packet"], job_id=job_id,
+                lease_token=leased["lease"]["token"], lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=evidence,
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
+
+    def test_completion_rejects_execution_output_digest_mismatch(self):
+        packet = preflighted_packet()
+        submitted = self.adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        job_id = submitted["job"]["job_id"]
+        leased = self.adapter.lease(self.worker_token, "worker-A", now_tick=110,
+                                    lease_ticks=64, job_id=job_id)
+        evidence = execution_evidence(
+            packet, lease_epoch=leased["lease"]["epoch"], lease_owner="worker-A",
+            result_digest="e" * 64, output_digest="f" * 64,
+        )
+        with self.assertRaisesRegex(NmpHttpError, "does not match result_digest"):
+            self.adapter.complete(
+                self.worker_token, leased["packet"], job_id=job_id,
+                lease_token=leased["lease"]["token"], lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=evidence,
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
 
     def test_submission_rejects_guest_echoed_program_id_not_in_server_registry(self):
         packet = preflighted_packet()
