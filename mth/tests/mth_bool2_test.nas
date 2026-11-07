@@ -8,11 +8,11 @@ mth_bool_test_main:
 
 mth_bool_loop:
   ADD r1,r12,r0
-  LD r7,r12,@mth_bool_expected
+  LD r10,r12,@mth_bool_expected
   LD r5,r0,@mth_bool_a
   LD r6,r0,@mth_bool_b
   CALL @mth_bool2
-  CMP r4,r7
+  CMP r4,r10
   JMP[NE] @mth_bool_fail
 
   ADD r12,r12,r13
