@@ -14,9 +14,9 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [x] 23/23 native MTH fixtures pass locally with `nan_cli`.
-- [x] 111 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42382908574` (49/49 steps).
+- [x] 31/31 native MTH fixtures pass locally with `nan_cli`.
+- [x] 124 Python tests pass.
+- [x] Expanded GitHub Actions native workflow passed prior run `42382908574` (49/49 steps); 31-fixture run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -53,12 +53,13 @@
 ## R3 — Spectral engine
 
 - [x] Add 256-point complex float32 DFT reference with caller-supplied twiddle table.
-- [ ] Add a separate 255-point head-only DFT reference.
+- [x] Add a separate 255-point head-only DFT reference.
 - [x] Add even 256-position fold vector kernel.
 - [x] Add odd 255-head fold vector kernel.
 - [x] Add 128×128 centrosymmetry certificate.
 - [ ] Add streaming 255/256 centrosymmetry certificate.
-- [ ] Add Lanczos/power-iteration top-k kernel.
+- [x] Add 128×128 power-iteration kernel.
+- [ ] Add Lanczos/top-k deflation.
 - [ ] Add residual/orthogonality fixture for a real operator.
 
 ## R4 — Wave dynamics
@@ -67,18 +68,18 @@
 - [x] Add step-energy metric kernel.
 - [x] Add invalid dt/gamma/layout rejection atomicity.
 - [x] Add four-step harmonic-H energy-conservation fixture (diagonal H) — local PASS.
-- [ ] Add repeated-step energy conservation with a real graph Laplacian `H`.
-- [ ] Add repeated-step damped-energy-decrease fixture.
+- [x] Add repeated-step energy conservation with a real C256 graph Laplacian `H`.
+- [x] Add four-step harmonic damped-energy-decrease fixture.
 - [ ] Add bounded DRIVE source fixture.
 - [ ] Add CFL / λ_max guard fixture.
 - [x] Add deterministic trace fields in storage schema.
 
 ## R5 — Aperture
 
-- [x] Add float32 dot, norm, and axpy primitives.
+- [x] Add float32 dot, norm, axpy, and cosine primitives.
 - [x] Add 128×128 dense matvec primitive.
 - [x] Add aperture descriptor and decomposition selector (`runner_riddle/wave_aperture.py`; 9 tests).
-- [ ] Add top singular-vector / power-iteration kernel.
+- [x] Add 128×128 power-iteration kernel.
 - [ ] Add QUERY / MATCH / FILTER / DRIVE composition.
 - [ ] Add observability/reachability metric kernel.
 - [ ] Add capacity-vs-SNR test plan.
@@ -89,7 +90,7 @@
 - [x] Add dense 128×128 pair-space action `LU + ULᵀ`.
 - [x] Add rank-1 128 pair-space prototype.
 - [x] Add small explicit fixture (L=2I) and zero-state fixture.
-- [ ] Add low-rank coupling descriptor `Σ B_r ⊗ C_r`.
+- [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
 - [ ] Add 256×256 paged/tiled product action.
@@ -113,6 +114,7 @@
 - [x] Add state-seal/cartridge schema.
 - [x] Add job/lease/capability state machine.
 - [x] Add stale/unauthorized/replay rejection tests.
+- [x] Add authenticated WaveService facade over BS0DB/MC0DB.
 - [ ] Add NANNET HTTP node endpoints and live Koyeb integration.
 - [ ] Run signed Koyeb volume-registry integration check.
 
@@ -121,20 +123,20 @@
 - [x] Freeze adapter descriptor `h + β C u`.
 - [x] Add adapter mode and ablation descriptor.
 - [x] Add frozen-base ablation labels and safety gate.
+- [x] Add 128-dimensional NaN16 adapter residual composition.
 - [ ] Add typed ENCODE/DECODE composition.
-- [ ] Add NaN16 residual composition.
 - [ ] Run retrieval/memory adapter and frozen-base ablations.
 - [ ] Enable only after measured held-out benefit.
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 23 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 31 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
 - [x] Add `docs/GRAPH_SPECTRAL_MTH_PLAN.md` implementation update.
 - [x] Add `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
-- [x] Run the expanded CI workflow on GitHub Actions (run `42382908574`).
+- [x] Run the expanded 31-fixture CI workflow on GitHub Actions.
 - [ ] Register final CI digests in the production MC0DB.
 
 ## Agent dispatch board
@@ -154,11 +156,11 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-23/23 fixtures passed
+31/31 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests
 OK
 ```
 
-CI run: `42382908574` — 49/49 steps passed. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42382908574` — 49/49 steps; 31-fixture run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.

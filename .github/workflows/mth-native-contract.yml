@@ -60,6 +60,28 @@ jobs:
           cat build/mth/ring255.err
           grep -q '^MTH RING255 LAPLACIAN PASS' build/mth/ring255.out
 
+      - name: Assemble C256 ring fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_ring256_laplacian_test.nas > build/mth/ring256.nan
+
+      - name: Execute C256 ring fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/ring256.nan --steps 20000000 --serial > build/mth/ring256.out 2> build/mth/ring256.err
+          cat build/mth/ring256.out
+          cat build/mth/ring256.err
+          grep -q '^MTH RING256 LAPLACIAN PASS' build/mth/ring256.out
+
+      - name: Assemble C256 graph-energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_ring_wave_energy_test.nas > build/mth/ring-wave-energy.nan
+
+      - name: Execute C256 graph-energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/ring-wave-energy.nan --steps 20000000 --serial > build/mth/ring-wave-energy.out 2> build/mth/ring-wave-energy.err
+          cat build/mth/ring-wave-energy.out
+          cat build/mth/ring-wave-energy.err
+          grep -q '^MTH RING WAVE ENERGY PASS' build/mth/ring-wave-energy.out
+
       - name: Assemble 255+1 port assembly fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_ring255_port_test.nas > build/mth/ring255-port.nan
@@ -92,6 +114,17 @@ jobs:
           cat build/mth/weighted-sparse.out
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
+
+      - name: Assemble damped harmonic energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_harmonic_damped_energy_test.nas > build/mth/harmonic-damped.nan
+
+      - name: Execute damped harmonic energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/harmonic-damped.nan --steps 10000000 --serial > build/mth/harmonic-damped.out 2> build/mth/harmonic-damped.err
+          cat build/mth/harmonic-damped.out
+          cat build/mth/harmonic-damped.err
+          grep -q '^MTH HARMONIC DAMPED ENERGY PASS' build/mth/harmonic-damped.out
 
       - name: Assemble harmonic wave-energy fixture with NaN16 source assembler
         run: |
@@ -192,6 +225,17 @@ jobs:
           cat build/mth/couple128.err
           grep -q '^MTH GRAPH COUPLE 128 PASS' build/mth/couple128.out
 
+      - name: Assemble 255-point DFT fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_dft255_test.nas > build/mth/dft255.nan
+
+      - name: Execute 255-point DFT fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/dft255.nan --steps 40000000 --serial > build/mth/dft255.out 2> build/mth/dft255.err
+          cat build/mth/dft255.out
+          cat build/mth/dft255.err
+          grep -q '^MTH GRAPH DFT255 PASS' build/mth/dft255.out
+
       - name: Assemble 256-point DFT fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_dft256_test.nas > build/mth/dft256.nan
@@ -202,6 +246,17 @@ jobs:
           cat build/mth/dft256.out
           cat build/mth/dft256.err
           grep -q '^MTH GRAPH DFT256 PASS' build/mth/dft256.out
+
+      - name: Assemble 128-power-iteration fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_power_iter128_test.nas > build/mth/power128.nan
+
+      - name: Execute 128-power-iteration fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/power128.nan --steps 50000000 --serial > build/mth/power128.out 2> build/mth/power128.err
+          cat build/mth/power128.out
+          cat build/mth/power128.err
+          grep -q '^MTH POWER_ITER128 PASS' build/mth/power128.out
 
       - name: Assemble 128-matvec fixture with NaN16 source assembler
         run: |
@@ -225,6 +280,28 @@ jobs:
           cat build/mth/pairfull.err
           grep -q '^MTH GRAPH PAIR FULL 128 PASS' build/mth/pairfull.out
 
+      - name: Assemble adapter residual fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_adapter_residual_128_test.nas > build/mth/adapter128.nan
+
+      - name: Execute adapter residual fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/adapter128.nan --steps 30000000 --serial > build/mth/adapter128.out 2> build/mth/adapter128.err
+          cat build/mth/adapter128.out
+          cat build/mth/adapter128.err
+          grep -q '^MTH ADAPTER RESIDUAL 128 PASS' build/mth/adapter128.out
+
+      - name: Assemble low-rank coupling fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_lowrank_add_128_test.nas > build/mth/lowrank128.nan
+
+      - name: Execute low-rank coupling fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/lowrank128.nan --steps 20000000 --serial > build/mth/lowrank128.out 2> build/mth/lowrank128.err
+          cat build/mth/lowrank128.out
+          cat build/mth/lowrank128.err
+          grep -q '^MTH LOWRANK ADD 128 PASS' build/mth/lowrank128.out
+
       - name: Assemble rank-1 pair-space fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_rank1_128_test.nas > build/mth/pair128.nan
@@ -235,6 +312,17 @@ jobs:
           cat build/mth/pair128.out
           cat build/mth/pair128.err
           grep -q '^MTH GRAPH PAIR RANK1 128 PASS' build/mth/pair128.out
+
+      - name: Assemble 256-cosine fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_cosine256_test.nas > build/mth/cosine256.nan
+
+      - name: Execute 256-cosine fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/cosine256.nan --steps 4000000 --serial > build/mth/cosine256.out 2> build/mth/cosine256.err
+          cat build/mth/cosine256.out
+          cat build/mth/cosine256.err
+          grep -q '^MTH COSINE256 PASS' build/mth/cosine256.out
 
       - name: Assemble 256-axpy fixture with NaN16 source assembler
         run: |

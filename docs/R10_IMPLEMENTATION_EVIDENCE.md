@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 23/23 native MTH fixtures passed locally and in GitHub Actions run `42382908574`; 111 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 49 steps on `main` for commit `831b055`.
+**Result:** 31/31 native MTH fixtures passed locally; 124 Python tests passed.
+**CI:** the prior 23-fixture set passed run `42382908574` (49/49 steps). The new eight fixtures await the next CI run.
 
 ## Native fixtures
 
@@ -32,12 +32,20 @@
 | 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | yes |
 | 22 | 128×128 matvec | `mth/tests/mth_matvec128_test.nas` | 249,914 | PASS | yes |
 | 23 | 128×128 centrosymmetry | `mth/tests/mth_centrosymmetry_128_test.nas` | 676,252 | PASS | yes |
+| 24 | 256-cosine match | `mth/tests/mth_cosine256_test.nas` | 17,189 | PASS | pending |
+| 25 | Damped harmonic energy | `mth/tests/mth_harmonic_damped_energy_test.nas` | 53,890 | PASS | pending |
+| 26 | C256 ring Laplacian | `mth/tests/mth_ring256_laplacian_test.nas` | 19,736 | PASS | pending |
+| 27 | C256 graph-H energy | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | pending |
+| 28 | 255-point DFT | `mth/tests/mth_graph_dft255_test.nas` | 6,666,266 | PASS | pending |
+| 29 | 128×128 power iteration | `mth/tests/mth_power_iter128_test.nas` | 758,847 | PASS | pending |
+| 30 | Rank-1 low-rank add | `mth/tests/mth_lowrank_add_128_test.nas` | 1,056,470 | PASS | pending |
+| 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | pending |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -v
-Ran 111 tests
+Ran 124 tests
 OK
 ```
 
@@ -62,13 +70,13 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 23 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 31 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 
-- No full wave run with repeated `H` application, CFL guard, damping sweep, and energy-conservation trace exists yet.
-- No aperture SVD/power iteration, Lanczos, or QUERY/MATCH/FILTER/DRIVE composition exists yet.
+- No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
+- No full aperture SVD/top-k or Lanczos deflation; the 128 power iteration and primitive compositions exist.
 - No full 256×256 pair space; only the bounded 128×128 prototype.
 - No NANNET HTTP node integration beyond the ring port descriptor and storage plane.
-- No LM adapter residual or ablation result; only the adapter contract.
+- The 128 adapter residual exists, but no LM ablation or held-out result exists; the adapter remains disabled.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

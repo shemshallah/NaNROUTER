@@ -62,6 +62,34 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.ring256.wave_energy.f32",
+      "source": "mth/nan16/mth_ring256_laplacian.nas",
+      "fixture": "mth/tests/mth_ring_wave_energy_test.nas",
+      "marker": "MTH RING WAVE ENERGY PASS",
+      "steps": 86374,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.ring256.laplacian.f32",
+      "source": "mth/nan16/mth_ring256_laplacian.nas",
+      "fixture": "mth/tests/mth_ring256_laplacian_test.nas",
+      "marker": "MTH RING256 LAPLACIAN PASS",
+      "steps": 19736,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.sparse.laplacian.q16.16",
       "source": "mth/nan16/mth_sparse_graph_laplacian.nas",
       "fixture": "mth/tests/mth_sparse_graph_laplacian_test.nas",
@@ -190,6 +218,20 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.vector.cosine256.f32",
+      "source": "mth/nan16/mth_cosine256_f32.nas",
+      "fixture": "mth/tests/mth_cosine256_test.nas",
+      "marker": "MTH COSINE256 PASS",
+      "steps": 17189,
+      "precision": "float32",
+      "workspace_words": 4,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.graph.void.f32",
       "source": "mth/nan16/mth_graph_void.nas",
       "fixture": "mth/tests/mth_graph_void_test.nas",
@@ -246,6 +288,20 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.harmonic.damped_energy.f32",
+      "source": "mth/nan16/mth_harmonic_accel_256.nas",
+      "fixture": "mth/tests/mth_harmonic_damped_energy_test.nas",
+      "marker": "MTH HARMONIC DAMPED ENERGY PASS",
+      "steps": 53890,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.matvec.128.f32",
       "source": "mth/nan16/mth_matvec128_f32.nas",
       "fixture": "mth/tests/mth_matvec128_test.nas",
@@ -259,6 +315,35 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.power_iter.128.f32",
+      "source": "mth/nan16/mth_power_iter128.nas",
+      "fixture": "mth/tests/mth_power_iter128_test.nas",
+      "marker": "MTH POWER_ITER128 PASS",
+      "steps": 758847,
+      "precision": "float32",
+      "workspace_words": 7,
+      "shape": [
+        128,
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.adapter.residual.128.f32",
+      "source": "mth/nan16/mth_adapter_residual_128.nas",
+      "fixture": "mth/tests/mth_adapter_residual_128_test.nas",
+      "marker": "MTH ADAPTER RESIDUAL 128 PASS",
+      "steps": 420587,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.graph.pair.full.128.f32",
@@ -291,6 +376,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.lowrank.add.128.f32",
+      "source": "mth/nan16/mth_lowrank_add_128.nas",
+      "fixture": "mth/tests/mth_lowrank_add_128_test.nas",
+      "marker": "MTH LOWRANK ADD 128 PASS",
+      "steps": 1056470,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128,
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.graph.dft256.f32",
       "source": "mth/nan16/mth_graph_dft256.nas",
       "fixture": "mth/tests/mth_graph_dft256_test.nas",
@@ -303,6 +403,20 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.graph.dft255.f32",
+      "source": "mth/nan16/mth_graph_dft255.nas",
+      "fixture": "mth/tests/mth_graph_dft255_test.nas",
+      "marker": "MTH GRAPH DFT255 PASS",
+      "steps": 6666266,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        255
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.graph.couple128.f32",

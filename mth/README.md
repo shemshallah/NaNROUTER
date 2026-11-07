@@ -23,6 +23,12 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_graph_pair.nas`: dense 128×128 pair-space action `LU + ULᵀ`; local canonical execution PASS.
 - `nan16/mth_graph_pair_rank1_128.nas`: rank-1 128 pair-space prototype; local canonical execution PASS.
 - `nan16/mth_graph_dft256.nas`: 256-point complex float32 DFT reference with caller-supplied twiddle table; local canonical execution PASS.
+- `nan16/mth_graph_dft255.nas`: 255-point complex float32 DFT reference; local canonical execution PASS.
+- `nan16/mth_ring256_laplacian.nas`, `nan16/mth_negate256_f32.nas`: C256 ring Laplacian and sign negation; local canonical execution PASS.
+- `nan16/mth_power_iter128.nas`: bounded 128×128 symmetric power iteration; local canonical execution PASS.
+- `nan16/mth_lowrank_add_128.nas`: rank-1 additive coupling; local canonical execution PASS.
+- `nan16/mth_adapter_residual_128.nas`: `h + beta*C*u` residual composition; local canonical execution PASS.
+- `nan16/mth_cosine256_f32.nas`: float32 cosine similarity; local canonical execution PASS.
 - `nan16/mth_graph_couple_128.nas`: two-region coupling primitive; local canonical execution PASS.
 - `nan16/mth_graph_transmission_128.nas`: two-region energy/transmission metric; local canonical execution PASS.
 - `runner_riddle/wave_store.py`: BS0DB/MC0DB wave job, lease, capability, seal, signature, and trace store; 12 tests pass.
@@ -48,6 +54,12 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `tests/mth_graph_pair_test.nas`: dense 128×128 pair action with `L=2I` and zero-state checks.
 - `tests/mth_graph_pair_rank1_128_test.nas`: rank-1 128 pair action.
 - `tests/mth_graph_dft256_test.nas`: impulse, DC, and Nyquist DFT checks.
+- `tests/mth_graph_dft255_test.nas`: 255-point impulse/DC/twiddle checks.
+- `tests/mth_ring256_laplacian_test.nas`, `tests/mth_ring_wave_energy_test.nas`: C256 ring and graph-H energy.
+- `tests/mth_power_iter128_test.nas`: dominant eigenpair of `2I`.
+- `tests/mth_lowrank_add_128_test.nas`: rank-1 add.
+- `tests/mth_adapter_residual_128_test.nas`: adapter residual.
+- `tests/mth_cosine256_test.nas`: cosine identity/orthogonality.
 - `tests/mth_graph_couple_128_test.nas`: eta=0/0.5/1 coupling and invalid-eta atomicity.
 - `tests/mth_graph_transmission_128_test.nas`: energy ratio and zero-denominator checks.
 - `tests/test_wave_store.py`, `tests/test_ring_csr.py`, `tests/test_wave_capabilities.py`, `tests/test_wave_adapter.py`: Python storage, ring, capability, and adapter contracts.
@@ -106,4 +118,4 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step-energy, pair, DFT, coupling, and transmission fixtures passed local `nan_cli` and GitHub Actions run `42382908574`. The CI workflow includes all 23 fixtures.
+The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step-energy, pair, DFT, coupling, and transmission fixtures passed local `nan_cli` and GitHub Actions run `42382908574`. The CI workflow includes all 31 fixtures.

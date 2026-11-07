@@ -209,6 +209,14 @@ The deep plan (`docs/game_plan_deep.md`) and ledger (`docs/IMPLEMENTATION_TODO.m
 | Harmonic wave energy | `mth/nan16/mth_harmonic_accel_256.nas` + fixture | local PASS |
 | 128×128 matvec | `mth/nan16/mth_matvec128_f32.nas` | local PASS |
 | 128×128 centrosymmetry | `mth/nan16/mth_centrosymmetry_128.nas` | local PASS |
+| 256-cosine match | `mth/nan16/mth_cosine256_f32.nas` | local PASS |
+| Damped harmonic energy | `mth/nan16/mth_harmonic_accel_256.nas` + fixture | local PASS |
+| C256 ring Laplacian | `mth/nan16/mth_ring256_laplacian.nas` | local PASS |
+| C256 graph-H energy | `mth/nan16/mth_ring256_laplacian.nas` + fixture | local PASS |
+| 255-point DFT | `mth/nan16/mth_graph_dft255.nas` | local PASS |
+| 128×128 power iteration | `mth/nan16/mth_power_iter128.nas` | local PASS |
+| Rank-1 low-rank add | `mth/nan16/mth_lowrank_add_128.nas` | local PASS |
+| 128 adapter residual | `mth/nan16/mth_adapter_residual_128.nas` | local PASS |
 | Dense 128×128 pair action | `mth/nan16/mth_graph_pair.nas` | local PASS |
 | Rank-1 128 pair action | `mth/nan16/mth_graph_pair_rank1_128.nas` | local PASS |
 | 256-point DFT reference | `mth/nan16/mth_graph_dft256.nas` | local PASS |
@@ -222,11 +230,11 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-23/23 fixtures passed
+31/31 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42382908574` (49/49 steps); the harmonic-energy fixture passed the same workflow. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42382908574` (49/49 steps). The 31-fixture run is pending. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
