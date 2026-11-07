@@ -110,7 +110,7 @@ At the time of writing the checked-in `main` contains:
 - **61 native MTH kernels** with fixtures;
 - **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
 - canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
-- **342 Python tests**;
+- **355 Python tests** (after the page-store/page-executor additions);
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
 Existing MTH kernels are the **implementation layer**. They are not yet a full mathematical registry: the current `MthKernelDescriptor` has no semantic input/output signature, domain, precondition, postcondition, undefinedness policy, or proof status. That is the gap this plan fills.
@@ -551,7 +551,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 342-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 355-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1356,6 +1356,8 @@ One NaN16 guest word is 8 bytes. A packed float32 payload is 4 bytes. These must
 
 Admission uses guest words/pages; raw packed bytes are a storage/transport detail only. At 2 MiB, 196,608 words (48 pages) fits with 64,512 words spare; a fourth 256×256 matrix (262,144 words) exactly fills the guest and is not practical with code/scratch. One complex matrix is practical; two complex matrices (262,144 words) are not.
 
+The page-backed pair executor adds a concrete worker-budget example. A K16 driver workspace is 17,170 words and the full-U reference is 73,990 words. At 1 MiB, `3*17,170 + 73,990 = 125,500` words fits and a fourth worker is rejected. At 2 MiB, up to **10** K16 workers plus the reference fit by aggregate arithmetic (`10*17,170 + 73,990 = 245,690` words); 11 do not (`262,860`). This is an **admission calculation**, not proof of physical parallelism: the runtime must provide independent worker slots and the coordinator still serializes the dense reference. The single-active-slot rule is unchanged.
+
 ### 16.1 Budget model
 
 ```
@@ -1458,6 +1460,8 @@ A valid, hashed, addressable mathematical structure exists with complete provena
 | `MthKernelDescriptor` | native implementation facts | semantic contract in `MathFunctionVersion` | one function, multiple implementations |
 | `spec/wave-capabilities.json` | implementation manifest | leave unchanged; new `spec/math-functions.v1.json` | mth IDs remain stable |
 | `wave_tile_orchestrator` | 256-tile page publication | NMP candidate batches can use it for pair ops | evidence binding |
+| `mth_pair_file_pages` | immutable 16×16 page files, pinned snapshots, CAS output generations | 2 MiB worker admission must include page-strip/reference workspace; no provider mount assumed | local adapter only; not deployed |
+| `mth_pair_tile_executor` | K16 page-backed executor + full-U cross-check | bind candidate output to tile manifest and page-store CAS | guest adapter still missing; parallel budget is aggregate |
 | `live_preflight` | offline/live gates | include math store/rule registry checks | no live credentials in tests |
 | `lm_ablation` / `r7_experiment` | experiment harnesses | consume math evidence; no truth promotion | don't fabricate results |
 | `JAHS` | mandatory handoff seal | every NMP execute/commit path binds seal; point-0 responses expose it | preserve existing tests |
@@ -1473,6 +1477,8 @@ Suggested names (not yet implemented):
 - `runner_riddle/math_linker.py` — `::` resolver/candidate generator.
 - `runner_riddle/nmp.py` — NMP packet/state machine and dedupe.
 - `runner_riddle/math_runtime.py` — execution bridge to `MthSystem`/point 0.
+- `runner_riddle/mth_pair_file_pages.py` — immutable file-backed 16×16 matrix pages and atomic output generations.
+- `runner_riddle/mth_pair_tile_executor.py` — page-backed K16/full-U tile executor and atomic candidate publication (not yet wired to a real guest).
 - `spec/math-leaf.schema.json`, `spec/math-function.schema.json`, `spec/math-rule.schema.json`, `spec/nmp.schema.json`.
 - tests by the same names plus a new end-to-end demonstration test.
 
@@ -1554,6 +1560,8 @@ These are actual seams in the current code, not hypothetical risks:
 | v1 plan is opaque | `MthPlan` does not type-check input/output handoffs | keep v1 opaque; add typed pins/TypeSpec in `NmpPlan`/v2; never claim v1 type-checks |
 | capability registration is R0-only by default | tool registers one runner slot | register all six slots or repeated runner IDs; verify runner-scoped capability at lease |
 | math health absent | `MthSystem.health()` can be green if math engine is broken | add optional math/linker/validity health and degrade if unavailable |
+| page-backed executor is not wired to a real guest | `mth_pair_tile_executor` has fake-boundary tests only; file pages are local | provide `NativePairTileGuest`/`CandidatePageStore` adapters, run K16 + full-U, prove atomic publication |
+| 2 MiB worker budget is aggregate | page executor's 10-worker arithmetic is not a VM memory fence | declare independent worker slots, pin memory, and test 10/11/12 worker admission |
 
 These are P0/P1 integration tests, not implementation details to defer.
 
@@ -1663,7 +1671,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests should live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, and `tests/test_math_end_to_end.py`. The existing 342-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests should live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, and `tests/test_math_end_to_end.py`. The existing 355-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 
@@ -1857,6 +1865,11 @@ These are in addition to T01–T20. They are blocking for any self-modification 
 | 95 | B-12 | lane 255/NANNET0 rejection | NANNET0 is not a lane; no learning ACL |
 | 96 | B-13 | point-0 payload arithmetic | code/constant/doc agree; 2 MiB target boundary tested |
 | 97 | B-14 | candidate batch no promotion | candidate seal is promotion-ineligible until separate gate |
+| 98 | B-15 | file-backed page snapshot | all 512 page digests verified; mutated page aborts |
+| 99 | B-16 | atomic output generation | stale publisher rejected; candidate discarded on mismatch; CAS head advances once |
+| 100 | B-17 | 2 MiB worker admission | 10 K16 workers + reference fit by arithmetic; 11 rejected; physical slots declared/verified |
+| 101 | B-18 | page executor full-U cross-check | every tile matches full-U reference; mismatch aborts before publication |
+| 102 | B-19 | no canonical page on failure | staging is unpublished; canonical head unchanged |
 
 ---
 
