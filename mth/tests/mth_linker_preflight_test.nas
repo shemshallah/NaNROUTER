@@ -149,7 +149,18 @@ mth_link_pf_main:
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_admit
   CMP r1,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[EQ] @mth_link_pf_admit_ok
+  MOVI r8,32
+  CMP r1,r8
+  JMP[GE] @mth_link_pf_admit_typed_fail
+  MOVI r1,@mth_link_pf_admit_rule_bad
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_admit_typed_fail:
+  MOVI r1,@mth_link_pf_admit_typed_bad
+  CALL @mth_link_pf_puts
+  HALT
+mth_link_pf_admit_ok:
   MOVI r1,@mth_link_pf_stage_admit
   CALL @mth_link_pf_puts
 
@@ -555,6 +566,10 @@ mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
 mth_link_pf_admit_pass:
 .str "MTH LINKER COMPOSED ADMISSION PASS\n"
+mth_link_pf_admit_rule_bad:
+.str "MTH LINKER RULE ADMISSION DENIED\n"
+mth_link_pf_admit_typed_bad:
+.str "MTH LINKER TYPED ADMISSION DENIED\n"
 mth_link_pf_dispatch_pass:
 .str "MTH NATIVE DISPATCH PASS\n"
 mth_link_pf_bad:
