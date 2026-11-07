@@ -32,7 +32,7 @@
 
 - [ ] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split.
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
-  - [ ] P0.2 Re-register all six slot capabilities at 262,144 words; 1 MiB capability cannot admit a 196,608-word job.
+  - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job.
   - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
   - [ ] P0.4 Peak-liveness plan workspace (not naive step sum); exact-limit accepted, +1 word rejected before store.
   - [ ] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump.

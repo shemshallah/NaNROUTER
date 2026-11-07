@@ -627,6 +627,40 @@ class MthRegistry:
         _plan_dataflow(tuple(plan.steps))
         return plan
 
+    def plan_workspace_peak(self, plan: MthPlan) -> int:
+        """Return peak live workspace for an ordered plan.
+
+        The v1 manifest has no liveness metadata, so this conservative model
+        keeps a step's workspace live until its last consumer in the ordered
+        plan.  It is an advisory control-plane bound; the declared
+        ``plan.workspace_words`` and v1 sum remain backward-compatible.
+        """
+        if not isinstance(plan, MthPlan):
+            raise MthPlanError("plan must be an MthPlan")
+        steps = tuple(plan.steps)
+        if not steps:
+            raise MthPlanError("plan must contain at least one step")
+        indices = {step.name: index for index, step in enumerate(steps)}
+        workspaces = [self.require(step.kernel_id).workspace_words for step in steps]
+        last_consumer = list(range(len(steps)))
+        for index, step in enumerate(steps):
+            for dependency in step.depends_on:
+                dep_index = indices.get(dependency)
+                if dep_index is None:
+                    raise MthPlanError(
+                        f"step {step.name!r} dependency {dependency!r} is not in the plan"
+                    )
+                last_consumer[dep_index] = max(last_consumer[dep_index], index)
+        live: dict[int, int] = {}
+        peak = 0
+        for index in range(len(steps)):
+            live[index] = workspaces[index]
+            peak = max(peak, sum(live.values()))
+            for dep_index in tuple(live):
+                if last_consumer[dep_index] <= index:
+                    del live[dep_index]
+        return peak
+
     def compose(self, plan_spec: Mapping[str, Any]) -> MthPlan:
         """Build and validate a deterministic :class:`MthPlan` from a dict spec."""
         if not isinstance(plan_spec, Mapping):
