@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from runner_riddle import nmp
-from runner_riddle.nmp_http import NmpHttpAdapter, NmpServerContextProvider
+from runner_riddle.nmp_http import NmpHttpAdapter, WaveStoreNmpContextProvider
 from runner_riddle.wave_service import WaveService
 from runner_riddle.wave_store import WaveStore
 
@@ -19,7 +19,7 @@ from test_nmp_http_adapter import (
 
 
 def make_context_provider(service):
-    return NmpServerContextProvider(
+    return WaveStoreNmpContextProvider(
         service,
         admission_provider=lambda **_: admission(),
         preflight_provider=lambda **_: {
