@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 812 Python tests, 1 skipped, OK; 70 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
+**Baseline:** 814 Python tests, 1 skipped, OK; 70 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -49,10 +49,10 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-15` Bearer-token redaction from serialized evidence.
 - [x] `A-16` Stale lease replay cannot re-execute/re-commit.
 - [x] `A-17` Negative suite A06/A09–A12/A20 and extended A01–A05/A13–A16/T07/T08/T19.
-- [ ] `A-18` Wire durable NMP packet/transition rows into `MathExecutionBridge` submit/lease/complete/cancel (store layer exists; runtime wiring does not).
+- [x] `A-18` Wire durable NMP packet/transition rows into `MathExecutionBridge` submit/lease/complete/cancel/fail.
 - [ ] `A-19` Revalidate the complete admission object at lease/complete (current rule-snapshot and lease checks are not a full `require_admission`).
 - [ ] `A-20` Add an end-to-end rejection test for a rule/capability/auth change between submit and complete.
-- [ ] `A-21` Make math admission binding mandatory for direct `MthSystem.submit_plan` in math mode (alternate-path guard).
+- [x] `A-21` Make math admission binding mandatory for direct `MthSystem.submit_plan` in math mode (`require_math_admission=True`); default remains off for legacy wave jobs.
 - [ ] `A-22` Add typed result fields beyond digest: runner/kernel identity, residual/error bound, saturation/iterations/status.
 - [ ] `A-23` Implement native receipt production (`mth_admit` caller) and native operator dispatch.
 - [ ] `A-24` Make the demo use the real native executor when the NaN0S toolchain is available, while retaining the evidence-digest fallback.
@@ -65,7 +65,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-33` Cross-store intent/finalize/recovery.
 - [x] `A-34` Disposable canonical-backed cache.
 - [x] `A-35` Durable NMP packet/transition ledger.
-- [ ] `A-36` Add `math_nmp_packet`/transition counts and runtime wiring to health/evidence.
+- [x] `A-36` Add `math_nmp_packet`/transition counts to health; runtime/bridge transitions now write the durable ledger.
 - [ ] `A-37` Enforce content-digest equality by default for all new versioned records (legacy compatibility clearly fenced).
 - [ ] `A-38` Enforce full result provenance: input IDs/versions/digests, function/rule snapshot, candidate/linker, runner/lease, native source/fixture digest, numerical policy, output digest, signature.
 - [ ] `A-39` Add durable universe page-record table/versioning and cache invalidation tied to operator version.
@@ -97,7 +97,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-72` 255 lane registry, pass schedule, page budget.
 - [x] `A-73` Work queues/stealing contract.
 - [x] `A-74` Ring epoch export/restore.
-- [ ] `A-75` Wire NMP durable ledger into bridge transitions.
+- [x] `A-75` Wire NMP durable ledger into bridge transitions (submit/lease/complete/commit/cancel/fail).
 - [ ] `A-76` Wire lane work queues/stealing into the bridge/scheduler (currently contract-only).
 - [ ] `A-77` Implement durable ring incarnation/epoch recovery in the bridge path.
 - [ ] `A-78` Add remote worker/peer protocol with selected-step-only payloads, quotas, timeouts.
