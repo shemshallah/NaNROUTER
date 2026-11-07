@@ -243,6 +243,8 @@ class N16TGuestPool:
         self._max_sessions = max_sessions
         self._max_steps = max_steps
         self._sessions: OrderedDict[bytes, _NaN16GuestVM] = OrderedDict()
+        self._active: dict[bytes, int] = {}
+        self._closing: set[bytes] = set()
         self._lock = threading.RLock()
         self._closed = False
 
@@ -272,8 +274,14 @@ class N16TGuestPool:
             vm = self._sessions.get(session_key)
             if vm is None:
                 if len(self._sessions) >= self._max_sessions:
-                    _, evicted = self._sessions.popitem(last=False)
-                    evicted.close()
+                    evict_key = next(
+                        (key for key in self._sessions if self._active.get(key, 0) == 0),
+                        None,
+                    )
+                    if evict_key is None:
+                        raise N16TGuestRuntimeError("all NaN16 guest sessions are busy")
+                    self._sessions.pop(evict_key).close()
+                    self._active.pop(evict_key, None)
                 vm = _NaN16GuestVM(
                     self._library_path,
                     self._image_path,
@@ -283,16 +291,34 @@ class N16TGuestPool:
                 self._sessions[session_key] = vm
             else:
                 self._sessions.move_to_end(session_key)
+            self._active[session_key] = self._active.get(session_key, 0) + 1
+
+        try:
             return vm.exchange(frame)
+        finally:
+            with self._lock:
+                remaining = self._active.get(session_key, 1) - 1
+                if remaining > 0:
+                    self._active[session_key] = remaining
+                else:
+                    self._active.pop(session_key, None)
+                    if session_key in self._closing:
+                        self._closing.discard(session_key)
+                        closing_vm = self._sessions.pop(session_key, None)
+                        if closing_vm is not None:
+                            closing_vm.close()
 
     def close(self) -> None:
         with self._lock:
             if self._closed:
                 return
-            for vm in self._sessions.values():
-                vm.close()
-            self._sessions.clear()
             self._closed = True
+            for key, vm in list(self._sessions.items()):
+                if self._active.get(key, 0) == 0:
+                    self._sessions.pop(key, None)
+                    vm.close()
+                else:
+                    self._closing.add(key)
 
 
 __all__ = ["N16TGuestPool", "N16TGuestRuntimeError"]
