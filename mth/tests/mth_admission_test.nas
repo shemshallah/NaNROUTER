@@ -58,7 +58,8 @@ mth_admit_test_main:
   MOVI r9,38
   CMP r1,r9
   JMP[NE] @mth_admit_fail_3
-  LD r10,r7,0
+  MOVI r8,@mth_admit_output
+  LD r10,r8,0
   MOVI r9,99
   CMP r10,r9
   JMP[NE] @mth_admit_fail_4
