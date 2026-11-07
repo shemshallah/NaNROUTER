@@ -15,10 +15,10 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [ ] Add single-active runner-ring scheduler and handoff tests.
-- [x] 33/33 native MTH fixtures pass locally with `nan_cli`.
-- [x] 161 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42384223162` (65/65 steps); 33-fixture run pending.
+- [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
+- [x] 33/33 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 189 Python tests pass.
+- [x] Expanded GitHub Actions native workflow passed prior run `42384223162` (65/65 steps); 34-fixture/71-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -132,7 +132,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 33 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 34 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -158,10 +158,10 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-33/33 fixtures passed
+33/34 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 161 tests
+Ran 189 tests
 OK
 ```
 
@@ -177,3 +177,13 @@ CI prior: `42384223162` — 65/65 steps for the 31-fixture set; 33-fixture run p
 | A12 | Rank-1 low-rank add | done — native PASS |
 | A13 | 128 adapter residual | done — native PASS |
 | A14 | Authenticated wave service facade | done — 13 tests |
+
+## Parallel batch 3 (2026-11-07)
+
+| Agent | Scope | Status |
+|---|---|---|
+| A15 | MTH system registry/planner | done — 26 tests |
+| A16 | 256×256 block matvec | done — native PASS |
+| A17 | 256×256 streaming certificate | done — native PASS |
+| A18 | Wave HTTP adapter | done — 12 tests |
+| A19 | Single-active runner-ring scheduler | done — 27 tests |

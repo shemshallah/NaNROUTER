@@ -460,9 +460,13 @@ class MthRegistry:
             if not isinstance(raw_tags, (tuple, list)):
                 raise MthManifestError(f"{kernel_id}: tags must be a list")
             explicit_tags: list[str] = []
+            seen_tags: set[str] = set()
             for tag in raw_tags:
                 if not isinstance(tag, str) or not _TAG_RE.fullmatch(tag):
                     raise MthManifestError(f"{kernel_id}: invalid tag: {tag!r}")
+                if tag in seen_tags:
+                    raise MthManifestError(f"{kernel_id}: duplicate tag: {tag!r}")
+                seen_tags.add(tag)
                 explicit_tags.append(tag)
 
             source, source_path = _resolve_member(

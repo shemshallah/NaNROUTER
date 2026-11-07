@@ -14,6 +14,7 @@ from .wave_aperture import ApertureDescriptor, ApertureError
 from .wave_service import WaveService, WaveServiceError
 from .wave_http import WaveHttpServer
 from .mth_registry import MthKernelDescriptor, MthPlan, MthPlanError, MthRegistry, MthRegistryError
+from .wave_ring_scheduler import WaveRingScheduler, WaveRingSchedulerError, RingCapacityError, RingBusyError, RingCheckpointError, RingStateError
 from .http_service import RiddleService, ServiceConfigError
 
 __all__ = [
@@ -31,5 +32,6 @@ __all__ = [
     "WaveService", "WaveServiceError",
     "WaveHttpServer",
     "MthKernelDescriptor", "MthPlan", "MthPlanError", "MthRegistry", "MthRegistryError",
+    "WaveRingScheduler", "WaveRingSchedulerError", "RingCapacityError", "RingBusyError", "RingCheckpointError", "RingStateError",
     "RiddleService", "ServiceConfigError",
 ]

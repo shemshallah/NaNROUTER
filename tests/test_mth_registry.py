@@ -243,6 +243,7 @@ class InvalidManifestTests(unittest.TestCase):
             "marker": lambda kernel: kernel.update(marker=""),
             "version": lambda kernel: kernel.update(version=0),
             "tags": lambda kernel: kernel.update(tags=["Not A Tag"]),
+            "duplicate_tags": lambda kernel: kernel.update(tags=["extra", "extra"]),
         }
         for label, change in cases.items():
             def mutate(document, change=change):

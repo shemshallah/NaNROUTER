@@ -26,6 +26,8 @@ SLOT_COUNT = 6
 MC0_SLOTS = tuple(f"MC0:0/R{i}" for i in range(SLOT_COUNT))
 NANROUTER_ALIASES = tuple(f"NANROUTER-{i}" for i in range(SLOT_COUNT))
 RING_SLOTS = MC0_SLOTS
+SLOTS = MC0_SLOTS
+NANROUTER_SLOTS = NANROUTER_ALIASES
 
 SLOT_ALIASES = {slot_id: index for index, slot_id in enumerate(MC0_SLOTS)}
 SLOT_ALIASES.update(
@@ -34,6 +36,7 @@ SLOT_ALIASES.update(
 
 DEFAULT_CYCLE_TICKS = 64
 DEFAULT_MAX_ACTIVE_MEMORY_BYTES = 7 * 1024 ** 3
+MAX_ACTIVE_MEMORY_BYTES = DEFAULT_MAX_ACTIVE_MEMORY_BYTES
 SNAPSHOT_SCHEMA = "nanrouter.wave-ring-scheduler.v1"
 
 SLOT_STATUSES = (
@@ -454,7 +457,7 @@ class WaveRingScheduler:
         return None
 
     def _next_eligible(self, current_index: int) -> int | None:
-        for step in range(1, SLOT_COUNT + 1):
+        for step in range(1, SLOT_COUNT):
             index = (current_index + step) % SLOT_COUNT
             if self._slots[index].status != "revoked":
                 return index
@@ -549,9 +552,12 @@ class WaveRingScheduler:
 __all__ = [
     "DEFAULT_CYCLE_TICKS",
     "DEFAULT_MAX_ACTIVE_MEMORY_BYTES",
+    "MAX_ACTIVE_MEMORY_BYTES",
     "MC0_SLOTS",
     "NANROUTER_ALIASES",
+    "NANROUTER_SLOTS",
     "RING_SLOTS",
+    "SLOTS",
     "RingBusyError",
     "RingCapacityError",
     "RingCheckpointError",

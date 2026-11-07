@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **33 native MTH kernels with fixtures**, all passing locally and in GitHub Actions, plus a working BS0DB/MC0DB control/evidence plane and 161 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **34 native MTH kernels with fixtures**: 33 pass in the local harness and all 34 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 189 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -66,20 +66,21 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_store.py` | BS0DB/MC0DB jobs, leases, operator/capability registry, traces, seals, signatures; 12 tests |
 | `runner_riddle/wave_service.py` | authenticated submit/worker/admin facade; 13 tests |
 | `runner_riddle/wave_http.py` | standalone authenticated HTTP adapter; 12 tests |
-| `runner_riddle/mth_registry.py` | MTH descriptor registry/planner; 25 tests |
+| `runner_riddle/mth_registry.py` | MTH descriptor registry/planner; 26 tests |
+| `runner_riddle/wave_ring_scheduler.py` | single-active six-slot runner ring, 7 GiB ceiling, cycle/handoff; 27 tests |
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
 | `tools/register_wave_capabilities.py` | registers 33 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 33-kernel capability manifest |
+| `spec/wave-capabilities.json` | 34-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 69 steps, 33 fixtures, all passing |
 
 ### 1.3 Evidence baseline
 
 ```
-33/33 native fixtures pass locally
-161/161 Python tests pass
+33/33 local fixtures pass; K256 pair passed canonical CI run 180
+34/34 total native fixtures; 189/189 Python tests pass
 GitHub Actions run 42384223162: 65/65 steps passed (prior 31-fixture set); 33-fixture run pending
 ```
 
@@ -258,7 +259,7 @@ The aperture’s role determines the decomposition. Do not force a Hermitian eig
 
 The six slots are not six math authorities. They are one service with a rotating execution identity.
 
-The handoff sequence is mandatory:
+The scheduler is implemented in `runner_riddle/wave_ring_scheduler.py` (27 tests). The handoff sequence is mandatory:
 
 ```
 active slot
@@ -477,7 +478,7 @@ A full dense eigensolve is a separate, paged QR/Jacobi project. It is not requir
 
 ### 6.1 Registry
 
-Implemented in `runner_riddle/mth_registry.py` (25 tests):
+Implemented in `runner_riddle/mth_registry.py` (26 tests):
 
 ```
 load(manifest)                  -> validated descriptors
@@ -642,7 +643,7 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 
 ### 7.8 From R8 NANNET
 
-- Add HTTP endpoints (in flight).
+- HTTP endpoints implemented; live Koyeb deployment remains.
 - Persist NANNET0 bindings in MC0DB.
 - Run signed Koyeb volume-registry check.
 - Add phase-invariant signature exchange.
@@ -657,7 +658,7 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 
 ### 7.10 From R10 promotion
 
-- Register all 33+ kernels in production MC0DB.
+- Register all 34+ kernels in production MC0DB.
 - Add registry/plan evidence.
 - Add capability promotion gate.
 - Do not promote source-only or stale kernels.
@@ -668,7 +669,8 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 
 | Packet | Scope | Depends on | Gate |
 |---|---|---|---|
-| P1 | MTH registry/planner | manifest | load 33, resolve/plan tests |
+| P0 | Single-active runner-ring scheduler | WaveStore/leases | one active, 7 GiB, cycle/handoff |
+| P1 | MTH registry/planner | manifest | load 34, resolve/plan tests |
 | P2 | 256 block matvec | R1 | 16-block full matvec oracle |
 | P3 | 256 streaming certificate | R3/fold | 16-block certificate + perturbation |
 | P4 | wave HTTP adapter | WaveService | auth/lease/complete HTTP tests |
@@ -683,6 +685,7 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 
 ### 8.1 First parallel batch (in flight)
 
+- Single-active runner-ring scheduler (implemented).
 - MTH registry/planner (implemented).
 - 256 block matvec (implemented).
 - 256 streaming certificate (implemented).
@@ -750,11 +753,12 @@ No silent exact→approximate coercion. No NaN payload arithmetic without decode
 
 ### 10.2 System gates
 
-- registry loads 33+ kernels;
+- registry loads 34+ kernels;
 - plan validation rejects stale/unverified/over-budget;
 - executor dispatch refuses unverified kernels;
 - BS0DB/MC0DB lease/idempotency/stale rejection;
 - HTTP auth/quota/size;
+- runner-ring one-active/7 GiB/handoff checks;
 - page round-trip and generation check;
 - no host math in execution path.
 
@@ -802,7 +806,7 @@ It does not mean every mathematical theorem is implemented.
 
 ## 12. The one-page continuation
 
-1. **Keep the 33 verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
+1. **Keep the 34 verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
 2. **Build MTH System v1**: registry, plan, executor, evidence, capability.
 3. **Use 256×256 dense only where it fits** (256 KiB); use 16×256 blocks for full matvec/certificate; use matrix-free/low-rank for the 65,536 product.
 4. **Use NANROUTER-0..5 as a single-active runner ring with a 7 GiB active ceiling**, not six parallel runners; use NANNET0 as the one node per universe.
@@ -826,7 +830,7 @@ The shortest correct sentence is:
 |---|---|---|---|
 | D1 | Keep dense 256×256/255×255 reference matrices; they are 256/254 KiB | accepted | if guest budget or precision changes |
 | D2 | Use 16×256 blocks as the paged 256 matvec/certificate unit | accepted by prototype | if 32×256 is faster and fits |
-| D3 | NANROUTER-0..5 is a six-slot, single-active runner ring with a 7 GiB active ceiling | accepted | after scheduler implementation |
+| D3 | NANROUTER-0..5 is a six-slot, single-active runner ring with a 7 GiB active ceiling | implemented | after live Koyeb integration |
 | D4 | NANNET0 is one node per universe, never a head/shard | accepted | none |
 | D5 | Product operator 65,536² stays matrix-free/low-rank | accepted | only with a proven bounded dense use case |
 | D6 | Top-k power/SVD before full dense eigensolve | accepted | when LM adapter needs full spectrum |
@@ -836,6 +840,7 @@ The shortest correct sentence is:
 | D10 | Every promoted kernel carries source/fixture digest, workspace, CI/evidence | accepted | none |
 
 
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -843,6 +848,7 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|
 | `mth.k256.laplacian.u16` | `u16->i32` | 5,391 | yes |
+| `mth.k256.pair_space.q16.16` | `q16.16` | 2,300,711 | yes |
 | `mth.k255.laplacian.u16` | `u16->i32` | 5,881 | yes |
 | `mth.ring255.laplacian.f32` | `float32` | 12,485 | yes |
 | `mth.ring255.port.f32` | `float32` | 3,353 | yes |
@@ -875,44 +881,3 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.dft255.f32` | `float32` | 6,666,266 | yes |
 | `mth.graph.couple128.f32` | `float32` | 8,637 | yes |
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
-
-## Appendix B — Plan-to-implementation traceability
-
-| Parent plan | Theme | Current anchor | Next continuation |
-|---|---|---|---|
-| MTH §2 | NaN word/classes | `mth_core`, `mth_double_endian` | MTH registry descriptor seals |
-| MTH §3 Tier 0–1 | exact scalar/bit/integer | bitwise, shift, multiply, divide, integer | multiword integer/rationals |
-| MTH §3 Tier 2–3 | vectors/matrices | dot, norm, axpy, matvec128, 256 block matvec | block matrix/tensor descriptors |
-| MTH §3 Tier 4–5 | model numerics/learning | wave/energy/adapter primitives | softmax/attention/optimizer kernels |
-| MTH §3 Tier 6 | symbolic/structural | graph components/energy | relation/proof records |
-| MTH §5 | type system | precision/shape fields in manifest | full MTH type registry |
-| MTH §6 | transformation contract | capability manifest + registry | plan evidence propagation |
-| MTH §7 | NaN encoding resources | class/face fixtures | versioned record families |
-| MTH §8 | ownership boundary | NaNROUTER/NaNLMind split | executor contract |
-| MTH §9 | numerical policy | exact/float32/Q16.16 lanes | error-bound registry |
-| MTH §10 | evidence/promotion | R10 ledger, CI | production MC0DB promotion |
-| MTH §11 | minimal architecture | L0–L7 anchors | L8–L9 |
-| MTH §12–13 | build order/vertical slice | 33 native fixtures | registry-driven vertical slice |
-| Foundations §2 | counts/matrices | mode accounting | 65,536-state accounting test |
-| Foundations §3 | annulus/void | C255/C256/void | radial block descriptor |
-| Foundations §4 | graph wave | wave/energy kernels | CFL/long-run trace |
-| Foundations §5 | inverse-square | void kernel | α/β sweep |
-| Foundations §6 | tunneling | coupling/transmission | avoided-crossing experiment |
-| Foundations §7 | spectral operator | DFT/fold/power | SVD/top-k/Lanczos |
-| Foundations §8 | API | WaveService/registry | executor |
-| Foundations §9 | symmetry/fold | fold/certificate | 255/256 streaming |
-| Foundations §10 | product space | pair/lowrank prototypes | 256 paged pair |
-| Foundations §11 | standing wave | C256 ring/DFT | full modal reconstruction |
-| Foundations §12 | LM hypotheses | adapter residual | held-out ablations |
-| Foundations §13 | noosphere | NANNET0 node | HTTP/federation |
-| Foundations §14 | NaN boundary | precision lanes | type registry |
-| Foundations §15 | reference arch | MTH registry plan | executor/runner-ring runtime |
-| Foundations §16 | structures | schemas | paged state ABI |
-| Foundations §17 | validation | 33 fixtures/124 tests | system/LM gates |
-| Deep plan §0–6 | 255+1/ring/void | frozen convention | 256 block integration |
-| Deep plan §7 | six verbs | primitive composition | typed plan API |
-| Deep plan §8 | ring/NANNET | WaveNode/WaveService | HTTP/live Koyeb |
-| Deep plan §9–10 | creativity/NaN16 | coupling/evidence | R7 experiment |
-| Deep plan §11–12 | routing/roadmap | WaveStore/CI | production promotion |
-
-This table is the integration contract: every parent-plan theme has a present anchor and a next continuation. If a theme has no anchor, it is not implemented yet; it is not silently claimed.

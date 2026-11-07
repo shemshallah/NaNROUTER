@@ -170,6 +170,6 @@ The counts above illustrate the shape; actual values come from the loaded manife
 
 ```
 python3 -m unittest tests.test_mth_registry -v
-Ran 26 tests in 0.410s
+Ran 26 tests
 OK
 ```

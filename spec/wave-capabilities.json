@@ -18,6 +18,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.k256.pair_space.q16.16",
+      "source": "mth/nan16/mth_k256_pair_space_v1.nas",
+      "fixture": "mth/tests/mth_k256_pair_space_v1_test.nas",
+      "marker": "MTH K256 PAIR SPACE V1 PASS",
+      "steps": 2300711,
+      "precision": "q16.16",
+      "workspace_words": 528,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": true
+    },
+    {
       "kernel_id": "mth.k255.laplacian.u16",
       "source": "mth/nan16/mth_k255_laplacian.nas",
       "fixture": "mth/tests/mth_k255_laplacian_test.nas",
