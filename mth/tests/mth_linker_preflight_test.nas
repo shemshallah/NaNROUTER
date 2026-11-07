@@ -235,7 +235,10 @@ mth_link_pf_main:
   MOVI r9,78
   ST r9,r8,1
   MOVI r8,@mth_link_pf_output_payload
-  MOVI r9,0x12345678
+  MOVI r9,0x1234
+  SHL r9,r9,16
+  MOVI r10,0x5678
+  ADD r9,r9,r10
   ST r9,r8,0
   MOVI r1,@mth_link_pf_candidate
   MOVI r2,@mth_link_pf_rule
@@ -252,7 +255,10 @@ mth_link_pf_main:
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
-  MOVI r10,0x12345678
+  MOVI r9,0x1234
+  SHL r9,r9,16
+  MOVI r10,0x5678
+  ADD r9,r9,r10
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_candidate
@@ -261,7 +267,10 @@ mth_link_pf_main:
 
   ; Unknown program IDs are rejected before preflight or output publication.
   MOVI r8,@mth_link_pf_output_payload
-  MOVI r9,0x12345678
+  MOVI r9,0x1234
+  SHL r9,r9,16
+  MOVI r10,0x5678
+  ADD r9,r9,r10
   ST r9,r8,0
   MOVI r8,@mth_link_pf_output
   MOVI r9,55
@@ -281,7 +290,10 @@ mth_link_pf_main:
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
-  MOVI r10,0x12345678
+  MOVI r9,0x1234
+  SHL r9,r9,16
+  MOVI r10,0x5678
+  ADD r9,r9,r10
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output
