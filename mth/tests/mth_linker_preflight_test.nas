@@ -255,10 +255,10 @@ mth_link_pf_main:
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
-  MOVI r9,0x1234
-  SHL r9,r9,16
-  MOVI r10,0x5678
-  ADD r9,r9,r10
+  MOVI r10,0x1234
+  SHL r10,r10,16
+  MOVI r11,0x5678
+  ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_candidate
@@ -290,10 +290,10 @@ mth_link_pf_main:
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
-  MOVI r9,0x1234
-  SHL r9,r9,16
-  MOVI r10,0x5678
-  ADD r9,r9,r10
+  MOVI r10,0x1234
+  SHL r10,r10,16
+  MOVI r11,0x5678
+  ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_output
