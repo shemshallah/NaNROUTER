@@ -4,6 +4,8 @@
 **Parent plans:** `docs/game_plan_deep.md`, `docs/game_plan_foundations.md`, `docs/GAME_PLAN_MTH.md`.
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
+**Mathematical linker plan:** `GAME_PLAN_::.md` (NaN Mathematical Linker, validity engine, leaves, NMP, 2 MiB integration).
+**Guest-budget update:** the owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults must be synchronized by GPT's integration.
 **Canonical language:** NaN16, assembled by `nasm0`, executed by `n16i` or the native NaN16 kernel.
 **Canonical math owner:** MTH inside the one NaNLMind universe.
 **Canonical routing/control owner:** NaNROUTER.
@@ -204,19 +206,21 @@ A 256×256 matrix has 256 eigen/singular patterns. The 65,536 product modes belo
 
 ### 3.2 Shape and storage accounting
 
-| Object | Coefficients | float32 bytes | Pages (32 KiB) | Fits guest? |
+| Object | Guest words (8 B) | Raw packed f32 | Guest pages (32 KiB) | 2 MiB fit |
 |---|---:|---:|---:|---|
 | 255-vector | 255 | ~1.0 KiB | 1 | yes |
 | 256-vector | 256 | 1 KiB | 1 | yes |
-| 255×255 head matrix | 65,025 | 254 KiB | ~8 | one matrix + small scratch |
-| 256×256 ring matrix | 65,536 | 256 KiB | 8 | one matrix + small scratch |
-| 256×256 complex float32 | 2 × 65,536 | 512 KiB | 16 | Fits under 1 MiB with ~512 KiB scratch. |
-| 256×256 Q16.16 | 65,536 | 128 KiB | 4 | comfortable |
-| 128×128 pair state | 16,384 | 64 KiB | 2 | comfortable |
-| product state 256×256 | 65,536 | 256 KiB | 8 | one buffer; double buffer tight |
-| full product operator | 65,536² | 16 GiB | impossible | **never dense** |
+| 255×255 head matrix | 65,025 | 254 KiB | 16 | yes, with scratch |
+| 256×256 ring matrix | 65,536 | 256 KiB | 16 | yes, with scratch |
+| 256×256 matrix + eigenvectors | 131,072 | 512 KiB | 32 | yes, 1 MiB scratch |
+| 256×256 complex float32 | 131,072 | 512 KiB | 32 | yes, 1 MiB scratch |
+| 256×256 Q16.16 | 65,536 | 128 KiB | 16 | yes |
+| 128×128 pair state | 16,384 | 64 KiB | 4 | yes |
+| product state 256×256 | 65,536 | 256 KiB | 16 | yes; double buffer =32 pages |
+| full 256 pair U+L+output | 196,608 | 768 KiB | 48 | yes, 16 pages spare |
+| full product operator | 65,536² = 4,294,967,296 | 16 GiB | 1,048,576 | **never dense** |
 
-The 7 GiB active-runner ceiling does not change the last row. A 65,536² float32 operator is 16 GiB; even 7 GiB cannot hold it. It must remain matrix-free, low-rank, block-sparse, or tensor-network.
+Admission uses **8-byte guest words**, not raw packed float32 bytes. The raw column is payload size only. The 7 GiB active-runner ceiling does not change the last row: a 65,536² operator is 16 GiB of raw float32 payload and **32 GiB in guest words**, so it is never dense. It must remain matrix-free, low-rank, block-sparse, or tensor-network.
 
 ### 3.3 The wave equation, in the continuation language
 
@@ -246,9 +250,22 @@ The aperture’s role determines the decomposition. Do not force a Hermitian eig
 
 ## 4. Memory architecture: single-active NaNROUTER-0..5, NANNET0, and paged 256×256
 
-### 4.0 Guest budget update: 1 MiB target
+### 4.0 Guest budget update: 1 MiB baseline, 2 MiB owner target
 
-The owner reports that GLT is increasing the guest page limit to **1 MiB**. The design target is now:
+The 1 MiB implementation baseline is:
+
+```
+1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
+```
+
+**Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for
+guest words**. The target is `2 MiB = 262,144 words = 64 pages of 32 KiB`.
+The checked-in defaults are still 1 MiB pending GPT's merge; 1 MiB and 512 KiB
+remain compatibility test modes. See `GAME_PLAN_::.md` §2 and §16. At 2 MiB,
+the full 256 `U+L+output` pair (196,608 words) becomes guest-feasible, while
+the 65,536² dense product remains forbidden (32 GiB at 8-byte NaN words).
+
+The 1 MiB design target and its consequences:
 
 ```
 1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
@@ -261,11 +278,11 @@ Immediate consequences:
 | Object | Old 512 KiB | New 1 MiB |
 |---|---|---|
 | 256×256 float32 matrix | fits alone | fits with vectors/scratch |
-| 256×256 matrix + eigenvectors | tight/over | fits, with ~512 KiB scratch |
-| 256×256 complex float32 | full guest | fits with ~512 KiB scratch |
+| 256×256 matrix + eigenvectors | tight/over | 1 MiB guest; fits at 2 MiB with ~1 MiB scratch |
+| 256×256 complex float32 | full 1 MiB guest | fits at 2 MiB with ~1 MiB scratch |
 | full 256 matvec A+x+y | would not fit with code | 66,048 words, fits |
 | full-U pair-tile reference (73,990 words) | not dispatchable | **fits** |
-| U+L+output full pair (196,608 words) | over | still over |
+| U+L+output full pair (196,608 words) | over | still over at 1 MiB; **fits at 2 MiB** |
 | 65,536² dense product | 16 GiB | still forbidden |
 
 
@@ -334,7 +351,7 @@ A rough capacity analogy, ignoring overhead and version metadata:
 |---|---:|---:|
 | dense 256×256 float32 | 256 KiB | ~28,600 versions |
 | dense 255×255 float32 | 254 KiB | ~28,900 versions |
-| dense 256×256 complex float32 | 512 KiB | ~14,300 versions |
+| dense 256×256 complex float32 | 1 MiB guest | ~7,150 versions at a 7 GiB ceiling (raw 512 KiB) |
 | dense 65,536² float32 | 16 GiB | **less than half of one copy** |
 
 This is why the product space must be matrix-free or low-rank. The 7 GiB ceiling buys versioning, caching, and experiments, not a dense product operator.
@@ -490,7 +507,7 @@ The user’s instinct to “leave some detail out if the 256×256 dense” is ha
 
 - **256×256 dense is small** and should be kept exact when it fits: 256 KiB = 8 pages.
 - **255×255 dense** is 254 KiB and also fits.
-- **256×256 complex float32** is 512 KiB; it fits under 1 MiB with scratch, and can still be split/paged for large plans.
+- **256×256 complex float32** is 1 MiB in guest words (raw payload 512 KiB); it fills a 1 MiB guest and fits at 2 MiB with ~1 MiB scratch; it can still be split/paged for large plans.
 - **65,536² dense** is the object that must never be materialized.
 
 So: keep the 256×256 aperture/wave operator dense for reference and small experiments; use block/tiled/paged paths for larger plans; use matrix-free/low-rank for the product space. Do not degrade the 256×256 correctness just to save memory.

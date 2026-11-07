@@ -1,5 +1,7 @@
 # MTH 1 MiB guest-budget migration
 
+> **Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for guest words**. This 1 MiB document is retained as the compatibility baseline and implementation history; the new target and integration order are in `GAME_PLAN_::.md`. Do not treat the 1 MiB default as final.
+
 Status: design target; canonical toolchain verification pending.
 
 ## 1. New budget
@@ -14,19 +16,19 @@ The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical C
 
 ## 2. What changes
 
-| Object | Old 512 KiB | New 1 MiB |
-|---|---|---|
-| 256×256 float32 matrix | fits alone | fits with vectors/scratch |
-| 256×256 matrix + eigenvectors | tight/over | fits, with ~512 KiB scratch |
-| 256×256 complex float32 | full guest | fits with ~512 KiB scratch |
-| Full 256 matvec A+x+y (66,048 words) | not with code | fits |
-| Full 256 SVD top pair (~66,305 words) | no | fits |
-| Full 256 ENCODE/DECODE W+vectors (~66,304) | no | fits |
-| Full-U pair-tile reference (73,990 words) | not dispatchable | fits |
-| U + L + output full pair (196,608 words) | no | still no |
-| 65,536² dense product (16 GiB) | forbidden | still forbidden |
+| Object | Old 512 KiB | 1 MiB | 2 MiB target |
+|---|---|---|---|
+| 256×256 float32 matrix (65,536 words) | fits alone | 16 pages; fits with scratch | fits with 1 MiB scratch |
+| 256×256 matrix + eigenvectors (131,072 words) | over | exactly full; no scratch | fits with 1 MiB scratch |
+| 256×256 complex float32 (131,072 words) | over | exactly full; no scratch | fits with 1 MiB scratch |
+| Full 256 matvec A+x+y (66,048 words) | not with code | fits | fits |
+| Full 256 SVD top pair (~66,305 words) | no | fits | fits |
+| Full 256 ENCODE/DECODE W+vectors (~66,304) | no | fits | fits |
+| Full-U pair-tile reference (73,990 words) | not dispatchable | fits | fits |
+| U + L + output full pair (196,608 words) | no | still no | **fits, 16 pages spare** |
+| 65,536² dense product (32 GiB guest words / 16 GiB raw) | forbidden | still forbidden | still forbidden |
 
-The 8 MiB universe still has 256 × 32 KiB pages: 255 head pages + 1 NANNET node page. The 1 MiB guest holds 32 of those pages, not 16.
+Guest accounting uses 8-byte NaN16 words, not raw packed float32 bytes. The 8 MiB universe has 256 × 32 KiB pages: 255 head pages + 1 NANNET node page. The 1 MiB guest holds 32 pages; the 2 MiB target holds 64.
 
 ## 3. New kernel opportunities
 

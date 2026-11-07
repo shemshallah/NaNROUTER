@@ -4,6 +4,7 @@
 **Canonical plan:** `docs/game_plan_deep.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 **Continuation plan:** `docs/DEEP_PLAN_CONT.md`.
+**Mathematical linker plan:** `GAME_PLAN_::.md`.
 **Rule:** math kernels are NaN16; host code is transport/scheduling/storage only. A source file is not CI-verified until the canonical GitHub Actions workflow runs.
 
 ## Current baseline
@@ -15,13 +16,40 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [x] Design target updated to 1 MiB guest (131,072 NaN16 words); old 512 KiB evidence is historical.
-- [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture local PASS; CI pending.
-- [ ] Verify GLT-enforced 1 MiB page-limit loading (CI text-loader execution is green).
+- [x] 1 MiB baseline implemented (131,072 NaN16 words); old 512 KiB evidence is historical.
+- [ ] Integrate GPT's 2 MiB adjustable guest-word update (262,144 words / 64 pages); preserve 1 MiB and 512 KiB compatibility modes.
+- [ ] Verify GLT-enforced 2 MiB page-limit loading (CI text-loader execution is green; GLT enforcement is separate).
+- [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 342 Python tests pass.
 - [x] Canonical GitHub Actions native workflow run `42396090387` passed 121 steps for the 59-fixture set.
+
+## GAME PLAN `::` integration queue (P0–P13)
+
+**Full architecture, schemas, authority rules, and the complete verification matrix:** `GAME_PLAN_::.md`.
+**Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `GAME_PLAN_::.md` §19–20.
+
+- [ ] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split.
+  - [ ] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack.
+  - [ ] P0.2 Re-register all six slot capabilities at 262,144 words; 1 MiB capability cannot admit a 196,608-word job.
+  - [ ] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word golden vector unchanged.
+  - [ ] P0.4 Peak-liveness plan workspace (not naive step sum); exact-limit accepted, +1 word rejected before store.
+  - [ ] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump.
+  - [ ] P0.6 Freeze authority/`::` context rules and JAHS execution binding.
+- [ ] **P1 — Mathematical leaf/identity/storage.** Add `math-leaf.v1`, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive MC0DB/BS0DB math tables.
+- [ ] **P2 — Semantic function registry.** Add `math-functions.v1` over current `MthRegistry` implementations; signatures, domains, pre/postconditions, undefinedness, numerical policy, proof status, composition.
+- [ ] **P3 — Validity engine.** Implement levels 0–3, typed outcomes, preflight cache, contradiction detection, and the no-bypass authorization gate.
+- [ ] **P4 — `::` linker.** Resolve, classify, propose/rank bounded candidate sets, reject address-context collisions, never execute or authorize implicitly.
+- [ ] **P5 — NMP + execution bridge.** Packet/state machine, snapshot and dedupe keys, preflight digest, MthSystem/WaveService/lease/point-0 path, JAHS binding.
+- [ ] **P6 — Meta-mapping/store.** Mapping CAS/rollback, payload references, cache invalidation, recovery, schema migration.
+- [ ] **P7 — Null/void/undefined algebra.** Typed absence/undefined semantics; no zero/null wildcard.
+- [ ] **P8 — Relations/hyperedges/hypergraphs.** Schema constraints, membership/incidence, bounded traversal, hyperedge-as-input.
+- [ ] **P9 — Learning/rule discovery.** Structural/transformational/derivational/relational/operational learning; proposal isolation; proof statuses; transactional promotion; Boolean-head governance.
+- [ ] **P10 — Scratch/oscillation/pruning.** Budgeted oscillation, duplicate-rediscovery control, retention scoring, structural pruning, recovery.
+- [ ] **P11 — Logical lanes/ring mapping.** Map 255 logical roles to the six-slot single-active ring without 255-concurrent-runner claims; capabilities, work stealing, determinism.
+- [ ] **P12 — End-to-end demo.** Leaf → `::` → preflight → execute → commit → feed back; all T01–T20 and additional negative tests green.
+- [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB; explicit blocked/rejected results instead of fabricated claims.
 
 ## R0 — Contract and storage freeze
 

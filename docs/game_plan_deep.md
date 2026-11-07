@@ -6,9 +6,10 @@
 **Canonical source language:** NaN16, assembled by `nasm0`, executed by `n16i` or the native NaN16 kernel.  
 **Canonical arithmetic home:** MTH inside the one NaNLMind universe.  
 **Canonical routing home:** NaNROUTER.  
-**Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`.
+**Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`, `GAME_PLAN_::.md` (math linker/validity/leaf architecture).
 
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
+**Guest-budget update:** owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults are a compatibility baseline pending GPT's merge. See `GAME_PLAN_::.md` §2 and §16.
 
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 
@@ -1097,10 +1098,10 @@ The guest working set is the constraint that shapes the algorithms.
 |---|---:|---:|---|
 | 256-vector | 1 KiB | 0.5 KiB | Yes. |
 | 256×256 matrix | 256 KiB | 128 KiB | One float32 matrix plus small scratch; two matrices fill the guest. |
-| 256×256 matrix + eigenvectors | 512 KiB | 256 KiB | Fits with scratch under 1 MiB. |
+| 256×256 matrix + eigenvectors | 512 KiB raw / 1 MiB guest | 256 KiB raw | Needs 2 MiB for code/scratch. |
 | 128×128 folded block + eigenvectors | 128 KiB | 64 KiB | Yes, with scratch. |
 | Two 128×128 blocks + eigenvectors | 256 KiB | 128 KiB | Yes at float32 with care. |
-| 256×256 complex float32 | 512 KiB | 256 KiB | Fits with scratch under 1 MiB; split/paged for large plans. |
+| 256×256 complex float32 | 512 KiB raw / 1 MiB guest | 256 KiB raw | Fits at 2 MiB with scratch; split/paged for large plans. |
 | Product state 256×256 | 256 KiB | 128 KiB | One buffer fits; double buffering at float32 fills the guest. |
 | Dense 65,536×65,536 | 16 GiB | 8 GiB | Forbidden. |
 

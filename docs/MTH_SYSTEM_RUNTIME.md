@@ -57,6 +57,8 @@ scheduler.start(now_tick=0)
 The constructor does not start the scheduler. The caller still owns ring
 startup, heartbeat, cycle, failover, and checkpoint policy.
 
+> **Owner update (2026-11-07):** GLT is now reported at 2 MiB and adjustable. This document describes the checked-in 1 MiB default; GPT's 2 MiB integration must update it while preserving the 1 MiB/512 KiB modes. See `GAME_PLAN_::.md`.
+
 `guest_budget_bytes` is separate from the plan bound and from the runner
 ceiling. If it is omitted, the 1 MiB target
 (`DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024`) is used. The effective workspace

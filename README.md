@@ -6,6 +6,7 @@ NaNROUTER organizes the networking and learning-control layers around the existi
 
 ## Current design boundary
 
+**Guest budget:** the owner reports GLT is now **2 MiB, adjustable for guest words** (262,144 NaN16 words / 64 pages of 32 KiB). The checked-in tree still contains 1 MiB defaults pending GPT's merge; the 1 MiB and 512 KiB modes remain compatibility gates. See `GAME_PLAN_::.md`.
 - One 8 MiB Bootstrap universe, with 256 palindromic heads.
 - One 2 GiB overbootstrap map hosted only by the Bootstrap runner; it is not copied to Android or peer nodes.
 - Six BSR runner-ring identities, mapped to the user's point assignments in `spec/point-map.toml`.
@@ -114,6 +115,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 
 - `docs/game_plan_deep.md` — full ring/void/NANNET game plan.
 - `docs/DEEP_PLAN_CONT.md` — continuation architecture, 256×256 paging, shard/NANNET0 integration, and MTH System v1.
+- `GAME_PLAN_::.md` — NaN mathematical linker, validity engine, leaves, NMP, 2 MiB guest plan, and ordered integration/test backlog.
 - `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
 - `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
 - `docs/WAVE_TILE_ORCHESTRATOR.md` — 256-tile page window and atomic publication.
