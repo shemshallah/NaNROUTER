@@ -44,6 +44,17 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
     return result
 
 
+
+def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) -> None:
+    """Bind the guest-echoed program ID to the server-owned function registry."""
+    expected = context.pop("expected_program_id", None)
+    if isinstance(expected, bool) or not isinstance(expected, int) or expected < 1:
+        raise NmpHttpError("server admission context has no verified program_id")
+    receipt = packet.admission_receipt
+    if not isinstance(receipt, Mapping) or receipt.get("program_id") != expected:
+        raise NmpHttpError("native receipt program_id does not match the server-owned function registry")
+
+
 def _native_packet(record: Any) -> NmpPacket:
     packet = NmpPacket.from_dict(record)
     if not packet.metadata.get("native_admission_required"):
@@ -102,6 +113,7 @@ class NmpHttpAdapter:
         if packet.state != "PREFLIGHTED":
             raise NmpHttpError("only PREFLIGHTED NMP packets may be submitted")
         gate_context = _context(self.context_provider, packet, "queue")
+        _require_server_program_binding(packet, gate_context)
         queued = packet.queue(tick=now_tick, **gate_context)
         job_id = "nmp:" + packet.packet_id
         queued = replace(queued, job_id=job_id)
@@ -169,6 +181,7 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "lease", job=job, lease=lease
         )
+        _require_server_program_binding(packet, gate_context)
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != owner:
             raise NmpHttpError("worker owner is not bound to the current verified capability")
@@ -222,6 +235,7 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "complete", job=job, lease=lease
         )
+        _require_server_program_binding(packet, gate_context)
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != lease_owner:
             raise NmpHttpError("completion worker is not bound to the current verified capability")
