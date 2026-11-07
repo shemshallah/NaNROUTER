@@ -8,14 +8,12 @@ a server-owned context provider and is never accepted from the HTTP caller.
 from __future__ import annotations
 
 from dataclasses import replace
-import hashlib
 from typing import Any, Callable, Mapping
 
 from .math_objects import digest_object
 from .nmp import (
     EXECUTING,
     NmpPacket,
-    NmpValidationError,
     validate_native_admission_receipt,
 )
 from .wave_service import WaveService
@@ -125,6 +123,7 @@ class NmpHttpAdapter:
             expected_generation=expected_generation,
             max_attempts=max_attempts,
             job_id=job_id,
+            kind=NMP_JOB_KIND,
         )
         if job is None:
             return None
