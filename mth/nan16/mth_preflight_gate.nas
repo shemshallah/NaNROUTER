@@ -60,9 +60,11 @@ mth_preflight_gate:
   LD r5,r2,5
   CMP r4,r5
   JMP[NE] @mth_pf_domain
+  ; Shape rule is independent from scalar domain; compare field 6 to field 6.
   LD r6,r1,6
+  LD r5,r2,6
   CMP r6,r5
-  JMP[NE] @mth_pf_domain
+  JMP[NE] @mth_pf_shape
 
   LD r6,r2,6
   CMP r6,r0
