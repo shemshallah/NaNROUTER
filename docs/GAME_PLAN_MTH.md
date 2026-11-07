@@ -884,5 +884,5 @@ A NaN16-only dense 256×256 pair-space tile operation is source-written:
 `Y_tile = (LU + UL^T)_tile`, with 16×16 output tiles and two independent,
 ordered float32 accumulators per output cell. Its register ABI and working
 set are frozen in `docs/MTH_GRAPH_PAIR_TILE16_ABI_V1.md`. The L=2I
-fixture checks all 256 outputs in one tile. Canonical NaN16 execution is
-pending; source presence and a workflow entry are not verification.
+fixture checks all 256 outputs in one tile. Canonical NaN16 CI run 201
+passed (2,301,554 guest steps). Full page-window orchestration remains open.
