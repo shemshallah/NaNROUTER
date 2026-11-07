@@ -22,6 +22,13 @@ if str(REPO) not in sys.path:
 
 from runner_riddle.math_execution import MathExecutionBridge
 from runner_riddle.math_objects import MathLeaf, digest_object
+from runner_riddle.math_relation import (
+    Hypergraph,
+    RelationMember,
+    RelationRecord,
+    RelationSchema,
+    RoleSpec,
+)
 from runner_riddle.math_registry import MathFunctionRegistry
 from runner_riddle.math_runtime import MathRuntime
 from runner_riddle.math_store import MathStore
@@ -187,6 +194,27 @@ def run_demo(root: Path | None = None, *, keep: bool = False) -> dict[str, Any]:
         )
         feedback_leaf = runtime.leaf(output.leaf_id)
         feedback_mapping = math_store.get_mapping("leaf:" + output.leaf_id)
+        relation_schema = RelationSchema(
+            schema_id="nanrouter.demo.dot-relation",
+            roles=(
+                RoleSpec("input", min_count=2, max_count=2, required=True),
+                RoleSpec("output", min_count=1, max_count=1, required=True),
+            ),
+            min_arity=3,
+            max_arity=3,
+        )
+        relation = RelationRecord(
+            relation_id="rel:demo:dot",
+            schema=relation_schema,
+            members=(
+                RelationMember(a.leaf_id, a.version, "input"),
+                RelationMember(b.leaf_id, b.version, "input"),
+                RelationMember(output.leaf_id, output.version, "output"),
+            ),
+        )
+        hypergraph = Hypergraph(
+            "hg:demo:dot", relations=(relation,),
+        )
         report = {
             "schema": "nanrouter.math-demo-report.v1",
             "ok": completed.state == "COMMITTED",
@@ -204,6 +232,17 @@ def run_demo(root: Path | None = None, *, keep: bool = False) -> dict[str, Any]:
             "result_digest": completed.result_digest,
             "output_leaf_id": output.leaf_id,
             "output_leaf": feedback_leaf.to_dict(),
+            "feedback_relation": {
+                "relation_id": relation.relation_id,
+                "digest": relation.digest(),
+                "member_count": len(relation.members),
+                "hypergraph_id": hypergraph.hypergraph_id,
+                "members": [
+                    {"leaf_id": member.leaf_id, "version": member.version,
+                     "role": member.role}
+                    for member in relation.members
+                ],
+            },
             "feedback": {
                 "leaf_id": feedback_leaf.leaf_id,
                 "version": feedback_leaf.version,

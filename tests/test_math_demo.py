@@ -33,6 +33,13 @@ class MathDemoTests(unittest.TestCase):
         self.assertEqual(
             leaf["provenance"]["packet_id"], report["packet_id"],
         )
+        relation = report["feedback_relation"]
+        self.assertEqual(relation["relation_id"], "rel:demo:dot")
+        self.assertEqual(relation["member_count"], 3)
+        self.assertEqual(
+            [member["role"] for member in relation["members"]],
+            ["input", "input", "output"],
+        )
         self.assertIn("not a claimed numeric", report["note"])
 
     def test_cli_json_returns_success(self):

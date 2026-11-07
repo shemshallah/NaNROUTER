@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 749 Python tests pass (1 skipped).
+- [x] 768 Python tests pass (1 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -52,10 +52,10 @@
 - [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 17 tests. Crash-consistent cross-store intent/finalize and recovery are implemented (12 tests, `docs/MATH_STORE_CROSS.md`).
 - [x] **P7 — Null/void/undefined algebra.** Typed `ZERO/NULL/VOID/EMPTY/UNDEFINED/INFINITY/UNKNOWN/ERROR/CANCELLED` states, explicit conjunction semantics, missing-reference dominance; 59 tests (`docs/MATH_ABSENCE_ALGEBRA.md`).
 - [x] **P8 — Relations/hyperedges/hypergraphs.** Typed schema/roles/arity/duplicate policy, immutable relation versions, incidence, bounded nested traversal, digest stability; 9 tests (`docs/MATH_RELATIONS_HYPERGRAPHS.md`).
-- [x] **P9 — Learning/rule discovery.** Five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transactional promotion, negative memory, audit chain, Boolean-head utility-only governance; 20 tests (`docs/MATH_RULE_LIFECYCLE.md`). Typed principal/role/capability policy with separation-of-duty checks is implemented in `math_auth` (9 tests, `docs/MATH_AUTHORIZATION.md`); full wiring into every learning mutator and the five discovery mechanisms remain open.
+- [x] **P9 — Learning/rule discovery.** Five orthogonal axes, isolated proposals, independent approval, trusted-checker-only V3/proof, transactional promotion, negative memory, audit chain, Boolean-head utility-only governance; 20 tests (`docs/MATH_RULE_LIFECYCLE.md`). Typed principal/role/capability policy with separation-of-duty checks is implemented in `math_auth` (9 tests, `docs/MATH_AUTHORIZATION.md`) and optionally enforced by `MathLearningService` (26 learning tests, fail-closed before store writes). Boolean-head 1,024/1,024 + leakage/control/shuffled gate is implemented (`math_boolean`, 10 tests, `docs/MATH_BOOLEAN_HEADS.md`). The five discovery mechanisms remain open.
 - [x] **P10 — Scratch/oscillation/pruning.** Typed retention features/scoring, tier policy, deterministic plans, protected proof objects, shadow/apply/rollback/restore, oscillation budgets, duplicate and rewrite-cycle stops; 10 tests (`docs/MATH_RETENTION_AND_OSCILLATION.md`).
-- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5. Bounded work queues and capability-safe work stealing are implemented in `lane_work` (8 tests, `docs/LANE_WORK_QUEUES.md`); remote/process stealing and durable ring epoch remain open.
-- [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The output leaf carries input parents, function/version, ruleset snapshot, plan digest, JAHS/ring/job/runner provenance, and the report labels its digest as evidence, not a numeric dot product (`docs/MATH_DEMO.md`).
+- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5. Bounded work queues and capability-safe work stealing are implemented in `lane_work` (8 tests, `docs/LANE_WORK_QUEUES.md`); ring state/epoch export-restore recovery is implemented in `WaveRingScheduler.export_state`/`restore_state` (30 scheduler tests, `docs/RING_EPOCH_RECOVERY.md`). Remote/process stealing remains open.
+- [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The output leaf carries input parents, function/version, ruleset snapshot, plan digest, JAHS/ring/job/runner provenance, and a typed input/input/output hypergraph relation; the report labels its digest as evidence, not a numeric dot product (`docs/MATH_DEMO.md`).
 - [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB, native numeric executor delivery; blocked pending real model/data/credentials/guest runtime. Machine-readable blocked ledger: `spec/p13-gates.json`; explanation: `docs/P13_GATES.md`. No fabricated claims.
 
 ## R0 — Contract and storage freeze
@@ -208,7 +208,7 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -q
-Ran 749 tests
+Ran 768 tests
 OK (skipped=1)
 ```
 

@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 749 Python tests passed (1 skipped).
+**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 768 Python tests passed (1 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -80,7 +80,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 749 tests in 68.528s
+Ran 768 tests in 68.528s
 OK (skipped=1)
 ```
 
@@ -94,7 +94,7 @@ Covered:
 - wave adapter contract (7 tests);
 - authenticated WaveService submit/worker/admin facade (13 tests);
 - MTH system registry/planner and peak-liveness admission (29 tests);
-- single-active runner-ring scheduler (27 tests);
+- single-active runner-ring scheduler with export/restore epoch recovery (30 tests);
 - standalone authenticated Wave HTTP adapter (12 tests);
 - point-0 NaN/binary bridge and active-slot router (35 tests);
 - MthSystem runtime facade (16 tests);
@@ -102,9 +102,12 @@ Covered:
 - mathematical objects/store/registry/validity/linker/runtime (P1–P4, P6);
 - typed absence algebra (P7, 59 tests);
 - relations/hyperedges (P8, 9 tests);
-- rule-learning lifecycle (P9, 20 tests);
+- rule-learning lifecycle with optional typed authorization enforcement (P9, 26 tests);
 - retention/oscillation/pruning (P10, 10 tests);
 - lane registry (P11, 18 tests);
+- bounded work queues/stealing (P11, 8 tests);
+- ring state/epoch export-restore (30 scheduler tests);
+- Boolean-head experiment gate with leakage/control/shuffled checks (10 tests);
 - NMP and native admission-receipt binding (P5, 60 tests);
 - authority-hardened host execution bridge with candidate/snapshot/function-version/selected-kernel binding, rule-snapshot revalidation, durable-job reread, pre-dispatch lease/deadline validation, disabled direct runtime submit, and token redaction (P5, 12 tests);
 - negative execution suite A06/A09–A12 (8 tests);

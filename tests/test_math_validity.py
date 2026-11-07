@@ -352,6 +352,18 @@ class MathValidityTests(unittest.TestCase):
         self.assertEqual(raised.exception.verdict, INVALID)
         self.assertEqual(raised.exception.admission, admission)
 
+    def test_t06_vector_scalar_is_invalid_without_mixed_contract(self):
+        scalar = leaf_pin(
+            "nml:U0:scalar:s", (), kind="scalar", workspace_words=1,
+        )
+        base = snapshot(functions=(self.add,), pins=(self.a, scalar))
+        engine = MathValidityEngine(base)
+        admission = engine.preflight(candidate_for(self.add, (self.a, scalar)))
+        self.assertEqual(admission.verdict, INVALID)
+        self.assertIn(admission.reason, {
+            "KIND_MISMATCH", "SHAPE_MISMATCH", "DOMAIN_MISMATCH",
+        })
+
     def test_t11_division_by_zero_is_undefined_not_null(self):
         dividend = leaf_pin("nml:U0:scalar:one", (), kind="scalar", content={"value": "1"})
         zero = leaf_pin("nml:U0:scalar:zero", (), kind="scalar", content={"value": "0"})
