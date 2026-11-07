@@ -121,9 +121,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bs0db", type=Path, help="BS0DB SQLite path")
     parser.add_argument("--mc0db", type=Path, help="MC0DB SQLite path")
     parser.add_argument("--runner-id", default="MC0:0/R0")
-    parser.add_argument("--guest-workspace-words", type=int,
-                        default=DEFAULT_GUEST_WORKSPACE_WORDS,
-                        help="available guest workspace in NaN16 words (default: 131072 = 1 MiB)")
+    budget = parser.add_mutually_exclusive_group()
+    budget.add_argument("--guest-workspace-words", type=int,
+                        help="available guest workspace in NaN16 words")
+    budget.add_argument("--guest-workspace-mib", type=int,
+                        help="available guest workspace in MiB (1 MiB = 131072 NaN16 words)")
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--tick", type=int, default=0)
     parser.add_argument("--dry-run", action="store_true")
@@ -132,6 +134,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.guest_workspace_words is not None:
+        guest_workspace_words = args.guest_workspace_words
+    elif args.guest_workspace_mib is not None:
+        guest_workspace_words = args.guest_workspace_mib * 131_072
+    else:
+        guest_workspace_words = DEFAULT_GUEST_WORKSPACE_WORDS
+    if guest_workspace_words < 0:
+        print("guest workspace must be non-negative", file=sys.stderr)
+        return 2
     manifest = load_manifest(args.manifest)
     if args.dry_run:
         rows = register_manifest(None, manifest, runner_id=args.runner_id, dry_run=True)
@@ -148,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = register_manifest(
         store, manifest, runner_id=args.runner_id, epoch=args.epoch,
         nanclock_tick=args.tick,
-        guest_workspace_words=args.guest_workspace_words,
+        guest_workspace_words=guest_workspace_words,
     )
     print(f"registered {len(rows)} kernels for {args.runner_id}")
     return 0
