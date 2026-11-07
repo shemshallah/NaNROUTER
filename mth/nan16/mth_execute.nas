@@ -27,6 +27,8 @@
 
 
 mth_execute:
+  ; Preserve the canonical operator ID before r9 is reused for program lookup.
+  ADD r11,r9,r0
   MOVI r13,1
   MOVI r9,900
   CMP r8,r9
@@ -40,14 +42,14 @@ mth_execute_check_dot:
   ; Program 900 is bound only to canonical operator 77 (vector dot).
   ; r9 is the operator ID returned by the canonical expression linker.
   MOVI r10,77
-  CMP r9,r10
+  CMP r11,r10
   JMP[NE] @mth_execute_unsupported
   JMP @mth_execute_supported
 
 mth_execute_check_cosine:
   ; Program 901 is bound only to canonical operator 78 (vector cosine).
   MOVI r10,78
-  CMP r9,r10
+  CMP r11,r10
   JMP[NE] @mth_execute_unsupported
 
 mth_execute_supported:
