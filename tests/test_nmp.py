@@ -176,6 +176,9 @@ class StateTransitionTests(unittest.TestCase):
 
     def test_proposed_cannot_jump_to_executing(self):
         packet = make_packet(state=nmp.PROPOSED)
+        self.assertFalse(packet.can_transition(nmp.EXECUTING))
+        self.assertFalse(packet.can_transition(nmp.QUEUED))
+        self.assertTrue(packet.can_transition(nmp.PREFLIGHTED))
         with self.assertRaises(nmp.NmpTransitionError):
             packet.transition(nmp.EXECUTING)
         with self.assertRaises(nmp.NmpTransitionError):
@@ -501,6 +504,18 @@ class GateTests(unittest.TestCase):
         no_workspace = gate(make_packet(state=nmp.PREFLIGHTED, guest_words=0))
         self.assertEqual(no_workspace.failure, nmp.UNAVAILABLE)
 
+    def test_capability_semantic_name_matches_kernel_implementation(self):
+        packet = make_packet(
+            state=nmp.PREFLIGHTED,
+            capability_set=({"required": "vector.dot", "workspace": 256},),
+        )
+        decision = gate(
+            packet,
+            capability=make_capability(kernel_id="mth.vector.dot256.f32"),
+        )
+        self.assertTrue(decision.ok, decision.reason)
+        self.assertEqual(decision.checks["capability"], True)
+
     def test_capability_epoch_and_precision_are_checked(self):
         packet = make_packet(state=nmp.PREFLIGHTED, capability_epoch=2)
         decision = gate(packet, capability=make_capability(epoch=1))
@@ -527,6 +542,19 @@ class GateTests(unittest.TestCase):
     def test_newer_cancel_epoch_supersedes_the_gate(self):
         packet = make_packet(state=nmp.PREFLIGHTED, cancel_epoch=1)
         decision = gate(packet, cancel_epoch=2)
+        self.assertEqual(decision.failure, nmp.CANCELLED)
+
+    def test_job_payload_cancel_epoch_supersedes_the_gate(self):
+        packet = make_packet(state=nmp.PREFLIGHTED, cancel_epoch=1)
+        decision = gate(
+            packet,
+            job={
+                "job_id": "job-1",
+                "state": "queued",
+                "generation": 7,
+                "payload_json": json.dumps({"cancel_epoch": 2}),
+            },
+        )
         self.assertEqual(decision.failure, nmp.CANCELLED)
 
     def test_gate_rejects_wrong_state(self):
@@ -905,6 +933,23 @@ class MathObjectIntegrationTests(unittest.TestCase):
         self.assertEqual(record["output"]["digest"], RESULT)
         self.assertEqual(record["status"], nmp.COMMITTED)
         self.assertEqual(record["cancel_epoch"], 0)
+
+    def test_prepare_uses_admission_verdict_for_typed_failure(self):
+        candidate = make_candidate()
+        packet = nmp.prepare(
+            candidate,
+            {
+                "result": "VALID",
+                "digest": PREFLIGHT,
+                "rule_snapshot_id": RULES,
+            },
+            snapshot_id=SNAP,
+            admission=make_admission(verdict="UNAUTHORIZED"),
+            resources={"guest_words": 256},
+        )
+        self.assertEqual(packet.state, nmp.UNAUTHORIZED)
+        self.assertEqual(packet.preflight_result, "VALID")
+        self.assertEqual(packet.admission_verdict, "UNAUTHORIZED")
 
     def test_packet_identity_is_stable_across_state_changes(self):
         packet = make_packet()

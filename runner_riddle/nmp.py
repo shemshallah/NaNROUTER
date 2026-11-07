@@ -108,7 +108,7 @@ TRANSITIONS = MappingProxyType({
     PREFLIGHTED: frozenset({
         QUEUED, UNAVAILABLE, UNAUTHORIZED, STALE, EXPERIMENTAL, CANCELLED,
     }),
-    QUEUED: frozenset({EXECUTING, CANCELLED, FAILED, STALE}),
+    QUEUED: frozenset({EXECUTING, CANCELLED, FAILED}),
     EXECUTING: frozenset({COMPLETED, FAILED, CANCELLED}),
     COMPLETED: frozenset({COMMITTED, FAILED}),
     COMMITTED: frozenset(),
@@ -587,6 +587,9 @@ class NmpPacket:
     history: tuple[dict[str, Any], ...] = ()
 
     def __post_init__(self) -> None:
+        # Lane validation comes first so NANNET0/out-of-range cannot be hidden
+        # behind another missing field.
+        object.__setattr__(self, "lane_id", validate_lane(self.lane_id))
         object.__setattr__(self, "snapshot_id", _snapshot_ref(self.snapshot_id, "snapshot_id"))
         object.__setattr__(self, "base_generation", _integer(self.base_generation, "base_generation"))
         if self.generation is None:
@@ -596,7 +599,6 @@ class NmpPacket:
         if self.generation < self.base_generation:
             raise NmpValidationError("generation cannot be older than base_generation")
 
-        object.__setattr__(self, "lane_id", validate_lane(self.lane_id))
         object.__setattr__(self, "universe_id", _text(self.universe_id, "universe_id", maximum=128))
         object.__setattr__(self, "function_id", _text(self.function_id, "function_id", maximum=256))
         if not _FUNCTION_RE.fullmatch(self.function_id):
@@ -969,7 +971,8 @@ class NmpPacket:
             "ruleset_snapshot_id": (
                 ruleset.get("snapshot_id")
                 or preflight.get("rule_snapshot_id")
-                or data.get("ruleset_snapshot_id", "")
+                or data.get("ruleset_snapshot_id")
+                or ""
             ),
             "capability_set": capability.get("set", data.get("capability_set", ())),
             "capability_set_digest": capability.get("digest", data.get("capability_set_digest")),
@@ -1039,6 +1042,15 @@ class NmpPacket:
             # Validate the prospective record before it is constructed.
             if not (self.result_digest or result_digest):
                 raise NmpTransitionError("COMMITTED requires a result_digest")
+            if self.result_digest and result_digest is not None:
+                try:
+                    proposed_digest = normalize_digest(result_digest, "result_digest")
+                except NmpValidationError as exc:
+                    raise NmpTransitionError("COMMITTED result_digest is malformed") from exc
+                if proposed_digest != self.result_digest:
+                    raise NmpTransitionError(
+                        "COMMITTED cannot replace the completed result digest"
+                    )
             prospective_provenance = provenance is not None and bool(provenance)
             provenance_ok = (
                 bool(self.provenance)
@@ -1055,6 +1067,13 @@ class NmpPacket:
             if self.jahs != JAHS_SEAL:
                 raise NmpTransitionError("COMMITTED requires the JAHS handoff seal")
         return state
+
+    def can_transition(self, next_state: str, **kwargs: Any) -> bool:
+        try:
+            self.check_transition(next_state, **kwargs)
+        except NmpTransitionError:
+            return False
+        return True
 
     def transition(
         self,
@@ -1555,11 +1574,11 @@ class NmpPacket:
             _integer(generation, "generation")
             if generation < self.base_generation:
                 raise NmpProjectionError("result generation is older than the packet")
-            if generation > self.base_generation and not allow_newer:
-                raise NmpProjectionError("result generation is newer than the packet")
+            if generation != self.generation and not allow_newer:
+                raise NmpProjectionError("result generation is not the packet generation")
         if result_generation is not None:
             _integer(result_generation, "result_generation")
-            expected_generation = self.base_generation if generation is None else generation
+            expected_generation = self.generation if generation is None else generation
             if result_generation != expected_generation and not allow_newer:
                 raise NmpProjectionError("result generation is not the job generation")
         if result_digest is not None and self.result_digest is not None:
@@ -1739,9 +1758,17 @@ def _match_capability(requirement: Mapping[str, Any],
     names = _requirement_names(requirement)
     if not names:
         return rows[0] if len(rows) == 1 else None
+    # A caller may hand the gate one already-selected capability row without
+    # repeating its kernel id.  That is still an explicit capability decision.
+    if len(rows) == 1 and not _row_names(rows[0]):
+        return rows[0]
     for row in rows:
         row_names = _row_names(row)
-        if any(name in row_names for name in names):
+        if any(
+            name == row_name or name in row_name or row_name in name
+            for name in names
+            for row_name in row_names
+        ):
             return row
     return None
 
@@ -1965,7 +1992,7 @@ def _job_gate(
     if job_generation is not None:
         if isinstance(job_generation, bool) or not isinstance(job_generation, int):
             return False, STALE, "job generation is not an integer"
-        if job_generation != packet.base_generation:
+        if job_generation != packet.generation:
             return False, STALE, "job generation does not match the packet snapshot"
     payload = _payload(job)
     for candidate_snapshot in (
@@ -1995,6 +2022,14 @@ def _job_gate(
         payload_epoch != packet.ring_epoch
     ):
         return False, STALE, "job ring epoch does not match the packet"
+    job_cancel = _job_value(job, payload, "cancel_epoch")
+    if (
+        job_cancel is not None
+        and isinstance(job_cancel, int)
+        and not isinstance(job_cancel, bool)
+        and job_cancel > packet.cancel_epoch
+    ):
+        return False, CANCELLED, "a newer cancel epoch is recorded on the job"
     lease_state = str(_row_get(lease, "state", "") or "").lower()
     if lease_state and lease_state != "active":
         return False, STALE, f"lease state {lease_state!r} is not active"
@@ -2197,10 +2232,26 @@ def prepare(
     admission_data = _admission_fields(admission)
     if admission is None and preflight_data.get("admission_id"):
         admission_data = preflight_data
-    preflight_result = _preflight_result(preflight_data) or _preflight_result(admission_data)
+    evaluated_preflight = _preflight_result(preflight_data)
+    evaluated_admission = _preflight_result(admission_data)
+    preflight_result = evaluated_preflight
+    if evaluated_preflight is not None and evaluated_preflight != "VALID":
+        control_result = evaluated_preflight
+    elif evaluated_admission is not None:
+        control_result = evaluated_admission
+    else:
+        control_result = evaluated_preflight
     preflight_digest = preflight_data.get("digest") or preflight_data.get("preflight_digest")
     if preflight_digest is None:
         preflight_digest = admission_data.get("preflight_digest")
+    if (
+        evaluated_preflight is None
+        and evaluated_admission == "VALID"
+        and preflight_digest is not None
+    ):
+        # An admission record may carry the preflight digest; in that case the
+        # preflight outcome is VALID by construction and can be bound.
+        preflight_result = "VALID"
     ruleset_snapshot = (
         ruleset_snapshot_id
         or preflight_data.get("rule_snapshot_id")
@@ -2252,8 +2303,8 @@ def prepare(
     )
     packet = packet.transition(RESOLVED, reason="candidate inputs resolved", tick=tick)
     packet = packet.transition(CLASSIFIED, reason="candidate function classified", tick=tick)
-    if preflight_result != "VALID":
-        failure = _ADMISSION_FAILURE.get(preflight_result or "", REJECTED)
+    if control_result != "VALID":
+        failure = _ADMISSION_FAILURE.get(control_result or "", REJECTED)
         if failure is None:
             failure = REJECTED
         # Finalize the most specific reachable control terminal.  These are
@@ -2261,7 +2312,7 @@ def prepare(
         if failure in (NULL, UNDEFINED):
             return packet.transition(
                 failure,
-                reason=preflight_result or "preflight failed",
+                reason=control_result or "preflight failed",
                 failure_class=failure,
                 tick=tick,
             )
@@ -2269,18 +2320,18 @@ def prepare(
         if failure in (UNAVAILABLE, UNAUTHORIZED, STALE, EXPERIMENTAL):
             packet = packet.transition(
                 PREFLIGHTED,
-                reason=f"preflight evaluated: {preflight_result or 'MISSING'}",
+                reason=f"preflight evaluated: {control_result or 'MISSING'}",
                 tick=tick,
             )
             return packet.transition(
                 failure,
-                reason=f"preflight result {preflight_result or 'MISSING'}",
+                reason=f"preflight/admission result {control_result or 'MISSING'}",
                 failure_class=failure,
                 tick=tick,
             )
         return packet.transition(
             REJECTED,
-            reason=f"preflight result {preflight_result or 'MISSING'}",
+            reason=f"preflight/admission result {control_result or 'MISSING'}",
             failure_class=failure,
             tick=tick,
         )
@@ -2465,7 +2516,15 @@ class NmpBatch:
             raise NmpBatchError("a batch parent must not hold a lease")
         if self.parent.state in _BATCH_PARENT_FORBIDDEN_STATES:
             raise NmpBatchError("a batch parent cannot be in an execution state")
-        batch_id = self.batch_id or self.parent.batch_id or batch_id_for(self.parent, self.children)
+        batch_id = self.batch_id or self.parent.batch_id
+        if not batch_id:
+            child_batch_ids = {child.batch_id for child in self.children if child.batch_id}
+            if len(child_batch_ids) > 1:
+                raise NmpBatchError("children name different batches and the parent has no batch_id")
+            if child_batch_ids:
+                batch_id = next(iter(child_batch_ids))
+        if not batch_id:
+            batch_id = batch_id_for(self.parent, self.children)
         _text(batch_id, "batch_id", maximum=512)
         parent = replace(
             self.parent,
@@ -2863,8 +2922,8 @@ def project_packet(
             return projection(STALE, False, "job generation is malformed")
         if job_generation < packet.base_generation:
             return projection(STALE, False, "job generation is older than the packet")
-        if job_generation > packet.base_generation and not allow_newer:
-            return projection(STALE, False, "job generation is newer than the packet")
+        if job_generation != packet.generation and not allow_newer:
+            return projection(STALE, False, "job generation does not match the packet")
     result_generation = _row_get(job, "result_generation")
     if result_generation is not None:
         if isinstance(result_generation, bool) or not isinstance(result_generation, int):

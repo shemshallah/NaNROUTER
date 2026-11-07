@@ -115,7 +115,7 @@ class MathFunctionRegistryTests(unittest.TestCase):
 
     def test_default_load_uses_sibling_manifest(self):
         loaded = MathFunctionRegistry.load(CATALOG)
-        self.assertEqual(len(loaded.implementation_registry), 62)
+        self.assertEqual(len(loaded.implementation_registry), 63)
         self.assertEqual(
             loaded.require("math.vector.dot").contract_digest,
             self.registry.require("math.vector.dot").contract_digest,
@@ -126,9 +126,9 @@ class MathFunctionRegistryTests(unittest.TestCase):
         MathFunctionRegistry.load(CATALOG)
         after = MANIFEST.read_bytes()
         self.assertEqual(before, after)
-        self.assertEqual(len(self.mth), 62)
+        self.assertEqual(len(self.mth), 63)
         self.assertEqual(
-            self.registry.health()["mth_kernels"], 62,
+            self.registry.health()["mth_kernels"], 63,
         )
 
     def test_unknown_function_lookup_and_require(self):
@@ -309,7 +309,7 @@ class MathFunctionRegistryTests(unittest.TestCase):
         self.assertEqual(health["implementations"], 8)
         self.assertEqual(health["native_verified_ci"], 8)
         self.assertEqual(health["implementation_kernels"], 8)
-        self.assertEqual(health["mth_kernels"], 62)
+        self.assertEqual(health["mth_kernels"], 63)
         self.assertEqual(health["status"], {"active": 7, "proposed": 12})
         self.assertEqual(health["proof_status"], {"stated": 12, "verified": 7})
 

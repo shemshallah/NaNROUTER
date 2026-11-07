@@ -900,6 +900,20 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.admission.u32",
+      "source": "mth/nan16/mth_admission.nas",
+      "fixture": "mth/tests/mth_admission_test.nas",
+      "marker": "MTH COMPOSED ADMISSION PASS",
+      "steps": 931,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": true
     }
   ]
 }
