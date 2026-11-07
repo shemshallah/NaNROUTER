@@ -120,6 +120,57 @@ class N16TGuestRuntimeTests(unittest.TestCase):
             pool.close()
 
 
+
+    def test_live_sessions_are_not_evicted_and_guest_close_releases_capacity(self):
+        pool = N16TGuestPool(
+            os.environ["NAN16_LIBRARY"],
+            os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"],
+            max_sessions=1,
+        )
+        first = self.make_client(bytes(range(1, 17)))
+        second = self.make_client(bytes(range(17, 33)))
+        try:
+            first_request = self.send_hello(first)
+            first_response = pool.exchange(first_request)
+            first.write_bytes(REQUEST_BASE, first_response)
+            first.call("n16_android_route", {1: REQUEST_BASE, 2: len(first_response)})
+            self.assertEqual(first.reg(3), 2)
+
+            second_request = self.send_hello(second)
+            with self.assertRaises(N16TGuestRuntimeError):
+                pool.exchange(second_request)
+
+            # Capacity pressure must not reset the first session's replay cursor.
+            with self.assertRaises(N16TGuestRuntimeError):
+                pool.exchange(first_request)
+
+            first.call(
+                "n16_android_build",
+                {
+                    1: REQUEST_BASE,
+                    2: 13,
+                    4: RESPONSE_PAYLOAD_BASE,
+                    5: 0,
+                    6: SESSION_BASE,
+                },
+            )
+            self.assertEqual(first.reg(3), 0)
+            close_request = first.read_bytes(REQUEST_BASE, first.reg(1))
+            first.call("n16_android_advance")
+            self.assertEqual(first.reg(3), 0)
+
+            close_response = pool.exchange(close_request)
+            self.assertEqual(len(close_response), 36)
+            self.assertEqual(len(pool._sessions), 0)
+
+            second_response = pool.exchange(second_request)
+            self.assertEqual(len(second_response), 44)
+        finally:
+            first.close()
+            second.close()
+            pool.close()
+
     def test_authenticated_http_route_uses_the_real_nan16_guest(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
