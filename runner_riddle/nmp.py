@@ -19,6 +19,7 @@ must reconstruct state from the job/lease rows; :func:`project_packet` and
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import hashlib
 import json
 import re
 from types import MappingProxyType
@@ -420,6 +421,107 @@ def _preflight_result(data: Mapping[str, Any]) -> str | None:
     return value.upper() if isinstance(value, str) else None
 
 
+NATIVE_ADMISSION_RECEIPT_SCHEMA = "nanrouter.native-admission-receipt.v1"
+NATIVE_ADMISSION_LEASE_SCHEMA = "nanrouter.native-admission-lease.v1"
+
+
+def validate_native_admission_receipt(receipt: Any, packet: Any = None) -> dict[str, Any]:
+    """Validate a NaN16 guest receipt and, when supplied, bind it to one packet.
+
+    This is control-plane integrity checking only. It does not calculate or
+    certify the mathematical result; the guest receipt must be produced by the
+    native admission path and its provenance remains an execution attestation
+    concern.
+    """
+    if not isinstance(receipt, Mapping):
+        raise NmpValidationError("native admission receipt must be an object")
+    data = dict(receipt)
+    if data.get("schema") != NATIVE_ADMISSION_RECEIPT_SCHEMA:
+        raise NmpValidationError("native admission receipt schema is unsupported")
+    required_text = ("packet_id", "snapshot_id", "ruleset_snapshot_id", "producer")
+    for key in required_text:
+        data[key] = _text(data.get(key), f"native_receipt.{key}", maximum=512)
+    if data["producer"] != "nan16_guest":
+        raise NmpValidationError("native admission receipt producer must be nan16_guest")
+    for key in ("candidate_digest", "input_digest", "capability_digest",
+                "preflight_digest", "rule_digest", "receipt_digest"):
+        data[key] = normalize_digest(data.get(key), f"native_receipt.{key}")
+    for key in ("rule_epoch", "generation", "program_id", "guest_status"):
+        data[key] = _integer(data.get(key), f"native_receipt.{key}")
+    if data["rule_epoch"] < 1 or data["program_id"] < 1:
+        raise NmpValidationError("native receipt epoch and program_id must be positive")
+    if data["guest_status"] != 0:
+        raise NmpValidationError("native admission receipt does not record guest ALLOW")
+    body = {key: value for key, value in data.items() if key != "receipt_digest"}
+    if digest_object(body) != data["receipt_digest"]:
+        raise NmpValidationError("native admission receipt digest does not match its fields")
+    if packet is not None:
+        expected_candidate = digest_object({
+            "candidate_id": packet.candidate_id,
+            "function_id": packet.function_id,
+            "function_version": packet.function_version,
+        })
+        expected_inputs = digest_object([_input_identity(item) for item in packet.inputs])
+        bindings = {
+            "packet_id": packet.packet_id,
+            "candidate_digest": expected_candidate,
+            "snapshot_id": packet.snapshot_id,
+            "ruleset_snapshot_id": packet.ruleset_snapshot_id,
+            "input_digest": expected_inputs,
+            "capability_digest": packet.capability_set_digest,
+            "preflight_digest": packet.preflight_digest,
+            "generation": packet.generation,
+        }
+        for key, expected in bindings.items():
+            if data.get(key) != expected:
+                raise NmpValidationError(f"native admission receipt {key} does not match the packet")
+    return data
+
+
+def _native_lease_binding(packet: Any, job: Any, lease: Any) -> dict[str, Any]:
+    receipt = getattr(packet, "admission_receipt", None)
+    if not isinstance(receipt, Mapping):
+        raise NmpTransitionError("native execution requires a bound admission receipt")
+    job_id = _row_get(job, "job_id")
+    lease_job_id = _row_get(lease, "job_id", job_id)
+    lease_token = _row_get(lease, "lease_token")
+    job_token = _row_get(job, "lease_token", lease_token)
+    lease_owner = _row_get(lease, "lease_owner", _row_get(job, "lease_owner"))
+    lease_epoch = _row_get(lease, "lease_epoch", _row_get(job, "lease_epoch"))
+    if not isinstance(job_id, str) or not job_id or lease_job_id != job_id:
+        raise NmpTransitionError("native admission lease must bind the packet to one job")
+    if _row_get(job, "state") != "leased" or _row_get(lease, "state") != "active":
+        raise NmpTransitionError("native admission requires a live leased job and active lease")
+    if not isinstance(lease_token, str) or len(lease_token) < 16 or lease_token != job_token:
+        raise NmpTransitionError("native admission lease token is missing or inconsistent")
+    if not isinstance(lease_owner, str) or not lease_owner:
+        raise NmpTransitionError("native admission lease owner is missing")
+    _integer(lease_epoch, "lease_epoch", minimum=1)
+    if not packet.ring_incarnation or packet.ring_epoch is None or packet.ring_epoch < 1:
+        raise NmpTransitionError("native admission receipt is not bound to an active ring epoch")
+    if packet.jahs != JAHS_SEAL:
+        raise NmpTransitionError("native admission lease requires the JAHS seal")
+    if packet.job_id is not None and packet.job_id != job_id:
+        raise NmpTransitionError("native admission job_id changed")
+    if packet.lease_epoch is not None and packet.lease_epoch != lease_epoch:
+        raise NmpTransitionError("native admission lease epoch changed")
+    body = {
+        "schema": NATIVE_ADMISSION_LEASE_SCHEMA,
+        "packet_id": packet.packet_id,
+        "receipt_digest": receipt["receipt_digest"],
+        "job_id": job_id,
+        "lease_owner": lease_owner,
+        "lease_epoch": lease_epoch,
+        "lease_token_digest": hashlib.sha256(lease_token.encode("utf-8")).hexdigest(),
+        "ring_incarnation": packet.ring_incarnation,
+        "ring_epoch": packet.ring_epoch,
+        "generation": packet.generation,
+        "jahs": packet.jahs,
+    }
+    return {**body, "binding_digest": digest_object(body)}
+
+
+
 # ---------------------------------------------------------------------------
 # Dedupe identity
 # ---------------------------------------------------------------------------
@@ -547,6 +649,7 @@ class NmpPacket:
     admission_id: str | None = None
     admission_verdict: str | None = None
     preflight_digest: str | None = None
+    admission_receipt: dict[str, Any] | None = None
     preflight_result: str | None = None
     ruleset_id: str = ""
     ruleset_version: int = 1
@@ -667,6 +770,8 @@ class NmpPacket:
         object.__setattr__(self, "provenance", dict(self.provenance or {}))
         object.__setattr__(self, "evidence", dict(self.evidence or {}))
         object.__setattr__(self, "metadata", dict(self.metadata or {}))
+        if self.admission_receipt is not None:
+            object.__setattr__(self, "admission_receipt", validate_native_admission_receipt(self.admission_receipt, self))
         object.__setattr__(self, "history", _tuple_of_dicts(self.history, "history"))
         object.__setattr__(self, "child_packet_ids", tuple(
             _text(item, "child_packet_id", maximum=512) for item in (self.child_packet_ids or ())
@@ -858,6 +963,7 @@ class NmpPacket:
             "admission_id": self.admission_id,
             "admission_verdict": self.admission_verdict,
             "preflight_digest": self.preflight_digest,
+            "admission_receipt": dict(self.admission_receipt) if self.admission_receipt is not None else None,
             "preflight_result": self.preflight_result,
             "ruleset_snapshot_id": self.ruleset_snapshot_id or None,
             "capability_set": [dict(item) for item in self.capability_set],
@@ -965,6 +1071,7 @@ class NmpPacket:
             "admission_id": data.get("admission_id"),
             "admission_verdict": data.get("admission_verdict"),
             "preflight_digest": preflight.get("digest", data.get("preflight_digest")),
+            "admission_receipt": data.get("admission_receipt"),
             "preflight_result": preflight.get("result", data.get("preflight_result")),
             "ruleset_id": ruleset.get("id") or data.get("ruleset_id", ""),
             "ruleset_version": ruleset.get("version", data.get("ruleset_version", 1)),
@@ -1176,6 +1283,7 @@ class NmpPacket:
         result: str | None = None,
         digest: str | None = None,
         reason: str | None = None,
+        admission_receipt: Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> "NmpPacket":
         """Advance PROPOSED -> PREFLIGHTED only for a VALID preflight."""
@@ -1191,6 +1299,10 @@ class NmpPacket:
             "preflight_result": "VALID",
             "preflight_digest": preflight_digest,
         }
+        if admission_receipt is not None:
+            updates["admission_receipt"] = dict(admission_receipt)
+        elif self.metadata.get("native_admission_required") and self.admission_receipt is None:
+            raise NmpTransitionError("native admission receipt is required before PREFLIGHTED")
         if reason is not None:
             updates["reason"] = reason
         return replace(self, **updates).transition(PREFLIGHTED, **kwargs)
@@ -1235,10 +1347,18 @@ class NmpPacket:
         *,
         gate: "NmpGateDecision" | None = None,
         tick: int = 0,
+        job: Any = None,
+        lease: Any = None,
         **gate_kwargs: Any,
     ) -> "NmpPacket":
         """Gate then move QUEUED -> EXECUTING at lease time."""
-        decision = gate if gate is not None else execution_gate(self, **gate_kwargs)
+        job_id = gate_kwargs.pop("job_id", None)
+        lease_epoch = gate_kwargs.pop("lease_epoch", None)
+        ring_incarnation = gate_kwargs.get("ring_incarnation", self.ring_incarnation)
+        ring_epoch = gate_kwargs.get("ring_epoch", self.ring_epoch)
+        decision = gate if gate is not None else execution_gate(
+            self, job=job, lease=lease, **gate_kwargs,
+        )
         if not decision.ok:
             raise NmpGateError(decision)
         if decision.packet_id != self.packet_id:
@@ -1255,11 +1375,23 @@ class NmpPacket:
                 failure=STALE,
                 reason=f"gate was evaluated at {decision.from_state}, packet is {self.state}",
             ))
+        evidence = {"lease_gate": decision.to_dict()}
+        if self.metadata.get("native_admission_required"):
+            binding = _native_lease_binding(self, job, lease)
+            job_id = binding["job_id"]
+            lease_epoch = binding["lease_epoch"]
+            ring_incarnation = binding["ring_incarnation"]
+            ring_epoch = binding["ring_epoch"]
+            evidence["native_admission_lease"] = binding
         return self.transition(
             EXECUTING,
             reason="lease gate accepted",
             tick=tick,
-            evidence={"lease_gate": decision.to_dict()},
+            job_id=job_id,
+            lease_epoch=lease_epoch,
+            ring_incarnation=ring_incarnation,
+            ring_epoch=ring_epoch,
+            evidence=evidence,
         )
 
     def complete(
@@ -2129,6 +2261,18 @@ def execution_gate(
     if not admission_ok:
         return refuse(failure or REJECTED, reason or "admission refused")
 
+    native_required = bool(packet.metadata.get("native_admission_required"))
+    if native_required and packet.admission_receipt is None:
+        checks["native_receipt"] = False
+        return refuse(REJECTED, "native NaN16 admission receipt is required")
+    if packet.admission_receipt is not None:
+        try:
+            validate_native_admission_receipt(packet.admission_receipt, packet)
+        except NmpValidationError as exc:
+            checks["native_receipt"] = False
+            return refuse(STALE, str(exc))
+    checks["native_receipt"] = (packet.admission_receipt is not None) if native_required else True
+
     ruleset_ok, failure, reason = _ruleset_gate(packet, ruleset_snapshot)
     checks["ruleset"] = ruleset_ok
     if not ruleset_ok:
@@ -2164,6 +2308,17 @@ def execution_gate(
     checks["job"] = job_ok
     if not job_ok:
         return refuse(failure or STALE, reason or "job/lease evidence refused")
+    if native_required and packet.state == EXECUTING:
+        try:
+            expected_binding = _native_lease_binding(packet, job, lease)
+        except NmpError as exc:
+            checks["native_lease"] = False
+            return refuse(STALE, str(exc))
+        stored_binding = packet.evidence.get("native_admission_lease")
+        if not isinstance(stored_binding, Mapping) or dict(stored_binding) != expected_binding:
+            checks["native_lease"] = False
+            return refuse(STALE, "native admission receipt is not bound to this worker lease")
+        checks["native_lease"] = True
 
     return NmpGateDecision(
         packet_id=packet.packet_id,
