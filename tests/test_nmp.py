@@ -211,6 +211,41 @@ class NativeAdmissionReceiptTests(unittest.TestCase):
         with self.assertRaises(nmp.NmpValidationError):
             replace(packet, admission_receipt=rebound)
 
+    def test_android_extended_receipt_metadata_is_validated(self):
+        packet = make_packet(
+            state=nmp.PROPOSED,
+            metadata={"native_admission_required": True},
+        )
+        receipt = make_native_receipt(packet)
+        receipt.update({
+            "output_generation": packet.generation + 1,
+            "output_descriptor_digest": digest_object([3, 0, 1, 1, 1, 9000, 3, 0]),
+            "guest_source_digest": "a" * 64,
+            "guest_image_digest": "b" * 64,
+        })
+        receipt.pop("receipt_digest")
+        receipt["receipt_digest"] = digest_object(receipt)
+        bound = packet.mark_preflight(
+            result="VALID", digest=PREFLIGHT, admission_receipt=receipt,
+        )
+        self.assertEqual(bound.admission_receipt["output_generation"], packet.generation + 1)
+        self.assertEqual(bound.admission_receipt["guest_source_digest"], "a" * 64)
+        self.assertEqual(bound.admission_receipt["guest_image_digest"], "b" * 64)
+
+        wrong_generation = dict(bound.admission_receipt)
+        wrong_generation["output_generation"] += 1
+        wrong_generation.pop("receipt_digest")
+        wrong_generation["receipt_digest"] = digest_object(wrong_generation)
+        with self.assertRaises(nmp.NmpValidationError):
+            replace(bound, admission_receipt=wrong_generation)
+
+        malformed_source = dict(bound.admission_receipt)
+        malformed_source["guest_source_digest"] = "not-a-digest"
+        malformed_source.pop("receipt_digest")
+        malformed_source["receipt_digest"] = digest_object(malformed_source)
+        with self.assertRaises(nmp.NmpValidationError):
+            replace(bound, admission_receipt=malformed_source)
+
     def test_native_receipt_is_bound_to_active_worker_lease(self):
         packet = self.make_preflighted()
         packet = packet.queue(gate=gate(packet))
