@@ -21,6 +21,8 @@ from .wave_service import WaveService
 
 NMP_JOB_KIND = "nmp"
 NMP_PAYLOAD_KEY = "nmp_packet"
+# Keep admission aligned with the Android NaN16 worker and completion ABI.
+NMP_WORKER_PROGRAM_IDS = frozenset({78, 79})
 
 
 class NmpHttpError(ValueError):
@@ -48,8 +50,8 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
 def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) -> int:
     """Bind the guest-echoed program ID to the server-owned function registry."""
     expected = context.pop("expected_program_id", None)
-    if isinstance(expected, bool) or not isinstance(expected, int) or expected < 1:
-        raise NmpHttpError("server admission context has no verified program_id")
+    if isinstance(expected, bool) or not isinstance(expected, int) or expected not in NMP_WORKER_PROGRAM_IDS:
+        raise NmpHttpError("server admission context has no supported NaN16 worker program_id")
     receipt = packet.admission_receipt
     if not isinstance(receipt, Mapping) or receipt.get("program_id") != expected:
         raise NmpHttpError("native receipt program_id does not match the server-owned function registry")
@@ -338,4 +340,4 @@ class NmpHttpAdapter:
         }
 
 
-__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NmpHttpAdapter", "NmpHttpError"]
+__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NMP_WORKER_PROGRAM_IDS", "NmpHttpAdapter", "NmpHttpError"]
