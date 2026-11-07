@@ -67,15 +67,15 @@ mth_pair_driver_lu_zero:
   PUTC r11
 mth_pair_driver_lu_checked:
   CMP r7,r8
-  JMP[EQ] @mth_pair_driver_lu_four
-  MOVI r11,63
-  PUTC r11
-  JMP @mth_pair_driver_lu_done
-mth_pair_driver_lu_four:
+  JMP[NE] @mth_pair_driver_lu_bad
   MOVI r11,52
   PUTC r11
+  JMP @mth_pair_driver_lu_done
+mth_pair_driver_lu_bad:
+  MOVI r11,63
+  PUTC r11
+  JMP @mth_pair_driver_test_fail
 mth_pair_driver_lu_done:
-  JMP[NE] @mth_pair_driver_test_fail
   LA r4,@mth_driver_acc_ult
   MOVI r6,18
   ADD r4,r4,r6
