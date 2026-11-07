@@ -1073,7 +1073,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
         )
 
     def test_receipt_rejects_changed_inputs_generation_and_guest_denial(self):
-        packet = make_packet().resolve().classify().propose()
+        packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
         changed_inputs = nmp.replace(
             packet, inputs=({"leaf_id": "nml:U0:vector:changed",
@@ -1098,7 +1098,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
             )
 
     def test_native_receipt_is_checked_by_nmp_queue_gate(self):
-        packet = make_packet().resolve().classify().propose()
+        packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
         preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         admission = make_admission(preflight_digest=receipt.receipt_digest)
@@ -1132,7 +1132,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
         self.assertIn("native preflight receipt", denied.reason)
 
     def test_native_receipt_must_be_bound_to_active_lease_before_execution(self):
-        packet = make_packet().resolve().classify().propose()
+        packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
         preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         admission = make_admission(preflight_digest=receipt.receipt_digest)
@@ -1215,7 +1215,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
             )
 
     def test_native_lease_binding_rejects_wrong_ring_epoch_and_owner(self):
-        packet = make_packet().resolve().classify().propose()
+        packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
         preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         queued = preflighted.transition(nmp.QUEUED)
