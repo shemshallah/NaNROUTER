@@ -1,7 +1,7 @@
 # R10 implementation evidence ledger
 
 **Date:** 2026-11-06
-**Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
+**Latest bounded pair-tile CI:** run 242 (`42388648618`), K16 accumulator/finalizer verified, 283,436 guest steps; 1,542 NaN16-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
 **Result:** 33/33 locally runnable fixtures passed; 35/35 total pass including CI-only K256 pair; 235 Python tests passed.
 **CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
