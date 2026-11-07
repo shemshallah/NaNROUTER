@@ -739,3 +739,4 @@ jobs:
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
           grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
+          grep -q '^MTH NATIVE DISPATCH PASS' build/mth/linker-preflight.out
