@@ -12,8 +12,11 @@ mth_test_main:
   MOVI r14,0
 
 mth_rot_loop:
-  MOVI r1,r12
+  ADD r1,r12,r0
   CALL @mth_rot2_class
+  LD r4,r12,@mth_rot_expected
+  CMP r1,r4
+  JMP[NE] @mth_fail
 
   ; Apply the rotation twice; it must return the original four-bit class.
   CALL @mth_rot2_class
@@ -34,12 +37,15 @@ mth_rot_loop:
   LDN r11,r6,0
   MOVI r1,@mth_word
   CALL @mth_double_endian
+  LDN r12,r6,0
+  CMP r12,r10
+  JMP[EQ] @mth_fail
   CALL @mth_double_endian
   LD r2,r6,0
   LDN r3,r6,0
-  CMP r2,r10
+  CMP r2,r11
   JMP[NE] @mth_fail
-  CMP r3,r11
+  CMP r3,r10
   JMP[NE] @mth_fail
 
   MOVI r1,@mth_pass
@@ -53,16 +59,37 @@ mth_fail:
 
 mth_puts:
   MOVI r4,255
-mth_puts_byte:
+mth_puts_word:
   LD r2,r1,0
+  MOVI r3,4
+mth_puts_byte:
   BOOL.8 r5,r2,r4
   CMP r5,r0
   RET[EQ]
   PUTC r5
   SHR r2,r2,8
+  SUB r3,r3,r13
+  JMP[NE] @mth_puts_byte
   ADD r1,r1,r13
-  JMP @mth_puts_byte
+  JMP @mth_puts_word
 
+mth_rot_expected:
+.word 0
+.word 4
+.word 8
+.word 12
+.word 1
+.word 5
+.word 9
+.word 13
+.word 2
+.word 6
+.word 10
+.word 14
+.word 3
+.word 7
+.word 11
+.word 15
 mth_word:
 .word 0
 mth_pass:
