@@ -388,6 +388,14 @@ class LinkSnapshot:
     implementation_capabilities: tuple[dict[str, Any], ...] = ()
 
     @property
+    def functions(self) -> tuple[dict[str, Any], ...]:
+        return self.function_digests
+
+    @property
+    def rules(self) -> tuple[dict[str, Any], ...]:
+        return self.rule_digests
+
+    @property
     def function_snapshot_id(self) -> str:
         return self.function_snapshot_digest
 
@@ -496,6 +504,10 @@ class LinkResult:
     @property
     def snapshot_id(self) -> str:
         return self.snapshot.snapshot_id
+
+    @property
+    def function_snapshot_id(self) -> str:
+        return self.snapshot.function_snapshot_digest
 
     @property
     def rule_snapshot_id(self) -> str:
