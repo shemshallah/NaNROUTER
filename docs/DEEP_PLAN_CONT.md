@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **40 native MTH kernels with fixtures**: 37 pass in the local harness, the prior 35 plus the bounded K16 pair tile pass canonical CI (including the tiled 256 pair), and the new encode/decode, SVD, and 255 odd certificate await the next CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **40 native MTH kernels with fixtures**: 38 pass in the local harness, the prior tile/K16 fixtures pass canonical CI, and the new encode/decode, SVD, and 255 odd certificate await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -51,13 +51,13 @@ The 255 + 1 rule remains:
 | Ring geometry | C255 head ring, C256 ring, 255+1 port assembly | Native + CI |
 | Sparse graph | unweighted Q16.16 Laplacian, weighted CSR v2, energy, components | Native + CI |
 | Void | regularized inverse-square float32 potential | Native + CI |
-| Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate, 15×255 streaming 255 certificate | Native + CI (255 pending CI) |
-| Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI (SVD pending CI) |
+| Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate, 15×255 streaming 255 certificate | Native + CI |
+| Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
 | Coupling / creativity primitive | two-region coupling, transmission metric | Native + CI |
 | Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense pair-tile reference, bounded K16 streaming pair-tile accumulator | Native + CI |
 | Vector / match | dot, norm, axpy, cosine similarity | Native + CI |
-| Adapter | 128-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI (encode/decode pending CI) |
+| Adapter | 128-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI |
 
 ### 1.2 System/control plane
 
@@ -81,9 +81,9 @@ The 255 + 1 rule remains:
 ### 1.3 Evidence baseline
 
 ```
-37/37 locally runnable fixtures pass; K256 pair passed canonical CI
-38/38 total native fixtures; 235/235 Python tests pass
-GitHub Actions prior run 42386209524: 71/71 steps; 38-fixture/79-step run pending
+38/38 locally runnable fixtures pass; K256 pair passed canonical CI
+39/39 total native fixtures; 235/235 Python tests pass
+Prior GitHub Actions run 42388797363: 79/79 steps; combined 39-fixture/81-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -917,6 +917,7 @@ The shortest correct sentence is:
 
 
 
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -937,7 +938,7 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.fold.f32` | `float32` | 9,281 | yes |
 | `mth.centrosymmetry.128.f32` | `float32` | 676,252 | yes |
 | `mth.centrosymmetry256.block16.f32` | `float32` | 337,623 | yes |
-| `mth.centrosymmetry255.block15.f32` | `float32` | 653,687 | pending |
+| `mth.centrosymmetry255.block15.f32` | `float32` | 653,687 | yes |
 | `mth.vector.dot256.f32` | `float32` | 9,144 | yes |
 | `mth.vector.norm256.f32` | `float32` | 6,842 | yes |
 | `mth.vector.axpy256.f32` | `float32` | 8,389 | yes |
@@ -950,10 +951,10 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.matvec.128.f32` | `float32` | 249,914 | yes |
 | `mth.matvec256.block16.f32` | `float32` | 148,561 | yes |
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
-| `mth.svd.top128.f32` | `float32` | 1,311,632 | pending |
+| `mth.svd.top128.f32` | `float32` | 1,311,632 | yes |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
-| `mth.decode.128_256.f32` | `float32` | 996,358 | pending |
-| `mth.encode.256_128.f32` | `float32` | 996,358 | pending |
+| `mth.decode.128_256.f32` | `float32` | 996,358 | yes |
+| `mth.encode.256_128.f32` | `float32` | 996,358 | yes |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |
 | `mth.graph.pair.rank1.128.f32` | `float32` | 252,060 | yes |
 | `mth.lowrank.add.128.f32` | `float32` | 1,056,470 | yes |
@@ -961,3 +962,4 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.dft255.f32` | `float32` | 6,666,266 | yes |
 | `mth.graph.couple128.f32` | `float32` | 8,637 | yes |
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
+| `mth.graph.pair.tile16.f32` | `float32` | 4,643,414 | yes |

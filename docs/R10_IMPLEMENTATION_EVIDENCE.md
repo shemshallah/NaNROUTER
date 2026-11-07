@@ -4,8 +4,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 37/37 locally runnable fixtures passed; 38/38 total including CI-only K256 pair; 235 Python tests passed.
-**CI:** the prior tile run 218 passed the 35-fixture set. The 38-fixture/79-step run is pending after the SVD/encode/255 integration.
+**Result:** 38/38 locally runnable fixtures passed; 39/39 total including CI-only K256 pair; 235 Python tests passed.
+**CI:** prior runs 218/242 passed the tile/K16 fixtures; the combined 39-fixture/81-step run is pending.
 
 ## Native fixtures
 
@@ -80,7 +80,7 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-37/37 local fixtures passed; 38/38 total
+38/38 local fixtures passed; 39/39 total
 ```
 
 Run it after any kernel change.

@@ -126,7 +126,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 37 locally runnable fixtures and 235 Python tests pass; the 38th (K256 pair) is CI-verified. The prior run `42386209524` passed 71 native steps; the 38-fixture/79-step run is pending.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 38 locally runnable fixtures and 235 Python tests pass; the 39th (K256 pair) is CI-verified. The combined 39-fixture/81-step run is pending.
 
 ## Runner Riddle
 

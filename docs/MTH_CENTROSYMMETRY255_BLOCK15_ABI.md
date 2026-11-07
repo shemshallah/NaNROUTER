@@ -45,7 +45,9 @@ Caller preconditions:
   self-comparison that is not a certificate;
 - the mismatch accumulator and the block pointers belong to the caller.
 
-The routine has no failure path and always returns `r1=1`.
+The routine has no failure path and always returns `r1=1`. As with the other
+NaN16 MTH kernels, `r0` is the zero convention (the kernel reads it but does
+not write it); the caller supplies `r13=1`.
 
 ## 3. Mirror orientation
 
