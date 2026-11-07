@@ -66,6 +66,8 @@ server.start()
 
 The context provider is a mandatory deployment dependency. It must not trust
 client-supplied admission, capability, ruleset, ring or cancellation claims.
+It must also bind the requested worker owner to the currently native-verified
+capability runner; a worker bearer token alone is not a capability identity.
 The adapter fails closed if the provider is absent or does not return a mapping.
 The server still needs a TLS-terminating reverse proxy for non-loopback use.
 
