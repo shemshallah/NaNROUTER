@@ -12,26 +12,46 @@
 ;   r12 = caller scratch base (57 words)
 ;   r13 = constant 1 (set internally)
 ;
-; Dispatch is allowlisted. Program 900 is the 256-element float32 dot ABI.
-; Admission runs before the kernel; denial never reaches the numerical kernel.
-; Unsupported program IDs are rejected before admission/output metadata writes.
-; The wrapper returns 0 on success, passes through mth_admit denials,
-; 64 for unsupported program IDs, and 80 for a kernel ABI failure.
+; Allowlist:
+;   program 900 + operator 77 -> mth.vector.dot256.f32
+;   program 901 + operator 78 -> mth.vector.cosine256.f32
+; Admission runs before either numerical kernel; denial never reaches a kernel.
+; Unsupported or mismatched program/operator pairs are rejected before
+; admission/output metadata writes. Return 0 on success, pass through
+; mth_admit denials, 64 for unsupported pairs, 80 for kernel ABI failure.
 ;
 ; Scratch words 0..47 belong to mth_admit. This wrapper uses 48..56.
+; Cosine uses words 52..55 as its four-word caller-owned nested scratch frame.
 ; r14 is used as the preserved scratch-base register and is clobbered.
+
+.include "mth_cosine256_f32.nas"
 
 mth_execute:
   MOVI r13,1
   MOVI r9,900
   CMP r8,r9
-  JMP[NE] @mth_execute_unsupported
+  JMP[EQ] @mth_execute_check_dot
+  MOVI r9,901
+  CMP r8,r9
+  JMP[EQ] @mth_execute_check_cosine
+  JMP @mth_execute_unsupported
+
+mth_execute_check_dot:
   ; Program 900 is bound only to canonical operator 77 (vector dot).
   LD r10,r1,1
   MOVI r9,77
   CMP r10,r9
   JMP[NE] @mth_execute_unsupported
+  JMP @mth_execute_supported
 
+mth_execute_check_cosine:
+  ; Program 901 is bound only to canonical operator 78 (vector cosine).
+  LD r10,r1,1
+  MOVI r9,78
+  CMP r10,r9
+  JMP[NE] @mth_execute_unsupported
+
+mth_execute_supported:
   ADD r14,r12,r0
   ST r15,r14,56
   ST r1,r14,48
@@ -49,14 +69,35 @@ mth_execute:
   CMP r1,r0
   JMP[NE] @mth_execute_return
 
-  ; Program 900: float32 dot256. Payload ranges and dimensions were admitted.
-  LD r1,r12,50
+  ; Select the already-checked program. Payload ranges and dimensions were
+  ; admitted; the kernels receive only the exact registered operand buffers.
+  LD r8,r14,55
+  MOVI r9,900
+  CMP r8,r9
+  JMP[EQ] @mth_execute_dot
+
+mth_execute_cosine:
+  LD r1,r14,50
   LD r1,r1,5
-  LD r2,r12,51
+  LD r2,r14,51
   LD r2,r2,5
-  LD r3,r12,54
+  LD r3,r14,54
+  LD r3,r3,5
+  MOVI r4,52
+  ADD r4,r14,r4
+  CALL @mth_cosine256_f32
+  JMP @mth_execute_kernel_status
+
+mth_execute_dot:
+  LD r1,r14,50
+  LD r1,r1,5
+  LD r2,r14,51
+  LD r2,r2,5
+  LD r3,r14,54
   LD r3,r3,5
   CALL @mth_dot256_f32
+
+mth_execute_kernel_status:
   MOVI r9,1
   CMP r1,r9
   JMP[NE] @mth_execute_kernel_error
