@@ -388,7 +388,7 @@ The general dense pair action now has a source-written NaN16 tile kernel:
 two 16-row windows of L, rather than materializing the 65,536×65,536
 Kronecker matrix. The bounded K16 L=2I fixture passed canonical NaN16 CI run 242 (283,436 guest
 steps) using 1,542 NaN16 words. The full-U tile reference remains useful for
-mathematical comparison but requires 73,990 words and exceeds the 512 KiB
+mathematical comparison and requires 73,990 words (591,920 bytes); it fits the new 1 MiB MTH guest budget but not a 512 KiB runner
 guest ceiling. The K16 kernel is the dispatchable path; page-window
 orchestration remains open. This is not a claim that all 65,536 product
 modes are independently controllable.
