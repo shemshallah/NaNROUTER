@@ -181,3 +181,12 @@ that can be executed before those wider contracts are frozen.
 The signed fixed-point ABI is now frozen in `docs/MTH_SPARSE_GRAPH_ABI.md`. The first sparse native slice is intentionally an exact unweighted symmetric simple-graph CSR operator with Q16.16/I32 input and output. The input state is bounded to [-64,+64], so each edge difference is bounded by 2^23 raw units and a maximum-degree-255 row sum remains below signed-I32 overflow. No rounding or saturation is used.
 
 Source: `mth/nan16/mth_sparse_graph_laplacian.nas`. Fixtures: `mth/tests/mth_sparse_graph_laplacian_test.nas` (path graph, disconnected graph, and invalid-input atomicity). The fixture has been added to the canonical NaN16 CI workflow. Its evidence status is now **native_verified**: canonical NaN16 CI run #58 assembled and executed the path, disconnected, and invalid-input atomicity fixtures successfully (20,737 guest steps). Kernel SHA-256: `013048435c1026643554fb20e3434934cf059dd47cf2857577cac13ed5be6b8f`. The NaNLMind capability can be promoted only with this exact digest, Q format, and workspace contract. Weighted CSR is a separately versioned follow-on, not an implicit extension of this ABI.
+
+
+## 12. Weighted sparse CSR v2 native verification
+
+The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted_graph_laplacian_v2.nas` with ABI `docs/MTH_WEIGHTED_CSR_ABI_V2.md`. It accepts Q16.16/I32 state in [-64,+64], U8 integer edge weights 1..255, and emits signed I64 Q16.16 outputs. The 16-word caller scratch frame and register ABI are explicit. Per-edge products fit signed I32; each row is accumulated exactly in signed I64 under the proved <2^40 bound.
+
+Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
+
+This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
