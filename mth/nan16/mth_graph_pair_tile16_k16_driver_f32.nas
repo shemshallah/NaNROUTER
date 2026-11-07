@@ -75,6 +75,7 @@ mth_pair_driver_slice:
   LD r1,r12,4
   LD r2,r12,5
   LD r3,r12,7
+  MOVI r13,1
   CALL @mth_graph_pair_tile16_finalize_f32
   MOVI r11,71
   PUTC r11
