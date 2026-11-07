@@ -1008,6 +1008,14 @@ class MathObjectIntegrationTests(unittest.TestCase):
 
 
 class NativePreflightReceiptTests(unittest.TestCase):
+    def make_proposed_packet(self):
+        return make_packet(
+            preflight_digest=None,
+            preflight_result=None,
+            admission_id=None,
+            admission_verdict=None,
+        ).resolve().classify().propose()
+
     def make_receipt(self, packet):
         return NativePreflightReceipt.from_guest_result(
             packet,
@@ -1025,9 +1033,9 @@ class NativePreflightReceiptTests(unittest.TestCase):
         )
 
     def test_native_receipt_binds_packet_and_survives_canonical_round_trip(self):
-        packet = make_packet().resolve().classify().propose()
+        packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
-        preflighted = packet.mark_preflight(receipt=receipt)
+        preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         self.assertEqual(preflighted.state, nmp.PREFLIGHTED)
         self.assertTrue(preflighted.metadata["native_preflight_required"])
         self.assertEqual(preflighted.preflight_digest, receipt.receipt_digest)
