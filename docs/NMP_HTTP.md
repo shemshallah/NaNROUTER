@@ -47,22 +47,37 @@ Complete:
 ## Required server wiring
 
 Construct the adapter with the same WaveService instance used by the HTTP
-server and a trusted context provider:
+server. The provided `WaveStoreNmpContextProvider` resolves the active operator
+and native-verified runner capability from WaveStore; the admission, preflight,
+ruleset, ring and cancellation snapshots remain explicit callbacks into the
+authoritative server registries:
 
 ~~~python
-from runner_riddle import NmpHttpAdapter, WaveHttpServer
+from runner_riddle import (
+    NmpHttpAdapter, WaveHttpServer, WaveStoreNmpContextProvider,
+)
 
-def current_nmp_context(*, packet, stage, job, lease):
-    # Read current admission, preflight, ruleset snapshot, capability,
-    # ring incarnation/epoch and cancellation state from server-owned stores.
-    # Return the keyword arguments accepted by NmpPacket.queue() or
-    # NmpPacket.start_execution()/execution_gate(). Raise if evidence is absent.
-    return load_current_gate_evidence(packet, stage, job, lease)
-
-nmp = NmpHttpAdapter(service, current_nmp_context)
+context = WaveStoreNmpContextProvider(
+    service,
+    admission_provider=current_admission,
+    preflight_provider=current_preflight,
+    ruleset_provider=current_ruleset_snapshot,
+    ring_provider=current_ring_state,
+    cancel_epoch_provider=current_cancel_epoch,
+)
+nmp = NmpHttpAdapter(service, context)
 server = WaveHttpServer(service, host="127.0.0.1", port=8080, nmp_adapter=nmp)
 server.start()
 ~~~
+
+The provider requires an active operator record with native-verified evidence
+and a matching dispatchable capability digest, workspace and precision. Its
+`select_worker()` preflight runs the complete QUEUED-state gate for the chosen
+runner before `lease_job()` writes a durable lease. A worker without the
+matching native capability therefore cannot consume or strand a queued NMP
+job. The adapter still rechecks the full gate against the concrete lease after
+acquisition; if trusted evidence changes between the two checks, the lease
+fails closed and expires back through the existing WaveStore lease lifecycle.
 
 The context provider is a mandatory deployment dependency. It must not trust
 client-supplied admission, capability, ruleset, ring or cancellation claims.
