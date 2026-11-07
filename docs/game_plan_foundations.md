@@ -386,6 +386,7 @@ The architecture succeeds only if its mathematical invariants hold, its implemen
 The general dense pair action now has a source-written NaN16 tile kernel:
 `Y = LU + UL^T`, one 16×16 output tile per invocation. It stages U plus
 two 16-row windows of L, rather than materializing the 65,536×65,536
-Kronecker matrix. The L=2I exact fixture and canonical CI step are present;
-native execution remains pending. This is an implementation step, not a
-claim that all 65,536 product modes are independently controllable.
+Kronecker matrix. The L=2I exact fixture passed canonical NaN16 CI run 201 (2,301,554 guest
+steps), checking all 256 cells of the first tile. This is one verified tile,
+not full product-space orchestration and not a claim that all 65,536 product
+modes are independently controllable.
