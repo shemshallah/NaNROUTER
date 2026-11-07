@@ -393,6 +393,16 @@ class BatchTests(unittest.TestCase):
         seal = batch.seal()
         self.assertEqual(seal.child_states, (nmp.FAILED, nmp.CANCELLED))
 
+    def test_candidate_names_make_distinct_child_packets_but_share_operation(self):
+        parent = make_packet(is_batch_parent=True)
+        children = (
+            make_packet(candidate_id="cnd:" + "a" * 64),
+            make_packet(candidate_id="cnd:" + "b" * 64),
+        )
+        batch = nmp.NmpBatch(parent, children)
+        self.assertEqual(len({child.packet_id for child in batch.children}), 2)
+        self.assertEqual(len({child.dedupe_key for child in batch.children}), 1)
+
     def test_batch_parent_cannot_be_an_execution_state_or_hold_a_job(self):
         with self.assertRaises(nmp.NmpValidationError):
             make_packet(is_batch_parent=True, job_id="job-1")
@@ -722,6 +732,23 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection.state, nmp.COMPLETED)
         self.assertEqual(store.calls, ["job-1"])
 
+    def test_accepts_result_enforces_snapshot_and_generation_binding(self):
+        packet = make_packet(state=nmp.COMPLETED)
+        self.assertTrue(packet.accepts_result(
+            snapshot_id=SNAP,
+            ruleset_snapshot_id=RULES,
+            result_digest=RESULT,
+            result_generation=7,
+            generation=7,
+        ))
+        self.assertFalse(packet.accepts_result(snapshot_id=OTHER_SNAP))
+        self.assertFalse(packet.accepts_result(
+            ruleset_snapshot_id=OTHER_RULES,
+        ))
+        self.assertFalse(packet.accepts_result(result_generation=8))
+        self.assertFalse(packet.accepts_result(generation=8))
+        self.assertFalse(packet.accepts_result(result_digest="f" * 64))
+
     def test_committed_projection_requires_job_and_commit_evidence(self):
         committed = make_packet(state=nmp.COMMITTED)
         projection = nmp.project_packet(committed, job=self._job("done"))
@@ -819,6 +846,30 @@ class MathObjectIntegrationTests(unittest.TestCase):
             )
             self.assertEqual(packet.state, state, verdict)
             self.assertNotEqual(packet.state, nmp.COMMITTED)
+
+    def test_canonical_packet_fields_are_present(self):
+        packet = make_packet(state=nmp.COMMITTED)
+        record = packet.to_dict()
+        for key in (
+            "packet_id", "state", "status", "snapshot_id", "base_generation",
+            "generation", "lane_id", "parent_packet_id", "batch_id",
+            "batch_index", "batch_count", "function_id", "function_version",
+            "candidate_id", "admission_id", "admission_verdict", "preflight",
+            "ruleset", "capability", "resources", "cancel_epoch", "output",
+            "evidence", "plan_digest",
+        ):
+            self.assertIn(key, record)
+        self.assertEqual(record["lane_id"], 3)
+        self.assertEqual(record["resources"]["guest_words"], 256)
+        self.assertEqual(record["preflight"]["digest"], PREFLIGHT)
+        self.assertEqual(record["ruleset"]["snapshot_id"], RULES)
+        self.assertEqual(record["capability"]["set"][0]["required"], "vector.dot")
+        self.assertEqual(record["evidence"]["ring_incarnation"], "ring-inc-1")
+        self.assertEqual(record["evidence"]["ring_epoch"], 1)
+        self.assertEqual(record["evidence"]["jahs"], nmp.JAHS_SEAL)
+        self.assertEqual(record["output"]["digest"], RESULT)
+        self.assertEqual(record["status"], nmp.COMMITTED)
+        self.assertEqual(record["cancel_epoch"], 0)
 
     def test_packet_identity_is_stable_across_state_changes(self):
         packet = make_packet()

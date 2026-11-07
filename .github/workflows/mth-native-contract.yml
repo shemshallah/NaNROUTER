@@ -448,6 +448,17 @@ jobs:
           cat build/mth/power128.err
           grep -q '^MTH POWER_ITER128 PASS' build/mth/power128.out
 
+      - name: Assemble native preflight-gate fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_preflight_gate_test.nas > build/mth/preflight-gate.nan
+
+      - name: Execute native preflight-gate fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/preflight-gate.nan --steps 200000 --serial > build/mth/preflight-gate.out 2> build/mth/preflight-gate.err
+          cat build/mth/preflight-gate.out
+          cat build/mth/preflight-gate.err
+          grep -q '^MTH PREFLIGHT GATE PASS' build/mth/preflight-gate.out
+
       - name: Assemble JAHS handoff-gate fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_jahs_gate_test.nas > build/mth/jahs-gate.nan

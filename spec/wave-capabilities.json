@@ -886,6 +886,20 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.preflight.gate.u32",
+      "source": "mth/nan16/mth_preflight_gate.nas",
+      "fixture": "mth/tests/mth_preflight_gate_test.nas",
+      "marker": "MTH PREFLIGHT GATE PASS",
+      "steps": 336,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": true
     }
   ]
 }

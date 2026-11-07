@@ -158,9 +158,30 @@ class MathLinkerCandidateTests(unittest.TestCase):
         self.assertIsNotNone(result.null)
         self.assertEqual(result.null.kind, "null")
         self.assertIsNone(result.null.content)
-        self.assertEqual(result.null.metadata["reason"], "NO_VALID_TRANSFORM")
+        self.assertEqual(result.null.metadata["reason"], "DIMENSION_MISMATCH")
         self.assertNotEqual(result.null.kind, "scalar")
         self.assertEqual(result.to_dict()["null"]["kind"], "null")
+
+    def test_proposed_contracts_are_proposed_but_deprecated_contracts_are_not(self):
+        left = vector_leaf(1)
+        right = vector_leaf(2)
+        registry = {
+            "math.vector.proposed": function_contract(
+                "math.vector.proposed", status="proposed", proof_status="stated",
+            ),
+            "math.vector.deprecated": function_contract(
+                "math.vector.deprecated", status="deprecated", proof_status="tested",
+            ),
+        }
+        result = propose([left, right], registry=registry, snapshot_id=SNAPSHOT_ID)
+
+        self.assertEqual(result.candidate_count, 1)
+        self.assertEqual(result.candidates[0].function_id, "math.vector.proposed")
+        self.assertEqual(result.candidates[0].preflight_hint, "candidate")
+        self.assertIn(
+            "inactive_function",
+            {row["reason"] for row in result.rejected if row["function_id"] == "math.vector.deprecated"},
+        )
 
     def test_zero_candidates_is_typed_null_not_zero(self):
         left = vector_leaf(1)
@@ -185,7 +206,7 @@ class MathLinkerCandidateTests(unittest.TestCase):
         result = propose([left, right], registry=registry, snapshot_id=SNAPSHOT_ID)
 
         self.assertEqual(result.candidate_count, 0)
-        self.assertEqual(result.null.metadata["reason"], "NO_VALID_TRANSFORM")
+        self.assertEqual(result.null.metadata["reason"], "KIND_MISMATCH")
         self.assertEqual(result.rejected[0]["reason"], "kind_mismatch")
 
     def test_snapshot_records_function_rule_and_capability_digests(self):

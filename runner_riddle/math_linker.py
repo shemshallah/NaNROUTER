@@ -131,6 +131,19 @@ class LeafClass:
     leaf_digest: str
     relation_schema: str | None = None
 
+    @property
+    def shape_list(self) -> list[int]:
+        return list(self.shape)
+
+    def __getitem__(self, key: str) -> Any:
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_dict().get(key, default)
+
+    def as_dict(self) -> dict[str, Any]:
+        return self.to_dict()
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "leaf_id": self.leaf_id,
@@ -747,6 +760,24 @@ def _leaf_from_mapping(document: Mapping[str, Any]) -> MathLeaf:
         return MathLeaf(**payload)
     except (TypeError, MathObjectError) as exc:
         raise LinkError("invalid_leaf", str(exc)) from exc
+
+
+def _follow_alias(value: Any, aliases: Mapping[str, Any] | None) -> Any:
+    if aliases is None or not isinstance(value, str):
+        return None
+    seen: set[str] = set()
+    current: Any = value
+    while isinstance(current, str) and current not in seen:
+        seen.add(current)
+        if current in aliases:
+            current = aliases[current]
+        elif current.upper() in aliases:
+            current = aliases[current.upper()]
+        else:
+            return current if current != value else None
+        if isinstance(current, (MathLeaf, Mapping)):
+            return current
+    return None
 
 
 def _resolve_leaf(operand: Any, ref: MathRef, leaves: Any) -> MathLeaf:
@@ -1745,6 +1776,7 @@ def _invoke_registry(registry: Any, classes: tuple[LeafClass, ...], query: LinkQ
             ((classes, query, query.mode), {}),
             ((classes, query, query.objective), {}),
             ((classes, query), {}),
+            ((query, classes), {}),
             ((classes,), {}),
             ((), {}),
         ])
@@ -1758,6 +1790,8 @@ def _invoke_registry(registry: Any, classes: tuple[LeafClass, ...], query: LinkQ
         return registry
     if hasattr(registry, "functions"):
         return registry.functions
+    if hasattr(registry, "function_id") and hasattr(registry, "signature"):
+        return [registry]
     if isinstance(registry, Iterable) and not isinstance(registry, (str, bytes, Mapping)):
         return registry
     raise LinkError("invalid_registry", "registry must be a mapping or callable")
@@ -1793,6 +1827,8 @@ def _call_first(callable_value: Any, signature: inspect.Signature | None,
 def _prepare_registry(raw: Any) -> tuple[tuple[_FunctionSpec, ...], tuple[dict[str, Any], ...]]:
     if isinstance(raw, str) or raw is None:
         raise LinkError("invalid_registry", "registry did not return a function collection")
+    if hasattr(raw, "function_id") and hasattr(raw, "signature"):
+        raw = [raw]
     if not isinstance(raw, (Mapping, str, bytes)) and hasattr(raw, "functions"):
         raw = raw.functions
     items: list[tuple[Any, Any]] = []
@@ -2054,8 +2090,10 @@ def _build_snapshot(specs: tuple[_FunctionSpec, ...], rules: Any, capabilities: 
 
 
 def propose(
-    query: LinkQuery | Iterable[Any] | Any,
+    query: LinkQuery | Iterable[Any] | Any = None,
     *,
+    operands: Any = None,
+    refs: Any = None,
     registry: Any = None,
     functions: Any = None,
     function_registry: Any = None,
@@ -2083,6 +2121,10 @@ def propose(
             "execution_not_permitted",
             "the :: linker only proposes candidates; preflight/execution are separate",
         )
+    if query is None:
+        query = operands if operands is not None else refs
+    if query is None:
+        raise LinkError("invalid_query", "provide a LinkQuery or operands/refs")
     if registry is None:
         registry = functions if functions is not None else function_registry
     if registry is None:
@@ -2113,7 +2155,18 @@ def propose(
     resolved: list[MathLeaf] = []
     for operand in effective.operands:
         reference = parse_ref(operand, aliases=aliases)
-        resolved.append(_resolve_leaf(operand, reference, leaves))
+        alias_value = _follow_alias(operand, aliases)
+        if isinstance(alias_value, MathLeaf):
+            leaf = alias_value
+        elif isinstance(alias_value, Mapping) and alias_value.get("kind") is not None and alias_value.get("type") is not None:
+            leaf = _leaf_from_mapping(_leaf_document_for_ref(alias_value, reference))
+        else:
+            leaf = _resolve_leaf(operand, reference, leaves)
+        if leaf.leaf_id != reference.leaf_id or leaf.version != reference.version:
+            raise LinkError("version_mismatch", "alias leaf does not match its pin")
+        if reference.content_digest is not None and leaf.content_digest != reference.content_digest:
+            raise LinkError("digest_mismatch", "alias leaf content digest does not match its pin")
+        resolved.append(leaf)
     classes = tuple(classify_leaf(leaf) for leaf in resolved)
     input_records = tuple(_input_record(item) for item in classes)
 
@@ -2136,7 +2189,7 @@ def propose(
                 incomplete_reasons.append("fuel_exhausted")
                 break
             fuel_used += 1
-            if spec.status != "active":
+            if spec.status not in {"active", "proposed"}:
                 rejected.append(_rejection(
                     spec.function_id, spec.version, "inactive_function",
                     f"function status is {spec.status}",
@@ -2301,7 +2354,8 @@ class MathLinker:
         self.snapshot_id = snapshot_id
         self.aliases = aliases
 
-    def propose(self, query: LinkQuery | Iterable[Any] | Any, **kwargs: Any) -> LinkResult:
+    def propose(self, query: LinkQuery | Iterable[Any] | Any = None,
+                **kwargs: Any) -> LinkResult:
         options = {
             "registry": self.registry,
             "leaves": self.leaves,
@@ -2313,7 +2367,8 @@ class MathLinker:
         options.update(kwargs)
         return propose(query, **options)
 
-    def link(self, query: LinkQuery | Iterable[Any] | Any, **kwargs: Any) -> LinkResult:
+    def link(self, query: LinkQuery | Iterable[Any] | Any = None,
+             **kwargs: Any) -> LinkResult:
         return self.propose(query, **kwargs)
 
 
@@ -2373,6 +2428,8 @@ def _function_metadata(record: _CandidateRecord) -> dict[str, Any]:
         "rank_score": record.score,
         "reason": _candidate_reason(record),
         "candidate_id": record.candidate.candidate_id,
+        "commutative": record.spec.commutative,
+        "commutative_proved": record.spec.commutative_proved,
         "commutative_canonical_order": record.canonical_order,
     }
 
@@ -2399,8 +2456,29 @@ def _null_reason(query: LinkQuery, classes: tuple[LeafClass, ...],
     if query.mode == "transform" and query.goal is not None:
         if any(row.get("reason") == "goal_mismatch" for row in rejected):
             return "NO_TRANSFORM_MATCH"
+    ignored = {"inactive_function", "rejected_function", "duplicate_candidate"}
+    specific = {
+        "arity_mismatch": "ARITY_MISMATCH",
+        "kind_mismatch": "KIND_MISMATCH",
+        "domain_mismatch": "DOMAIN_MISMATCH",
+        "dimension_mismatch": "DIMENSION_MISMATCH",
+        "element_mismatch": "ELEMENT_MISMATCH",
+        "precision_mismatch": "PRECISION_MISMATCH",
+        "layout_mismatch": "LAYOUT_MISMATCH",
+        "goal_mismatch": "GOAL_MISMATCH",
+    }
+    reasons = {
+        str(row.get("reason")) for row in rejected
+        if row.get("reason") not in ignored
+    }
+    if len(reasons) == 1:
+        reason = next(iter(reasons))
+        if reason in specific:
+            return specific[reason]
     if not specs:
         return "NO_REGISTERED_FUNCTION"
+    if rejected and all(row.get("reason") == "inactive_function" for row in rejected):
+        return "NO_ACTIVE_FUNCTION"
     return "NO_VALID_TRANSFORM"
 
 

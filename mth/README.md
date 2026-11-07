@@ -160,6 +160,7 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_centrosymmetry_255_full.nas`: full 255×255 centrosymmetry certificate; local canonical execution PASS (2,700,726 steps).
 - `nan16/mth_avoided_crossing_sweep.nas`: R7 avoided-crossing sweep; local canonical execution PASS (11,651 steps).
 - `nan16/mth_jahs_gate.nas`: mandatory "Just A Handoff Seal" gate; accepts only `0x4A414853`; local canonical execution PASS (201 steps).
+- `nan16/mth_preflight_gate.nas`: native execution-authorization gate over 256-bit rule digests; local canonical execution PASS (336 steps); dedicated CI workflow added.
 - `nan16/mth_topk_256.nas`: stable descending top-k with index tie-break; local canonical execution PASS (1,158,106 steps).
 - `nan16/mth_drive_source_256.nas`: bounded DRIVE source `state + dt*source`; local canonical execution PASS (13,092 steps).
 - `nan16/mth_cfl_guard_256.nas`: CFL/lambda_max guard; local canonical execution PASS (2,639,509 steps).

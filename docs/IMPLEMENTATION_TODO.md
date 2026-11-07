@@ -21,9 +21,9 @@
 - [ ] Verify GLT-enforced 2 MiB page-limit loading (CI text-loader execution is green; GLT enforcement is separate).
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 530 Python tests pass.
-- [x] Canonical GitHub Actions native workflow run `42396090387` passed 121 steps for the 59-fixture set.
+- [x] 59/59 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 535 Python tests pass.
+- [x] Previous canonical workflow `42396090387` passed 121 steps for 59 fixtures; the native preflight gate added a dedicated workflow and the unified 124-step run is pending.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -198,14 +198,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-58/58 local fixtures passed; 59/59 total (K256 pair CI-only)
+59/59 local fixtures passed; 60/60 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI: `42396090387` — 121/121 steps for the 59-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42396090387` — 121/121 steps historically; current workflow has 124 steps after the native preflight gate, pending. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

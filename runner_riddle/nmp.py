@@ -104,8 +104,7 @@ TRANSITIONS = MappingProxyType({
     CLASSIFIED: frozenset({PROPOSED, NULL, UNDEFINED, INVALID, CANCELLED}),
     PROPOSED: frozenset({PREFLIGHTED, NULL, REJECTED, CANCELLED}),
     PREFLIGHTED: frozenset({
-        QUEUED, UNAVAILABLE, UNAUTHORIZED, STALE, EXPERIMENTAL, REJECTED,
-        CANCELLED,
+        QUEUED, UNAVAILABLE, UNAUTHORIZED, STALE, EXPERIMENTAL, CANCELLED,
     }),
     QUEUED: frozenset({EXECUTING, CANCELLED, FAILED, STALE}),
     EXECUTING: frozenset({COMPLETED, FAILED, CANCELLED}),
@@ -451,13 +450,21 @@ def packet_id_for(
     lane_id: int = 0,
     batch_id: str | None = None,
     batch_index: int | None = None,
+    candidate_id: str = "",
 ) -> str:
-    """Derive a deterministic packet identity from content and placement."""
+    """Derive a deterministic packet identity from content and placement.
+
+    ``candidate_id`` is included so two selected candidates that resolve to the
+    same operation content still have distinct packet records; they share a
+    dedupe key and subscribe to one execution.  ``request_id`` is deliberately
+    excluded because it is evidence, not identity.
+    """
     validate_lane(lane_id)
     _text(dedupe_key, "dedupe_key", maximum=128)
     payload = {
         "schema": NMP_SCHEMA,
         "dedupe_key": dedupe_key,
+        "candidate_id": candidate_id,
         "lane_id": lane_id,
         "batch_id": batch_id,
         "batch_index": batch_index,
@@ -672,6 +679,7 @@ class NmpPacket:
                 lane_id=self.lane_id,
                 batch_id=self.batch_id,
                 batch_index=self.batch_index,
+                candidate_id=self.candidate_id,
             ))
         else:
             object.__setattr__(self, "packet_id", _text(self.packet_id, "packet_id", maximum=512))
@@ -691,6 +699,60 @@ class NmpPacket:
     def status(self) -> str:
         """Alias for ``state`` used by callers that call it packet status."""
         return self.state
+
+    @property
+    def admission(self) -> dict[str, Any]:
+        return {
+            "admission_id": self.admission_id,
+            "verdict": self.admission_verdict,
+            "snapshot_id": self.snapshot_id,
+            "rule_snapshot_id": self.ruleset_snapshot_id or None,
+            "preflight_digest": self.preflight_digest,
+        }
+
+    @property
+    def preflight(self) -> dict[str, Any]:
+        return {
+            "result": self.preflight_result,
+            "digest": self.preflight_digest,
+            "rule_snapshot_id": self.ruleset_snapshot_id or None,
+        }
+
+    @property
+    def ruleset(self) -> dict[str, Any]:
+        return {
+            "id": self.ruleset_id or None,
+            "version": self.ruleset_version,
+            "snapshot_id": self.ruleset_snapshot_id or None,
+        }
+
+    @property
+    def capability(self) -> dict[str, Any]:
+        return {
+            "set": [dict(item) for item in self.capability_set],
+            "digest": self.capability_set_digest,
+            "epoch": self.capability_epoch,
+        }
+
+    @property
+    def resources(self) -> dict[str, Any]:
+        return {"guest_words": self.guest_words}
+
+    @property
+    def output(self) -> dict[str, Any]:
+        return {
+            "leaf_id": self.output_leaf_id,
+            "digest": self.result_digest,
+            "kind": self.output_kind,
+            "status": self.result_status,
+        }
+
+    @property
+    def ring(self) -> dict[str, Any]:
+        return {
+            "incarnation": self.ring_incarnation,
+            "epoch": self.ring_epoch,
+        }
 
     @property
     def dedupe_key(self) -> str:
@@ -725,6 +787,7 @@ class NmpPacket:
         provenance = (
             bool(self.provenance)
             or bool(self.evidence.get("provenance"))
+            or bool(self.evidence.get("job_id"))
             or bool(self.output_leaf_id)
         )
         if not provenance:
@@ -759,6 +822,18 @@ class NmpPacket:
             "inputs": [dict(item) for item in self.inputs],
             "admission_id": self.admission_id,
             "admission_verdict": self.admission_verdict,
+            "preflight_digest": self.preflight_digest,
+            "preflight_result": self.preflight_result,
+            "ruleset_snapshot_id": self.ruleset_snapshot_id or None,
+            "capability_set": [dict(item) for item in self.capability_set],
+            "capability_set_digest": self.capability_set_digest,
+            "guest_words": self.guest_words,
+            "cancel_epoch": self.cancel_epoch,
+            "result_digest": self.result_digest,
+            "ring_incarnation": self.ring_incarnation,
+            "ring_epoch": self.ring_epoch,
+            "jahs": self.jahs,
+            "result_status": self.result_status,
             "preflight": {
                 "result": self.preflight_result,
                 "digest": self.preflight_digest,
@@ -805,6 +880,13 @@ class NmpPacket:
 
     def digest(self) -> str:
         return digest_object(self.to_dict())
+
+    def append_evidence(self, **values: Any) -> "NmpPacket":
+        """Append immutable evidence without changing packet state."""
+        return replace(
+            self,
+            evidence={**dict(self.evidence), **values},
+        )
 
     @classmethod
     def create(cls, **fields: Any) -> "NmpPacket":
@@ -928,6 +1010,7 @@ class NmpPacket:
             provenance_ok = (
                 bool(self.provenance)
                 or bool(self.evidence.get("provenance"))
+                or bool(self.evidence.get("job_id"))
                 or bool(self.output_leaf_id)
                 or bool(output_leaf_id)
                 or prospective_provenance
@@ -1442,7 +1525,8 @@ class NmpPacket:
                 raise NmpProjectionError("result generation is newer than the packet")
         if result_generation is not None:
             _integer(result_generation, "result_generation")
-            if generation is not None and result_generation != generation and not allow_newer:
+            expected_generation = self.base_generation if generation is None else generation
+            if result_generation != expected_generation and not allow_newer:
                 raise NmpProjectionError("result generation is not the job generation")
         if result_digest is not None and self.result_digest is not None:
             if normalize_digest(result_digest, "result_digest") != self.result_digest:
@@ -1478,6 +1562,11 @@ class NmpCancellation:
     @property
     def too_late(self) -> bool:
         return self.status == "too_late"
+
+    def __getattr__(self, name: str) -> Any:
+        # Keep cancellation results convenient to treat as the resulting
+        # packet without duplicating fields.
+        return getattr(self.packet, name)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1521,6 +1610,9 @@ class NmpGateDecision:
 
     @property
     def allowed(self) -> bool:
+        return self.ok
+
+    def __bool__(self) -> bool:
         return self.ok
 
     @property
@@ -1923,7 +2015,8 @@ def execution_gate(
 
     All of these must hold:
 
-    * the packet is PREFLIGHTED (queue gate) or QUEUED (lease gate);
+    * the packet is PREFLIGHTED (queue gate), QUEUED (lease gate), or
+      EXECUTING (pre-dispatch recheck);
     * admission is VALID and bound to the same candidate/snapshot/ruleset;
     * preflight is VALID and its digest matches the packet;
     * the ruleset snapshot is still current;
@@ -1948,7 +2041,7 @@ def execution_gate(
             checks=checks,
         )
 
-    if packet.state not in (PREFLIGHTED, QUEUED):
+    if packet.state not in (PREFLIGHTED, QUEUED, EXECUTING):
         checks["state"] = False
         return refuse(REJECTED, f"packet state {packet.state} is not gateable")
     checks["state"] = True
@@ -2348,6 +2441,10 @@ class NmpBatch:
         for index, child in enumerate(self.children):
             if child.is_batch_parent:
                 raise NmpBatchError("a batch child cannot itself be a batch parent")
+            if child.snapshot_id != self.parent.snapshot_id:
+                raise NmpBatchError("batch children must share the parent snapshot")
+            if child.base_generation != self.parent.base_generation:
+                raise NmpBatchError("batch children must share the parent generation")
             if child.parent_packet_id is not None and child.parent_packet_id != parent.packet_id:
                 raise NmpBatchError("child belongs to another parent packet")
             if child.batch_id is not None and child.batch_id != batch_id:
@@ -2400,6 +2497,15 @@ class NmpBatch:
     @property
     def sealed(self) -> bool:
         return self.finished
+
+    def __len__(self) -> int:
+        return len(self.children)
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def __getitem__(self, index: int | str) -> NmpPacket:
+        return self.child(index)
 
     def child(self, index_or_id: int | str) -> NmpPacket:
         if isinstance(index_or_id, int):
