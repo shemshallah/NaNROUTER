@@ -618,13 +618,18 @@ class MthRegistry:
             plan.workspace_words, "workspace_words", minimum=0,
             error_cls=MthPlanError,
         )
+        _plan_dataflow(tuple(plan.steps))
+        # A plan that declares dependencies also declares the liveness
+        # boundary of each producer buffer.  Admit it by peak live workspace;
+        # a plan with no dependency edges retains the conservative v1 sum.
+        if any(step.depends_on for step in plan.steps):
+            required_workspace = self.plan_workspace_peak(plan)
         if required_workspace > plan.workspace_words:
             raise MthPlanError(
                 f"plan workspace bound {plan.workspace_words} is below the "
                 f"required {required_workspace} words"
             )
 
-        _plan_dataflow(tuple(plan.steps))
         return plan
 
     def plan_workspace_peak(self, plan: MthPlan) -> int:

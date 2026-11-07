@@ -204,10 +204,13 @@ class MthSystem:
                 f"{self.workspace_budget_bytes} bytes"
             )
 
-        required_words = sum(
-            self.registry.require(step.kernel_id).workspace_words
-            for step in plan.steps
-        )
+        if any(step.depends_on for step in plan.steps):
+            required_words = self.registry.plan_workspace_peak(plan)
+        else:
+            required_words = sum(
+                self.registry.require(step.kernel_id).workspace_words
+                for step in plan.steps
+            )
         if workspace is None:
             job_workspace = plan_bound
         else:

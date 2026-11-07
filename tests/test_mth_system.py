@@ -9,6 +9,7 @@ from runner_riddle.mth_registry import (
     MthKernelDescriptor,
     MthPlan,
     MthPlanError,
+    MthPlanStep,
     MthRegistry,
 )
 from runner_riddle.mth_system import (
@@ -220,6 +221,48 @@ class MthSystemTests(unittest.TestCase):
 
         with self.assertRaises(MthSystemWorkspaceError):
             self.submit(plan, job_id="job-small", workspace=2)
+
+    def test_submit_plan_admits_declared_liveness_by_peak_not_sum(self):
+        def descriptor(name, workspace):
+            return MthKernelDescriptor(
+                kernel_id=f"mth.test.{name}.f32",
+                source=f"{name}.nas",
+                fixture=f"{name}_test.nas",
+                marker="TEST",
+                steps=1,
+                precision="float32",
+                workspace_words=workspace,
+                shape=(1,),
+                status="native_verified",
+                ci_verified=True,
+                source_digest="a" * 64,
+                fixture_digest="b" * 64,
+            )
+        registry = MthRegistry([
+            descriptor("a", 10), descriptor("b", 20), descriptor("c", 30),
+        ])
+        system = MthSystem(
+            registry, self.store, self.service, self.scheduler,
+            guest_budget_bytes=None,
+            workspace_word_bytes=8,
+            enforce_active_slot=True,
+        )
+        self.scheduler.start(0)
+        steps = (
+            MthPlanStep(name="a", kernel_id="mth.test.a.f32"),
+            MthPlanStep(
+                name="b", kernel_id="mth.test.b.f32", depends_on=("a",),
+            ),
+            MthPlanStep(name="c", kernel_id="mth.test.c.f32"),
+        )
+        plan = MthPlan(plan_id="peak-plan", steps=steps, workspace_words=30)
+        job = self.submit(plan, system=system)
+        self.assertEqual(job["workspace"], 30)
+        below = MthPlan(
+            plan_id="peak-below", steps=steps, workspace_words=29,
+        )
+        with self.assertRaises(MthPlanError):
+            self.submit(below, system=system, job_id="job-below")
 
     def test_plan_workspace_over_seven_gib_runner_budget_is_rejected(self):
         words = (7 * 1024 ** 3) // 8 + 1

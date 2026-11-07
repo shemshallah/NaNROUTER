@@ -505,6 +505,72 @@ class MthPlanTests(unittest.TestCase):
         self.assertEqual(registry.plan_workspace_peak(plan), 30)
         self.assertEqual(plan.workspace_words, 60)
 
+    def test_validate_plan_admits_by_peak_when_dependencies_declare_liveness(self):
+        def descriptor(name, workspace):
+            return MthKernelDescriptor(
+                kernel_id=f"mth.test.{name}.f32",
+                source=f"{name}.nas",
+                fixture=f"{name}_test.nas",
+                marker="TEST",
+                steps=1,
+                precision="float32",
+                workspace_words=workspace,
+                shape=(1,),
+                status="native_verified",
+                ci_verified=True,
+                source_digest="a" * 64,
+                fixture_digest="b" * 64,
+            )
+        registry = MthRegistry([
+            descriptor("a", 10), descriptor("b", 20), descriptor("c", 30),
+        ])
+        steps = (
+            MthPlanStep(name="a", kernel_id="mth.test.a.f32"),
+            MthPlanStep(
+                name="b", kernel_id="mth.test.b.f32", depends_on=("a",),
+            ),
+            MthPlanStep(name="c", kernel_id="mth.test.c.f32"),
+        )
+        exact = MthPlan(
+            plan_id="peak-exact", steps=steps, workspace_words=30,
+        )
+        self.assertIs(registry.validate_plan(exact), exact)
+        below = MthPlan(
+            plan_id="peak-below", steps=steps, workspace_words=29,
+        )
+        with self.assertRaises(MthPlanError):
+            registry.validate_plan(below)
+
+    def test_validate_plan_keeps_sum_for_undeclared_liveness(self):
+        def descriptor(name, workspace):
+            return MthKernelDescriptor(
+                kernel_id=f"mth.test.{name}.f32",
+                source=f"{name}.nas",
+                fixture=f"{name}_test.nas",
+                marker="TEST",
+                steps=1,
+                precision="float32",
+                workspace_words=workspace,
+                shape=(1,),
+                status="native_verified",
+                ci_verified=True,
+                source_digest="a" * 64,
+                fixture_digest="b" * 64,
+            )
+        registry = MthRegistry([
+            descriptor("a", 10), descriptor("b", 20),
+        ])
+        steps = (
+            MthPlanStep(name="a", kernel_id="mth.test.a.f32"),
+            MthPlanStep(name="b", kernel_id="mth.test.b.f32"),
+        )
+        with self.assertRaises(MthPlanError):
+            registry.validate_plan(MthPlan(
+                plan_id="sum-below", steps=steps, workspace_words=20,
+            ))
+        plan = MthPlan(plan_id="sum-exact", steps=steps, workspace_words=30)
+        self.assertIs(registry.validate_plan(plan), plan)
+
     def test_validate_plan_requires_workspace_bound(self):
         step = MthPlanStep(
             name="score",

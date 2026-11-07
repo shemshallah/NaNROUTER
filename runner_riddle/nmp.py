@@ -2996,8 +2996,13 @@ def project_packet(
     if job_state == "leased" and _lease_expired(job, lease, now_tick):
         return projection(STALE, True, "lease deadline has expired", lease_epoch=lease_epoch)
 
+    common_epoch = lease_epoch if lease_epoch is not None else job_epoch
+    if common_epoch == 0:
+        # WaveStore uses 0 for a job that has never been leased.  A packet
+        # lease epoch is either absent or >= 1; zero is not a lease identity.
+        common_epoch = None
     common = {
-        "lease_epoch": lease_epoch if lease_epoch is not None else job_epoch,
+        "lease_epoch": common_epoch,
         "ring_incarnation": payload_ring or packet.ring_incarnation,
         "ring_epoch": payload_epoch if payload_epoch is not None else packet.ring_epoch,
         "result_generation": result_generation,
