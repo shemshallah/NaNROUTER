@@ -23,7 +23,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 540 Python tests pass.
-- [x] Canonical workflow `42405417726` passed 130 steps for the 61-fixture set, including native preflight/admission gates.
+- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Registry-to-`mth_admit` linker integration is in PR #38 and remains pending its rebased CI gate.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -39,9 +39,16 @@
   - [ ] P0.6 Freeze authority/`::` context rules and JAHS execution binding.
 - [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` (14 tests).
 - [x] **P2 — Semantic function registry.** `math_registry` + `spec/math-functions.v1.json`; 19 contracts/8 implementation bindings; composition tests (17).
-- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); Authorization/capability gate wiring remains.
+- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); native NaN16 rule and typed-object admission gates are integrated. Authorization/ACL and lifecycle/capability-to-lease wiring remain.
 - [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 23 tests; does not execute.
 - [ ] **P5 — NMP + execution bridge.** NMP packet/state/dedupe/batch module and 45 tests are implemented; MthSystem/WaveService/lease/point-0 execution binding remains.
+  - [x] P5.a Native NaN16 rule gate + typed operand preflight; exact epoch, signature, domain, shape, capability subset, proof level, enabled state, and 256-bit rule digest.
+  - [x] P5.b Canonical NaN0S `::op:` expression resolution returns the authoritative MC0 contract pointer; NaNROUTER consumes that exact pointer (no reconstructed contract).
+  - [x] P5.c Output/input payload non-aliasing uses half-open ranges and rejects partial overlap and address-plus-capacity wrap; left/right overlap and output atomicity are native-tested.
+  - [ ] P5.d Bind composed `mth_admit` result to an immutable NMP admission receipt (candidate/rule digest, epoch, operands, capability snapshot, output generation), then bind the receipt to the worker lease.
+  - [ ] P5.e Add native NaN16 operator dispatch after admission; dispatch only allowlisted program IDs to matching kernel ABI, with output commit only after success.
+  - [ ] P5.f Bind packet/receipt/lease to point-0 and MthSystem ring lifecycle; stale/replay/duplicate/cancel/restart tests must deny before executor or commit.
+  - [ ] P5.g End-to-end native execution + immutable result commit + provenance/evidence; no host-side mathematical result computation.
 - [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 15 tests.
 - [ ] **P7 — Null/void/undefined algebra.** Typed absence/undefined semantics; no zero/null wildcard.
 - [ ] **P8 — Relations/hyperedges/hypergraphs.** Schema constraints, membership/incidence, bounded traversal, hyperedge-as-input.
