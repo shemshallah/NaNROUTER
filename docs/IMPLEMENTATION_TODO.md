@@ -14,7 +14,7 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [x] 22/22 native MTH fixtures pass locally with `nan_cli`.
+- [x] 23/23 native MTH fixtures pass locally with `nan_cli`.
 - [x] 111 Python tests pass.
 - [x] Expanded GitHub Actions native workflow passed run `42382663835` (47/47 steps).
 
@@ -56,6 +56,7 @@
 - [ ] Add a separate 255-point head-only DFT reference.
 - [x] Add even 256-position fold vector kernel.
 - [x] Add odd 255-head fold vector kernel.
+- [x] Add 128×128 centrosymmetry certificate.
 - [ ] Add streaming 255/256 centrosymmetry certificate.
 - [ ] Add Lanczos/power-iteration top-k kernel.
 - [ ] Add residual/orthogonality fixture for a real operator.
@@ -127,7 +128,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 22 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 23 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -153,7 +154,7 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-22/22 fixtures passed
+23/23 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests

@@ -133,6 +133,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.centrosymmetry.128.f32",
+      "source": "mth/nan16/mth_centrosymmetry_128.nas",
+      "fixture": "mth/tests/mth_centrosymmetry_128_test.nas",
+      "marker": "MTH CENTROSYMMETRY 128 PASS",
+      "steps": 676252,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128,
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.vector.dot256.f32",
       "source": "mth/nan16/mth_dot256_f32.nas",
       "fixture": "mth/tests/mth_dot256_test.nas",

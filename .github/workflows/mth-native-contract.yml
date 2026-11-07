@@ -137,6 +137,17 @@ jobs:
           cat build/mth/void.err
           grep -q '^MTH GRAPH VOID POTENTIAL PASS' build/mth/void.out
 
+      - name: Assemble centrosymmetry certificate fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry_128_test.nas > build/mth/centro128.nan
+
+      - name: Execute centrosymmetry certificate fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/centro128.nan --steps 10000000 --serial > build/mth/centro128.out 2> build/mth/centro128.err
+          cat build/mth/centro128.out
+          cat build/mth/centro128.err
+          grep -q '^MTH CENTROSYMMETRY 128 PASS' build/mth/centro128.out
+
       - name: Assemble graph-fold fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_fold_test.nas > build/mth/fold.nan

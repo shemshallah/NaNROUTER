@@ -47,6 +47,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("step_energy", "mth/tests/mth_graph_step_energy_256_test.nas", 4_000_000, "MTH GRAPH STEP ENERGY PASS", "native_verified"),
     Fixture("harmonic_energy", "mth/tests/mth_harmonic_wave_energy_test.nas", 10_000_000, "MTH HARMONIC WAVE ENERGY PASS", "native_verified"),
     Fixture("matvec128", "mth/tests/mth_matvec128_test.nas", 10_000_000, "MTH MATVEC128 PASS", "native_verified"),
+    Fixture("centro128", "mth/tests/mth_centrosymmetry_128_test.nas", 10_000_000, "MTH CENTROSYMMETRY 128 PASS", "native_verified"),
     Fixture("pair_full", "mth/tests/mth_graph_pair_test.nas", 100_000_000, "MTH GRAPH PAIR FULL 128 PASS", "native_verified"),
     Fixture("pair_rank1", "mth/tests/mth_graph_pair_rank1_128_test.nas", 30_000_000, "MTH GRAPH PAIR RANK1 128 PASS", "native_verified"),
     Fixture("dft256", "mth/tests/mth_graph_dft256_test.nas", 50_000_000, "MTH GRAPH DFT256 PASS", "native_verified"),
