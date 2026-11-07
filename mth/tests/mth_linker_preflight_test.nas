@@ -46,8 +46,12 @@ mth_link_pf_main:
   CALL @nmr_obj_bind_data
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_bind2
+  CALL @mth_link_pf_puts
 
   ; Existing shape metadata is used by the legacy route-expression parser.
+  MOVI r1,@mth_link_pf_stage_before_shape
+  CALL @mth_link_pf_puts
   MOVI r1,123
   MOVI r2,1
   MOVI r3,256
@@ -477,3 +481,7 @@ mth_link_pf_stage_op:
 .str "STAGE OP\n"
 mth_link_pf_stage_contract_put:
 .str "STAGE CONTRACT PUT\n"
+mth_link_pf_stage_bind2:
+.str "STAGE BIND2\n"
+mth_link_pf_stage_before_shape:
+.str "STAGE BEFORE SHAPE\n"
