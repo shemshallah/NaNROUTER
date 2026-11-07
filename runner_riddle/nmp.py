@@ -444,12 +444,15 @@ def validate_native_admission_receipt(receipt: Any, packet: Any = None) -> dict[
     if data["producer"] != "nan16_guest":
         raise NmpValidationError("native admission receipt producer must be nan16_guest")
     for key in ("candidate_digest", "input_digest", "capability_digest",
-                "preflight_digest", "rule_digest", "receipt_digest"):
+                "preflight_digest", "rule_digest", "output_descriptor_digest",
+                "guest_source_digest", "guest_image_digest", "receipt_digest"):
         data[key] = normalize_digest(data.get(key), f"native_receipt.{key}")
-    for key in ("rule_epoch", "generation", "program_id", "guest_status"):
+    for key in ("rule_epoch", "generation", "output_generation", "program_id", "guest_status"):
         data[key] = _integer(data.get(key), f"native_receipt.{key}")
     if data["rule_epoch"] < 1 or data["program_id"] < 1:
         raise NmpValidationError("native receipt epoch and program_id must be positive")
+    if data["output_generation"] != data["generation"] + 1:
+        raise NmpValidationError("native receipt output_generation must be input generation + 1")
     if data["guest_status"] != 0:
         raise NmpValidationError("native admission receipt does not record guest ALLOW")
     body = {key: value for key, value in data.items() if key != "receipt_digest"}
@@ -462,6 +465,20 @@ def validate_native_admission_receipt(receipt: Any, packet: Any = None) -> dict[
             "function_version": packet.function_version,
         })
         expected_inputs = digest_object([_input_identity(item) for item in packet.inputs])
+        metadata = dict(getattr(packet, "metadata", {}) or {})
+        expected_metadata = {
+            "program_id": metadata.get("program_id"),
+            "rule_epoch": metadata.get("rule_epoch"),
+            "rule_digest": metadata.get("rule_digest"),
+            "output_descriptor_digest": metadata.get("output_descriptor_digest"),
+            "guest_source_digest": metadata.get("guest_source_digest"),
+            "guest_image_digest": metadata.get("guest_image_digest"),
+        }
+        missing_metadata = [key for key, value in expected_metadata.items() if value is None]
+        if missing_metadata:
+            raise NmpValidationError(
+                "native packet is missing receipt bindings: " + ", ".join(missing_metadata)
+            )
         bindings = {
             "packet_id": packet.packet_id,
             "candidate_digest": expected_candidate,
@@ -471,6 +488,8 @@ def validate_native_admission_receipt(receipt: Any, packet: Any = None) -> dict[
             "capability_digest": packet.capability_set_digest,
             "preflight_digest": packet.preflight_digest,
             "generation": packet.generation,
+            "output_generation": packet.generation + 1,
+            **expected_metadata,
         }
         for key, expected in bindings.items():
             if data.get(key) != expected:
