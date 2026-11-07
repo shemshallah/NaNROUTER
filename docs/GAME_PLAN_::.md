@@ -110,7 +110,7 @@ At the time of writing the checked-in `main` contains:
 - **63 native MTH kernels** with fixtures; 60 local and 61 total fixtures;
 - **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
 - canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
-- **650 Python tests** (1 skipped) after the P7–P12 math integration additions;
+- **653 Python tests** (1 skipped) after the P7–P12 math integration additions;
 - **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
@@ -552,7 +552,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 650-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 653-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1613,7 +1613,7 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Priority:** 5.
 **Scope:** NMP packet/states, preflight digest, MthSystem/WaveService/lease/point-0 path, dedupe/in-flight, cancellation, JAHS binding.
 **Exit:** one end-to-end dot product leaf; duplicate conjunction reuses result; invalid preflight bypass denied; T14/T19/T20; A09–A12/A19.
-**Implemented:** `MathExecutionBridge` binds typed admission, active-ring incarnation/epoch, JAHS, capability, durable job, one lease, cancellation, completion/commit, and restart projection. Seven execution tests plus the P12 demo are green.
+**Implemented:** NMP validates immutable native-admission receipts and binds them to a live packet/job/lease/ring/JAHS snapshot. `MathExecutionBridge` binds typed admission, active-ring incarnation/epoch, JAHS, capability, durable job, one lease, cancellation, completion/commit, and restart projection. Seven execution tests plus the P12 demo are green. Native receipt production and native operator dispatch remain external P13 gates.
 
 ### P6 — Meta-mapping and durable store
 
@@ -1683,7 +1683,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 650-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 653-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 

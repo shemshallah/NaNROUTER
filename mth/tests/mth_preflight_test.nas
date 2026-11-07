@@ -49,7 +49,7 @@ mth_pf_test_main:
   MOVI r5,1
   MOVI r6,1
   MOVI r7,1
-  MOVI r8,0
+  MOVI r8,2
   CALL @nmr_contract_put
   CMP r3,r0
   JMP[NE] @mth_pf_fail_6
@@ -251,6 +251,55 @@ mth_pf_test_main:
   CMP r1,r7
   JMP[NE] @mth_pf_fail_29
 
+  ; Partial overlap must reject even when the payload base pointers differ.
+  ; Give the output its full required capacity so capacity validation passes
+  ; and the range-overlap predicate is the check under test.
+  MOVI r6,@mth_pf_output
+  MOVI r7,55
+  ST r7,r6,0
+  MOVI r7,@mth_pf_left_payload
+  ADDI r7,r7,1
+  ST r7,r6,5
+  MOVI r7,3
+  ST r7,r6,6
+  MOVI r1,@mth_pf_left
+  MOVI r2,@mth_pf_right
+  LD r3,r0,@mth_pf_contract
+  MOVI r4,1
+  MOVI r5,@mth_pf_output
+  CALL @mth_preflight
+  MOVI r7,8
+  CMP r1,r7
+  JMP[NE] @mth_pf_fail_30
+  LD r6,r5,0
+  MOVI r7,55
+  CMP r6,r7
+  JMP[NE] @mth_pf_fail_31
+
+  ; The same partial-overlap rule applies to the right operand.
+  MOVI r6,@mth_pf_output
+  MOVI r7,55
+  ST r7,r6,0
+  MOVI r7,@mth_pf_right_payload
+  ADDI r7,r7,1
+  ST r7,r6,5
+  MOVI r7,3
+  ST r7,r6,6
+  MOVI r1,@mth_pf_left
+  MOVI r2,@mth_pf_right
+  LD r3,r0,@mth_pf_contract
+  MOVI r4,1
+  MOVI r5,@mth_pf_output
+  CALL @mth_preflight
+  MOVI r7,8
+  CMP r1,r7
+  JMP[NE] @mth_pf_fail_32
+  MOVI r6,@mth_pf_output
+  LD r7,r6,0
+  MOVI r8,55
+  CMP r7,r8
+  JMP[NE] @mth_pf_fail_33
+
   MOVI r1,@mth_pf_pass
   CALL @mth_pf_puts
   HALT
@@ -369,6 +418,22 @@ mth_pf_fail_28:
   JMP @mth_pf_fail
 mth_pf_fail_29:
   MOVI r1,29
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_30:
+  MOVI r1,30
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_31:
+  MOVI r1,31
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_32:
+  MOVI r1,32
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_33:
+  MOVI r1,33
   ST r1,r12,38
   JMP @mth_pf_fail
 mth_pf_fail:

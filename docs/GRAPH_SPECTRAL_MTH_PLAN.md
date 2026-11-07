@@ -233,11 +233,11 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total
 
 python3 -m unittest discover -s tests -q
-Ran 650 tests
+Ran 653 tests
 OK (skipped=1)
 ```
 
-The expanded workflow passed canonical run `42405417726` (130 steps, 61 fixtures); GLT 2 MiB page-limit enforcement remains open. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
+The expanded workflow passed canonical run `42405649076` (132 steps, 61 fixtures); GLT 2 MiB page-limit enforcement remains open. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
 
 
 ## K256 closed-form pair-space v1 — native verified

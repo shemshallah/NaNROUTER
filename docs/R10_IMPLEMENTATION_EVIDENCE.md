@@ -5,8 +5,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405417726 passed 130 steps (plus the dedicated preflight workflow); 650 Python tests passed (1 skipped).
-**CI:** canonical run `42405417726` passed all 130 steps for the 61-fixture set, including the native preflight/admission gates. GLT-enforced page-limit verification remains a separate pending gate.
+**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 653 Python tests passed (1 skipped).
+**CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
 
@@ -80,7 +80,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 650 tests in 132.916s
+Ran 653 tests in 86.889s
 OK (skipped=1)
 ```
 
@@ -105,13 +105,15 @@ Covered:
 - rule-learning lifecycle (P9, 20 tests);
 - retention/oscillation/pruning (P10, 10 tests);
 - lane registry (P11, 18 tests);
-- NMP and execution bridge (P5, 7 tests);
+- NMP packet/state/dedupe/batch, native admission-receipt validation, and lease binding (P5, 60 tests);
+- host execution bridge (P5, 7 tests);
 - end-to-end control-plane demo (P12, 2 tests).
 
 ## Math integration evidence (P0–P12)
 
 - Peak-liveness admission: dependent plans are admitted by `MthRegistry.plan_workspace_peak`; undeclared-liveness plans keep the v1 sum. Exact-bound and bound-minus-one tests pass in `tests/test_mth_registry.py` and `tests/test_mth_system.py`.
 - Authority/JAHS binding: `MathExecutionBridge` refuses inactive/stale/unsealed rings, missing capability coverage, tampered candidate/admission bindings, and stale generations; it leases only the active slot and releases ring resources exactly once.
+- NMP validates native NaN16 admission receipts against packet candidate/rule/preflight digests, epoch, operands, capability snapshot, guest ALLOW status, and receipt digest, then binds the receipt to one live job/lease/ring/JAHS snapshot before execution. Receipt production remains the native `mth_admit` caller's responsibility.
 - NMP packets bind admission candidates/snapshots/preflight digests and are projected back from WaveStore job/lease rows after restart.
 - The demo runs leaf → `::` → preflight → NMP queue → lease → execute completion → commit → output feedback. Its executor callback returns an evidence digest, not a numeric dot product; the report labels this explicitly.
 
@@ -136,7 +138,7 @@ Run it after any kernel change.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.
 - R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
-- P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, or capacity-vs-SNR measurement has been produced.
+- P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, capacity-vs-SNR measurement, or native numeric executor delivery has been produced.
 - The P12 demo proves control-plane integration only; it does not compute a numeric dot product. Native numeric execution remains the external executor's responsibility.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

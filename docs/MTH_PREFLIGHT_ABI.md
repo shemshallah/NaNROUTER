@@ -1,6 +1,6 @@
 # MTH typed mathematical preflight ABI v1
 
-Status: native-verified by canonical CI run 42405417726 (typed preflight and linker-to-preflight fixtures).
+Status: native-verified by canonical CI run 42405649076 (typed preflight, operand-alias regressions, and linker-to-preflight fixtures; 132 steps).
 
 ## Ownership
 
@@ -101,3 +101,8 @@ The fixture checks representative success and rejection paths, including output-
 ## Linker integration
 
 `mth/tests/mth_linker_preflight_test.nas` exercises the canonical route-expression parser with an actual `nan://...::op:77::nan://...` expression. The parser resolves both leaf IDs, the operator ID, the output/program mapping, and the exact contract pointer returned by NaN0S `nmr_expr_resolve` (r10). That pointer is passed unchanged to `mth_preflight`; the router fixture does not reconstruct a contract record. The native MTH workflow assembles and executes this integration fixture separately from the preflight-only regression.
+
+
+## Payload range safety
+
+When precondition bit 1 is set, output and input payloads are compared as half-open word ranges using descriptor capacities. Partial overlap is rejected even when base pointers differ. Address-plus-capacity wrap is rejected as a malformed descriptor before output metadata is committed. The regression deliberately places a full-capacity output range one word inside the left input range, ensuring the test reaches the alias predicate rather than failing earlier on output capacity.
