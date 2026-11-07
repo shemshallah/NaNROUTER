@@ -145,6 +145,32 @@ class PairTileGenerationExecutorTests(unittest.TestCase):
             self.make_executor(store=store).execute(expected_operator_digest="0" * 64)
         self.assertIsNone(store.candidate)
 
+    def test_row_strip_is_packed_as_sixteen_contiguous_k_blocks(self):
+        from runner_riddle.mth_pair_tile_executor import _pack_row_strip_k16
+
+        source = bytearray(16 * 256 * 8)
+        for row in range(16):
+            for k in range(256):
+                word = (row * 256 + k).to_bytes(8, "little")
+                start = (row * 256 + k) * 8
+                source[start:start + 8] = word
+
+        packed = _pack_row_strip_k16(bytes(source))
+        self.assertEqual(len(packed), len(source))
+        for k_block in range(16):
+            for row in range(16):
+                for local_k in range(16):
+                    global_k = k_block * 16 + local_k
+                    target_word = k_block * 256 + row * 16 + local_k
+                    actual = int.from_bytes(packed[target_word * 8:(target_word + 1) * 8], "little")
+                    self.assertEqual(actual, row * 256 + global_k)
+
+    def test_invalid_row_strip_length_is_rejected(self):
+        from runner_riddle.mth_pair_tile_executor import _pack_row_strip_k16
+
+        with self.assertRaises(PairTileExecutionError):
+            _pack_row_strip_k16(b"short")
+
     def test_strip_shape_is_enforced(self):
         page = PageStrip(
             matrix="L", row_base=0, col_base=0, rows=16, cols=256,
