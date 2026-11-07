@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import tempfile
 import unittest
 from pathlib import Path
@@ -176,10 +177,10 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
 
     def test_submission_rejects_packet_without_native_receipt(self):
         packet = make_packet(metadata={"native_admission_required": True})
-        preflighted = packet.mark_preflight(result="VALID", digest=PREFLIGHT)
-        with self.assertRaises((NmpHttpError, nmp.NmpValidationError)):
+        preflighted_without_receipt = replace(packet, state=nmp.PREFLIGHTED)
+        with self.assertRaises(NmpHttpError):
             self.adapter.submit(
-                self.submit_token, preflighted.to_dict(), now_tick=100
+                self.submit_token, preflighted_without_receipt.to_dict(), now_tick=100
             )
         self.assertEqual(self.store.stats()["jobs"]["queued"], 0)
 
