@@ -19,7 +19,7 @@ mth_energy_v1_test_main:
   ; Q32.32 raw result = 5 * 2^30 = 0x00000001_40000000.
   MOVI r6,@mth_energy_v1_out
   LD r7,r6,0
-  MOVI r8,0x4000
+  MOVI r8,0
   MOVHI r8,0x4000
   CMP r7,r8
   JMP[NE] @mth_energy_v1_fail
