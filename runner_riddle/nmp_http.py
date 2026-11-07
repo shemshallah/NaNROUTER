@@ -86,7 +86,12 @@ def _validate_execution_evidence(
     output_count = evidence.get("output_count")
     expected_kind = {78: 4, 79: 3}.get(expected_program_id)
     expected_count = dimension if expected_program_id == 78 else 1
-    if output_kind != expected_kind or isinstance(output_count, bool) or output_count != expected_count:
+    if (
+        isinstance(output_kind, bool) or not isinstance(output_kind, int)
+        or output_kind != expected_kind
+        or isinstance(output_count, bool) or not isinstance(output_count, int)
+        or output_count != expected_count
+    ):
         raise NmpHttpError("kernel execution output descriptor does not match the allowlisted program")
     for field in ("output_digest", "guest_image_digest", "guest_source_digest"):
         value = evidence.get(field)
