@@ -402,6 +402,7 @@ Rules:
 - BS0DB/MC0DB are durable control/evidence, not the universe;
 - only the active runner holds live pages; standby caches are sealed or evicted;
 - handoff requires checkpoint digest, lease drain, and memory release;
+- every handoff also carries the mandatory **JAHS** ("Just A Handoff Seal") domain separator and passes the native `mth_jahs_gate` seal check; `MthSystem.lease` rejects a snapshot without it;
 - no secrets, no dense 65,536², no 2 GiB map copies on Android/peers.
 
 ### 4.6 NANNET0 binding

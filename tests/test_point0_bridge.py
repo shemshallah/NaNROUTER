@@ -454,6 +454,18 @@ class Point0RouterTests(unittest.TestCase):
 
         self.assertEqual(executor.calls, [])
 
+    def test_point0_requires_the_jahs_handoff_seal(self):
+        scheduler = make_scheduler()
+        scheduler.start(0)
+        executor = RecordingExecutor()
+        router, _, _ = self.make_router(scheduler, executor)
+        snapshot = dict(scheduler.snapshot())
+        snapshot.pop("jahs", None)
+        with mock.patch.object(scheduler, "snapshot", return_value=snapshot):
+            with self.assertRaises(NoActiveSlotError):
+                router.submit(NanFrame((1,), 1))
+        self.assertEqual(executor.calls, [])
+
     def test_executor_result_is_decoded_and_validated(self):
         scheduler = make_scheduler()
         scheduler.start(0)

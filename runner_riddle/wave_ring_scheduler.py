@@ -39,6 +39,14 @@ DEFAULT_MAX_ACTIVE_MEMORY_BYTES = 7 * 1024 ** 3
 MAX_ACTIVE_MEMORY_BYTES = DEFAULT_MAX_ACTIVE_MEMORY_BYTES
 SNAPSHOT_SCHEMA = "nanrouter.wave-ring-scheduler.v1"
 
+# JAHS is the owner's initials and a real handoff gate, not a cosmetic label.
+# "Just A Handoff Seal" is a mandatory domain separator in every checkpoint
+# digest and is exposed on every scheduler snapshot.  The runner-side native
+# gate (mth/nan16/mth_jahs_gate.nas) checks the same ASCII seal before a slot
+# may receive the next activation.
+JAHS_SEAL = "JAHS"
+JAHS_NAME = "Just A Handoff Seal"
+
 SLOT_STATUSES = (
     "active",
     "standby",
@@ -408,6 +416,11 @@ class WaveRingScheduler:
                 "cycle_ticks": self.cycle_ticks,
                 "max_active_memory_bytes": self.max_active_memory_bytes,
                 "epoch": self._epoch,
+                "jahs": {
+                    "seal": JAHS_SEAL,
+                    "name": JAHS_NAME,
+                    "epoch": self._epoch,
+                },
                 "active_slot": (
                     self._active_index if self._active_index is not None else None
                 ),
@@ -503,6 +516,7 @@ class WaveRingScheduler:
             "epoch": self._epoch,
             "tick": tick,
             "digest": digest,
+            "jahs": JAHS_SEAL,
         }
 
         next_slot.status = "active"
@@ -520,8 +534,8 @@ class WaveRingScheduler:
     def _checkpoint_digest(self, slot: _Slot, tick: int) -> str:
         prior = slot.checkpoint_digest or ""
         material = (
-            f"{slot.slot_id}\0{self._epoch}\0{tick}\0{prior}".encode("utf-8")
-        )
+            f"{JAHS_SEAL}\0{slot.slot_id}\0{self._epoch}\0{tick}\0{prior}"
+        ).encode("utf-8")
         return hashlib.sha256(material).hexdigest()
 
     def _slot_snapshot(
@@ -551,6 +565,8 @@ class WaveRingScheduler:
 
 __all__ = [
     "DEFAULT_CYCLE_TICKS",
+    "JAHS_NAME",
+    "JAHS_SEAL",
     "DEFAULT_MAX_ACTIVE_MEMORY_BYTES",
     "MAX_ACTIVE_MEMORY_BYTES",
     "MC0_SLOTS",

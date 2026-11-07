@@ -66,6 +66,10 @@ budget is:
 workspace_budget_bytes = min(guest_budget_bytes, scheduler.max_active_memory_bytes)
 ```
 
+Health reports derived `guest_budget_words` and `guest_budget_pages` at the
+declared 32 KiB page size, plus `workspace_budget_words`, so an adjustable
+deployment budget is visible without host-side plan math.
+
 The value is adjustable through the constructor; the 1 MiB default is policy,
 not a hardware measurement. No hardware size is invented by this module. `workspace_word_bytes` defaults
 to `8` because the point-0 framing contract counts 64-bit NaN16 words; a caller
@@ -87,8 +91,13 @@ another.
 | `store_trace(...)` / `store_seal(...)` / `store_signature(...)` | `WaveService` evidence delegates |
 | `ring()` | detached `WaveRingScheduler.snapshot()` |
 | `health()` | merged store, registry, ring, and budget report |
-| `active_slot()` | point-0 document with current slot evidence |
+| `active_slot()` | point-0 document with current slot and JAHS evidence |
 | `point_zero_route()` | stable point-0 route with current slot evidence |
+
+`lease` also requires the scheduler snapshot's `jahs` handoff seal
+(`"JAHS"`, "Just A Handoff Seal"). A missing seal is a hard slot error; this is
+the same seal carried into every checkpoint digest and checked by the native
+`mth_jahs_gate` kernel before a runner accepts activation.
 
 `submit_plan`, `lease`, `complete`, and `register_capability` also accept the
 optional keyword arguments of their underlying service methods. In addition,

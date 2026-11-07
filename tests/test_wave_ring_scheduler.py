@@ -1,8 +1,10 @@
+import hashlib
 import json
 import unittest
 
 from runner_riddle.wave_ring_scheduler import (
     DEFAULT_MAX_ACTIVE_MEMORY_BYTES,
+    JAHS_SEAL,
     MC0_SLOTS,
     NANROUTER_ALIASES,
     RING_SLOTS,
@@ -186,6 +188,21 @@ class WaveRingSchedulerTests(unittest.TestCase):
         self.assertEqual(snapshot["active_slot"], 1)
         self.assertEqual(snapshot["epoch"], 2)
         self.assertEqual(snapshot["active_memory_bytes"], 0)
+
+    def test_jahs_seal_is_present_and_bound_into_every_handoff_digest(self):
+        self.assertEqual(JAHS_SEAL, "JAHS")
+        saved = []
+        scheduler = self.make(checkpoint_store=saved.append)
+        started = scheduler.start(0)
+        self.assertEqual(started["jahs"]["seal"], "JAHS")
+        self.assertEqual(started["jahs"]["name"], "Just A Handoff Seal")
+        self.assertEqual(started["jahs"]["epoch"], 1)
+        snapshot = scheduler.cycle(1)
+        self.assertEqual(snapshot["last_checkpoint"]["jahs"], "JAHS")
+        expected = hashlib.sha256(
+            b"JAHS\0MC0:0/R0\0" + b"1\0" + b"1\0"
+        ).hexdigest()
+        self.assertEqual(snapshot["last_checkpoint"]["digest"], expected)
 
     def test_successful_cycle_checkpoints_and_empties_old_slot(self):
         saved = []

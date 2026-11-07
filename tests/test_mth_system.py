@@ -164,6 +164,19 @@ class MthSystemTests(unittest.TestCase):
             self.system.lease(self.worker_token, "MC0:0/R0", 31, 16)
         )
 
+    def test_lease_requires_the_jahs_handoff_seal(self):
+        class MissingJahsScheduler(WaveRingScheduler):
+            def snapshot(self, now_tick=None):
+                snapshot = super().snapshot(now_tick)
+                snapshot.pop("jahs", None)
+                return snapshot
+
+        scheduler = MissingJahsScheduler(cycle_ticks=10, now_tick=0)
+        scheduler.start(0)
+        system = self.make_system(scheduler=scheduler)
+        with self.assertRaises(MthSystemSlotError):
+            system.lease(self.worker_token, "MC0:0/R0", 10)
+
     def test_lease_rejects_inactive_slot_and_accepts_active_alias(self):
         idle_system = self.make_system(scheduler=WaveRingScheduler(now_tick=0))
         with self.assertRaises(MthSystemSlotError):
@@ -329,6 +342,7 @@ class MthSystemTests(unittest.TestCase):
         self.assertEqual(first["route"], POINT_ZERO_ADDRESS)
         self.assertEqual(first["active_slot"], 0)
         self.assertEqual(first["active_slot_id"], "MC0:0/R0")
+        self.assertEqual(first["jahs"]["seal"], "JAHS")
 
         self.scheduler.cycle(1)
         second = self.system.point_zero_route()
@@ -376,6 +390,10 @@ class MthSystemTests(unittest.TestCase):
             DEFAULT_GUEST_BUDGET_BYTES,
         )
         self.assertEqual(health["budgets"]["workspace_word_bytes"], 8)
+        self.assertEqual(health["budgets"]["page_bytes"], 32 * 1024)
+        self.assertEqual(health["budgets"]["guest_budget_words"], 131072)
+        self.assertEqual(health["budgets"]["guest_budget_pages"], 32)
+        self.assertEqual(health["budgets"]["workspace_budget_words"], 131072)
         self.assertEqual(health["store"]["jobs"]["done"], 1)
 
         rendered = json.dumps(health, sort_keys=True)

@@ -805,6 +805,11 @@ class Point0Router:
             raise StaleEnvelopeError(
                 "the active slot heartbeat is stale; refusing point-0 work"
             )
+        jahs = snapshot.get("jahs")
+        if not isinstance(jahs, Mapping) or jahs.get("seal") != "JAHS":
+            raise NoActiveSlotError(
+                "the runner ring handoff seal is missing; JAHS gate not satisfied"
+            )
         slot = snapshot.get("active_slot")
         if not _is_int(slot) or not 0 <= slot < SLOT_COUNT:
             raise NoActiveSlotError("the runner ring has no active slot")

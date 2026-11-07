@@ -152,17 +152,27 @@ slot to `standby`. The active slot cannot be revoked in place; cycle or fail ove
 first. A slot holding leases or memory cannot be revoked. Slot arguments accept
 canonical IDs and `NANROUTER-*` aliases.
 
-## Checkpoint digests
+## Checkpoint digests and the JAHS handoff seal
 
-Each handoff computes a lowercase SHA-256 digest over the old slot identity, the
-current epoch, the handoff tick, and that slot's previous checkpoint digest. The
-digest is deterministic for the same state and creates a per-slot chain. The
-checkpoint store, when configured, receives exactly that digest string. Its
-return value is ignored; persistence is its responsibility.
+Each handoff computes a lowercase SHA-256 digest over the mandatory `JAHS`
+domain separator, the old slot identity, the current epoch, the handoff tick,
+and that slot's previous checkpoint digest. The digest is deterministic for the
+same state and creates a per-slot chain. The checkpoint store, when configured,
+receives exactly that digest string. Its return value is ignored; persistence
+is its responsibility.
+
+`JAHS` is the owner's initials and an easter egg that is also load-bearing:
+it expands to **"Just A Handoff Seal"**. Every snapshot exposes a `jahs` object
+with `seal`, `name`, and `epoch`; every checkpoint records `jahs: "JAHS"`; and
+`MthSystem.lease()` refuses to lease work when the active snapshot has no valid
+JAHS seal. The runner-side gate is the native NaN16 kernel
+`mth/nan16/mth_jahs_gate.nas`, which accepts only the exact 64-bit word
+`0x4A414853` ("JAHS" in ASCII). A handoff without the seal is not a valid
+handoff.
 
 The latest checkpoint is also exposed in the snapshot as `last_checkpoint` with
-the slot index, canonical ID, alias, epoch, tick, and digest. No checkpoint
-payload or credential is stored by the scheduler.
+the slot index, canonical ID, alias, epoch, tick, digest, and JAHS seal. No
+checkpoint payload or credential is stored by the scheduler.
 
 ## Snapshot
 
@@ -173,6 +183,7 @@ live internal object is exposed. Top-level fields include:
 - `started`, `now_tick`, `cycle_ticks`, `max_active_memory_bytes`;
 - `epoch`, `active_slot`, `active_slot_id`, `active_alias`, `active_count`;
 - `active_memory_bytes`, `active_memory_reserved_bytes`, `active_lease_count`;
+- `jahs` (`seal`, `name`, `epoch`) and the mandatory handoff seal;
 - `stale`, `last_checkpoint`, `last_failover_reason`, `last_failover_tick`;
 - `health` (`idle`, `green`, `degraded`, `stale`, or `failed`);
 - `slots`, with per-slot status, heartbeat, memory, lease, checkpoint, and epoch

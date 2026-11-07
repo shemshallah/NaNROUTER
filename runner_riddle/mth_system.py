@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Any
 
 from .mth_registry import MthPlan, MthRegistry
-from .wave_ring_scheduler import WaveRingScheduler, resolve_slot
+from .wave_ring_scheduler import JAHS_SEAL, WaveRingScheduler, resolve_slot
 from .wave_service import WaveService
 from .wave_store import WaveStore
 
@@ -41,6 +41,7 @@ DEFAULT_WORKSPACE_WORD_BYTES = 8
 # The announced 1 MiB guest target.  Callers may override this per plan or
 # deployment; the effective budget is still min(guest, runner-ceiling).
 DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024
+DEFAULT_PAGE_BYTES = 32 * 1024
 
 
 class MthSystemError(ValueError):
@@ -230,6 +231,11 @@ class MthSystem:
             active = snapshot["active_slot"]
             if not snapshot["started"] or active is None:
                 raise MthSystemSlotError("runner ring has no active slot")
+            jahs = snapshot.get("jahs")
+            if not isinstance(jahs, dict) or jahs.get("seal") != JAHS_SEAL:
+                raise MthSystemSlotError(
+                    "runner ring handoff seal is missing; JAHS gate not satisfied"
+                )
             try:
                 owner_index = resolve_slot(owner)
             except ValueError as exc:
@@ -422,6 +428,7 @@ class MthSystem:
             "active_slot_id": snapshot["active_slot_id"],
             "active_alias": snapshot["active_alias"],
             "epoch": snapshot["epoch"],
+            "jahs": snapshot.get("jahs"),
             "stale": snapshot["stale"],
             "health": snapshot["health"],
         }
@@ -457,9 +464,19 @@ class MthSystem:
             },
             "budgets": {
                 "workspace_word_bytes": self.workspace_word_bytes,
+                "page_bytes": DEFAULT_PAGE_BYTES,
                 "guest_budget_bytes": self.guest_budget_bytes,
+                "guest_budget_words": (
+                    self.guest_budget_bytes // self.workspace_word_bytes
+                ),
+                "guest_budget_pages": (
+                    self.guest_budget_bytes // DEFAULT_PAGE_BYTES
+                ),
                 "runner_budget_bytes": self.runner_budget_bytes,
                 "workspace_budget_bytes": self.workspace_budget_bytes,
+                "workspace_budget_words": (
+                    self.workspace_budget_bytes // self.workspace_word_bytes
+                ),
             },
             "enforce_active_slot": self.enforce_active_slot,
         }
@@ -467,6 +484,7 @@ class MthSystem:
 
 __all__ = [
     "DEFAULT_GUEST_BUDGET_BYTES",
+    "DEFAULT_PAGE_BYTES",
     "DEFAULT_WORKSPACE_WORD_BYTES",
     "HEALTH_SCHEMA",
     "MthSystem",
