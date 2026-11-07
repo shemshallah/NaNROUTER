@@ -44,7 +44,7 @@
     },
     "precision": {
       "type": "string",
-      "enum": ["float32", "u16->i32", "u32", "q16.16", "q32.32"]
+      "enum": ["float32", "u16->i32", "u32", "q16.16", "q32.32", "bool", "i32", "u32->u64"]
     },
     "kernelStatus": {
       "type": "string",

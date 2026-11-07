@@ -47,7 +47,7 @@ COMPATIBILITY_SCHEMA = "nanrouter.math-compatibility-index.v1"
 # Separate from ``mth_registry.PRECISIONS`` so future semantic contracts do not
 # change the frozen implementation enum.  Nothing here widens the MTH manifest.
 MATH_PRECISIONS = tuple(dict.fromkeys(
-    (*PRECISIONS, "float16", "float64", "i32", "i64", "exact", "boolean", "any")
+    (*PRECISIONS, "float16", "float64", "i64", "exact", "boolean", "any")
 ))
 
 FUNCTION_STATUSES = frozenset({"proposed", "active", "deprecated", "revoked"})

@@ -34,7 +34,10 @@ KERNEL_STATUSES = (
     "degraded",
     "revoked",
 )
-PRECISIONS = ("float32", "u16->i32", "u32", "q16.16", "q32.32")
+PRECISIONS = (
+    "float32", "u16->i32", "u32", "q16.16", "q32.32",
+    "bool", "i32", "u32->u64",
+)
 
 _KERNEL_ID_RE = re.compile(r"^mth\.[a-z0-9][a-z0-9_.-]{0,120}$")
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")

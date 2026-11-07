@@ -914,6 +914,104 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.bool.all",
+      "source": "mth/nan16/mth_bool.nas",
+      "fixture": "mth/tests/mth_bool2_test.nas",
+      "marker": "MTH BOOL2 ALL 16 PASS",
+      "steps": 458,
+      "precision": "bool",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.bitwise.u32",
+      "source": "mth/nan16/mth_bitwise.nas",
+      "fixture": "mth/tests/mth_bitwise_test.nas",
+      "marker": "MTH BITWISE/COMPARE PASS",
+      "steps": 312,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        32
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.integer.checked.i32",
+      "source": "mth/nan16/mth_integer.nas",
+      "fixture": "mth/tests/mth_integer_test.nas",
+      "marker": "MTH INT32 CHECKED PASS",
+      "steps": 245,
+      "precision": "i32",
+      "workspace_words": 0,
+      "shape": [
+        32
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.shift.u32",
+      "source": "mth/nan16/mth_shift.nas",
+      "fixture": "mth/tests/mth_shift_test.nas",
+      "marker": "MTH SHIFT PASS",
+      "steps": 338,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        32
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.multiply.wide.u32",
+      "source": "mth/nan16/mth_multiply.nas",
+      "fixture": "mth/tests/mth_multiply_test.nas",
+      "marker": "MTH MUL WIDE PASS",
+      "steps": 1578,
+      "precision": "u32->u64",
+      "workspace_words": 0,
+      "shape": [
+        64
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.divmod.u32",
+      "source": "mth/nan16/mth_divide.nas",
+      "fixture": "mth/tests/mth_divide_test.nas",
+      "marker": "MTH DIVMOD PASS",
+      "steps": 2062,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        64
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.negate256.f32",
+      "source": "mth/nan16/mth_negate256_f32.nas",
+      "fixture": "mth/tests/mth_ring_wave_energy_test.nas",
+      "marker": "MTH RING WAVE ENERGY PASS",
+      "steps": 86374,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": true
     }
   ]
 }

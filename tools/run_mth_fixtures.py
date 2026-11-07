@@ -90,6 +90,12 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("reachability_256", "mth/tests/mth_reachability_256_test.nas", 20_000_000, "MTH REACHABILITY 256 PASS", "native_verified"),
     Fixture("phase_coherence", "mth/tests/mth_phase_coherence_128_test.nas", 4_000_000, "MTH PHASE COHERENCE 128 PASS", "native_verified"),
     Fixture("topk256", "mth/tests/mth_topk_256_test.nas", 10_000_000, "MTH TOPK 256 PASS", "native_verified"),
+    Fixture("bool2", "mth/tests/mth_bool2_test.nas", 100_000, "MTH BOOL2 ALL 16 PASS", "native_verified"),
+    Fixture("bitwise", "mth/tests/mth_bitwise_test.nas", 100_000, "MTH BITWISE/COMPARE PASS", "native_verified"),
+    Fixture("integer", "mth/tests/mth_integer_test.nas", 100_000, "MTH INT32 CHECKED PASS", "native_verified"),
+    Fixture("shift", "mth/tests/mth_shift_test.nas", 100_000, "MTH SHIFT PASS", "native_verified"),
+    Fixture("multiply", "mth/tests/mth_multiply_test.nas", 100_000, "MTH MUL WIDE PASS", "native_verified"),
+    Fixture("divide", "mth/tests/mth_divide_test.nas", 100_000, "MTH DIVMOD PASS", "native_verified"),
 )
 
 
