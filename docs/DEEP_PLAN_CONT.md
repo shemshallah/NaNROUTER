@@ -90,10 +90,10 @@ GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 
 
 | Area | Open item |
 |---|---|
-| R2 | radial block descriptor/tridiagonal layout, inner Dirichlet/Robin descriptor, radial energy/localization fixture |
-| R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
-| R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
-| R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
+| R2 | radial tridiagonal layout, descriptor-level inner Dirichlet/Robin boundary convention, and radial energy/localization native PASS |
+| R3 | 256 SVD top pair/top-2, stable top-k, and bounded Lanczos native PASS; residual/orthogonality covered by fixtures; 128/255/256 certificates done |
+| R4 | bounded DRIVE source and CFL/λ_max guard native PASS; long-run paged graph trace remains open |
+| R5 | full aperture SVD/top-k, reachability, and colored noise native PASS; QUERY/MATCH/FILTER/DRIVE composition and capacity-vs-SNR experiment remain open |
 | R6 | bounded K16 pair-tile native_verified; 256-tile page-window/atomic-publication orchestrator implemented with 31 tests; default MTH guest budget 1 MiB; native full-grid driver still open; K256 closed form done |
 | R7 | two-level spectrum, phase metric, native avoided-crossing sweep, and held-out protocol harness with explicit gates done; real-model experiment remains gated |
 | R8 | Point-0 HTTP ingress, offline live preflight, and signed-volume gate done; live Koyeb/NANNET0 deployment blocked on credentials |
