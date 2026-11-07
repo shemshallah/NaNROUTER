@@ -32,7 +32,7 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_matvec256_block16.nas`: 16-row × 256-column block matvec; local canonical execution PASS.
 - `nan16/mth_centrosymmetry_block16.nas`: 16-row streaming 256 certificate; local canonical execution PASS.
 - `nan16/mth_k256_pair_space_v1.nas`: closed-form K256 256×256 pair action; canonical CI run 180 PASS.
-- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, one 16×16 output tile per call; canonical NaN16 CI run 218 PASS (4,643,414 guest steps; origins (0,0) and (16,32)).
+- `nan16/mth_graph_pair_tile16_f32.nas`: general dense full-U 16×16 pair-tile reference `LU + ULᵀ`; CI verified but not dispatchable under the 512 KiB guest budget (73,990 NaN16 words).
 - `nan16/mth_svd_top128.nas`: top singular pair of a dense 128×128 matrix; local canonical execution PASS.
 - `nan16/mth_encode256_128.nas`, `nan16/mth_decode128_256.nas`: dense 256↔128 encoder/decoder; local canonical execution PASS.
 - `nan16/mth_centrosymmetry255_block15.nas`: 15×255 streaming certificate for the odd 255-head block; local canonical execution PASS.
@@ -142,3 +142,5 @@ The native fixtures passed local `nan_cli` and GitHub Actions run `42386209524` 
 - Closed-form K256 action: `512U-colsum(U)-rowsum(U)`; matrix-free, O(256²) storage/work.
 - Exact I32 output bound ±2^30 for input raw range ±2^20.
 - Canonical NaN16 verification: workflow run 180 passed.
+
+- `nan16/mth_graph_pair_tile16_k16_f32.nas`: bounded 16×16 K-block pair accumulator and finalizer; canonical NaN16 CI run 242 PASS (283,436 guest steps; 1,542 NaN16 words / 12,336 bytes).

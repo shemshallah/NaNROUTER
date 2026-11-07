@@ -1,6 +1,6 @@
 # MTH 256x256 pair-space tile ABI v1
 
-Status: NATIVE_VERIFIED for the stated tile ABI by canonical NaN16 CI run 218 (4,643,414 guest steps).
+Status: NATIVE_VERIFIED as a mathematical reference by canonical NaN16 CI run 218 (4,643,414 guest steps); NOT DISPATCHABLE under the 512 KiB guest budget.
 
 ## Operation
 
@@ -32,15 +32,9 @@ Return: r1=1. The caller supplies the two immutable L row windows from one opera
 
 For each output cell, the first sum and second sum use separate +0.0 accumulators. Each executes k=0..255 in increasing order, with one rounded FMUL followed by one rounded FADD per term. The final result is one FADD of the two completed sums. No FMA, parallel reduction, reassociation, or hidden precision is permitted.
 
-## Memory budget
+## Memory budget and dispatch status
 
-- U: 65,536 float32 words = 256 KiB.
-- L_I: 4,096 float32 words = 16 KiB.
-- L_J: 4,096 float32 words = 16 KiB.
-- Output tile: 256 float32 words = 1 KiB.
-- Scratch: 6 words = 24 bytes.
-
-Total declared payload is below 290 KiB, within the 512 KiB guest working-set ceiling. The L matrix itself remains in persistent pages; only two 16-row windows are staged into the guest.
+The complete guest working set is 65,536 + 4,096 + 4,096 + 256 + 6 = 73,990 NaN16 words. At 8 bytes per NaN16 word this is 591,920 bytes, exceeding the 512 KiB (65,536-word) guest ceiling by 8,454 words. The kernel is retained as a mathematically verified CI reference, but a 512 KiB MthSystem plan must reject it. Use the K16 streaming ABI in docs/MTH_GRAPH_PAIR_TILE16_K16_ABI_V1.md for bounded execution.
 
 ## Preconditions and limits
 

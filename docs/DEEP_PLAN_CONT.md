@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **39 native MTH kernels with fixtures**: 37 pass in the local harness, the prior 35 pass canonical CI (including the tiled 256 pair), and the new encode/decode, SVD, and 255 odd certificate await the next CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **40 native MTH kernels with fixtures**: 37 pass in the local harness, the prior 35 plus the bounded K16 pair tile pass canonical CI (including the tiled 256 pair), and the new encode/decode, SVD, and 255 odd certificate await the next CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -55,7 +55,7 @@ The 255 + 1 rule remains:
 | Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI (SVD pending CI) |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
 | Coupling / creativity primitive | two-region coupling, transmission metric | Native + CI |
-| Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense 256 pair tile | Native + CI |
+| Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense pair-tile reference, bounded K16 streaming pair-tile accumulator | Native + CI |
 | Vector / match | dot, norm, axpy, cosine similarity | Native + CI |
 | Adapter | 128-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI (encode/decode pending CI) |
 
@@ -73,8 +73,8 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 39 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 39-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 40 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 40-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 69 steps, 33 fixtures, all passing |
 
@@ -94,7 +94,7 @@ GitHub Actions prior run 42386209524: 71/71 steps; 38-fixture/79-step run pendin
 | R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
-| R6 | 16×16 dense pair tile native_verified; next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; K256 closed-form 256×256 done |
+| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; full-U pair-tile reference exceeds 512 KiB and is not dispatchable; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep, phase-coherence metric, held-out creativity/association experiment |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
 | R9 | 256-dimensional residual, frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE done |
@@ -875,7 +875,7 @@ It does not mean every mathematical theorem is implemented.
 
 ## 12. The one-page continuation
 
-1. **Keep the 35 verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
+1. **Keep the 36 CI-verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
 2. **Build MTH System v1**: registry, plan, executor, evidence, capability.
 3. **Use 256×256 dense only where it fits** (256 KiB); use 16×256 blocks for full matvec/certificate; use matrix-free/low-rank for the 65,536 product.
 4. **Use NANROUTER-0..5 as a single-active runner ring with a 7 GiB active ceiling**, not six parallel runners; use NANNET0 as the one node per universe.
