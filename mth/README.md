@@ -1,3 +1,4 @@
+- Full 16-slice driver: `mth/nan16/mth_graph_pair_tile16_k16_driver_f32.nas` with native fixture `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas`; native-verified across all K slices in order (2,224,303 guest steps, 17,170-word working set).
 # MTH NaN16 source
 
 This directory is the first native MTH source slice. Mathematical code here is NaN16; no host-language math implementation is permitted.
