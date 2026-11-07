@@ -26,6 +26,8 @@
 ; Input/output spans must not overlap.
 
 mth_sparse_graph_laplacian_q16_16:
+  CMP r5,r0
+  JMP[LT] @mth_sparse_graph_invalid
   MOVI r6,65280
   CMP r5,r6
   JMP[GT] @mth_sparse_graph_invalid
@@ -55,6 +57,10 @@ mth_sparse_graph_validate_offsets:
   CMP r10,r8
   JMP[LT] @mth_sparse_graph_invalid
   CMP r10,r5
+  JMP[GT] @mth_sparse_graph_invalid
+  SUB r11,r10,r8
+  MOVI r12,255
+  CMP r11,r12
   JMP[GT] @mth_sparse_graph_invalid
   ADD r8,r10,r0
   ADD r6,r6,r13
@@ -88,6 +94,7 @@ mth_sparse_graph_apply_setup:
   ADD r6,r1,r0
   ADD r7,r2,r0
   ADD r8,r3,r0
+  ADD r12,r3,r0
   ADD r9,r4,r0
   MOVI r10,256
 mth_sparse_graph_apply_row:
@@ -101,8 +108,8 @@ mth_sparse_graph_apply_edge:
   CMP r3,r0
   JMP[EQ] @mth_sparse_graph_store_row
   LD r1,r11,0
-  ADD r12,r8,r1
-  LD r1,r12,0
+  ADD r2,r12,r1
+  LD r1,r2,0
   SUB r1,r4,r1
   ADD r5,r5,r1
   ADD r11,r11,r13
