@@ -763,18 +763,20 @@ The first native source slice now lives under `mth/`:
 
 - `mth/nan16/mth_core.nas` contains a NaN16 implementation of the ordered class rotation and an explicit wrapper around the existing `BSWAPM` primitive.
 - `mth/nan16/mth_bool.nas` contains a generic two-input Boolean transform that dynamically selects one of the frozen `BOOL.n` instruction classes and executes it as NaN16.
+- `mth/nan16/mth_double_endian.nas` adapts the canonical NaN0S pair-voting codec into MTH names; it validates both tags, both class nibbles, and byte-swapped agreement.
+- `mth/tests/mth_double_endian_test.nas` checks pair round-trip and deliberate corruption rejection.
 - `mth/tests/mth_stage0_test.nas` checks the 16-entry class-rotation table, rotation involution, exact BSWAPM payload-byte reversal, and double-reversal restoration.
 - `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
 
-This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. In particular, the pair-voting codec has not yet been imported into MTH; its source path, ABI, and corruption behavior must be confirmed before reuse.
+This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. The pair codec source path and basic behavior have been inspected. Its inherited static return-address slots make it non-reentrant; this must be converted to caller-owned stack state before concurrent multi-runner use. The smoke test remains unverified until assembled and run.
 
 ### Stage 0 next gate
 
 1. Assemble `mth/nan16/mth_core.nas` and `mth/tests/mth_stage0_test.nas` with the canonical NaN16 toolchain.
 2. Run the smoke test and capture the guest output.
 3. Add exhaustive checks for all 16 ordered face pairs, including every face class in both positions.
-4. Import or wrap the canonical double-endian pair codec and test matching, mismatched, missing, swapped, and corrupted members.
+4. Run the pair-codec fixture, then add missing-member, wrong-class, wrong-tag, swapped-member, and resynchronization tests.
 5. Add raw-word fixtures that verify payload bytes independently from face classes.
 6. Record exact toolchain version, source digest, test digest, and result before marking Stage 0 passed.
 
