@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 22/22 native MTH fixtures passed locally; 111 Python tests passed.
-**CI:** the prior 21-fixture set passed run `42382439616` (45/45 steps). The new 128-matvec fixture awaits the next CI run.
+**Result:** 22/22 native MTH fixtures passed locally and in GitHub Actions run `42382663835`; 111 Python tests passed.
+**CI:** the expanded `mth-native-contract` workflow passed all 47 steps on `main` for commit `2d1b5b7`.
 
 ## Native fixtures
 
@@ -30,7 +30,7 @@
 | 19 | Two-region coupling | `mth/tests/mth_graph_couple_128_test.nas` | 8,637 | PASS | yes |
 | 20 | Transmission metric | `mth/tests/mth_graph_transmission_128_test.nas` | 7,147 | PASS | yes |
 | 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | yes |
-| 22 | 128×128 matvec | `mth/tests/mth_matvec128_test.nas` | 249,914 | PASS | pending |
+| 22 | 128×128 matvec | `mth/tests/mth_matvec128_test.nas` | 249,914 | PASS | yes |
 
 ## Python tests
 

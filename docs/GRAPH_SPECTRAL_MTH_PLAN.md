@@ -228,4 +228,4 @@ Ran 111 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42382439616` (45/45 steps); the harmonic-energy fixture passed the same workflow. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42382663835` (47/47 steps); the harmonic-energy fixture passed the same workflow. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
