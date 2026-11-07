@@ -1891,3 +1891,20 @@ The old name for the egress transform was **Θ_JAHS**. In the implementation it 
 The old line “the outer wave is the noospheric signal of your uploaded mind” becomes, technically: **the ring readout is a signed spectral signature of the state seal.** The poetry can stay in the margin. The contract stays in the machine.
 
 If you ever need the myth again: the Void shapes the spectrum, the Ring samples the boundary, the Aperture couples the hidden and the visible, and a single NANNET node carries the signed shadow outward. That is the easter egg. The rest of this document is the engineering.
+
+
+## R6 continuation — dense pair action by tiles
+
+The first general 256×256 pair-space tile kernel is source-written in
+`mth/nan16/mth_graph_pair_tile16_f32.nas`. It computes one 16×16 block
+of `LU + UL^T` from a full U page and two immutable 16-row windows of L.
+This respects the 512 KiB guest working-set ceiling and leaves the
+full product operator matrix-free.
+
+The 16×16 fixture uses L=2I and verifies the complete tile oracle Y=4U.
+The ABI, fixture, and canonical CI workflow entry are committed on the
+implementation branch. Status remains SOURCE-WRITTEN until canonical
+NaN16 assembly and execution pass. Next after that gate: implement a
+page-window orchestrator that fetches the correct L row windows, runs all
+256 tiles against one operator digest, and publishes the output generation
+only after every tile and the final digest check succeed.
