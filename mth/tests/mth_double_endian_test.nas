@@ -1,16 +1,35 @@
+; MTH double-endian reentrancy and validation fixture — NaN16 only.
 .org 0
 JMP @mth_de_test_main
 .include "../nan16/mth_double_endian.nas"
 
 mth_de_test_main:
   MOVI r13,1
+
+  ; Two independent caller-owned frames and destinations.
   MOVI r1,0x1234
   MOVI r2,4096
+  MOVI r12,@mth_de_frame_a
+  CALL @mth_de_encode
+
+  MOVI r1,0xABCD
+  MOVI r2,4100
+  MOVI r12,@mth_de_frame_b
   CALL @mth_de_encode
 
   MOVI r1,4096
+  MOVI r12,@mth_de_frame_a
   CALL @mth_de_decode
   MOVI r3,0x1234
+  CMP r1,r3
+  JMP[NE] @mth_de_fail
+  CMP r2,r0
+  JMP[EQ] @mth_de_fail
+
+  MOVI r1,4100
+  MOVI r12,@mth_de_frame_b
+  CALL @mth_de_decode
+  MOVI r3,0xABCD
   CMP r1,r3
   JMP[NE] @mth_de_fail
   CMP r2,r0
@@ -25,6 +44,17 @@ mth_de_test_main:
   STW r5,r2,r6
 
   MOVI r1,4096
+  MOVI r12,@mth_de_frame_a
+  CALL @mth_de_decode
+  CMP r2,r0
+  JMP[NE] @mth_de_fail
+
+  ; Wrong first-member class must be rejected.
+  MOVI r2,4096
+  MOVI r5,9
+  STW r5,r2,r0
+  MOVI r1,4096
+  MOVI r12,@mth_de_frame_a
   CALL @mth_de_decode
   CMP r2,r0
   JMP[NE] @mth_de_fail
@@ -54,7 +84,15 @@ mth_de_puts_byte:
   ADD r1,r1,r13
   JMP @mth_de_puts_word
 
+mth_de_frame_a:
+.word 0
+.word 0
+.word 0
+mth_de_frame_b:
+.word 0
+.word 0
+.word 0
 mth_de_pass:
-.str "MTH DOUBLE-ENDIAN PASS\n"
+.str "MTH DOUBLE-ENDIAN REENTRANT PASS\n"
 mth_de_bad:
-.str "MTH DOUBLE-ENDIAN FAIL\n"
+.str "MTH DOUBLE-ENDIAN REENTRANT FAIL\n"
