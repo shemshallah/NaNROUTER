@@ -29,7 +29,7 @@ mth_weighted_v2_test_main:
   MOVI r8,0
   MOVHI r8,0xFFFE
   CMP r7,r8
-  JMP[NE] @mth_weighted_v2_fail_high3_low3_high2_low2_high1_low1_high0_low0
+  JMP[NE] @mth_weighted_v2_fail_low0
   LD r7,r6,1
   MOVI r8,0xFFFF
   MOVHI r8,0xFFFF
