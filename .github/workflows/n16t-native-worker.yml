@@ -1,0 +1,57 @@
+name: NaN16 N16T server guest
+
+on:
+  push:
+    paths:
+      - "runner_riddle/n16t_guest.py"
+      - "runner_riddle/n16t_http.py"
+      - "runner_riddle/wave_http.py"
+      - "tests/test_n16t_guest_runtime.py"
+      - ".github/workflows/n16t-native-worker.yml"
+  pull_request:
+    paths:
+      - "runner_riddle/n16t_guest.py"
+      - "runner_riddle/n16t_http.py"
+      - "runner_riddle/wave_http.py"
+      - "tests/test_n16t_guest_runtime.py"
+      - ".github/workflows/n16t-native-worker.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native-guest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 1dec48476aeaa3032f24bba7b6d24656f43bda49
+          path: nan0s
+      - name: Build the canonical NaN16 C execution core as a shared runtime
+        run: |
+          mkdir -p build
+          cc -std=gnu99 -O2 -Wall -Wno-misleading-indentation \
+            -ffp-contract=off -fno-fast-math -fPIC -shared \
+            -DNAN_WORDS=0x100000 \
+            nan0s/aarch64/android/core/nan16.c \
+            nan0s/aarch64/android/core/nan_dev.c \
+            nan0s/aarch64/android/core/nan_load.c \
+            nan0s/aarch64/android/core/nan_render.c \
+            nan0s/aarch64/android/core/nan_state.c \
+            nan0s/aarch64/android/core/nan_net_driver.c \
+            -o build/libnan16.so -lm
+      - name: Assemble the persistent N16T guest and label map
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            -v LABELS=build/n16_protocol.labels \
+            nan0s/src/nannet/n16t_android_guest.nas > build/n16_protocol.nan
+          grep -q '^n16_server_exchange ' build/n16_protocol.labels
+      - name: Run router tests against the real NaN16 guest runtime
+        env:
+          NAN16_LIBRARY: ${{ github.workspace }}/build/libnan16.so
+          N16T_GUEST_IMAGE: ${{ github.workspace }}/build/n16_protocol.nan
+          N16T_GUEST_LABELS: ${{ github.workspace }}/build/n16_protocol.labels
+        run: python -m unittest discover -s tests -v
