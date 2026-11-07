@@ -53,4 +53,4 @@ Total declared payload is below 290 KiB, within the 512 KiB guest working-set ce
 
 ## Fixture
 
-mth/tests/mth_graph_pair_tile16_f32_test.nas uses L=2I and a two-entry U. The exact oracle is Y=4U. It checks all 256 outputs in the two tiles. Canonical NaN16 workflow run 218 assembled and executed the fixture successfully; output marker: MTH PAIR TILE16 F32 PASS. This verifies one 16×16 tile for the L=2I oracle, not full 256-tile orchestration or generic sparse-CSR integration.
+mth/tests/mth_graph_pair_tile16_f32_test.nas uses L=2I and a three-entry U. The exact oracle is Y=4U. It checks all 256 outputs in the two tiles. Canonical NaN16 workflow run 218 assembled and executed the fixture successfully; output marker: MTH PAIR TILE16 F32 PASS. This verifies two 16×16 tiles for the L=2I oracle at global origins (0,0) and (16,32), not full 256-tile orchestration or generic sparse-CSR integration.
