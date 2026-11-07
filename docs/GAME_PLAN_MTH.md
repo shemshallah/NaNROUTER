@@ -144,23 +144,17 @@ MTH uses the same native 64-bit word substrate for both instructions and data, b
 
 The exact MTH data-word allocation is an implementation gate. Do not freeze a new bitfield until the NaN16 assembler, interpreter, loader, and existing word tests have been checked together. The first design should reuse known-good NaN16 operations and add explicit format descriptors, not invent a second incompatible ISA.
 
-### 2.5 Double-endian is a first-class operation
+### 2.5 Keep the three endian-related mechanisms separate
 
-The existing `BSWAPM` behavior is a core mathematical and data operation, not just a serialization trick.
+There are three related but distinct operations in the existing NaN16 work. MTH must not collapse them into one ambiguous "byte swap":
 
-MTH should expose explicit operations for:
+1. **BSWAPM face swap.** The existing NaN16 primitive swaps the two NaN faces of a memory word. The established Boolean exhibit documents the class-nibble transform `rot2(n) = ((n & 3) << 2) | (n >> 2)`. Treat this as the frozen machine operation. It is not evidence that every byte of the 64-bit word is reversed.
+2. **Double-endian pair codec.** The existing `n16de` codec stores a chunk as a big-endian member and a byte-swapped little-endian member, each with its own tag. Decode validates both members and rejects disagreement. This is a paired representation with voting/validation, not the same thing as BSWAPM.
+3. **Ordinary byte-order transforms.** Reversing an eight-byte word, reversing a 32-bit payload, reversing a 16-bit lane, and changing multiword scalar order are separate operations that need their own exact contracts and tests.
 
-- reverse all eight bytes of a 64-bit word;
-- swap the near and far faces;
-- reverse the 32-bit payload bytes;
-- reverse a 16-bit payload lane;
-- convert a declared multiword scalar between little- and big-endian order;
-- convert vector/matrix/tensor storage order without changing logical indices;
-- inspect both orientations and report whether a format is invariant under reversal.
+MTH should expose explicit operation IDs for each of these. The initial implementation must wrap the existing BSWAPM and pair codec without changing their semantics. Only add a full-word byte reversal after the actual NaN16 instruction semantics and memory representation have been verified.
 
-These must be separate, testable operations. A full-word reversal is not the same thing as reversing a payload lane or changing the logical order of a vector.
-
-A reversal test must verify both the transformed bytes and the transformed semantic class. It must also test the reverse operation and confirm that applying it twice returns the original word.
+Every transform test must check exact input/output words, face classes, payload bytes, inverse behavior, and corruption handling where the format includes redundancy. Applying an involutive transform twice must restore the original bytes; a pair codec must also reject a mismatched pair rather than silently choose one member.
 
 ---
 
@@ -455,13 +449,14 @@ This separation prevents the class nibble from being overloaded as a universal t
 ### 7.2 Ordered face pairs are resources
 
 The near and far classes can support:
-- distinct instruction predicate patterns under the frozen ISA;
-- ordered data subformats;
-- explicit orientation and byte-order markers;
-- typed control/data distinctions where the record contract defines them;
+- the existing instruction predicate / Boolean truth-table patterns under the frozen ISA;
+- ordered face-pair identity and face-swap relationships;
+- explicitly declared data variants;
+- orientation markers where a data format defines them;
 - compact validity and variant checks;
-- independent cross-check channels;
 - forward/reversed representation pairs.
+
+Do not infer that the class nibble is a general-purpose opcode or a free-form data tag. Preserve the frozen instruction meaning first; assign data meanings only inside a versioned data format.
 
 The mapping must be versioned and documented. Do not assume all 16 class combinations are equally appropriate for every record family. Some are instruction semantics; some may be useful data variants; some may be reserved by a particular format. Reserve explicitly rather than leaving accidental ambiguity.
 
@@ -758,3 +753,27 @@ These are not forbidden forever. They are simply not prerequisites for a useful 
 6. Do not add a large operator catalogue until the first vertical slice runs and is independently checked.
 
 **MTH is successful when NaNLMind can ask for a mathematical transformation, execute it in NaN16, inspect exactly what happened, and rely on the result at a clearly stated evidence level.**
+
+
+---
+
+## 17. Stage 0 implementation snapshot
+
+The first native source slice now lives under `mth/`:
+
+- `mth/nan16/mth_core.nas` contains a NaN16 implementation of the ordered class rotation and an explicit wrapper around the existing `BSWAPM` primitive.
+- `mth/tests/mth_stage0_test.nas` checks the full 16-entry class-rotation table, verifies that rotation is an involution, and checks that two face swaps restore the original test word.
+- `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
+
+This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. In particular, the pair-voting codec has not yet been imported into MTH; its source path, ABI, and corruption behavior must be confirmed before reuse.
+
+### Stage 0 next gate
+
+1. Assemble `mth/nan16/mth_core.nas` and `mth/tests/mth_stage0_test.nas` with the canonical NaN16 toolchain.
+2. Run the smoke test and capture the guest output.
+3. Add exhaustive checks for all 16 ordered face pairs, including every face class in both positions.
+4. Import or wrap the canonical double-endian pair codec and test matching, mismatched, missing, swapped, and corrupted members.
+5. Add raw-word fixtures that verify payload bytes independently from face classes.
+6. Record exact toolchain version, source digest, test digest, and result before marking Stage 0 passed.
+
+The MTH source must remain NaN16. A host test runner may assemble, launch, and collect bytes, but may not calculate the expected mathematical result on behalf of the guest.
