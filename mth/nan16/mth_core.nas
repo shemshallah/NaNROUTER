@@ -18,7 +18,7 @@ mth_rot2_class:
 
 ; Explicit wrapper around the frozen NaN16 face-swap operation.
 ; Caller supplies a writable word address in r1.
-mth_double_endian:
+mth_bswapm64:
   BSWAPM r1,0
   RET
 
