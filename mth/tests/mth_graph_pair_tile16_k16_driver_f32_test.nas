@@ -47,6 +47,15 @@ mth_pair_driver_test_main:
   LD r7,r4,0
   MOVI r8,0
   MOVHI r8,0x4080
+  CMP r7,r0
+  JMP[EQ] @mth_pair_driver_lu_zero
+  MOVI r11,78
+  PUTC r11
+  JMP @mth_pair_driver_lu_checked
+mth_pair_driver_lu_zero:
+  MOVI r11,90
+  PUTC r11
+mth_pair_driver_lu_checked:
   CMP r7,r8
   JMP[NE] @mth_pair_driver_test_fail
   LA r4,@mth_driver_acc_ult
