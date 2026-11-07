@@ -74,12 +74,14 @@ mth_k256_test_puts_byte:
   ADD r1,r1,r13
   JMP @mth_k256_test_puts_word
 
+ ; Fixed, non-overlapping 256-word test regions; keep code below word 512.
+.org 512
 mth_k256_input:
 .word 1
-.org @mth_k256_input+256
+.org 768
 mth_k256_output:
-.word 0
-.org @mth_k256_output+256
+.word 77
+.org 1024
 mth_k256_test_pass:
 .str "MTH K256 LAPLACIAN PASS\n"
 mth_k256_test_bad:
