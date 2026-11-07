@@ -44,6 +44,8 @@ mth_k256_test_main:
   CMP r1,r0
   JMP[NE] @mth_k256_test_fail
 
+  ; The kernel clobbers r3-r10 by ABI; reload the output base.
+  MOVI r3,@mth_k256_output
   LD r4,r3,0
   MOVI r5,77
   CMP r4,r5
