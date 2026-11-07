@@ -111,7 +111,7 @@ def preflighted_packet():
 
 
 def gate_context(*, packet, stage, job, lease):
-    return {
+    context = {
         "admission": admission(),
         "preflight": {
             "result": "VALID",
@@ -124,6 +124,9 @@ def gate_context(*, packet, stage, job, lease):
         "ring_epoch": 1,
         "workspace": 256,
     }
+    if stage in {"lease", "complete"}:
+        context["expected_worker_owner"] = lease["lease_owner"]
+    return context
 
 
 class NmpHttpAdapterIntegrationTests(unittest.TestCase):
