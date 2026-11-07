@@ -16,18 +16,18 @@ mth_sparse_test_main:
   JMP[NE] @mth_sparse_test_fail
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
-  MOVI r8,0xFFFF0000
+  LA r8,0xFFFF0000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,1
-  MOVI r8,0xFFFE0000
+  LA r8,0xFFFE0000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,2
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,3
-  MOVI r8,0x00050000
+  LA r8,0x00050000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
 
@@ -42,25 +42,25 @@ mth_sparse_test_main:
   JMP[NE] @mth_sparse_test_fail
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
-  MOVI r8,0xFFFF0000
+  LA r8,0xFFFF0000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,1
-  MOVI r8,0x00010000
+  LA r8,0x00010000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,2
-  MOVI r8,0xFFFB0000
+  LA r8,0xFFFB0000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,3
-  MOVI r8,0x00050000
+  LA r8,0x00050000
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
 
   ; Invalid state must be rejected before any output write.
   MOVI r6,@mth_sparse_x
-  MOVI r7,0x00400001
+  LA r7,0x00400001
   ST r7,r6,0
   MOVI r6,@mth_sparse_output
   MOVI r7,77
