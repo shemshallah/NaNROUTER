@@ -765,8 +765,10 @@ The first native source slice now lives under `mth/`:
 - `mth/nan16/mth_bool.nas` contains a generic two-input Boolean transform that dynamically selects one of the frozen `BOOL.n` instruction classes and executes it as NaN16.
 - `mth/nan16/mth_double_endian.nas` adapts the canonical NaN0S pair-voting codec into MTH names; it validates both tags, both class nibbles, and byte-swapped agreement.
 - `mth/nan16/mth_integer.nas` implements checked unsigned 32-bit addition and subtraction with explicit overflow/underflow status.
+- `mth/nan16/mth_bitwise.nas` implements native bitwise transforms, unsigned min/max, and comparison predicates.
 - `mth/tests/mth_double_endian_test.nas` checks pair round-trip and deliberate corruption rejection.
 - `mth/tests/mth_integer_test.nas` checks exact add/subtract cases and boundary overflow/underflow.
+- `mth/tests/mth_bitwise_test.nas` checks Boolean bitwise functions and unsigned comparison/min/max results.
 - `mth/tests/mth_stage0_test.nas` checks all 16 ordered face pairs, four face-type sign/quiet mappings, class packing round trips, invalid class rejection, rotation involution, exact BSWAPM payload-byte reversal, and double-reversal restoration.
 - `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
