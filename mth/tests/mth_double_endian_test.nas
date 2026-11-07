@@ -52,7 +52,8 @@ mth_de_test_main:
   ; Wrong first-member class must be rejected.
   MOVI r2,4096
   MOVI r5,9
-  STW r5,r2,r0
+  MOVI r6,9
+  STW r5,r2,r6
   MOVI r1,4096
   MOVI r12,@mth_de_frame_a
   CALL @mth_de_decode
