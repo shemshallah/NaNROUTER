@@ -4,7 +4,7 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 `nmk.awk` assembler and `nan_cli` on 2026-11-07. The kernel image is 324
 NaN16 words; the committed fixture image is 2,058 words and executes the
 full PASS sequence in 1,158,106 guest steps. No shared harness, workflow,
-or registry file was edited; CI registration for this kernel is pending.
+or registry file was edited; canonical CI run 42395520794 executed it and GLT enforcement is pending.
 
 ## 1. Scope
 

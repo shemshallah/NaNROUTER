@@ -1,6 +1,6 @@
 # MTH 256-element deterministic colored noise
 
-Status: source-written and locally executed with the canonical NaN0S toolchain; CI promotion pending.
+Status: locally executed; canonical CI run 42395520794 executed the fixture. GLT 1 MiB page-limit enforcement is pending.
 
 ## 1. Scope
 
@@ -213,6 +213,6 @@ and fixture do not use host math at runtime.
 - The metric sweep is a fixed deterministic regression, not a statistical
   test over many seeds. It is intended to catch sign/order regressions, not to
   certify spectral accuracy.
-- The fixture is not registered in `tools/run_mth_fixtures.py` or the CI
+- The fixture is registered and canonical CI run 42395520794 executed it. The CI
   workflow because those are shared files outside this task's ownership.
   Promotion requires adding it there after review.

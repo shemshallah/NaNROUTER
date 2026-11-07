@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **61 native MTH kernels with fixtures**: 58 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial energy, DRIVE, CFL, colored-noise, K16-driver, and reachability fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 342 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **61 native MTH kernels with fixtures**: 58 pass in the local harness and all 59 fixtures pass canonical CI run 42395520794 (121 steps). The 1 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 342 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -76,14 +76,14 @@ The 255 + 1 rule remains:
 | `tools/register_wave_capabilities.py` | registers 61 kernels into MC0DB |
 | `spec/wave-capabilities.json` | 61-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 121 steps, 59 fixtures; 1 MiB additions pending |
+| `.github/workflows/mth-native-contract.yml` | 121 steps, 59 fixtures; canonical CI PASS (1 MiB page-limit enforcement pending) |
 
 ### 1.3 Evidence baseline
 
 ```
-58/58 locally runnable fixtures pass; K256 pair passed canonical CI
-59/59 total native fixtures; 342/342 Python tests pass
-GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 59-fixture/121-step run pending
+58/58 locally runnable fixtures pass
+59/59 total native fixtures pass canonical CI run 42395520794 (121 steps); 342/342 Python tests pass
+GLT-enforced 1 MiB page-limit verification remains pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -953,9 +953,10 @@ The shortest correct sentence is:
 
 
 
+
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kernels; 58 fixtures run locally and the K256 pair fixture is CI-only locally.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kernels; all 59 fixtures pass canonical CI run 42395520794 (121 steps). GLT 1 MiB page-limit enforcement remains a separate pending gate.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|
@@ -985,18 +986,18 @@ Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kerne
 | `mth.harmonic.damped_energy.f32` | `float32` | 53,890 | yes |
 | `mth.matvec.128.f32` | `float32` | 249,914 | yes |
 | `mth.matvec256.block16.f32` | `float32` | 148,561 | yes |
-| `mth.matvec256.full.f32` | `float32` | 2,978,362 | pending |
+| `mth.matvec256.full.f32` | `float32` | 2,978,362 | yes |
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
 | `mth.svd.top128.f32` | `float32` | 1,311,632 | yes |
-| `mth.svd.top256.f32` | `float32` | 11,002,235 | pending |
+| `mth.svd.top256.f32` | `float32` | 11,002,235 | yes |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
 | `mth.adapter.residual.256.block16.f32` | `float32` | 113,055 | yes |
 | `mth.phase.coherence.128.f32` | `float32` | 11,381 | yes |
 | `mth.two_level.spectrum.f32` | `float32` | 390 | yes |
 | `mth.decode.128_256.f32` | `float32` | 996,358 | yes |
 | `mth.encode.256_128.f32` | `float32` | 996,358 | yes |
-| `mth.decode.256.full.f32` | `float32` | 1,655,853 | pending |
-| `mth.encode.256.full.f32` | `float32` | 1,655,853 | pending |
+| `mth.decode.256.full.f32` | `float32` | 1,655,853 | yes |
+| `mth.encode.256.full.f32` | `float32` | 1,655,853 | yes |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |
 | `mth.graph.pair.rank1.128.f32` | `float32` | 252,060 | yes |
 | `mth.lowrank.add.128.f32` | `float32` | 1,056,470 | yes |
@@ -1006,17 +1007,17 @@ Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kerne
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
 | `mth.graph.pair.tile16.f32` | `float32` | 4,643,414 | yes |
 | `mth.graph.pair.tile16.k16.f32` | `float32` | 283,436 | yes |
-| `mth.jahs.gate.u64` | `u32` | 201 | pending |
-| `mth.adapter.residual.256.full.f32` | `float32` | 2,839,172 | pending |
-| `mth.graph.avoided_crossing_sweep.f32` | `float32` | 11,651 | pending |
-| `mth.centrosymmetry255.full.f32` | `float32` | 2,700,726 | pending |
-| `mth.svd.top2.256.f32` | `float32` | 40,216,927 | pending |
-| `mth.topk.256.f32` | `float32` | 1,158,106 | pending |
-| `mth.drive.source.256.f32` | `float32` | 13,092 | pending |
-| `mth.cfl.guard.256.f32` | `float32` | 2,639,509 | pending |
-| `mth.radial.tridiagonal.256.f32` | `float32` | 42,518 | pending |
-| `mth.noise.colored.256.f32` | `float32` | 72,318 | pending |
-| `mth.lanczos.topk.256.f32` | `float32` | 133,628,629 | pending |
-| `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | pending |
-| `mth.reachability.256.f32` | `float32` | 2,489,116 | pending |
-| `mth.radial.energy.256.f32` | `float32` | 61,355 | pending |
+| `mth.jahs.gate.u64` | `u32` | 201 | yes |
+| `mth.adapter.residual.256.full.f32` | `float32` | 2,839,172 | yes |
+| `mth.graph.avoided_crossing_sweep.f32` | `float32` | 11,651 | yes |
+| `mth.centrosymmetry255.full.f32` | `float32` | 2,700,726 | yes |
+| `mth.svd.top2.256.f32` | `float32` | 40,216,927 | yes |
+| `mth.topk.256.f32` | `float32` | 1,158,106 | yes |
+| `mth.drive.source.256.f32` | `float32` | 13,092 | yes |
+| `mth.cfl.guard.256.f32` | `float32` | 2,639,509 | yes |
+| `mth.radial.tridiagonal.256.f32` | `float32` | 42,518 | yes |
+| `mth.noise.colored.256.f32` | `float32` | 72,318 | yes |
+| `mth.lanczos.topk.256.f32` | `float32` | 133,628,629 | yes |
+| `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | yes |
+| `mth.reachability.256.f32` | `float32` | 2,489,116 | yes |
+| `mth.radial.energy.256.f32` | `float32` | 61,355 | yes |

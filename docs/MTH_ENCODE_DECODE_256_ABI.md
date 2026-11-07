@@ -1,7 +1,7 @@
 # MTH full 256×256 ENCODE / DECODE linear kernels
 
 Status: source-written and locally executed with the canonical NaN0S assembler
-and `nan_cli` text loader. Canonical 1 MiB GLT/MthSystem dispatch is pending;
+and `nan_cli` text loader. Canonical CI run 42395520794 executed the fixture; GLT/MthSystem 1 MiB dispatch enforcement is pending;
 the old 512 KiB evidence remains historical.
 
 ## 1. Scope
@@ -164,7 +164,7 @@ path in `core/nan_load.c` still clamps to 65,536 words, and
 `docs/MTH_SYSTEM_RUNTIME.md` still shows an explicit
 `guest_budget_bytes=512 * 1024`. Registering or dispatching this fixture
 through a 512 KiB MthSystem plan will therefore reject it; canonical 1 MiB
-promotion remains pending GLT.
+canonical CI run 42395520794 passed; GLT enforcement remains pending.
 
 ## 6. Limitations
 
@@ -185,4 +185,4 @@ promotion remains pending GLT.
   `r1`-`r12` and `r14` and preserve `r15`. They contain no `CALL`.
 - **Budget status.** The source and fixture target 1 MiB and exceed the old
   512 KiB ceiling. Local text-mode execution passed; canonical 1 MiB
-  MthSystem/GLT dispatch and CI promotion are not yet claimed.
+  MthSystem/GLT page-limit dispatch is not yet claimed; canonical CI execution passed in run 42395520794.

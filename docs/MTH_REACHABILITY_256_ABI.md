@@ -2,7 +2,7 @@
 
 Status: source-written and locally executed with the canonical NaN0S `nmk.awk` /
 `nan_cli` toolchain on 2026-11-07. The fixture prints its PASS marker through
-the `.nan` text loader. CI promotion, the 1 MiB GLT page-limit run, and any
+the `.nan` text loader. Canonical CI run 42395520794 executed it; the GLT 1 MiB page-limit run and any
 shared registry/workflow change are not claimed here.
 
 This change owns only:

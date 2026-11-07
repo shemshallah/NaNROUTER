@@ -4,8 +4,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 58/58 locally runnable fixtures passed; 59/59 total including CI-only K256 pair; 342 Python tests passed.
-**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 59-fixture/121-step run is pending (local 1 MiB text-loader execution passed).
+**Result:** 58/58 locally runnable fixtures passed; 59/59 total including the CI-only K256 pair; canonical CI 42395520794 passed 121 steps; 342 Python tests passed.
+**CI:** canonical workflow run `42395520794` passed all 121 steps for the 59-fixture set, including every 1 MiB fixture. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
 
@@ -54,24 +54,24 @@
 | 41 | Two-level spectrum | `mth/tests/mth_two_level_spectrum_test.nas` | 390 | PASS | yes |
 | 42 | 128 phase coherence | `mth/tests/mth_phase_coherence_128_test.nas` | 11,381 | PASS | yes |
 | 43 | 256-block adapter residual | `mth/tests/mth_adapter_residual_256_block16_test.nas` | 113,055 | PASS | yes |
-| 44 | Full 256 matvec | `mth/tests/mth_matvec256_full_test.nas` | 2,978,362 | PASS | pending |
-| 45 | Full 256 ENCODE | `mth/tests/mth_encode_decode256_test.nas` | 1,655,853 | PASS | pending |
-| 46 | Full 256 DECODE | `mth/tests/mth_encode_decode256_test.nas` | 1,655,853 | PASS | pending |
-| 47 | Full 256 SVD top pair | `mth/tests/mth_svd_top256_test.nas` | 11,002,235 | PASS | pending |
-| 48 | JAHS handoff gate | `mth/tests/mth_jahs_gate_test.nas` | 201 | PASS | pending |
-| 49 | Full 256 adapter residual | `mth/tests/mth_adapter_residual_256_full_test.nas` | 2,839,172 | PASS | pending |
-| 50 | Avoided-crossing sweep | `mth/tests/mth_avoided_crossing_sweep_test.nas` | 11,651 | PASS | pending |
-| 51 | Full 255 certificate | `mth/tests/mth_centrosymmetry_255_full_test.nas` | 2,700,726 | PASS | pending |
-| 52 | Full 256 SVD top-2 | `mth/tests/mth_svd_top2_256_test.nas` | 40,216,927 | PASS | pending |
-| 53 | Stable top-k 256 | `mth/tests/mth_topk_256_test.nas` | 1,158,106 | PASS | pending |
-| 54 | DRIVE source 256 | `mth/tests/mth_drive_source_256_test.nas` | 13,092 | PASS | pending |
-| 55 | CFL guard 256 | `mth/tests/mth_cfl_guard_256_test.nas` | 2,639,509 | PASS | pending |
-| 56 | Radial tridiagonal | `mth/tests/mth_radial_tridiagonal_test.nas` | 42,518 | PASS | pending |
-| 57 | Colored noise 256 | `mth/tests/mth_colored_noise_256_test.nas` | 72,318 | PASS | pending |
-| 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,628,629 | PASS | pending |
-| 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | pending |
-| 60 | Reachability 256 | `mth/tests/mth_reachability_256_test.nas` | 2,489,116 | PASS | pending |
-| 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,355 | PASS | pending |
+| 44 | Full 256 matvec | `mth/tests/mth_matvec256_full_test.nas` | 2,978,362 | PASS | yes |
+| 45 | Full 256 ENCODE | `mth/tests/mth_encode_decode256_test.nas` | 1,655,853 | PASS | yes |
+| 46 | Full 256 DECODE | `mth/tests/mth_encode_decode256_test.nas` | 1,655,853 | PASS | yes |
+| 47 | Full 256 SVD top pair | `mth/tests/mth_svd_top256_test.nas` | 11,002,235 | PASS | yes |
+| 48 | JAHS handoff gate | `mth/tests/mth_jahs_gate_test.nas` | 201 | PASS | yes |
+| 49 | Full 256 adapter residual | `mth/tests/mth_adapter_residual_256_full_test.nas` | 2,839,172 | PASS | yes |
+| 50 | Avoided-crossing sweep | `mth/tests/mth_avoided_crossing_sweep_test.nas` | 11,651 | PASS | yes |
+| 51 | Full 255 certificate | `mth/tests/mth_centrosymmetry_255_full_test.nas` | 2,700,726 | PASS | yes |
+| 52 | Full 256 SVD top-2 | `mth/tests/mth_svd_top2_256_test.nas` | 40,216,927 | PASS | yes |
+| 53 | Stable top-k 256 | `mth/tests/mth_topk_256_test.nas` | 1,158,106 | PASS | yes |
+| 54 | DRIVE source 256 | `mth/tests/mth_drive_source_256_test.nas` | 13,092 | PASS | yes |
+| 55 | CFL guard 256 | `mth/tests/mth_cfl_guard_256_test.nas` | 2,639,509 | PASS | yes |
+| 56 | Radial tridiagonal | `mth/tests/mth_radial_tridiagonal_test.nas` | 42,518 | PASS | yes |
+| 57 | Colored noise 256 | `mth/tests/mth_colored_noise_256_test.nas` | 72,318 | PASS | yes |
+| 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,628,629 | PASS | yes |
+| 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | yes |
+| 60 | Reachability 256 | `mth/tests/mth_reachability_256_test.nas` | 2,489,116 | PASS | yes |
+| 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,355 | PASS | yes |
 
 ## Python tests
 
@@ -113,7 +113,7 @@ Run it after any kernel change.
 ## What is not yet proven
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
-- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; canonical 1 MiB CI remains open.
+- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; GLT page-limit enforcement remains open.
 - K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.

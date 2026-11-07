@@ -4,7 +4,7 @@ Status: source-written and locally executed with the canonical NaN0S `nmk.awk` /
 toolchain on 2026-11-07 through the `.nan` text loader. The fixture image is 66,574
 NaN16 words (532,592 bytes), which exceeds the historical 512 KiB (65,536-word)
 guest. It targets the new 1 MiB (131,072-word) guest budget; canonical GLT 1 MiB
-page-limit execution and CI promotion are still pending.
+page-limit execution is still pending, but canonical CI run 42395520794 executed the fixture successfully.
 
 ## 1. Scope
 
@@ -117,7 +117,7 @@ text file is 2,187,734 bytes; the loaded guest image is 66,574 words
 1/1 fixtures passed
 ```
 
-## 6. Old 512 KiB limitation and pending 1 MiB validation
+## 6. Old 512 KiB limitation and 1 MiB validation
 
 The fixture image is 66,574 words = 532,592 bytes. The historical guest budget
 is 65,536 words = 524,288 bytes, so the image exceeds it by 1,038 words

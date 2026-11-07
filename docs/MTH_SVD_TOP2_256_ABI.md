@@ -4,7 +4,7 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 `nan_cli` as a `nan-text` image (68,878 NaN16 words; 40,216,927 guest
 steps; marker `MTH SVD TOP2 256 PASS`). The image exceeds the historical
 65,536-word / 512 KiB declared guest budget but is well inside the 1 MiB
-target (131,072 NaN16 words). It is a 1 MiB-target fixture pending
+target (131,072 NaN16 words). It is a 1 MiB-target fixture; canonical CI run 42395520794 executed it;
 GLT/plan promotion; the shared fixture harness and workflow were not
 edited by this change.
 
@@ -246,5 +246,5 @@ is not yet scheduled by the combined harness.
 - The static save frame and link word make the kernel non-reentrant and
   non-concurrent.
 - The fixture and kernel are a 1 MiB-target artifact. Scheduling them
-  under the historical 512 KiB declared budget requires the pending GLT
+  under the historical 512 KiB declared budget requires the GLT
   limit increase.

@@ -17,11 +17,11 @@
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] Design target updated to 1 MiB guest (131,072 NaN16 words); old 512 KiB evidence is historical.
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture local PASS; CI pending.
-- [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
+- [ ] Verify GLT-enforced 1 MiB page-limit loading (CI text-loader execution is green).
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 342 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 59-fixture/121-step run pending.
+- [x] Canonical GitHub Actions native workflow run `42395520794` passed 121 steps for the 59-fixture set.
 
 ## R0 — Contract and storage freeze
 
@@ -177,7 +177,7 @@ Ran 235 tests
 OK
 ```
 
-CI prior: `42389738332` — 87/87 steps; 59-fixture/121-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42395520794` — 121/121 steps for the 59-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

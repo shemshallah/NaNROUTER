@@ -10,7 +10,7 @@ The owner reports that GLT is increasing the guest page limit to **1 MiB**:
 1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
 ```
 
-The old 512 KiB / 65,536-word ceiling is historical. Existing evidence at 512 KiB remains valid for those exact kernels; any fixture above the old limit is marked **pending 1 MiB toolchain** until the canonical NaN16 harness executes it.
+The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical CI run 42395520794 executed all 59 fixtures, including images above 65,536 words, through the text loader; GLT-enforced 1 MiB page-limit loading remains a separate pending gate.
 
 ## 2. What changes
 
@@ -45,7 +45,7 @@ The 8 MiB universe still has 256 × 32 KiB pages: 255 head pages + 1 NANNET node
 - BS0DB/MC0DB remain durable control/evidence, not the canonical universe.
 - The 8 MiB universe remains the persistent page store.
 
-## 5. Implemented 1 MiB kernels (local execution, CI pending)
+## 5. Implemented 1 MiB kernels (local PASS; canonical CI PASS)
 
 | Kernel | Local evidence | Working set |
 |---|---|---|

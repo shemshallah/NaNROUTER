@@ -5,7 +5,7 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 The fixture image is **65,555 NaN16 words** (524,440 bytes), 19 words above the
 historical 65,536-word / 512 KiB guest. It targets the new **1 MiB
 (131,072 NaN16 words)** guest budget; GLT-enforced 1 MiB page-limit execution
-and CI promotion are still pending. The local loader accepted the complete
+and GLT page-limit enforcement are still pending. Canonical CI run 42395520794 executed the fixture; the local loader accepted the complete
 image, as recorded in §7 and §8.
 
 ## 1. Scope
@@ -271,7 +271,7 @@ fixture at load time rather than being treated as a pass.
   `0,4,5,6,7,8`) or map a learning head onto a reserved write target. The
   signed head atlas, reserved-head policy, and write ACL remain separate.
 - The local run is a 1 MiB-target text-loader run, not a GLT 1 MiB
-  page-limit run. CI promotion is pending that harness.
+  page-limit run; canonical CI execution passed in run 42395520794 and GLT enforcement is pending that harness.
 - No throughput claim is made. The reported step count includes fixture
   construction and direct checks, not only the certificate scans.
 

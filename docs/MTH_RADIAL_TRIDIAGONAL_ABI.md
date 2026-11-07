@@ -2,7 +2,7 @@
 
 Status: source-written and **locally native-verified** for the exact fixture in
 this document with the canonical NaN0S `nmk.awk` / `nan_cli` toolchain on
-2026-11-07. This is local execution evidence, not a CI claim.
+2026-11-07. This is local execution evidence; canonical CI run 42395520794 executed it, while GLT page-limit enforcement remains separate.
 
 ## 1. Scope
 
@@ -263,7 +263,7 @@ python3 tools/run_mth_fixtures.py --only radial_tridiagonal
 ```
 
 This task did not modify shared files. The evidence above is local
-`nmk.awk` / `nan_cli` execution, not a CI result.
+`nmk.awk` / `nan_cli` execution; canonical CI run 42395520794 executed it, while GLT page-limit enforcement remains separate.
 
 As an independent review check outside the execution path, a host-side NumPy
 float32 model reproduced all four analytic expectations and a random

@@ -60,6 +60,23 @@ mth_radial_energy_test_main:
   CMP r7,r8
   JMP[NE] @mth_radial_energy_test_fail
 
+  ; ABI preservation after the first call: r2-r5 must still hold the four
+  ; input/output pointers and r13 must still be 1.
+  LA r6,@mth_radial_energy_test_offdiag
+  CMP r2,r6
+  JMP[NE] @mth_radial_energy_test_fail
+  LA r6,@mth_radial_energy_test_x
+  CMP r3,r6
+  JMP[NE] @mth_radial_energy_test_fail
+  LA r6,@mth_radial_energy_test_energy_out
+  CMP r4,r6
+  JMP[NE] @mth_radial_energy_test_fail
+  LA r6,@mth_radial_energy_test_loc_out
+  CMP r5,r6
+  JMP[NE] @mth_radial_energy_test_fail
+  CMP r13,r1               ; r1 is the verified success value 1
+  JMP[NE] @mth_radial_energy_test_fail
+
   ; ---- Case 2: x=e0 -> energy=2, localization=1. ----
   LA r1,@mth_radial_energy_test_x
   MOVI r2,256
