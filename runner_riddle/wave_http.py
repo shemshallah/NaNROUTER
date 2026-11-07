@@ -609,6 +609,8 @@ class WaveHttpServer:
         if (isinstance(max_body_bytes, bool)
                 or not isinstance(max_body_bytes, int) or max_body_bytes < 1):
             raise ValueError("max_body_bytes must be a positive integer")
+        if nmp_adapter is not None and getattr(nmp_adapter, "service", None) is not service:
+            raise ValueError("NMP adapter must share the WaveHttpServer WaveService instance")
         self.service = service
         self.store: WaveStore = service.store if store is None else store
         self.host = host
