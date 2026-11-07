@@ -63,3 +63,13 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - State: Q16.16/I32 input in [-64,+64]; U8 integer edge weights 1..255; signed I64 Q16.16 output.
 - The caller supplies a 16-word scratch frame. The row accumulator is widened to I64; each edge product is exact signed I32.
 - Exact weighted-path and invalid-zero-weight atomicity fixtures are wired into the canonical NaN16 workflow. Canonical NaN16 CI run #107 passed the weighted path and invalid-zero-weight atomicity fixture (41,253 guest steps). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. This is native_verified only for the stated v2 contract.
+
+## Weighted graph energy v1
+
+- Contract: `docs/MTH_GRAPH_ENERGY_ABI_V1.md`.
+- Kernel: `nan16/mth_graph_energy_weighted_v1.nas`.
+- Fixture: `tests/mth_graph_energy_weighted_v1_test.nas`.
+- Computes the quadratic form directly from a canonical undirected edge list, independently of the Laplacian kernel.
+- State is bounded to [-1,+1] in Q16.16; exact output is unsigned I64 Q32.32. The range proof bounds total energy below 2^57.
+- The edge-list form requires one strictly ordered u<v record per undirected edge, so reciprocal-weight mismatch cannot be represented at this boundary. CSR adapters must validate reciprocity before conversion.
+- Native CI verification is pending.

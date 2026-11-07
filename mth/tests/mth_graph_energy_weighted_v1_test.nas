@@ -1,0 +1,401 @@
+.org 0
+JMP @mth_energy_v1_test_main
+.include "../nan16/mth_graph_energy_weighted_v1.nas"
+
+mth_energy_v1_test_main:
+  MOVI r13,1
+  MOVI r1,@mth_energy_v1_u
+  MOVI r2,@mth_energy_v1_v
+  MOVI r3,@mth_energy_v1_w
+  MOVI r4,@mth_energy_v1_x
+  MOVI r5,@mth_energy_v1_out
+  MOVI r6,2
+  MOVI r7,@mth_energy_v1_scratch
+  CALL @mth_graph_energy_weighted_q16_16_u64_v1
+  CMP r1,r13
+  JMP[NE] @mth_energy_v1_fail
+
+  ; E = 2*(1/2)^2 + 3*(1/2)^2 = 5/4.
+  ; Q32.32 raw result = 5 * 2^30 = 0x00000001_40000000.
+  MOVI r6,@mth_energy_v1_out
+  LD r7,r6,0
+  MOVI r8,0
+  MOVHI r8,0x4000
+  CMP r7,r8
+  JMP[NE] @mth_energy_v1_fail
+  LD r7,r6,1
+  MOVI r8,1
+  CMP r7,r8
+  JMP[NE] @mth_energy_v1_fail
+
+  ; Constant state must have exactly zero energy.
+  MOVI r6,@mth_energy_v1_x
+  MOVI r7,32768
+  ST r7,r6,0
+  ST r7,r6,1
+  ST r7,r6,2
+  MOVI r1,@mth_energy_v1_u
+  MOVI r2,@mth_energy_v1_v
+  MOVI r3,@mth_energy_v1_w
+  MOVI r4,@mth_energy_v1_x
+  MOVI r5,@mth_energy_v1_out
+  MOVI r6,2
+  MOVI r7,@mth_energy_v1_scratch
+  CALL @mth_graph_energy_weighted_q16_16_u64_v1
+  CMP r1,r13
+  JMP[NE] @mth_energy_v1_fail
+  MOVI r6,@mth_energy_v1_out
+  LD r7,r6,0
+  CMP r7,r0
+  JMP[NE] @mth_energy_v1_fail
+  LD r7,r6,1
+  CMP r7,r0
+  JMP[NE] @mth_energy_v1_fail
+
+  ; Noncanonical endpoint (u==v) rejects and preserves output.
+  MOVI r6,@mth_energy_v1_out
+  MOVI r7,77
+  ST r7,r6,0
+  MOVI r7,88
+  ST r7,r6,1
+  MOVI r6,@mth_energy_v1_v
+  ST r0,r6,0
+  MOVI r1,@mth_energy_v1_u
+  MOVI r2,@mth_energy_v1_v
+  MOVI r3,@mth_energy_v1_w
+  MOVI r4,@mth_energy_v1_x
+  MOVI r5,@mth_energy_v1_out
+  MOVI r6,2
+  MOVI r7,@mth_energy_v1_scratch
+  CALL @mth_graph_energy_weighted_q16_16_u64_v1
+  MOVI r8,2
+  CMP r1,r8
+  JMP[NE] @mth_energy_v1_fail
+  MOVI r6,@mth_energy_v1_out
+  LD r7,r6,0
+  MOVI r8,77
+  CMP r7,r8
+  JMP[NE] @mth_energy_v1_fail
+  LD r7,r6,1
+  MOVI r8,88
+  CMP r7,r8
+  JMP[NE] @mth_energy_v1_fail
+
+  MOVI r1,@mth_energy_v1_pass
+  CALL @mth_energy_v1_puts
+  HALT
+
+mth_energy_v1_fail:
+  MOVI r1,@mth_energy_v1_bad
+  CALL @mth_energy_v1_puts
+  HALT
+
+mth_energy_v1_puts:
+  MOVI r4,255
+mth_energy_v1_puts_word:
+  LD r2,r1,0
+  MOVI r3,4
+mth_energy_v1_puts_byte:
+  BOOL.8 r5,r2,r4
+  CMP r5,r0
+  RET[EQ]
+  PUTC r5
+  SHR r2,r2,8
+  SUB r3,r3,r13
+  JMP[NE] @mth_energy_v1_puts_byte
+  ADD r1,r1,r13
+  JMP @mth_energy_v1_puts_word
+
+.org 1024
+mth_energy_v1_u:
+.word 0
+.word 1
+mth_energy_v1_v:
+.word 1
+.word 2
+mth_energy_v1_w:
+.word 2
+.word 3
+mth_energy_v1_x:
+.word 0
+.word 32768
+.word 65536
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.org 2048
+mth_energy_v1_out:
+.word 77
+.word 88
+mth_energy_v1_scratch:
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.org 2100
+mth_energy_v1_pass:
+.str "MTH WEIGHTED GRAPH ENERGY V1 PASS\n"
+mth_energy_v1_bad:
+.str "MTH WEIGHTED GRAPH ENERGY V1 FAIL\n"
