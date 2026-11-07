@@ -17,14 +17,6 @@ mth_pair_driver_test_main:
   MOVI r6,50
   ADD r4,r4,r6
   ST r5,r4,0
-  LA r4,@mth_driver_uik
-  MOVI r6,21
-  ADD r4,r4,r6
-  ST r5,r4,0
-  LA r4,@mth_driver_ljk
-  MOVI r6,37
-  ADD r4,r4,r6
-  ST r5,r4,0
 
   ; Verify the staged source strip contains the expected float32 payload.
   LA r4,@mth_driver_li
