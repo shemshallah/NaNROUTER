@@ -79,6 +79,103 @@ mth_pair_tile_check_next:
   MOVI r7,256
   CMP r5,r7
   JMP[LT] @mth_pair_tile_check
+
+  ; Verify nonzero global tile bases: i_base=16, j_base=32.
+  ; Rebuild the two 16-row windows as rows 16..31 and 32..47 of L=2I.
+  LA r4,@mth_pair_tile_li
+  MOVI r5,4096
+  MOVI r6,0
+mth_pair_tile_clear_li:
+  ST r6,r4,0
+  ADD r4,r4,r13
+  SUB r5,r5,r13
+  CMP r5,r0
+  JMP[GT] @mth_pair_tile_clear_li
+
+  LA r4,@mth_pair_tile_lj
+  MOVI r5,4096
+mth_pair_tile_clear_lj:
+  ST r6,r4,0
+  ADD r4,r4,r13
+  SUB r5,r5,r13
+  CMP r5,r0
+  JMP[GT] @mth_pair_tile_clear_lj
+
+  LA r4,@mth_pair_tile_li
+  MOVI r5,0
+  MOVI r6,0
+  MOVHI r6,0x4000
+mth_pair_tile_fill_li_offset:
+  ADD r7,r5,r0
+  SHL r7,r7,8
+  ADD r7,r7,r5
+  MOVI r8,16
+  ADD r7,r7,r8
+  ADD r7,r4,r7
+  ST r6,r7,0
+  ADD r5,r5,r13
+  MOVI r8,16
+  CMP r5,r8
+  JMP[LT] @mth_pair_tile_fill_li_offset
+
+  LA r4,@mth_pair_tile_lj
+  MOVI r5,0
+mth_pair_tile_fill_lj_offset:
+  ADD r7,r5,r0
+  SHL r7,r7,8
+  ADD r7,r7,r5
+  MOVI r8,32
+  ADD r7,r7,r8
+  ADD r7,r4,r7
+  ST r6,r7,0
+  ADD r5,r5,r13
+  MOVI r8,16
+  CMP r5,r8
+  JMP[LT] @mth_pair_tile_fill_lj_offset
+
+  ; Add U[17,34]=2.0 at full-matrix word offset 4386.
+  LA r4,@mth_pair_tile_u
+  MOVI r5,4386
+  ADD r4,r4,r5
+  MOVI r5,0
+  MOVHI r5,0x4000
+  ST r5,r4,0
+
+  LA r1,@mth_pair_tile_u
+  LA r2,@mth_pair_tile_li
+  LA r3,@mth_pair_tile_lj
+  LA r4,@mth_pair_tile_y
+  MOVI r5,16
+  MOVI r6,32
+  LA r7,@mth_pair_tile_scratch
+  CALL @mth_graph_pair_tile16_f32
+  MOVI r8,1
+  CMP r1,r8
+  JMP[NE] @mth_pair_tile_fail
+
+  ; The second tile also satisfies Y=4U: only local [1,2] is 8.0.
+  LA r4,@mth_pair_tile_y
+  MOVI r5,0
+mth_pair_tile_check_offset:
+  LD r6,r4,0
+  MOVI r7,18
+  CMP r5,r7
+  JMP[EQ] @mth_pair_tile_expect_offset_eight
+  CMP r6,r0
+  JMP[NE] @mth_pair_tile_fail
+  JMP @mth_pair_tile_check_offset_next
+mth_pair_tile_expect_offset_eight:
+  MOVI r7,0
+  MOVHI r7,0x4100
+  CMP r6,r7
+  JMP[NE] @mth_pair_tile_fail
+mth_pair_tile_check_offset_next:
+  ADD r4,r4,r13
+  ADD r5,r5,r13
+  MOVI r7,256
+  CMP r5,r7
+  JMP[LT] @mth_pair_tile_check_offset
+
   LA r1,@mth_pair_tile_pass
   CALL @mth_pair_tile_puts
   HALT
