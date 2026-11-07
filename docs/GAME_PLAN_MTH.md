@@ -910,6 +910,8 @@ NaNNet runners advertise per-kernel capability and workspace. Only a capability 
 
 ### 20.4 Immediate gate
 
-The signed fixed-point/vector ABI is not yet frozen. Do not write a speculative signed wave solver before choosing the exact NaN16 representation and overflow semantics. First establish the canonical NaN16 assembler/interpreter, freeze the signed Q ABI, then implement K256 degree and matrix-free Lx with exact fixtures. Only after those pass should the void, eigensolver, filter, and wave modules proceed.
+The canonical NaN16 assembler/interpreter is now located and exercised by CI. The first exact K256 U16-input matrix-free Laplacian kernel is native_verified; it checks all 256 inputs before writing and passes the impulse response plus invalid-input atomicity fixture. This baseline deliberately does not define the signed fixed-point ABI for waves.
 
-**Evidence:** specification added; no graph-spectral MTH kernel or native runner capability is yet claimed complete or verified.
+Next: freeze a versioned signed fixed-point ABI (word width, Q format, rounding, overflow/saturation, scratch frame and workspace), then implement a sparse weighted-graph degree/Lx kernel against path-graph and disconnected-graph exact oracles. Only after those pass should the void potential, eigensolver/filter and wave stepper proceed. Keep the runner capability non-dispatchable until the kernel digest and workspace are registered in its manifest.
+
+**Evidence:** K256 native kernel and fixture passed canonical NaN16 CI (workflow run #17); higher-level sparse, void, spectral and wave kernels remain unimplemented.
