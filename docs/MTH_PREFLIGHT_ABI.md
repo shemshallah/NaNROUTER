@@ -96,3 +96,8 @@ A capability rejection is not a mathematical null. A failed precondition is not 
 ## Evidence boundary
 
 The fixture checks representative success and rejection paths, including output-descriptor atomicity. It is not a theorem prover, a general tensor-shape engine, or a proof of all operator contracts. The canonical NaN16 workflow must assemble and execute the fixture before the source is marked native-verified.
+
+
+## Linker integration
+
+`mth/tests/mth_linker_preflight_test.nas` exercises the canonical route-expression parser with an actual `nan://...::op:77::nan://...` expression. The parser resolves both leaf IDs, the operator ID, the output/program mapping, and the exact contract pointer returned by NaN0S `nmr_expr_resolve` (r10). That pointer is passed unchanged to `mth_preflight`; the router fixture does not reconstruct a contract record. The native MTH workflow assembles and executes this integration fixture separately from the preflight-only regression.
