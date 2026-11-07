@@ -93,6 +93,17 @@ class WaveCapabilityTests(unittest.TestCase):
             )
             self.assertEqual([row["runner_id"] for row in accepted], ["MC0:0/R1M"])
 
+            bigger = WaveStore(root / "big-bs.sqlite3", root / "big-mc.sqlite3")
+            register_manifest(
+                bigger, manifest, runner_id="MC0:0/R2M",
+                guest_workspace_words=262_144,
+            )
+            admitted = bigger.dispatchable_capabilities(
+                workspace=required, operator_digest=digest,
+                precision=target["precision"],
+            )
+            self.assertEqual([row["runner_id"] for row in admitted], ["MC0:0/R2M"])
+
     def test_manifest_json_is_valid(self):
         document = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(document["schema"], "nanrouter.wave-capabilities.v1")
