@@ -74,28 +74,85 @@ mth_comp_test_main:
   MOVI r1,68
   PUTC r1
 
-  MOVI r1,@mth_comp_pass
-  CALL @mth_comp_puts
+  MOVI r1,77
+  PUTC r1
+  MOVI r1,84
+  PUTC r1
+  MOVI r1,72
+  PUTC r1
+  MOVI r1,32
+  PUTC r1
+  MOVI r1,71
+  PUTC r1
+  MOVI r1,82
+  PUTC r1
+  MOVI r1,65
+  PUTC r1
+  MOVI r1,80
+  PUTC r1
+  MOVI r1,72
+  PUTC r1
+  MOVI r1,32
+  PUTC r1
+  MOVI r1,67
+  PUTC r1
+  MOVI r1,79
+  PUTC r1
+  MOVI r1,77
+  PUTC r1
+  MOVI r1,80
+  PUTC r1
+  MOVI r1,79
+  PUTC r1
+  MOVI r1,78
+  PUTC r1
+  MOVI r1,69
+  PUTC r1
+  MOVI r1,78
+  PUTC r1
+  MOVI r1,84
+  PUTC r1
+  MOVI r1,83
+  PUTC r1
+  MOVI r1,32
+  PUTC r1
+  MOVI r1,78
+  PUTC r1
+  MOVI r1,85
+  PUTC r1
+  MOVI r1,76
+  PUTC r1
+  MOVI r1,76
+  PUTC r1
+  MOVI r1,73
+  PUTC r1
+  MOVI r1,84
+  PUTC r1
+  MOVI r1,89
+  PUTC r1
+  MOVI r1,32
+  PUTC r1
+  MOVI r1,86
+  PUTC r1
+  MOVI r1,49
+  PUTC r1
+  MOVI r1,32
+  PUTC r1
+  MOVI r1,80
+  PUTC r1
+  MOVI r1,65
+  PUTC r1
+  MOVI r1,83
+  PUTC r1
+  MOVI r1,83
+  PUTC r1
+  MOVI r1,10
+  PUTC r1
   HALT
 mth_comp_fail:
-  MOVI r1,@mth_comp_bad
-  CALL @mth_comp_puts
+  MOVI r1,70
+  PUTC r1
   HALT
-mth_comp_puts:
-  MOVI r4,255
-mth_comp_puts_word:
-  LD r2,r1,0
-  MOVI r3,4
-mth_comp_puts_byte:
-  BOOL.8 r5,r2,r4
-  CMP r5,r0
-  RET[EQ]
-  PUTC r5
-  SHR r2,r2,8
-  SUB r3,r3,r13
-  JMP[NE] @mth_comp_puts_byte
-  ADD r1,r1,r13
-  JMP @mth_comp_puts_word
 
 .org 512
 mth_comp_offsets:
