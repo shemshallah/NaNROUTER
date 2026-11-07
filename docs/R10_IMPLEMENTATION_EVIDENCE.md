@@ -3,8 +3,8 @@
 **Date:** 2026-11-06
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 33/33 locally runnable fixtures passed; 35/35 total pass including CI-only K256 pair; 235 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
+**Result:** 37/37 locally runnable fixtures passed; 38/38 total including CI-only K256 pair; 235 Python tests passed.
+**CI:** the prior tile run 218 passed the 35-fixture set. The 38-fixture/79-step run is pending after the SVD/encode/255 integration.
 
 ## Native fixtures
 
@@ -45,6 +45,10 @@
 | 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | yes |
 | 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,711 | PASS (CI run 180) | yes |
 | 35 | General dense 256 pair-space tile16 | `mth/tests/mth_graph_pair_tile16_f32_test.nas` | 4,643,414 | PASS (CI run 218) | yes |
+| 36 | ENCODE 256→128 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | pending |
+| 37 | DECODE 128→256 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | pending |
+| 38 | 128×128 SVD top pair | `mth/tests/mth_svd_top128_test.nas` | 1,311,632 | PASS | pending |
+| 39 | 255 odd certificate | `mth/tests/mth_centrosymmetry255_block15_test.nas` | 653,687 | PASS | pending |
 
 ## Python tests
 
@@ -74,14 +78,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-33/33 local fixtures passed; 34/34 total
+37/37 local fixtures passed; 38/38 total
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 35 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 39 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 

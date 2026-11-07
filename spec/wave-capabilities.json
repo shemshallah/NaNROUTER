@@ -206,6 +206,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.centrosymmetry255.block15.f32",
+      "source": "mth/nan16/mth_centrosymmetry255_block15.nas",
+      "fixture": "mth/tests/mth_centrosymmetry255_block15_test.nas",
+      "marker": "MTH CENTROSYMMETRY 255 BLOCK15 PASS",
+      "steps": 653687,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        15,
+        255
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.vector.dot256.f32",
       "source": "mth/nan16/mth_dot256_f32.nas",
       "fixture": "mth/tests/mth_dot256_test.nas",
@@ -377,6 +392,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.svd.top128.f32",
+      "source": "mth/nan16/mth_svd_top128.nas",
+      "fixture": "mth/tests/mth_svd_top128_test.nas",
+      "marker": "MTH SVD TOP128 PASS",
+      "steps": 1311632,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128,
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.adapter.residual.128.f32",
       "source": "mth/nan16/mth_adapter_residual_128.nas",
       "fixture": "mth/tests/mth_adapter_residual_128_test.nas",
@@ -389,6 +419,36 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.decode.128_256.f32",
+      "source": "mth/nan16/mth_decode128_256.nas",
+      "fixture": "mth/tests/mth_encode_decode_test.nas",
+      "marker": "MTH ENCODE DECODE PASS",
+      "steps": 996358,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.encode.256_128.f32",
+      "source": "mth/nan16/mth_encode256_128.nas",
+      "fixture": "mth/tests/mth_encode_decode_test.nas",
+      "marker": "MTH ENCODE DECODE PASS",
+      "steps": 996358,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.graph.pair.full.128.f32",

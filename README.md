@@ -116,7 +116,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
 - `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
 - `spec/ring-255.json` — deterministic C255 CSR and 255+1 page map.
-- `spec/wave-capabilities.json` — 34-kernel capability manifest.
+- `spec/wave-capabilities.json` — 38-kernel capability manifest.
 - `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
 - `runner_riddle/wave_service.py` — authenticated submit/worker/admin facade over the wave store.
 - `runner_riddle/wave_node.py` — one NANNET node binding per universe.
@@ -126,7 +126,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 33 locally runnable fixtures and 235 Python tests pass; the 34th (K256 pair) is CI-verified. GitHub Actions run `42386209524` passed all 71 native steps for the 34-fixture set.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 37 locally runnable fixtures and 235 Python tests pass; the 38th (K256 pair) is CI-verified. The prior run `42386209524` passed 71 native steps; the 38-fixture/79-step run is pending.
 
 ## Runner Riddle
 

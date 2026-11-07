@@ -32,7 +32,10 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_matvec256_block16.nas`: 16-row × 256-column block matvec; local canonical execution PASS.
 - `nan16/mth_centrosymmetry_block16.nas`: 16-row streaming 256 certificate; local canonical execution PASS.
 - `nan16/mth_k256_pair_space_v1.nas`: closed-form K256 256×256 pair action; canonical CI run 180 PASS.
-- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, one 16×16 output tile per call; canonical NaN16 CI run 218 PASS (4,643,414 guest steps; origins (0,0) and (16,32)).\n- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, emitted as one 16×16 tile per call; source-written, canonical CI pending.
+- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, one 16×16 output tile per call; canonical NaN16 CI run 218 PASS (4,643,414 guest steps; origins (0,0) and (16,32)).
+- `nan16/mth_svd_top128.nas`: top singular pair of a dense 128×128 matrix; local canonical execution PASS.
+- `nan16/mth_encode256_128.nas`, `nan16/mth_decode128_256.nas`: dense 256↔128 encoder/decoder; local canonical execution PASS.
+- `nan16/mth_centrosymmetry255_block15.nas`: 15×255 streaming certificate for the odd 255-head block; local canonical execution PASS.
 - `nan16/mth_graph_couple_128.nas`: two-region coupling primitive; local canonical execution PASS.
 - `nan16/mth_graph_transmission_128.nas`: two-region energy/transmission metric; local canonical execution PASS.
 - `runner_riddle/wave_store.py`: BS0DB/MC0DB wave job, lease, capability, seal, signature, and trace store; 12 tests pass.
@@ -67,6 +70,9 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `tests/mth_matvec256_block16_test.nas`: 256 block matvec.
 - `tests/mth_centrosymmetry_block16_test.nas`: 256 streaming certificate.
 - `tests/mth_k256_pair_space_v1_test.nas`: K256 pair-space oracle.
+- `tests/mth_svd_top128_test.nas`: 128×128 top singular pair.
+- `tests/mth_encode_decode_test.nas`: 256↔128 encoder/decoder.
+- `tests/mth_centrosymmetry255_block15_test.nas`: 255-head odd streaming certificate.
 - `tests/mth_graph_couple_128_test.nas`: eta=0/0.5/1 coupling and invalid-eta atomicity.
 - `tests/mth_graph_transmission_128_test.nas`: energy ratio and zero-denominator checks.
 - `tests/test_wave_store.py`, `tests/test_ring_csr.py`, `tests/test_wave_capabilities.py`, `tests/test_wave_adapter.py`: Python storage, ring, capability, and adapter contracts.
@@ -125,7 +131,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures passed local `nan_cli` and GitHub Actions run `42386209524` (71/71 steps); the CI workflow includes all 34 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures passed local `nan_cli` and GitHub Actions run `42386209524` (71/71 steps); the CI workflow includes all 37 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space

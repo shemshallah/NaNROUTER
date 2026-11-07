@@ -170,6 +170,17 @@ jobs:
           cat build/mth/void.err
           grep -q '^MTH GRAPH VOID POTENTIAL PASS' build/mth/void.out
 
+      - name: Assemble 255-block centrosymmetry fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry255_block15_test.nas > build/mth/centro255b.nan
+
+      - name: Execute 255-block centrosymmetry fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/centro255b.nan --steps 20000000 --serial > build/mth/centro255b.out 2> build/mth/centro255b.err
+          cat build/mth/centro255b.out
+          cat build/mth/centro255b.err
+          grep -q '^MTH CENTROSYMMETRY 255 BLOCK15 PASS' build/mth/centro255b.out
+
       - name: Assemble 256-block centrosymmetry fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry_block16_test.nas > build/mth/centro256b.nan
@@ -258,6 +269,17 @@ jobs:
           cat build/mth/dft256.err
           grep -q '^MTH GRAPH DFT256 PASS' build/mth/dft256.out
 
+      - name: Assemble 128-SVD fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_svd_top128_test.nas > build/mth/svd128.nan
+
+      - name: Execute 128-SVD fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/svd128.nan --steps 100000000 --serial > build/mth/svd128.out 2> build/mth/svd128.err
+          cat build/mth/svd128.out
+          cat build/mth/svd128.err
+          grep -q '^MTH SVD TOP128 PASS' build/mth/svd128.out
+
       - name: Assemble 128-power-iteration fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_power_iter128_test.nas > build/mth/power128.nan
@@ -301,6 +323,17 @@ jobs:
           cat build/mth/pairfull.out
           cat build/mth/pairfull.err
           grep -q '^MTH GRAPH PAIR FULL 128 PASS' build/mth/pairfull.out
+
+      - name: Assemble encode/decode fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_encode_decode_test.nas > build/mth/encode-decode.nan
+
+      - name: Execute encode/decode fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/encode-decode.nan --steps 30000000 --serial > build/mth/encode-decode.out 2> build/mth/encode-decode.err
+          cat build/mth/encode-decode.out
+          cat build/mth/encode-decode.err
+          grep -q '^MTH ENCODE DECODE PASS' build/mth/encode-decode.out
 
       - name: Assemble adapter residual fixture with NaN16 source assembler
         run: |

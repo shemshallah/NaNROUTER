@@ -16,9 +16,9 @@
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 33/33 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 37/37 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 235 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42386209524` (71/71 steps).
+- [x] Expanded GitHub Actions native workflow passed prior run `42386209524` (71/71 steps); 38-fixture/79-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -58,8 +58,8 @@
 - [x] Add a separate 255-point head-only DFT reference.
 - [x] Add even 256-position fold vector kernel.
 - [x] Add odd 255-head fold vector kernel.
-- [x] Add 128×128 centrosymmetry certificate.
-- [ ] Add streaming 255/256 centrosymmetry certificate.
+- [x] Add 128×128, 16×256, and 15×255 certificates.
+- [x] Add 16×256 and 15×255 streaming certificates.
 - [x] Add 128×128 power-iteration kernel.
 - [ ] Add Lanczos/top-k deflation.
 - [ ] Add residual/orthogonality fixture for a real operator.
@@ -130,13 +130,13 @@
 - [x] Add adapter mode and ablation descriptor.
 - [x] Add frozen-base ablation labels and safety gate.
 - [x] Add 128-dimensional NaN16 adapter residual composition.
-- [ ] Add typed ENCODE/DECODE composition.
+- [x] Add 256→128 ENCODE and 128→256 DECODE kernels.
 - [ ] Run retrieval/memory adapter and frozen-base ablations.
 - [ ] Enable only after measured held-out benefit.
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 34 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 38 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -162,14 +162,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-33/34 fixtures passed
+37/37 local fixtures passed; 38/38 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI: `42386209524` — 71/71 steps for the 34-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42386209524` — 71/71 steps; 38-fixture/79-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **35 native MTH kernels with fixtures**: 33 prior fixtures pass in the local harness and all 35 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **39 native MTH kernels with fixtures**: 37 pass in the local harness, the prior 35 pass canonical CI (including the tiled 256 pair), and the new encode/decode, SVD, and 255 odd certificate await the next CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -51,13 +51,13 @@ The 255 + 1 rule remains:
 | Ring geometry | C255 head ring, C256 ring, 255+1 port assembly | Native + CI |
 | Sparse graph | unweighted Q16.16 Laplacian, weighted CSR v2, energy, components | Native + CI |
 | Void | regularized inverse-square float32 potential | Native + CI |
-| Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate | Native + CI |
-| Spectral | 256-point DFT, 255-point DFT, 128×128 power iteration, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI |
+| Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate, 15×255 streaming 255 certificate | Native + CI (255 pending CI) |
+| Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI (SVD pending CI) |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
 | Coupling / creativity primitive | two-region coupling, transmission metric | Native + CI |
 | Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense 256 pair tile | Native + CI |
 | Vector / match | dot, norm, axpy, cosine similarity | Native + CI |
-| Adapter | 128-dimensional `h + beta*C*u` residual | Native + CI |
+| Adapter | 128-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI (encode/decode pending CI) |
 
 ### 1.2 System/control plane
 
@@ -73,17 +73,17 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 35 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 35-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 39 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 39-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 69 steps, 33 fixtures, all passing |
 
 ### 1.3 Evidence baseline
 
 ```
-33/33 locally runnable fixtures pass; K256 pair passed canonical CI
-34/34 total native fixtures; 235/235 Python tests pass
-GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
+37/37 locally runnable fixtures pass; K256 pair passed canonical CI
+38/38 total native fixtures; 235/235 Python tests pass
+GitHub Actions prior run 42386209524: 71/71 steps; 38-fixture/79-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -91,13 +91,13 @@ GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 | Area | Open item |
 |---|---|
 | R2 | radial block descriptor/tridiagonal layout, inner Dirichlet/Robin descriptor, radial energy/localization fixture |
-| R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/256 block certificates done |
+| R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
-| R5 | Full aperture SVD/top-k, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
+| R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
 | R6 | 16×16 dense pair tile native_verified; next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep, phase-coherence metric, held-out creativity/association experiment |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
-| R9 | typed ENCODE/DECODE, frozen-base ablations, measured LM benefit |
+| R9 | 256-dimensional residual, frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE done |
 | R10 | production digest registration, capability promotion |
 
 ---
@@ -120,15 +120,15 @@ GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 | Layer | Responsibility | Existing anchor |
 |---|---|---|
 | L0 | NaN16 machine, gated word/instruction contract | NaN0S |
-| L1 | MTH descriptor/registry/evidence | **to build** |
+| L1 | MTH descriptor/registry/evidence | implemented (`mth_registry`, 26 tests) |
 | L2 | exact scalar/bit/integer/vector | existing kernels |
 | L3 | graph, ring, void, energy, components | existing kernels |
 | L4 | spectral, DFT, fold, certificate, power iteration | existing kernels |
 | L5 | wave dynamics, energy, damping, drive | existing kernels |
 | L6 | aperture, pair, low-rank, adapter | existing kernels |
-| L7 | BS0DB/MC0DB, jobs, leases, capabilities, NANNET node | existing modules |
+| L7 | BS0DB/MC0DB, jobs, leases, capabilities, NANNET node | implemented (`WaveStore/WaveService/WaveNode`) |
 | L8 | HTTP/NANNET transport and federation | HTTP adapter built; live federation to build |
-| L9 | LM adapter and held-out evaluation | **to build** |
+| L9 | LM adapter and held-out evaluation | adapter contract + 128 residual; ablations to build |
 
 ### 2.2 The operator model
 
@@ -718,7 +718,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 ### 7.9 From R9 LM adapter
 
 - Add 256-dimensional residual.
-- Add typed ENCODE/DECODE.
+- ENCODE/DECODE 256↔128 implemented; add 256-dimensional residual/ablation.
 - Run frozen-base ablations.
 - Enable only after measured held-out benefit.
 
@@ -744,7 +744,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 | P6 | 256 aperture SVD/top-k | P2/P5 | singular residual + top-k |
 | P7 | 255/256 dense/paged eigenbasis | P2/P6 | versioned page/eigenbasis test |
 | P8 | NANNET0 persistence + Koyeb | P4 | signed volume registry |
-| P9 | LM ENCODE/DECODE + ablation | P6/P8 | held-out benefit or rejection |
+| P9 | LM ablation | P6/P8 | held-out benefit or rejection |
 | P10 | R7 avoided crossing/phase | coupling kernel | held-out experiment |
 | P11 | Point-0 NaN→binary→NaN bridge/router — implemented | scheduler + address grammar | stable ingress, active-slot routing, stale epoch rejection |
 
@@ -768,7 +768,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 
 ### 8.3 Third batch
 
-- LM ENCODE/DECODE and frozen-base ablations.
+- Frozen-base LM ablations with the new ENCODE/DECODE kernels.
 - R7 avoided-crossing/phase-coherence experiment.
 - Production MC0DB registration and promotion.
 
@@ -913,6 +913,10 @@ The shortest correct sentence is:
 
 
 
+
+
+
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -933,6 +937,7 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.fold.f32` | `float32` | 9,281 | yes |
 | `mth.centrosymmetry.128.f32` | `float32` | 676,252 | yes |
 | `mth.centrosymmetry256.block16.f32` | `float32` | 337,623 | yes |
+| `mth.centrosymmetry255.block15.f32` | `float32` | 653,687 | pending |
 | `mth.vector.dot256.f32` | `float32` | 9,144 | yes |
 | `mth.vector.norm256.f32` | `float32` | 6,842 | yes |
 | `mth.vector.axpy256.f32` | `float32` | 8,389 | yes |
@@ -945,7 +950,10 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.matvec.128.f32` | `float32` | 249,914 | yes |
 | `mth.matvec256.block16.f32` | `float32` | 148,561 | yes |
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
+| `mth.svd.top128.f32` | `float32` | 1,311,632 | pending |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
+| `mth.decode.128_256.f32` | `float32` | 996,358 | pending |
+| `mth.encode.256_128.f32` | `float32` | 996,358 | pending |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |
 | `mth.graph.pair.rank1.128.f32` | `float32` | 252,060 | yes |
 | `mth.lowrank.add.128.f32` | `float32` | 1,056,470 | yes |
@@ -953,23 +961,3 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.dft255.f32` | `float32` | 6,666,266 | yes |
 | `mth.graph.couple128.f32` | `float32` | 8,637 | yes |
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
-
-## Appendix C — Point-0 trace example
-
-A single ring request, in order:
-
-```text
-1. client builds NaN16 frame: request_id, route=point 0, words[]
-2. point 0 encodes binary envelope:
-     magic/version, request_id, word_count, payload bytes, SHA-256
-3. scheduler reports active slot (for example R2, epoch 7)
-4. point 0 routes envelope to R2; R2 does not appear in the client address
-5. R2 executes the NaN16 plan/work and returns binary result bytes
-6. point 0 validates result digest and decodes NaN16 words
-7. point 0 writes trace: request_id, point0, active_slot, epoch,
-     binary_digest, result_digest, status
-8. client receives NaN16 result; active slot remains internal
-```
-
-A later request after a slot cycle uses the same point-0 address and reaches the new active slot. Stale slot/epoch envelopes are rejected.
-
