@@ -2029,3 +2029,29 @@ A rule record must preserve the orthogonal axes. At minimum:
 ```
 
 A client may **claim** a validity level; the validator assigns `earned_validity`. The claimed value can never be used as authority. Until a trusted proof checker exists, production validity is capped at V2 and proof candidates are explicitly unchecked.
+
+
+## 23. Native preflight gate implementation (2026-11-07)
+
+The first executable gate is implemented at `mth/nan16/mth_preflight_gate.nas`.
+It is native NaN16 guest code, not a host-language math implementation.
+
+The gate checks:
+- ABI version and exact rule epoch;
+- ordered input/output type signature;
+- both operand domains against the authoritative rule domain;
+- optional equal-dimension shape policy;
+- required capability subset against available capabilities;
+- minimum proof level and enabled policy;
+- four words of the authoritative rule digest.
+
+It returns status 0 for allow and typed denial statuses 1–9. The caller must bind
+the exact candidate, rule epoch, and digest into NMP/lease admission. This
+primitive does not replace ACL authorization, numerical definedness, proof
+verification, or runner health/capacity checks.
+
+A native guest fixture is added at `mth/tests/mth_preflight_gate_test.nas`.
+It checks the accepted descriptor and a stale candidate epoch. The dedicated
+workflow `.github/workflows/native-preflight-gate.yml` assembles the fixture
+with the canonical NaN0S toolchain and executes it under `nan_cli`. CI evidence
+must be observed before claiming the fixture passes.
