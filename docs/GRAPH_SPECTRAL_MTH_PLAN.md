@@ -237,7 +237,7 @@ Ran 189 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed run `42384223162` (65/65 steps) for the 31-fixture set. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed run `42386209524` (71/71 steps) for the 31-fixture set. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
 
 
 ## K256 closed-form pair-space v1 — native verified

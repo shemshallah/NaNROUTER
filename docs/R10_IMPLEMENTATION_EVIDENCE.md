@@ -3,7 +3,7 @@
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
 **Result:** 33/33 locally runnable fixtures passed; 34/34 total pass including CI-only K256 pair; 189 Python tests passed.
-**CI:** the prior 31-fixture set passed run `42384223162` (65/65 steps). The 33-fixture run is pending.
+**CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
 
 ## Native fixtures
 
@@ -40,8 +40,8 @@
 | 29 | 128×128 power iteration | `mth/tests/mth_power_iter128_test.nas` | 758,847 | PASS | yes |
 | 30 | Rank-1 low-rank add | `mth/tests/mth_lowrank_add_128_test.nas` | 1,056,470 | PASS | yes |
 | 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | yes |
-| 32 | 256 block matvec | `mth/tests/mth_matvec256_block16_test.nas` | 148,561 | PASS | pending |
-| 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | pending |
+| 32 | 256 block matvec | `mth/tests/mth_matvec256_block16_test.nas` | 148,561 | PASS | yes |
+| 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | yes |
 | 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,711 | PASS (CI run 180) | yes |
 
 ## Python tests
@@ -83,7 +83,7 @@ Run it after any kernel change.
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
 - No full aperture SVD/top-k or Lanczos deflation; the 128 power iteration and primitive compositions exist.
-- No full 256×256 pair space; only the bounded 128×128 prototype.
-- No NANNET HTTP node integration beyond the ring port descriptor and storage plane.
+- K256 closed-form 256×256 pair exists; generic 256×256 paged/tiled pair remains open.
+- Wave HTTP adapter exists; live Koyeb/NANNET0 deployment remains open.
 - The 128 adapter residual exists, but no LM ablation or held-out result exists; the adapter remains disabled.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

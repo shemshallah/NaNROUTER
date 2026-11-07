@@ -18,7 +18,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 33/33 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 189 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42384223162` (65/65 steps); 34-fixture/71-step run pending.
+- [x] Expanded GitHub Actions native workflow passed run `42386209524` (71/71 steps).
 
 ## R0 — Contract and storage freeze
 
@@ -89,6 +89,7 @@
 
 ## R6 — Product space
 
+- [x] Add K256 closed-form 256×256 pair-space action.
 - [x] Add dense 128×128 pair-space action `LU + ULᵀ`.
 - [x] Add rank-1 128 pair-space prototype.
 - [x] Add small explicit fixture (L=2I) and zero-state fixture.
@@ -138,7 +139,7 @@
 - [x] Add `mth/README.md` inventory updates.
 - [x] Add `docs/GRAPH_SPECTRAL_MTH_PLAN.md` implementation update.
 - [x] Add `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
-- [x] Run the prior 31-fixture CI workflow on GitHub Actions.
+- [x] Run the 34-fixture CI workflow on GitHub Actions.
 - [ ] Register final CI digests in the production MC0DB.
 
 ## Agent dispatch board
@@ -165,7 +166,7 @@ Ran 189 tests
 OK
 ```
 
-CI prior: `42384223162` — 65/65 steps for the 31-fixture set; 33-fixture run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42386209524` — 71/71 steps for the 34-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

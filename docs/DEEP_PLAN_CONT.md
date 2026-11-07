@@ -55,7 +55,7 @@ The 255 + 1 rule remains:
 | Spectral | 256-point DFT, 255-point DFT, 128×128 power iteration, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
 | Coupling / creativity primitive | two-region coupling, transmission metric | Native + CI |
-| Pair / product | full 128×128 pair action, rank-1 pair action, rank-1 low-rank add | Native + CI |
+| Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add | Native + CI |
 | Vector / match | dot, norm, axpy, cosine similarity | Native + CI |
 | Adapter | 128-dimensional `h + beta*C*u` residual | Native + CI |
 
@@ -79,9 +79,9 @@ The 255 + 1 rule remains:
 ### 1.3 Evidence baseline
 
 ```
-33/33 local fixtures pass; K256 pair passed canonical CI run 180
+33/33 locally runnable fixtures pass; K256 pair passed canonical CI
 34/34 total native fixtures; 189/189 Python tests pass
-GitHub Actions run 42384223162: 65/65 steps passed (prior 31-fixture set); 33-fixture run pending
+GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -89,12 +89,12 @@ GitHub Actions run 42384223162: 65/65 steps passed (prior 31-fixture set); 33-fi
 | Area | Open item |
 |---|---|
 | R2 | radial block descriptor/tridiagonal layout, inner Dirichlet/Robin descriptor, radial energy/localization fixture |
-| R3 | 255/256 streaming certificate, Lanczos/top-k deflation, residual/orthogonality fixture for a real operator |
+| R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/256 block certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
-| R5 | QUERY/MATCH/FILTER/DRIVE composition, observability/reachability metric, capacity-vs-SNR, colored noise, full aperture SVD/top-k |
-| R6 | 256×256 paged/tiled pair action, rank-R sum, matrix-free product |
+| R5 | Full aperture SVD/top-k, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
+| R6 | Generic 256×256 paged/tiled pair action, rank-R sum, matrix-free product; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep, phase-coherence metric, held-out creativity/association experiment |
-| R8 | NANNET HTTP endpoints, live Koyeb volume-registry check, production MC0DB registration |
+| R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
 | R9 | typed ENCODE/DECODE, frozen-base ablations, measured LM benefit |
 | R10 | production digest registration, capability promotion |
 
@@ -860,7 +860,7 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.components.256` | `u32` | 29,931 | yes |
 | `mth.graph.fold.f32` | `float32` | 9,281 | yes |
 | `mth.centrosymmetry.128.f32` | `float32` | 676,252 | yes |
-| `mth.centrosymmetry256.block16.f32` | `float32` | 337,623 | pending |
+| `mth.centrosymmetry256.block16.f32` | `float32` | 337,623 | yes |
 | `mth.vector.dot256.f32` | `float32` | 9,144 | yes |
 | `mth.vector.norm256.f32` | `float32` | 6,842 | yes |
 | `mth.vector.axpy256.f32` | `float32` | 8,389 | yes |
@@ -871,7 +871,7 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.harmonic.wave_energy.f32` | `float32` | 53,877 | yes |
 | `mth.harmonic.damped_energy.f32` | `float32` | 53,890 | yes |
 | `mth.matvec.128.f32` | `float32` | 249,914 | yes |
-| `mth.matvec256.block16.f32` | `float32` | 148,561 | pending |
+| `mth.matvec256.block16.f32` | `float32` | 148,561 | yes |
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |
