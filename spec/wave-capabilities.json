@@ -377,6 +377,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.matvec256.full.f32",
+      "source": "mth/nan16/mth_matvec256_full.nas",
+      "fixture": "mth/tests/mth_matvec256_full_test.nas",
+      "marker": "MTH MATVEC256 FULL PASS",
+      "steps": 2978362,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.power_iter.128.f32",
       "source": "mth/nan16/mth_power_iter128.nas",
       "fixture": "mth/tests/mth_power_iter128_test.nas",
@@ -405,6 +420,21 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.svd.top256.f32",
+      "source": "mth/nan16/mth_svd_top256.nas",
+      "fixture": "mth/tests/mth_svd_top256_test.nas",
+      "marker": "MTH SVD TOP256 PASS",
+      "steps": 11002235,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.adapter.residual.128.f32",
@@ -492,6 +522,36 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.decode.256.full.f32",
+      "source": "mth/nan16/mth_decode256_full.nas",
+      "fixture": "mth/tests/mth_encode_decode256_test.nas",
+      "marker": "MTH ENCODE DECODE 256 PASS",
+      "steps": 1655853,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.encode.256.full.f32",
+      "source": "mth/nan16/mth_encode256_full.nas",
+      "fixture": "mth/tests/mth_encode_decode256_test.nas",
+      "marker": "MTH ENCODE DECODE 256 PASS",
+      "steps": 1655853,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.graph.pair.full.128.f32",

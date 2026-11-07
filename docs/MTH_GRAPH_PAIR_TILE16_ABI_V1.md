@@ -1,6 +1,6 @@
 # MTH 256x256 pair-space tile ABI v1
 
-Status: NATIVE_VERIFIED as a mathematical reference by canonical NaN16 CI run 218 (4,643,414 guest steps); NOT DISPATCHABLE under the 512 KiB guest budget.
+Status: NATIVE_VERIFIED as a mathematical reference by canonical NaN16 CI run 218 (4,643,414 guest steps); Fits the 1 MiB guest target; the old 512 KiB limit is historical.
 
 ## Operation
 
@@ -34,7 +34,7 @@ For each output cell, the first sum and second sum use separate +0.0 accumulator
 
 ## Memory budget and dispatch status
 
-The complete guest working set is 65,536 + 4,096 + 4,096 + 256 + 6 = 73,990 NaN16 words. At 8 bytes per NaN16 word this is 591,920 bytes, exceeding the 512 KiB (65,536-word) guest ceiling by 8,454 words. The kernel is retained as a mathematically verified CI reference, but a 512 KiB MthSystem plan must reject it. Use the K16 streaming ABI in docs/MTH_GRAPH_PAIR_TILE16_K16_ABI_V1.md for bounded execution.
+The complete guest working set is 65,536 + 4,096 + 4,096 + 256 + 6 = 73,990 NaN16 words. At 8 bytes per NaN16 word this is 591,920 bytes. The 73,990-word working set fits the new 1 MiB (131,072-word) target. Under the old 512 KiB limit it was reference-only; that restriction is historical. Use the K16 streaming ABI in docs/MTH_GRAPH_PAIR_TILE16_K16_ABI_V1.md for bounded execution.
 
 ## Preconditions and limits
 

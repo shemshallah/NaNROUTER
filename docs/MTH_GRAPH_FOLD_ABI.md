@@ -159,7 +159,7 @@ Reasons:
    access to the paired entries across the full matrix.
 2. In this NaN16 layout each float32 coefficient occupies one 8-byte word.
    A full 256x256 float32 matrix is 65,536 coefficients = 524,288 bytes of word
-   storage, which is the entire declared 512 KiB guest working set before any
+   storage, which is the old 512 KiB guest working set before any
    code, vectors, or scratch is added. A test that materializes the full matrix
    cannot honor that budget.
 3. A faithful fast-path certificate needs a paged/streaming or digest-bound

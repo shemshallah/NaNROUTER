@@ -496,7 +496,7 @@ A cross-coupling term can be written as a low-rank sum:
 K = Σ_{r=1}^R B_r ⊗ C_r
 ```
 
-The rank `R`, memory, and per-step cost are declared before execution. Never materialize a dense 65,536×65,536 operator. That is 4,294,967,296 entries; even at one byte per entry it is four gigabytes, and at float32 it is sixteen gigabytes. The guest has 512 KiB of working memory. The product operator is applied matrix-free, blockwise, or low-rank.
+The rank `R`, memory, and per-step cost are declared before execution. Never materialize a dense 65,536×65,536 operator. That is 4,294,967,296 entries; even at one byte per entry it is four gigabytes, and at float32 it is sixteen gigabytes. The guest target is 1 MiB of working memory (131,072 NaN16 words); the old 512 KiB limit is historical. The product operator is applied matrix-free, blockwise, or low-rank.
 
 ### 5.4 The 65,536 modes are not 65,536 independent controls
 
@@ -1093,18 +1093,18 @@ No silent coercion. No hidden host float. No NaN-payload arithmetic without deco
 
 The guest working set is the constraint that shapes the algorithms.
 
-| Object | Size at float32 | Size at Q16.16 | Fits 512 KiB guest? |
+| Object | Size at float32 | Size at Q16.16 | Fits 1 MiB guest target? |
 |---|---:|---:|---|
 | 256-vector | 1 KiB | 0.5 KiB | Yes. |
 | 256×256 matrix | 256 KiB | 128 KiB | One float32 matrix plus small scratch; two matrices fill the guest. |
-| 256×256 matrix + eigenvectors | 512 KiB | 256 KiB | Float32 does not fit with scratch; Q16.16 does. |
+| 256×256 matrix + eigenvectors | 512 KiB | 256 KiB | Fits with scratch under 1 MiB. |
 | 128×128 folded block + eigenvectors | 128 KiB | 64 KiB | Yes, with scratch. |
 | Two 128×128 blocks + eigenvectors | 256 KiB | 128 KiB | Yes at float32 with care. |
-| 256×256 complex float32 | 512 KiB | 256 KiB | Complex float32 does not fit with scratch; Q16.16 or paging. |
+| 256×256 complex float32 | 512 KiB | 256 KiB | Fits with scratch under 1 MiB; split/paged for large plans. |
 | Product state 256×256 | 256 KiB | 128 KiB | One buffer fits; double buffering at float32 fills the guest. |
 | Dense 65,536×65,536 | 16 GiB | 8 GiB | Forbidden. |
 
-The 8 MiB universe is the persistent store, not the guest working set. At 32 KiB per page, the 8 MiB universe has **256 pages**: 255 head pages plus one NANNET node page. The 512 KiB guest holds 16 pages. That is a direct structural alignment: the 255+1 convention is also the universe page layout.
+The 8 MiB universe is the persistent store, not the guest working set. At 32 KiB per page, the 8 MiB universe has **256 pages**: 255 head pages plus one NANNET node page. The 1 MiB guest holds 32 pages. That is a direct structural alignment: the 255+1 convention is also the universe page layout.
 
 A 256×256 float32 ring matrix is 256 KiB = 8 pages; a 255×255 float32 head-only matrix is 254 KiB = 7.94 pages (127 KiB at Q16.16). The universe can hold the matrix, eigenbasis, ring samples, and seal pages; the guest can hold one or two matrices at a time. The wave engine must page, tile, fold, or low-rank. The 2 GiB overbootstrap map is hosted only by the Bootstrap runner and is not copied into the guest or to peers; it may index signatures and candidate operators, not store raw dense wave arrays.
 
@@ -1251,7 +1251,7 @@ The 2 GiB map stays on the Bootstrap runner. It is not copied to Android or peer
 - storing evidence records and match indexes;
 - meta-map learning over ring metrics and fold certificates.
 
-It is not a place to materialize dense wave arrays or the 65,536×65,536 product operator. The 8 MiB universe holds the persistent wave pages; the 512 KiB guest holds the working set; the 2 GiB map holds control/meta records.
+It is not a place to materialize dense wave arrays or the 65,536×65,536 product operator. The 8 MiB universe holds the persistent wave pages; the 1 MiB guest holds the working set; the 2 GiB map holds control/meta records.
 
 ### 11.7 Storage and execution fabric: NaNROUTER, CPU runners, Koyeb BS0DB/MC0DB
 
@@ -1709,7 +1709,7 @@ Open mathematical questions:
 2. Does the void actually concentrate energy in a ring, or does it merely shift the spectrum?
 3. Is the cross-modal aperture `M_wave` normal, Hermitian, scattering, or general in practice?
 4. How sparse is the centrosymmetry-breaking residual when the void is off-centre?
-5. Can a NaN16 float32 eigensolver meet the residual target within the 512 KiB guest and the declared time budget?
+5. Can a NaN16 float32 eigensolver meet the residual target within the 1 MiB guest target and the declared time budget?
 6. Does weak barrier coupling improve associations after controlling for novelty and factuality?
 7. Does the ring’s phase coherence survive the port coupling and the network?
 8. What is the correct signed binding between 256 mathematical ring positions (255 heads + 1 NANNET port), 249 learning heads, and 6 control heads?
@@ -1730,7 +1730,7 @@ Open mathematical questions:
 8. **256 ring positions are not 256 maxima.** A real bandlimited field on 256 positions has at most 128 maxima. Measure antinodes; do not assume them.
 9. **The NANNET node is the universe’s single network port.** It receives and emits signed spectral signatures, not the wave itself. Phase coherence is not automatic; use phase-invariant matching unless a clock model exists.
 10. **Tunneling is an experiment, not a conclusion.** Measure transmission, avoided crossings, and downstream outcomes; do not equate unusual output with creativity.
-11. **All mathematics is NaN16.** The host launches, transports, and compares bytes; it does not compute the math. Memory is 512 KiB guest working set, 8 MiB persistent universe, no dense 65,536×65,536 product.
+11. **All mathematics is NaN16.** The host launches, transports, and compares bytes; it does not compute the math. Memory target is 1 MiB guest working set, 8 MiB persistent universe, no dense 65,536×65,536 product.
 12. **The six BSR heads remain control.** Each universe has 255 heads: 249 learning + 6 control; the 256th ring position is the NANNET port. A mathematical symmetry is not an authorization symmetry.
 13. **The state seal is a cartridge.** A portable, signed, replayable record, not a consciousness claim and not a transfer of authority.
 15. **Use the fabric we have.** NaNROUTER routes through point 0; the single-active six-slot runner ring executes with a 7 GiB active ceiling; Koyeb BS0DB stores ingress/egress, traces, seals, and signatures; MC0DB stores control/meta, candidates, capabilities, and match indexes; the 8 MiB universe stores 255 head pages + 1 NANNET page; the 2 GiB overbootstrap stays on Bootstrap.
@@ -1898,7 +1898,7 @@ If you ever need the myth again: the Void shapes the spectrum, the Ring samples 
 The first general 256×256 pair-space tile kernel is source-written in
 `mth/nan16/mth_graph_pair_tile16_f32.nas`. It computes one 16×16 block
 of `LU + UL^T` from a full U page and two immutable 16-row windows of L.
-This respects the 512 KiB guest working-set ceiling and leaves the
+This respects the 1 MiB guest working-set target and leaves the
 full product operator matrix-free.
 
 The 16×16 fixture uses L=2I and verifies the complete tile oracle Y=4U.
@@ -1906,7 +1906,7 @@ The ABI, fixture, and canonical CI workflow entry are committed on the
 implementation branch. Canonical NaN16 CI run 242 verifies the bounded K16 accumulator/finalizer
 (283,436 guest steps; 1,542 NaN16 words). The earlier full-U tile reference
 is also mathematically verified, but its 73,990-word working set exceeds the
-512 KiB guest budget and it is not dispatchable. Full page-window orchestration
+1 MiB guest target and it is dispatchable there; old 512 KiB budget is historical. Full page-window orchestration
 is the next open gate. Next: implement a
 page-window orchestrator that fetches the correct L row windows, runs all
 256 tiles against one operator digest, and publishes the output generation

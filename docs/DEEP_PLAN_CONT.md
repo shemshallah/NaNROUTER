@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **43 native MTH kernels with fixtures**: 41 pass in the local harness and all prior fixtures pass canonical CI; all fixtures pass the combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **47 native MTH kernels with fixtures**: 44 pass in the local harness and all prior fixtures pass canonical CI; the 1 MiB full 256 matvec/SVD/ENCODE/DECODE fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -52,7 +52,7 @@ The 255 + 1 rule remains:
 | Sparse graph | unweighted Q16.16 Laplacian, weighted CSR v2, energy, components | Native + CI |
 | Void | regularized inverse-square float32 potential | Native + CI |
 | Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate, 15×255 streaming 255 certificate | Native + CI |
-| Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI |
+| Spectral | 256/255-point DFT, 128×128 power iteration, 128/256 SVD top pair, 128/256 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI (1 MiB full 256 pending) |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
 | Coupling / creativity primitive | two-region coupling, transmission metric, two-level avoided-crossing spectrum, 128 phase coherence | Native + CI (new two-level/phase pending CI) |
 | Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense pair-tile reference, bounded K16 streaming pair-tile accumulator | Native + CI |
@@ -73,10 +73,10 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 40 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 43-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 43 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 47-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 87 steps, 42 fixtures, all passing |
+| `.github/workflows/mth-native-contract.yml` | 93 steps, 45 fixtures; 1 MiB additions pending |
 
 ### 1.3 Evidence baseline
 
@@ -94,10 +94,10 @@ GitHub Actions run 42389738332: 87/87 steps passed (42-fixture set)
 | R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/255/256 certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
-| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; full-U pair-tile reference exceeds 512 KiB and is not dispatchable; K256 closed-form 256×256 done |
+| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; full-U pair-tile reference now fits the 1 MiB target; page-window orchestration/atomic publication still open; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep driver, held-out creativity/association experiment; two-level spectrum and phase metric done |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
-| R9 | frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE and 256-block residual done |
+| R9 | frozen-base ablations, measured LM benefit; full 256×256 ENCODE/DECODE and 256-block residual done |
 | R10 | production digest registration, capability promotion |
 
 ---
@@ -210,7 +210,7 @@ A 256×256 matrix has 256 eigen/singular patterns. The 65,536 product modes belo
 | 256-vector | 256 | 1 KiB | 1 | yes |
 | 255×255 head matrix | 65,025 | 254 KiB | ~8 | one matrix + small scratch |
 | 256×256 ring matrix | 65,536 | 256 KiB | 8 | one matrix + small scratch |
-| 256×256 complex float32 | 2 × 65,536 | 512 KiB | 16 | full guest; no scratch |
+| 256×256 complex float32 | 2 × 65,536 | 512 KiB | 16 | Fits under 1 MiB with ~512 KiB scratch. |
 | 256×256 Q16.16 | 65,536 | 128 KiB | 4 | comfortable |
 | 128×128 pair state | 16,384 | 64 KiB | 2 | comfortable |
 | product state 256×256 | 65,536 | 256 KiB | 8 | one buffer; double buffer tight |
@@ -245,6 +245,29 @@ The aperture’s role determines the decomposition. Do not force a Hermitian eig
 ---
 
 ## 4. Memory architecture: single-active NaNROUTER-0..5, NANNET0, and paged 256×256
+
+### 4.0 Guest budget update: 1 MiB target
+
+The owner reports that GLT is increasing the guest page limit to **1 MiB**. The design target is now:
+
+```
+1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
+```
+
+The old 512 KiB / 65,536-word evidence remains historical. Kernels and fixtures that exceed the old limit are marked **pending 1 MiB toolchain** until the canonical NaN16 harness executes them. The active-runner 7 GiB ceiling and durable-page model are unchanged.
+
+Immediate consequences:
+
+| Object | Old 512 KiB | New 1 MiB |
+|---|---|---|
+| 256×256 float32 matrix | fits alone | fits with vectors/scratch |
+| 256×256 matrix + eigenvectors | tight/over | fits, with ~512 KiB scratch |
+| 256×256 complex float32 | full guest | fits with ~512 KiB scratch |
+| full 256 matvec A+x+y | would not fit with code | 66,048 words, fits |
+| full-U pair-tile reference (73,990 words) | not dispatchable | **fits** |
+| U+L+output full pair (196,608 words) | over | still over |
+| 65,536² dense product | 16 GiB | still forbidden |
+
 
 ### 4.1 What NANROUTER-0..5 is: a single-active runner ring
 
@@ -352,7 +375,7 @@ The 255-head case is odd: one fixed middle head and 127/128 blocks. It must not 
 |---|---|
 | 255×255 head operator | dense is 254 KiB; keep dense for reference, page for versions |
 | 256×256 ring operator | dense is 256 KiB; keep dense for reference, block/paged for large plans |
-| complex 256×256 | split real/imag or Q16.16; do not double-buffer in one guest |
+| complex 256×256 | fits under 1 MiB with scratch; split/paged for large plans |
 | 256×256 power/SVD | block matvec; keep basis vectors and top-k, not full dense workspace |
 | 256×256 pair state | block/tile; do not materialize the 256²×256² operator |
 | 65,536 product state | one 256 KiB buffer; double buffer tight; use Q16.16 or paging |
@@ -466,7 +489,7 @@ The user’s instinct to “leave some detail out if the 256×256 dense” is ha
 
 - **256×256 dense is small** and should be kept exact when it fits: 256 KiB = 8 pages.
 - **255×255 dense** is 254 KiB and also fits.
-- **256×256 complex float32** is 512 KiB and is the real guest edge; split/paged/Q16.16.
+- **256×256 complex float32** is 512 KiB; it fits under 1 MiB with scratch, and can still be split/paged for large plans.
 - **65,536² dense** is the object that must never be materialized.
 
 So: keep the 256×256 aperture/wave operator dense for reference and small experiments; use block/tiled/paged paths for larger plans; use matrix-free/low-rank for the product space. Do not degrade the 256×256 correctness just to save memory.
@@ -482,7 +505,7 @@ x:       256 float32
 y_block: 16 float32
 ```
 
-Sixteen calls with the same `x` and successive row blocks produce the full 256×256 matvec. This keeps the guest under budget and maps cleanly to 16 sequential calls on the single active runner.
+Sixteen calls with the same `x` and successive row blocks produce the full 256×256 matvec. A full 256×256 matvec also fits the 1 MiB target (A+x+y ≈ 66,048 words); the 16-block form remains the bounded/paged path for multi-tenant and >1 MiB plans.
 
 ### 5.4 256×256 streaming certificate
 
@@ -922,6 +945,9 @@ The shortest correct sentence is:
 
 
 
+
+
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -954,14 +980,18 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.harmonic.damped_energy.f32` | `float32` | 53,890 | yes |
 | `mth.matvec.128.f32` | `float32` | 249,914 | yes |
 | `mth.matvec256.block16.f32` | `float32` | 148,561 | yes |
+| `mth.matvec256.full.f32` | `float32` | 2,978,362 | pending |
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
 | `mth.svd.top128.f32` | `float32` | 1,311,632 | yes |
+| `mth.svd.top256.f32` | `float32` | 11,002,235 | pending |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
 | `mth.adapter.residual.256.block16.f32` | `float32` | 113,055 | yes |
 | `mth.phase.coherence.128.f32` | `float32` | 11,381 | yes |
 | `mth.two_level.spectrum.f32` | `float32` | 390 | yes |
 | `mth.decode.128_256.f32` | `float32` | 996,358 | yes |
 | `mth.encode.256_128.f32` | `float32` | 996,358 | yes |
+| `mth.decode.256.full.f32` | `float32` | 1,655,853 | pending |
+| `mth.encode.256.full.f32` | `float32` | 1,655,853 | pending |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |
 | `mth.graph.pair.rank1.128.f32` | `float32` | 252,060 | yes |
 | `mth.lowrank.add.128.f32` | `float32` | 1,056,470 | yes |

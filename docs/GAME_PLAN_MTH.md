@@ -899,6 +899,6 @@ The exact two-slice L=2I fixture passed canonical NaN16 CI run 242 in
 283,436 guest steps. Workspace is 1,542 NaN16 words (12,336 bytes).
 
 The earlier full-U tile is retained as a mathematically verified reference,
-but its 73,990-word workspace exceeds the 512 KiB guest budget. It is not
+but its 73,990-word workspace now fits the 1 MiB guest target; it was not
 dispatchable under the standard MthSystem budget. Full page-window
 orchestration and atomic publication of all 256 output tiles remain open.

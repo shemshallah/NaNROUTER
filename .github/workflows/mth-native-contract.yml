@@ -291,6 +291,17 @@ jobs:
           cat build/mth/dft256.err
           grep -q '^MTH GRAPH DFT256 PASS' build/mth/dft256.out
 
+      - name: Assemble full 256-SVD fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_svd_top256_test.nas > build/mth/svd256.nan
+
+      - name: Execute full 256-SVD fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/svd256.nan --steps 150000000 --serial > build/mth/svd256.out 2> build/mth/svd256.err
+          cat build/mth/svd256.out
+          cat build/mth/svd256.err
+          grep -q '^MTH SVD TOP256 PASS' build/mth/svd256.out
+
       - name: Assemble 128-SVD fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_svd_top128_test.nas > build/mth/svd128.nan
@@ -312,6 +323,17 @@ jobs:
           cat build/mth/power128.out
           cat build/mth/power128.err
           grep -q '^MTH POWER_ITER128 PASS' build/mth/power128.out
+
+      - name: Assemble full 256-matvec fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_matvec256_full_test.nas > build/mth/matvec256full.nan
+
+      - name: Execute full 256-matvec fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/matvec256full.nan --steps 50000000 --serial > build/mth/matvec256full.out 2> build/mth/matvec256full.err
+          cat build/mth/matvec256full.out
+          cat build/mth/matvec256full.err
+          grep -q '^MTH MATVEC256 FULL PASS' build/mth/matvec256full.out
 
       - name: Assemble 256-block matvec fixture with NaN16 source assembler
         run: |
@@ -356,6 +378,17 @@ jobs:
           cat build/mth/adapter256b.out
           cat build/mth/adapter256b.err
           grep -q '^MTH ADAPTER RESIDUAL 256 BLOCK16 PASS' build/mth/adapter256b.out
+
+      - name: Assemble full 256 encode/decode fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_encode_decode256_test.nas > build/mth/encode-decode256.nan
+
+      - name: Execute full 256 encode/decode fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/encode-decode256.nan --steps 30000000 --serial > build/mth/encode-decode256.out 2> build/mth/encode-decode256.err
+          cat build/mth/encode-decode256.out
+          cat build/mth/encode-decode256.err
+          grep -q '^MTH ENCODE DECODE 256 PASS' build/mth/encode-decode256.out
 
       - name: Assemble encode/decode fixture with NaN16 source assembler
         run: |

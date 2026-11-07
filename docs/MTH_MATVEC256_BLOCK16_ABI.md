@@ -10,7 +10,7 @@ Status: source-written and locally executed with the canonical NaN0S toolchain; 
 y[k] = sum_{j=0}^{255} A[k,j] * x[j]    for k = 0..15
 ```
 
-The caller supplies one 16-row block of the matrix. A complete 256×256 matvec is a caller-driven sequence of 16 calls, not one monolithic kernel. A full dense 256×256 float32 matrix is 65,536 words, which does not fit in guest memory alongside code and vectors; the paged form keeps the working set at 4,368 words.
+The caller supplies one 16-row block of the matrix. A complete 256×256 matvec is a caller-driven sequence of 16 calls, not one monolithic kernel. A full dense 256×256 float32 matrix is 65,536 words. Under the new 1 MiB target a full matvec A+x+y (~66,048 words) fits; this block form remains the bounded/paged path for multi-tenant and larger plans.
 
 ## 2. ABI
 

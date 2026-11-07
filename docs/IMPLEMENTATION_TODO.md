@@ -15,10 +15,12 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
+- [x] Design target updated to 1 MiB guest (131,072 NaN16 words); old 512 KiB evidence is historical.
+- [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 41/41 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 44/44 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 235 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42389738332` (87/87 steps).
+- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 45-fixture/93-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -96,7 +98,7 @@
 - [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
-- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U tile is reference-only because it exceeds 512 KiB.
+- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U tile now fits the 1 MiB target; page-window orchestration/atomic publication remain open.
 
 ## R7 — Tunneling and creativity
 
@@ -136,7 +138,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 43 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 47 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -162,14 +164,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-41/41 local fixtures passed; 42/42 total (K256 pair CI-only)
+44/44 local fixtures passed; 45/45 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI: `42389738332` — 87/87 steps for the 42-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42389738332` — 87/87 steps; 45-fixture/93-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
@@ -193,5 +195,5 @@ CI: `42389738332` — 87/87 steps for the 42-fixture set. See `docs/R10_IMPLEMEN
 | A19 | Single-active runner-ring scheduler | done — 27 tests |
 | A20 | Point-0 NaN/binary bridge/router | done — 35 tests (implemented during integration) |
 | A21 | MthSystem runtime facade | done — 11 tests |
-| A22 | 256×256 pair-space tile reference | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified; over 512 KiB |
+| A22 | 256×256 pair-space tile reference | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified; fits 1 MiB target |
 | A23 | Bounded K16 pair tile | `mth_graph_pair_tile16_k16_f32.nas`, fixture, ABI, CI | done — native_verified, CI run 242; 1,542 words |
