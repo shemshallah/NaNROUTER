@@ -1116,6 +1116,28 @@ class NativePreflightReceiptTests(unittest.TestCase):
             ring_epoch=1,
         )
         self.assertTrue(decision.ok, decision.reason)
+        stale_epoch = nmp.execution_gate(
+            preflighted,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 8},
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertFalse(stale_epoch.ok)
+        self.assertIn("rule epoch", stale_epoch.reason)
+        stale_digest = nmp.execution_gate(
+            preflighted,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 7, "rule_digest": "f" * 64},
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertFalse(stale_digest.ok)
+        self.assertIn("rule digest", stale_digest.reason)
         queued = preflighted.queue(gate=decision)
         tampered_evidence = dict(queued.evidence)
         tampered_evidence.pop("native_preflight_receipt")
