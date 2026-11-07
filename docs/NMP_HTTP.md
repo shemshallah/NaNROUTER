@@ -106,3 +106,23 @@ The server still needs a TLS-terminating reverse proxy for non-loopback use.
 The current adapter returns the canonical packet at each stage. NMP state is
 reconstructed from the job payload plus the worker's returned execution packet;
 the durable job/lease rows remain authoritative for queue and lease state.
+
+## NaN16 worker dispatch and binary pins
+
+The server-side function registry must resolve only the two worker ABI mappings
+`math.vector.add.v1 → 78` and `math.vector.dot.v1 → 79`.
+The adapter independently checks that mapping at queue, lease, and completion.
+A program ID merely belonging to the allowlist is not sufficient.
+
+At completion, deployments may also return server-controlled
+`expected_guest_image_digest` and `expected_guest_source_digest` from the
+trusted context provider. When present, these full SHA-256 hashes must match
+the execution-evidence envelope; mismatches reject completion before durable
+`complete_job`. These pins are intentionally consumed only by the completion
+adapter and are not forwarded to the packet gate.
+
+Without configured pins, guest digests remain *self-reported execution
+evidence*, not server-certified binary identity. Operators should pin
+approved artifacts for production deployments. A digest pin alone also does
+not prove a remote host executed the binary; a separately established
+attestation mechanism would be required for that stronger guarantee.
