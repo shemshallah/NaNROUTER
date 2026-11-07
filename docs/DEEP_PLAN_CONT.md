@@ -125,7 +125,7 @@ GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 | L5 | wave dynamics, energy, damping, drive | existing kernels |
 | L6 | aperture, pair, low-rank, adapter | existing kernels |
 | L7 | BS0DB/MC0DB, jobs, leases, capabilities, NANNET node | existing modules |
-| L8 | HTTP/NANNET transport and federation | **to build** |
+| L8 | HTTP/NANNET transport and federation | HTTP adapter built; live federation to build |
 | L9 | LM adapter and held-out evaluation | **to build** |
 
 ### 2.2 The operator model
@@ -673,7 +673,7 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 | P1 | MTH registry/planner | manifest | load 34, resolve/plan tests |
 | P2 | 256 block matvec | R1 | 16-block full matvec oracle |
 | P3 | 256 streaming certificate | R3/fold | 16-block certificate + perturbation |
-| P4 | wave HTTP adapter | WaveService | auth/lease/complete HTTP tests |
+| P4 | wave HTTP adapter — implemented | WaveService | auth/lease/complete HTTP tests |
 | P5 | 256 block pair / low-rank | P2 | 256 paged pair oracle |
 | P6 | 256 aperture SVD/top-k | P2/P5 | singular residual + top-k |
 | P7 | 255/256 dense/paged eigenbasis | P2/P6 | versioned page/eigenbasis test |
@@ -834,7 +834,7 @@ The shortest correct sentence is:
 | D4 | NANNET0 is one node per universe, never a head/shard | accepted | none |
 | D5 | Product operator 65,536² stays matrix-free/low-rank | accepted | only with a proven bounded dense use case |
 | D6 | Top-k power/SVD before full dense eigensolve | accepted | when LM adapter needs full spectrum |
-| D7 | HTTP adapter is a separate module over WaveService | in flight | after auth/rate-limit review |
+| D7 | HTTP adapter is a separate module over WaveService | implemented | after auth/rate-limit review |
 | D8 | LM adapter default disabled until held-out ablation | accepted | after P9 evidence |
 | D9 | 255-head odd fold is 127+128, not 128+128 | accepted | none |
 | D10 | Every promoted kernel carries source/fixture digest, workspace, CI/evidence | accepted | none |

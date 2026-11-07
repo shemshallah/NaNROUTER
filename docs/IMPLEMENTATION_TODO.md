@@ -118,7 +118,8 @@
 - [x] Add job/lease/capability state machine.
 - [x] Add stale/unauthorized/replay rejection tests.
 - [x] Add authenticated WaveService facade over BS0DB/MC0DB.
-- [ ] Add NANNET HTTP node endpoints and live Koyeb integration.
+- [x] Add standalone Wave HTTP adapter over WaveService.
+- [ ] Add live NANNET0/Koyeb integration and signed volume-registry check.
 - [ ] Run signed Koyeb volume-registry integration check.
 
 ## R9 — LM adapter
