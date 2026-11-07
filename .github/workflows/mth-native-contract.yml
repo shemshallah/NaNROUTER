@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files]
+    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-sparse-laplacian-three-files, mth-graph-energy-v1]
   pull_request:
   workflow_dispatch:
 
@@ -59,3 +59,14 @@ jobs:
           cat build/mth/weighted-sparse.out
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
+
+      - name: Assemble weighted graph energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_energy_weighted_v1_test.nas > build/mth/graph-energy.nan
+
+      - name: Execute weighted graph energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/graph-energy.nan --steps 8000000 --serial > build/mth/graph-energy.out 2> build/mth/graph-energy.err
+          cat build/mth/graph-energy.out
+          cat build/mth/graph-energy.err
+          grep -q '^MTH WEIGHTED GRAPH ENERGY V1 PASS' build/mth/graph-energy.out
