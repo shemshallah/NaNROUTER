@@ -71,6 +71,9 @@ server.start()
 ~~~
 
 The context provider and worker identity provider are mandatory deployment dependencies. The
+context provider must also return `expected_program_id` from the server-owned function
+registry at queue, lease, and completion stages; this independently binds the guest-echoed
+program ID to the function/capability mapping instead of trusting a host-supplied receipt word.
 worker identity provider must bind the presented worker credential to the requested
 capability owner before the durable lease is acquired, and must recheck that binding
 against the durable lease owner at completion. A worker role token alone is not a
