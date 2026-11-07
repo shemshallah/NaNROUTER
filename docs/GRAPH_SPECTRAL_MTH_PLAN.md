@@ -190,3 +190,27 @@ The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted
 Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
 
 This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
+
+ 
+## 13. Independent weighted graph energy v1
+
+A first independent quadratic-energy kernel is now source-written at
+`mth/nan16/mth_graph_energy_weighted_v1.nas`, with ABI
+`docs/MTH_GRAPH_ENERGY_ABI_V1.md` and fixture
+`mth/tests/mth_graph_energy_weighted_v1_test.nas`.
+
+It computes
+`sum_{ {u,v} } w_uv * (x[u]-x[v])^2` directly from one canonical
+undirected edge record per edge, rather than deriving energy from the
+Laplacian output. The v1 energy domain is deliberately bounded to signed
+Q16.16 state [-1,+1], U8 integer weights 1..255, at most 32,640 edges,
+and unsigned I64 Q32.32 output. The exact bound is below 2^57. Native
+verification remains pending until the canonical NaN16 workflow passes.
+
+The edge-list representation requires u<v and strictly increasing
+lexicographic order, so reciprocal-weight mismatch is unrepresentable at
+the kernel boundary. A CSR-to-edge-list adapter must independently verify
+reciprocal endpoints and exact reciprocal weight equality before conversion.
+The next gates remain: native energy fixture pass; a native connected-
+component/nullity kernel and exact disconnected-graph fixture; only then
+matrix-free pair-space action.
