@@ -49,7 +49,7 @@ assembled and executed its fixture successfully (5,399 guest steps; HALT). The N
 - `tests/mth_sparse_graph_laplacian_test.nas`: path, disconnected graph, and invalid-input atomicity fixtures.
 - Full ABI and range proof: `docs/MTH_SPARSE_GRAPH_ABI.md`.
 
-The sparse kernel is source-written and is not native-verified until the canonical NaN16 CI fixture passes. Weighted CSR remains a separately versioned follow-on.
+The sparse kernel is native-verified by canonical NaN16 CI run #58 (path, disconnected, and invalid-input atomicity fixtures; 20,737 guest steps). Weighted CSR remains a separately versioned follow-on. Weighted CSR remains a separately versioned follow-on.
 
 
 The sparse graph fixture emits stage markers to distinguish preflight, path-oracle, and disconnected-oracle failures during initial native bring-up.
