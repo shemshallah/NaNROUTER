@@ -2,7 +2,7 @@
 
 This directory is the first native MTH source slice. Mathematical code here is NaN16; no host-language math implementation is permitted.
 
-- `nan16/mth_core.nas`: class-nibble face rotation and the explicit wrapper around the existing `BSWAPM` primitive.
+- `nan16/mth_core.nas`: class-nibble rotation, near/far face extraction and packing, sign/quiet-bit extraction for all four legal NaN face types, and the explicit `BSWAPM` wrapper.
 - `nan16/mth_bool.nas`: generic two-input Boolean transformation. It patches the frozen NaN16 `BOOL.n` class into a code slot and executes it natively.
 - `nan16/mth_double_endian.nas`: native double-endian pair codec with tagged big-endian/little-endian members and mismatch rejection.
 - `tests/mth_stage0_test.nas`: rotation-table and double-`BSWAPM` smoke test.
