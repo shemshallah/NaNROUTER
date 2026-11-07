@@ -1,10 +1,10 @@
 # MTH pair-space K16 full-tile driver ABI
 
-Status: NATIVE_VERIFIED locally after the link-register repair described below.
-This is the repaired form of the WIP driver on `origin/mth-pair-tile16-driver-v1`
-(commits `0cee006..788b036`). The fixture assembles with the NaN0S NaN16 source
-assembler and terminates after 4,449,894 guest steps under a 50,000,000-step
-budget (`rc=3`, HALT).
+Status: LOCAL_NATIVE_VERIFIED (not yet CI-integrated). This is the repaired form
+of the WIP driver on `origin/mth-pair-tile16-driver-v1` (commits
+`0cee006..788b036`). The fixture assembles with the NaN0S NaN16 source assembler
+and terminates after 4,449,894 guest steps under a 50,000,000-step budget
+(`rc=3`, HALT).
 
 ## Purpose
 
@@ -46,6 +46,10 @@ global-K order. The block for local slice index `s` begins at
 `strip_base + s*256`, and contains the 16x16 block for global K
 `K = 16*s`. All four strips for one output tile are staged simultaneously;
 strips for other output tiles are not required.
+
+All pointer spans (four strips, both accumulators, scratch, output) must be
+valid and pairwise disjoint, and none may overlap words 400..411 or the
+driver's code.
 
 Register effects: the driver clobbers `r1-r12`; it saves and restores `r14` and
 `r15`; it leaves `r13=1`; `r0` remains the zero register. The driver performs
@@ -90,11 +94,11 @@ that range.
 
 In NaN16, `CALL` overwrites `r15` with the return address and `RET` jumps to
 `r15`. The original WIP driver issued nested `CALL`s without preserving its own
-link, so after the first callee returned, the driver's `RET` jumped back inside
-the driver instead of to its caller. The repaired driver stores `r15` in the
-static frame on entry and restores it on both the success and failure paths.
-`r12` is only a temporary frame pointer and is recomputed after every callee
-call because the accumulator clobbers it.
+link, so its final `RET` reused the return address left by the last nested call
+and jumped back inside the driver instead of to its caller. The repaired driver
+stores `r15` in the static frame on entry and restores it on both the success
+and failure paths. `r12` is only a temporary frame pointer and is recomputed
+after every callee call because the accumulator clobbers it.
 
 ## Memory budget
 

@@ -1,11 +1,13 @@
 # MTH bounded 256×256 symmetric top-k kernel
 
 Status: source-written and locally executed PASS with the canonical NaN0S
-`nan_cli` as a `nan-text` image (72,980 NaN16 words; 133,498,079 guest
+`nan_cli` as a `nan-text` image (72,980 NaN16 words; 133,733,039 guest
 steps). The image is inside the 131,072-word / 1 MiB guest target and
-above the historical 65,536-word / 512 KiB budget. No CI workflow entry was
-added; the owned file set for this change is the kernel, its fixture, and
-this document.
+above the historical 65,536-word / 512 KiB budget. The owned file set for
+this change is the kernel, its fixture, and this document. A concurrent
+integration commit added shared workflow, harness, and README entries
+outside this owned set; those entries use a 200,000,000-step cap, which the
+fixture satisfies (133,733,039 steps).
 
 ## 1. Scope
 
@@ -207,12 +209,12 @@ words / 26,688 bytes, and the fixture image exceeds it by 7,444 words /
 `mth/tests/mth_lanczos_256_test.nas` checks:
 
 1. **Required diagonal case**: `A = diag(3,2,1,0,...)`, `q0 = 1`,
-   `k = 2`, `iterations = 20`. Status 1; values within `1e-3` of 3 and 2;
+   `k = 2`, `iterations = 16`. Status 1; values within `1e-3` of 3 and 2;
    both vectors unit-norm and mutually orthogonal within `1e-3`;
    `V0[0]^2 > 0.98` and `V1[1]^2 > 0.98`; `A` and `q0` unchanged. A direct
-   probe of this case observed values `0x403FFFFF` (2.9999998) and
-   `0x40000001` (2.0000002), with `V0 = [0x3F7FFFFF, ...]` and
-   `V1 = [..., 0xBF800000, ...]` (the second vector is `-e1`, a legal
+   probe of this case observed values `0x403FFFF5` (2.9999974) and
+   `0x4000000B` (2.0000007), with `V0 = [0x3F7FFFEC, ...]` and
+   `V1 = [..., 0xBF7FFFEE, ...]` (the second vector is `-e1`, a legal
    eigenvector sign).
 2. **Breakdown fallback**: the same `A`, `q0 = e0`, `k = 2`,
    `iterations = 4`. Status 1; values bit-exactly `3.0` and `2.0`;
@@ -220,7 +222,7 @@ words / 26,688 bytes, and the fixture image exceeds it by 7,444 words /
    exercises the exactly exhausted second seed and the coordinate-axis
    fallback.
 3. **Non-diagonal block**: `A = [[2,1],[1,2]]` in the leading block, zero
-   elsewhere, `q0 = 1`, `k = 2`, `iterations = 20`. Status 1; values 3
+   elsewhere, `q0 = 1`, `k = 2`, `iterations = 16`. Status 1; values 3
    and 1 within `1e-3`; unit and orthogonal vectors; the top vector has
    same-sign leading components and the second vector has opposite-sign
    leading components.
@@ -228,17 +230,31 @@ words / 26,688 bytes, and the fixture image exceeds it by 7,444 words /
    `values_out` slots at the `0xDEAD5A5A` sentinel.
 5. **Bounds**: `k = 0`, `k = 9`, `iterations = 0`, `iterations = 33`, and
    zero `q0` each return status 0 with `values_out` untouched.
-6. **`k = 1`**: `A = diag(3,2,1,0,...)`, `q0 = 1`, `iterations = 20`;
+6. **`k = 1`**: `A = diag(3,2,1,0,...)`, `q0 = 1`, `iterations = 16`;
    value 3 and one unit-norm vector.
 7. **`k = 4`**: `A = diag(8,6,4,2,0,...)`, `q0 = 1`,
    `iterations = 16`; values 8, 6, 4, 2 within `1e-3`; four unit-norm
    mutually orthogonal vectors.
-8. **Sort swap**: `A = diag(3,2,1,0,...)`, `q0 = e1`, `k = 2`,
+8. **`k = 8` fallback chain**: `A = diag(8,7,6,5,4,3,2,1,0,...)`,
+   `q0 = e0`, `k = 8`, `iterations = 1`. The initial column is `e0`; each
+   later column is supplied by the coordinate-axis fallback (`e1` through
+   `e7`). Values are bit-exactly 8,7,6,5,4,3,2,1 and all eight vectors are
+   unit-norm and mutually orthogonal.
+9. **Sort swap**: `A = diag(3,2,1,0,...)`, `q0 = e1`, `k = 2`,
    `iterations = 4`. The extraction order is 2 then 3; the values are
    bit-exactly 3 then 2 and the vector columns are swapped, checking the
    descending selection-sort path.
 
 Canonical local commands:
+
+```
+LC_ALL=C awk -f /data/data/com.termux/files/home/nan0s/tools/nmk.awk \
+  -v CMD=emit mth/nan16/mth_lanczos_256.nas \
+  > /data/data/com.termux/files/usr/tmp/opencode/kernel_only.nan
+```
+
+The kernel source alone assembles to **422 words** with `check: 0 mismatches`.
+The full fixture is assembled and executed with:
 
 ```
 LC_ALL=C awk -f /data/data/com.termux/files/home/nan0s/tools/nmk.awk \
@@ -258,13 +274,13 @@ Observed:
 ```
 words 72980
 check: 0 mismatches
-[nan_cli] nan-text: 133498079 steps, rc=3, pc=837, trap=''
+[nan_cli] nan-text: 133733039 steps, rc=3, pc=941, trap=''
 MTH LANCZOS 256 PASS
 ```
 
 The step count is for the whole fixture, including all success and
-rejection cases. A single successful `k=2`, 20-iteration call uses about
-42 matvecs and probes at 28,162,441 steps.
+rejection cases. A single successful `k=2`, 16-iteration call uses 34
+matvecs and probes at 22,802,185 steps.
 
 ## 8. Limitations
 
@@ -294,5 +310,6 @@ rejection cases. A single successful `k=2`, 20-iteration call uses about
   budget; they are inside the 1 MiB target only. Do not schedule this
   fixture under a 512 KiB plan.
 - No `.github/workflows` entry, README ledger entry, or harness registry
-  entry was added because those files are outside this change's owned file
-  set.
+  entry was edited here because those files are outside this change's owned
+  file set. Concurrent integration entries exist and use a 200,000,000-step
+  cap; this fixture uses 133,733,039 steps.

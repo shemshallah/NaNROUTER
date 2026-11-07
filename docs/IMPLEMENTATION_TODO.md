@@ -20,7 +20,7 @@
 - [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 56/56 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 321 Python tests pass.
+- [x] 342 Python tests pass.
 - [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 57-fixture/117-step run pending.
 
 ## R0 — Contract and storage freeze
@@ -109,7 +109,8 @@
 - [x] Add experiment protocol with conditions, metrics, baselines, kill criteria.
 - [x] Add two-level avoided-crossing spectrum kernel and native coupling sweep (11,651 steps).
 - [x] Add 128-element phase-coherence metric kernel.
-- [ ] Run held-out creativity/association experiment (sweep primitive done; real LM harness remains gated).
+- [x] Add held-out creativity/association protocol harness with leakage/duplicate/control gates (21 tests).
+- [ ] Run the held-out experiment against real frozen model/data (blocked; no result claimed).
 - [ ] Record supported/rejected/inconclusive result.
 
 ## R8 — NANNET node and storage

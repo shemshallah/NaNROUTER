@@ -4,7 +4,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 56/56 locally runnable fixtures passed; 57/57 total including CI-only K256 pair; 321 Python tests passed.
+**Result:** 56/56 locally runnable fixtures passed; 57/57 total including CI-only K256 pair; 342 Python tests passed.
 **CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 57-fixture/117-step run is pending (local 1 MiB text-loader execution passed).
 
 ## Native fixtures
@@ -115,4 +115,5 @@ Run it after any kernel change.
 - K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.
+- R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

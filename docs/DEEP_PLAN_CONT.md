@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **59 native MTH kernels with fixtures**: 56 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial, DRIVE, CFL, colored-noise, and K16-driver fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 321 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **59 native MTH kernels with fixtures**: 56 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial, DRIVE, CFL, colored-noise, and K16-driver fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 342 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -82,7 +82,7 @@ The 255 + 1 rule remains:
 
 ```
 56/56 locally runnable fixtures pass; K256 pair passed canonical CI
-57/57 total native fixtures; 321/321 Python tests pass
+57/57 total native fixtures; 342/342 Python tests pass
 GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 57-fixture/117-step run pending
 ```
 
@@ -95,7 +95,7 @@ GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
 | R6 | bounded K16 pair-tile native_verified; 256-tile page-window/atomic-publication orchestrator implemented with 31 tests; default MTH guest budget 1 MiB; native full-grid driver still open; K256 closed form done |
-| R7 | two-level spectrum, phase metric, and native avoided-crossing sweep done; held-out creativity/association protocol harness in progress |
+| R7 | two-level spectrum, phase metric, native avoided-crossing sweep, and held-out protocol harness with explicit gates done; real-model experiment remains gated |
 | R8 | Point-0 HTTP ingress, offline live preflight, and signed-volume gate done; live Koyeb/NANNET0 deployment blocked on credentials |
 | R9 | full 256×256 ENCODE/DECODE and adapter residual done; frozen-base ablation harness done; real LM/data ablation blocked |
 | R10 | production digest registration, capability promotion |
