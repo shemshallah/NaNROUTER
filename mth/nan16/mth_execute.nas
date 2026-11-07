@@ -24,7 +24,6 @@
 ; Cosine uses words 52..55 as its four-word caller-owned nested scratch frame.
 ; r14 is used as the preserved scratch-base register and is clobbered.
 
-.include "mth_cosine256_f32.nas"
 
 mth_execute:
   MOVI r13,1
