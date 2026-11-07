@@ -241,12 +241,7 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "lease", job=job, lease=lease
         )
-        expected_program_id = _require_server_program_binding(packet, gate_context)
-        native_execution = _validate_execution_evidence(
-            execution_evidence, packet=packet, expected_program_id=expected_program_id,
-            result_digest=result_digest, lease_epoch=lease_epoch,
-            lease_owner=str(lease_owner or ""),
-        )
+        _require_server_program_binding(packet, gate_context)
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != owner:
             raise NmpHttpError("worker owner is not bound to the current verified capability")
@@ -301,7 +296,12 @@ class NmpHttpAdapter:
         gate_context = _context(
             self.context_provider, packet, "complete", job=job, lease=lease
         )
-        _require_server_program_binding(packet, gate_context)
+        expected_program_id = _require_server_program_binding(packet, gate_context)
+        native_execution = _validate_execution_evidence(
+            execution_evidence, packet=packet, expected_program_id=expected_program_id,
+            result_digest=result_digest, lease_epoch=lease_epoch,
+            lease_owner=str(lease_owner or ""),
+        )
         expected_owner = gate_context.pop("expected_worker_owner", None)
         if not isinstance(expected_owner, str) or expected_owner != lease_owner:
             raise NmpHttpError("completion worker is not bound to the current verified capability")
