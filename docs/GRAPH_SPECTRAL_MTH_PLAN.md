@@ -189,7 +189,7 @@ The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted
 
 Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
 
-This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
+This verifies the exact U8 integer-weight v2 operator only. The independent weighted-energy and connected-component kernels are now separately implemented and exercised by the canonical native CI workflow on main: `mth_graph_energy_weighted_u8_q32_32.nas` and `mth_graph_components_256.nas`. The K256 closed-form pair-space special case is now added in this branch; generic sparse-CSR pair-space, spectral filters, Lanczos, and the remaining product-space gates are still distinct follow-on work.
 
 ## 13. Ring / void / NANNET implementation update (2026-11-06)
 
@@ -239,3 +239,18 @@ A closed-form K256 pair-space kernel is source-written at `mth/nan16/mth_k256_pa
 For the special K256 Laplacian `L=256I-J`, the implementation computes `LU+UL^T = 512U-colsum(U)-rowsum(U)` using two 256-element work vectors and three linear passes over U. It does not construct the 65,536-by-65,536 Kronecker matrix. State range is bounded to ±2^20 raw Q16.16 so every result is exact signed I32 (bound ±2^30).
 
 This is specifically the K256 closed-form case, not yet a generic CSR pair-space kernel. Native verification is pending.
+
+
+## 14. K256 closed-form pair-space v1 — native verified
+
+Kernel: `mth/nan16/mth_k256_pair_space_v1.nas`; ABI: `docs/MTH_K256_PAIR_SPACE_ABI_V1.md`; fixture: `mth/tests/mth_k256_pair_space_v1_test.nas`.
+
+For the exact K256 baseline `L=256I-J`, the kernel applies
+
+`L_pair(U)=LU+UL^T=512U-colsum(U)-rowsum(U)`
+
+with two 256-word work vectors and three linear passes over the 65,536-cell U matrix. It does not materialize the 65,536×65,536 Kronecker matrix. The Q16.16 input is bounded to ±2^20 raw, giving a proved signed-I32 output bound of ±2^30.
+
+Canonical NaN16 CI workflow run 180 passed the assembler and runtime fixture for this kernel, alongside all other steps in that workflow. The fixture checks the exact E00 response (510 at [0,0], −1 at [0,1] and [1,0], zero at [1,1]) and row/column sums of 1.
+
+Scope boundary: this verifies the K256 closed-form special case only. It does not yet establish a generic sparse weighted-CSR pair-space kernel for arbitrary L.
