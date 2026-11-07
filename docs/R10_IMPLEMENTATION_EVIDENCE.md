@@ -4,8 +4,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 56/56 locally runnable fixtures passed; 57/57 total including CI-only K256 pair; 342 Python tests passed.
-**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 57-fixture/117-step run is pending (local 1 MiB text-loader execution passed).
+**Result:** 57/57 locally runnable fixtures passed; 58/58 total including CI-only K256 pair; 342 Python tests passed.
+**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 58-fixture/119-step run is pending (local 1 MiB text-loader execution passed).
 
 ## Native fixtures
 
@@ -70,6 +70,7 @@
 | 57 | Colored noise 256 | `mth/tests/mth_colored_noise_256_test.nas` | 72,318 | PASS | pending |
 | 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,628,629 | PASS | pending |
 | 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | pending |
+| 60 | Reachability 256 | `mth/tests/mth_reachability_256_test.nas` | 2,489,116 | PASS | pending |
 
 ## Python tests
 
@@ -99,14 +100,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-56/56 local fixtures passed; 57/57 total
+57/57 local fixtures passed; 58/58 total
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 59 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **59 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 60 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **60 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 

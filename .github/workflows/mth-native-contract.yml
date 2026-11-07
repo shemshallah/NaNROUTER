@@ -236,6 +236,17 @@ jobs:
           cat build/mth/dot256.err
           grep -q '^MTH DOT256 PASS' build/mth/dot256.out
 
+      - name: Assemble reachability 256 fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_reachability_256_test.nas > build/mth/reachability-256.nan
+
+      - name: Execute reachability 256 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/reachability-256.nan --steps 20000000 --serial > build/mth/reachability-256.out 2> build/mth/reachability-256.err
+          cat build/mth/reachability-256.out
+          cat build/mth/reachability-256.err
+          grep -q '^MTH REACHABILITY 256 PASS' build/mth/reachability-256.out
+
       - name: Assemble stable top-k 256 fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_topk_256_test.nas > build/mth/topk256.nan

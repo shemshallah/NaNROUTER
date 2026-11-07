@@ -137,7 +137,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 57-fixture/117-step run is pending. The CI workflow includes all 57 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 58-fixture/119-step run is pending. The CI workflow includes all 58 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space
@@ -167,5 +167,6 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_colored_noise_256.nas`: deterministic colored-noise sequence; local canonical execution PASS (72,318 steps).
 - `nan16/mth_lanczos_256.nas`: bounded orthogonal/deflated Lanczos top-k; local canonical execution PASS (133,628,629 steps).
 - `nan16/mth_graph_pair_tile16_k16_driver_f32.nas`: one-tile 16-slice K16 driver; local canonical execution PASS (4,449,894 steps).
+- `nan16/mth_reachability_256.nas`: deterministic directed BFS reachability; local canonical execution PASS (2,489,116 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and await the canonical 1 MiB GLT CI run before promotion from local execution to CI-verified.

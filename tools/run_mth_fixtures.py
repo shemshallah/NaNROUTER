@@ -84,6 +84,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("radial_tridiagonal", "mth/tests/mth_radial_tridiagonal_test.nas", 5_000_000, "MTH RADIAL TRIDIAGONAL PASS", "native_verified"),
     Fixture("colored_noise_256", "mth/tests/mth_colored_noise_256_test.nas", 10_000_000, "MTH COLORED NOISE 256 PASS", "native_verified"),
     Fixture("lanczos_256", "mth/tests/mth_lanczos_256_test.nas", 200_000_000, "MTH LANCZOS 256 PASS", "native_verified"),
+    Fixture("reachability_256", "mth/tests/mth_reachability_256_test.nas", 20_000_000, "MTH REACHABILITY 256 PASS", "native_verified"),
     Fixture("phase_coherence", "mth/tests/mth_phase_coherence_128_test.nas", 4_000_000, "MTH PHASE COHERENCE 128 PASS", "native_verified"),
     Fixture("topk256", "mth/tests/mth_topk_256_test.nas", 10_000_000, "MTH TOPK 256 PASS", "native_verified"),
 )

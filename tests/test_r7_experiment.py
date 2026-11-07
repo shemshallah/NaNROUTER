@@ -211,7 +211,7 @@ class R7TaskContractTests(unittest.TestCase):
                 ),
             )
 
-    def test_excluded_tasks_must_use_a_non_heldout_split(self):
+    def test_excluded_tasks_must_not_be_marked_heldout(self):
         with self.assertRaises(SplitLeakageError):
             R7TaskSet(
                 "excluded-heldout",
@@ -225,19 +225,21 @@ class R7TaskContractTests(unittest.TestCase):
                     ),
                 ),
             )
-        with self.assertRaises(SplitLeakageError):
-            R7TaskSet(
-                "excluded-unknown",
-                make_tasks(4),
-                excluded_tasks=(
-                    R7Task(
-                        "train-00",
-                        "unseen train prompt",
-                        "answer",
-                        split="test",
-                    ),
+        # Non-held-out labels are metadata; a caller may use "test" as an
+        # excluded holdback. It is never evaluated.
+        task_set = R7TaskSet(
+            "excluded-test",
+            make_tasks(4),
+            excluded_tasks=(
+                R7Task(
+                    "test-00",
+                    "held-back test prompt",
+                    "answer",
+                    split="test",
                 ),
-            )
+            ),
+        )
+        self.assertEqual(task_set.excluded_tasks[0].split, "test")
 
     def test_duplicate_tasks_are_rejected(self):
         with self.assertRaises(DuplicateTaskError):
@@ -302,6 +304,7 @@ class R7TaskContractTests(unittest.TestCase):
 
         self.assertEqual(evidence["task_count"], 8)
         self.assertEqual(evidence["excluded_task_count"], 2)
+        self.assertEqual(task_set.train_tasks, excluded)
         self.assertEqual(evidence["excluded_splits"], ["dev", "train"])
         self.assertEqual(
             evidence["excluded_task_ids"], ["dev-00", "train-00"]

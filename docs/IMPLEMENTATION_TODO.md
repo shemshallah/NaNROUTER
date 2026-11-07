@@ -19,9 +19,9 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture local PASS; CI pending.
 - [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 56/56 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 57/57 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 342 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 57-fixture/117-step run pending.
+- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 58-fixture/119-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -170,14 +170,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-56/56 local fixtures passed; 57/57 total (K256 pair CI-only)
+57/57 local fixtures passed; 58/58 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI prior: `42389738332` — 87/87 steps; 57-fixture/117-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42389738332` — 87/87 steps; 58-fixture/119-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

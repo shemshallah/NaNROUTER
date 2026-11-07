@@ -40,7 +40,6 @@ R7_NATIVE_SCHEMA = "nanrouter.r7-native-evidence.v1"
 HARNESS_VERSION = 1
 
 HELDOUT_SPLIT = "heldout"
-NON_HELDOUT_SPLITS = ("train", "dev", "validation")
 
 CONDITION_DISCONNECTED = "disconnected"
 CONDITION_RANDOM = "random_coupling"
@@ -487,10 +486,10 @@ class R7TaskSet:
                     "excluded task is marked as held-out: "
                     f"{task.task_id!r}"
                 )
-            if task.split not in NON_HELDOUT_SPLITS:
-                raise SplitLeakageError(
-                    f"excluded task {task.task_id!r} has unsupported split "
-                    f"{task.split!r}; expected one of {NON_HELDOUT_SPLITS}"
+            if not isinstance(task.split, str) or not task.split.strip():
+                raise R7ExperimentError(
+                    f"excluded task {task.task_id!r} must declare a non-empty "
+                    "non-held-out split such as 'train' or 'dev'"
                 )
             normalized_prompt = _normalize_text(task.prompt)
             if task.task_id in excluded_ids:

@@ -130,7 +130,9 @@ Validation rules:
 
 - evaluated tasks must have `split == "heldout"`;
 - held-out task IDs and normalized prompts must be unique;
-- excluded tasks must use `train`, `dev`, or `validation`;
+- excluded tasks must not be marked `heldout`; `train`, `dev`, and
+  `validation` are conventional labels, and any other non-held-out label is
+  metadata only;
 - excluded task IDs and normalized prompts must be unique;
 - an excluded task ID or normalized prompt may not overlap the held-out split;
 - task IDs are 1..128 characters; prompts, task-family names, and accepted

@@ -195,7 +195,9 @@ Caller spans for the maximum `k = 8`:
 
 The kernel itself touches only the first 256 words of `scratch` (`w`); the
 remaining 768 words are reserved by the ABI for callers and future
-variants. The emitted fixture image is **72,980 words = 583,840 bytes**:
+variants. The `A + vectors_out + scratch` subset is exactly **68,608
+words**, matching the proposed budget; `q0` and `values_out` add 264 words,
+for a total caller working set of 68,872 words. The emitted fixture image is **72,980 words = 583,840 bytes**:
 code and static frame fit below word 4,096, `A` starts at word 4,096,
 `q0` at 69,632, `values_out` at 69,888, `vectors_out` at 69,896, and
 `scratch` at 71,944.
