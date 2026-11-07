@@ -26,6 +26,9 @@ jobs:
       - name: Build NaN0S execution harness
         run: make -s -C nan0s/aarch64/android nan_cli
 
+      - name: Verify page-backed K16 and full-U guest bridge
+        run: python -m unittest discover -s tests -p 'test_mth_pair_nan0s_guest_native.py' -v
+
       - name: Assemble K256 fixture with NaN16 source assembler
         run: |
           mkdir -p build/mth
