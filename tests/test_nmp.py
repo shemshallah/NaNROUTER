@@ -128,10 +128,18 @@ def gate(packet, **overrides):
     return nmp.execution_gate(packet, **inputs)
 
 
+def child_inputs(index: int):
+    return INPUTS + (
+        {"leaf_id": f"nml:U0:vector:child-{index}", "version": 1,
+         "digest": (str(index) * 64)[:64]},
+    )
+
+
 def committed_child(index: int):
     return make_packet(
         state=nmp.COMMITTED,
         candidate_id=f"cnd:child-{index}",
+        inputs=child_inputs(index),
         result_digest=(str(index) * 64)[:64],
         provenance={"job_id": f"job-{index}"},
         output_leaf_id=f"nml:U0:scalar:{index}",
@@ -264,10 +272,22 @@ class DedupeTests(unittest.TestCase):
     def test_request_id_is_not_an_idempotency_key(self):
         candidate_a = "cnd:" + "a" * 64
         candidate_b = "cnd:" + "b" * 64
+        different_inputs = INPUTS + (
+            {"leaf_id": "nml:U0:vector:3", "version": 1, "digest": "3" * 64},
+        )
         first = make_packet(candidate_id=candidate_a, request_id="same")
-        second = make_packet(candidate_id=candidate_b, request_id="same")
+        second = make_packet(
+            candidate_id=candidate_b,
+            inputs=different_inputs,
+            request_id="same",
+        )
         self.assertNotEqual(first.dedupe_key, second.dedupe_key)
         self.assertNotEqual(first.packet_id, second.packet_id)
+
+    def test_candidate_name_is_not_operation_content(self):
+        first = make_packet(candidate_id="cnd:" + "a" * 64)
+        second = make_packet(candidate_id="cnd:" + "b" * 64)
+        self.assertEqual(first.dedupe_key, second.dedupe_key)
 
     def test_snapshot_ruleset_and_policy_are_distinct_operations(self):
         base = make_packet()
@@ -302,7 +322,10 @@ class BatchTests(unittest.TestCase):
     def _batch(self, size=3):
         parent = make_packet(is_batch_parent=True)
         children = tuple(
-            make_packet(candidate_id=f"cnd:child-{index}")
+            make_packet(
+                candidate_id=f"cnd:child-{index}",
+                inputs=child_inputs(index),
+            )
             for index in range(size)
         )
         return nmp.NmpBatch(parent, children)
@@ -352,6 +375,7 @@ class BatchTests(unittest.TestCase):
         failed = make_packet(
             state=nmp.FAILED,
             candidate_id="cnd:child-0",
+            inputs=child_inputs(0),
             failure_class="EXECUTION_FAILED",
             result_digest=None,
             output_leaf_id=None,
@@ -359,6 +383,7 @@ class BatchTests(unittest.TestCase):
         cancelled = make_packet(
             state=nmp.CANCELLED,
             candidate_id="cnd:child-1",
+            inputs=child_inputs(1),
             failure_class=nmp.CANCELLED,
             result_digest=None,
             output_leaf_id=None,
@@ -718,6 +743,22 @@ class ProjectionTests(unittest.TestCase):
         self.assertFalse(hasattr(nmp.NmpPacket, "save"))
         self.assertFalse(hasattr(nmp.NmpPacket, "persist"))
 
+    def test_module_imports_no_executor_or_host_math(self):
+        import ast
+
+        tree = ast.parse(inspect.getsource(nmp))
+        imported: list[str] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.extend(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                imported.append(node.module or "")
+        self.assertNotIn("math", imported)
+        for name in imported:
+            self.assertNotIn("executor", name)
+            self.assertNotIn("mth_system", name)
+            self.assertNotIn("wave_store", name)
+
 
 class MathObjectIntegrationTests(unittest.TestCase):
     def test_prepare_from_math_objects_reaches_preflighted(self):
@@ -792,6 +833,41 @@ class MathObjectIntegrationTests(unittest.TestCase):
             packet = state_call(packet)
             self.assertEqual(packet.packet_id, packet_id)
             self.assertEqual(packet.dedupe_key, dedupe_key)
+
+    def test_canonical_record_round_trips_for_restart_evidence(self):
+        packet = make_packet(state=nmp.PREFLIGHTED)
+        rebuilt = nmp.NmpPacket.from_dict(packet.to_dict())
+        self.assertEqual(rebuilt, packet)
+        self.assertEqual(rebuilt.to_dict(), packet.to_dict())
+        self.assertEqual(rebuilt.dedupe_key, packet.dedupe_key)
+
+    def test_gate_and_projector_aliases(self):
+        packet = make_packet(state=nmp.PREFLIGHTED)
+        decision = nmp.gate(
+            packet,
+            admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT,
+                       "rule_snapshot_id": RULES},
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertTrue(decision.ok)
+        self.assertTrue(nmp.can_execute(
+            packet,
+            admission=make_admission(),
+            preflight={"result": "VALID", "digest": PREFLIGHT,
+                       "rule_snapshot_id": RULES},
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        ))
+        projector = nmp.NmpProjector()
+        self.assertFalse(projector.durable)
+        projection = projector.project(packet)
+        self.assertEqual(projection.state, nmp.PREFLIGHTED, projection.reason)
+        with self.assertRaises(nmp.NmpGateError):
+            packet.assert_executable()
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 521 Python tests pass.
+- [x] 530 Python tests pass.
 - [x] Canonical GitHub Actions native workflow run `42396090387` passed 121 steps for the 59-fixture set.
 
 ## GAME PLAN `::` integration queue (P0–P13)

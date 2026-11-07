@@ -318,6 +318,21 @@ class MathValidityTests(unittest.TestCase):
             VALID,
         )
 
+        equals_zero = scalar_div(undefined_conditions=(
+            {
+                "op": "eq",
+                "left": {"input": 1, "field": "content.value"},
+                "right": "0",
+                "reason": "DIVISION_BY_ZERO",
+            },
+        ))
+        base = snapshot(functions=(equals_zero,), pins=(dividend, zero))
+        engine = MathValidityEngine(base)
+        self.assertEqual(
+            engine.preflight(candidate_for(equals_zero, (dividend, zero))).verdict,
+            UNDEFINED,
+        )
+
     def test_t12_unknown_function_is_unsupported_before_execution(self):
         engine = MathValidityEngine(self.base_snapshot)
         missing = MathFunction(
@@ -521,6 +536,22 @@ class MathValidityTests(unittest.TestCase):
             VALID,
         )
 
+        production_claim = rule_definition(
+            "math.rule.experimental.add",
+            level=3,
+            function_ids=("math.vector.add",),
+            contract_extra={"production": True},
+        )
+        base = snapshot(
+            functions=(isolated_add,),
+            rules=(production_claim,),
+            pins=(self.a, self.b),
+        )
+        engine = MathValidityEngine(base)
+        admission = engine.preflight(candidate_for(isolated_add, (self.a, self.b)))
+        self.assertEqual(admission.verdict, INVALID)
+        self.assertEqual(admission.reason, "SELF_PROMOTION_FORBIDDEN")
+
         promoted = snapshot(
             SNP2,
             functions=(isolated_add, self.dot),
@@ -584,6 +615,13 @@ class MathValidityTests(unittest.TestCase):
             functions=(certified,), pins=(pin,), certificates=(CERT,),
         )
         engine = MathValidityEngine(base)
+        self.assertEqual(
+            engine.preflight(candidate_for(certified, (pin,))).verdict,
+            VALID,
+        )
+
+        declared_only = snapshot(functions=(certified,), pins=(pin,))
+        engine = MathValidityEngine(declared_only)
         self.assertEqual(
             engine.preflight(candidate_for(certified, (pin,))).verdict,
             VALID,
@@ -864,6 +902,10 @@ class MathValidityTests(unittest.TestCase):
             require_admission(admission, self.base_snapshot),
             admission,
         )
+        engine = MathValidityEngine(self.base_snapshot)
+        issued = engine.preflight(candidate_for(self.add, (self.a, self.b)))
+        plan = plan_for(issued)
+        self.assertIs(require_admission(issued, plan, engine=engine), issued)
         stale_snapshot = snapshot(
             SNP2,
             functions=(self.add,),

@@ -262,6 +262,48 @@ class MathLinkerCandidateTests(unittest.TestCase):
         self.assertEqual(result.candidate_count, 4)
         self.assertEqual(linker.link([vector_leaf(1), vector_leaf(2)]).candidate_count, 4)
 
+    def test_math_function_objects_and_registry_objects_are_supported(self):
+        dot = MathFunction(
+            function_id="math.vector.dot",
+            version=1,
+            signature={
+                "inputs": [
+                    {"name": "a", "type": "vector", "domain": "real", "shape": [128]},
+                    {"name": "b", "type": "vector", "domain": "real", "shape": [128]},
+                ],
+                "output": {"type": "scalar", "domain": "real"},
+            },
+            semantics={"commutative": True},
+            proof_status="verified",
+            implementations=({"kernel_id": "mth.vector.dot256.f32"},),
+        )
+
+        class RegistryView:
+            functions = (dot,)
+
+        result = propose(
+            [vector_leaf(1), vector_leaf(2)],
+            registry=RegistryView(),
+            snapshot_id=SNAPSHOT_ID,
+        )
+        self.assertEqual(result.candidate_count, 1)
+        self.assertEqual(result.candidates[0].function_id, "math.vector.dot")
+        self.assertEqual(len(result.snapshot.function_digests[0]["contract_digest"]), 64)
+
+    def test_conjoin_text_query_parses_pinned_leaf_references(self):
+        left = vector_leaf(1)
+        right = vector_leaf(2)
+        query = LinkQuery.parse(f"{left.leaf_id}@v1 :: {right.leaf_id}@v1")
+        self.assertEqual(query.mode, "conjoin")
+        result = propose(
+            query,
+            registry={"math.vector.dot": vector_registry()["math.vector.dot"]},
+            leaves={left.leaf_id: left, right.leaf_id: right},
+            snapshot_id=SNAPSHOT_ID,
+        )
+        self.assertEqual(result.candidate_count, 1)
+        self.assertEqual(result.inputs[0]["leaf_id"], left.leaf_id)
+
 
 class MathLinkerDeterminismTests(unittest.TestCase):
     def test_duplicate_contracts_dedupe_by_content_key(self):

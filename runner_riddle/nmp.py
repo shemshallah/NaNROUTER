@@ -80,20 +80,18 @@ TERMINAL_STATES = frozenset({
     STALE,
     FAILED,
     CANCELLED,
-    # Optional preflight terminals from the canonical table.
-    INVALID,
-    EXPERIMENTAL,
 })
 
-# The subset the task explicitly requires.  Kept separate so consumers that
-# only care about the required typed failures do not have to special-case the
-# two optional preflight terminals.
-REQUIRED_TERMINAL_STATES = frozenset({
-    NULL, UNDEFINED, REJECTED, UNAVAILABLE, UNAUTHORIZED, STALE, FAILED,
-    CANCELLED,
-})
+# The canonical transition table also names INVALID and EXPERIMENTAL.  They
+# are kept as optional typed preflight terminals, but the required terminal
+# set above remains exactly the eight control outcomes.
+OPTIONAL_TERMINAL_STATES = frozenset({INVALID, EXPERIMENTAL})
+ALL_TERMINAL_STATES = TERMINAL_STATES | OPTIONAL_TERMINAL_STATES
 
-ALL_STATES = frozenset(STATES) | TERMINAL_STATES
+# Backwards/explicit alias for consumers that want every terminal state.
+REQUIRED_TERMINAL_STATES = TERMINAL_STATES
+
+ALL_STATES = frozenset(STATES) | ALL_TERMINAL_STATES
 SUCCESS_TERMINAL_STATES = frozenset({COMMITTED})
 
 _PRE_EXECUTION_STATES = frozenset({CREATED, RESOLVED, CLASSIFIED, PROPOSED, PREFLIGHTED})
@@ -113,7 +111,7 @@ TRANSITIONS = MappingProxyType({
     EXECUTING: frozenset({COMPLETED, FAILED, CANCELLED}),
     COMPLETED: frozenset({COMMITTED, FAILED}),
     COMMITTED: frozenset(),
-    **{state: frozenset() for state in TERMINAL_STATES},
+    **{state: frozenset() for state in ALL_TERMINAL_STATES},
 })
 
 # A parent packet is a batch envelope, never executable work.
@@ -159,6 +157,10 @@ class NmpError(ValueError):
 
 class NmpValidationError(NmpError):
     """A packet field violates the canonical record contract."""
+
+
+class NmpLaneError(NmpValidationError):
+    """A lane is outside 0..254 or names NANNET0."""
 
 
 class NmpTransitionError(NmpError):
@@ -320,14 +322,14 @@ def is_valid_lane(lane_id: Any) -> bool:
 
 def validate_lane(lane_id: Any) -> int:
     if isinstance(lane_id, bool) or not isinstance(lane_id, int):
-        raise NmpValidationError("lane_id must be an integer")
+        raise NmpLaneError("lane_id must be an integer")
     if lane_id == NANNET0_LANE:
-        raise NmpValidationError(
+        raise NmpLaneError(
             "lane 255 is NANNET0 (ring position 255), not a NMP lane; "
             f"valid lanes are 0..{MAX_LANE}"
         )
     if not 0 <= lane_id <= MAX_LANE:
-        raise NmpValidationError(f"lane_id must be in 0..{MAX_LANE}")
+        raise NmpLaneError(f"lane_id must be in 0..{MAX_LANE}")
     return lane_id
 
 
@@ -430,7 +432,10 @@ def dedupe_key_for(
         "base_generation": base_generation,
         "function_id": function,
         "function_version": function_version,
-        "candidate_id": candidate_id,
+        # Candidate IDs are convenience identities.  When input identities are
+        # available the operation key uses those, so two producers that name
+        # the same content differently still deduplicate.
+        "candidate_id": "" if identities else candidate_id,
         "inputs": identities,
         "ruleset_snapshot_id": ruleset_snapshot_id,
         "numerical_policy": dict(numerical_policy or {}),
@@ -704,11 +709,11 @@ class NmpPacket:
 
     @property
     def is_terminal(self) -> bool:
-        return self.state in TERMINAL_STATES or self.state == COMMITTED
+        return self.state in ALL_TERMINAL_STATES or self.state == COMMITTED
 
     @property
     def is_failure_terminal(self) -> bool:
-        return self.state in TERMINAL_STATES
+        return self.state in ALL_TERMINAL_STATES
 
     @property
     def cancel_requested(self) -> bool:
@@ -801,6 +806,93 @@ class NmpPacket:
     def digest(self) -> str:
         return digest_object(self.to_dict())
 
+    @classmethod
+    def create(cls, **fields: Any) -> "NmpPacket":
+        """Named constructor for callers that prefer an explicit factory."""
+        return cls(**fields)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "NmpPacket":
+        """Rebuild a packet from canonical ``to_dict`` evidence.
+
+        Unknown fields are ignored; the nested preflight/ruleset/capability/
+        resources/output/evidence groups are flattened back to packet fields.
+        """
+        if not isinstance(data, Mapping):
+            raise NmpValidationError("packet record must be an object")
+        preflight = data.get("preflight") if isinstance(data.get("preflight"), Mapping) else {}
+        ruleset = data.get("ruleset") if isinstance(data.get("ruleset"), Mapping) else {}
+        capability = data.get("capability") if isinstance(data.get("capability"), Mapping) else {}
+        resources = data.get("resources") if isinstance(data.get("resources"), Mapping) else {}
+        output = data.get("output") if isinstance(data.get("output"), Mapping) else {}
+        evidence = data.get("evidence") if isinstance(data.get("evidence"), Mapping) else {}
+        known_evidence = {
+            "job_id", "lease_epoch", "ring_incarnation", "ring_epoch",
+            "result_status", "cancel_epoch", "jahs",
+        }
+        extra_evidence = {
+            key: value for key, value in evidence.items()
+            if key not in known_evidence
+        }
+        fields: dict[str, Any] = {
+            "packet_id": data.get("packet_id", ""),
+            "snapshot_id": data.get("snapshot_id", ""),
+            "base_generation": data.get("base_generation", 0),
+            "generation": data.get("generation"),
+            "lane_id": data.get("lane_id", 0),
+            "universe_id": data.get("universe_id", "U0"),
+            "function_id": data.get("function_id", ""),
+            "function_version": data.get("function_version", 1),
+            "candidate_id": data.get("candidate_id", ""),
+            "inputs": data.get("inputs", ()),
+            "admission_id": data.get("admission_id"),
+            "admission_verdict": data.get("admission_verdict"),
+            "preflight_digest": preflight.get("digest", data.get("preflight_digest")),
+            "preflight_result": preflight.get("result", data.get("preflight_result")),
+            "ruleset_id": ruleset.get("id") or data.get("ruleset_id", ""),
+            "ruleset_version": ruleset.get("version", data.get("ruleset_version", 1)),
+            "ruleset_snapshot_id": (
+                ruleset.get("snapshot_id")
+                or preflight.get("rule_snapshot_id")
+                or data.get("ruleset_snapshot_id", "")
+            ),
+            "capability_set": capability.get("set", data.get("capability_set", ())),
+            "capability_set_digest": capability.get("digest", data.get("capability_set_digest")),
+            "capability_epoch": capability.get("epoch", data.get("capability_epoch", 0)),
+            "guest_words": resources.get("guest_words", data.get("guest_words", 0)),
+            "plan_digest": data.get("plan_digest"),
+            "numerical_policy": data.get("numerical_policy", {}),
+            "commutative": data.get("commutative", False),
+            "operation_id": data.get("operation_id"),
+            "request_id": data.get("request_id"),
+            "cancel_epoch": evidence.get("cancel_epoch", data.get("cancel_epoch", 0)),
+            "state": data.get("state", data.get("status", CREATED)),
+            "result_digest": output.get("digest", data.get("result_digest")),
+            "result_status": output.get("status", evidence.get("result_status")),
+            "output_leaf_id": output.get("leaf_id", data.get("output_leaf_id")),
+            "output_kind": output.get("kind", data.get("output_kind", "scalar")),
+            "job_id": evidence.get("job_id", data.get("job_id")),
+            "lease_epoch": evidence.get("lease_epoch", data.get("lease_epoch")),
+            "ring_incarnation": evidence.get("ring_incarnation", data.get("ring_incarnation")),
+            "ring_epoch": evidence.get("ring_epoch", data.get("ring_epoch")),
+            "jahs": evidence.get("jahs", data.get("jahs")),
+            "batch_id": data.get("batch_id"),
+            "batch_index": data.get("batch_index"),
+            "batch_count": data.get("batch_count"),
+            "parent_packet_id": data.get("parent_packet_id"),
+            "child_packet_ids": data.get("child_packet_ids", ()),
+            "is_batch_parent": data.get("is_batch_parent", False),
+            "reason": data.get("reason"),
+            "failure_class": data.get("failure_class"),
+            "provenance": data.get("provenance", {}),
+            "evidence": extra_evidence,
+            "metadata": data.get("metadata", {}),
+            "created_tick": data.get("created_tick", 0),
+            "updated_tick": data.get("updated_tick", 0),
+            "history": data.get("history", ()),
+        }
+        return cls(**fields)
+
     # -- state machine ------------------------------------------------------
 
     def check_transition(
@@ -814,7 +906,7 @@ class NmpPacket:
         state = _text(next_state, "next_state", maximum=32).upper()
         if state not in ALL_STATES:
             raise NmpTransitionError(f"unknown target state: {state!r}")
-        if self.state in TERMINAL_STATES or self.state == COMMITTED:
+        if self.state in ALL_TERMINAL_STATES or self.state == COMMITTED:
             raise NmpTransitionError(
                 f"{self.state} is terminal for packet {self.packet_id}"
             )
@@ -927,6 +1019,12 @@ class NmpPacket:
         return replace(self, **updates)
 
     # Convenience transitions -------------------------------------------------
+
+    def advance(self, next_state: str, **kwargs: Any) -> "NmpPacket":
+        """Alias for :meth:`transition`."""
+        return self.transition(next_state, **kwargs)
+
+    transition_to = advance
 
     def resolve(self, **kwargs: Any) -> "NmpPacket":
         return self.transition(RESOLVED, **kwargs)
@@ -1072,6 +1170,10 @@ class NmpPacket:
     def execution_gate(self, **kwargs: Any) -> "NmpGateDecision":
         return execution_gate(self, **kwargs)
 
+    # Common names for the same side-effect-free check.
+    def gate(self, **kwargs: Any) -> "NmpGateDecision":
+        return execution_gate(self, **kwargs)
+
     def can_execute(self, **kwargs: Any) -> bool:
         return execution_gate(self, **kwargs).ok
 
@@ -1079,6 +1181,8 @@ class NmpPacket:
         decision = execution_gate(self, **kwargs)
         if not decision.ok:
             raise NmpGateError(decision)
+
+    assert_executable = require_executable
 
     # -- cancellation (cooperative, plan-step granularity) -------------------
 
@@ -1113,7 +1217,7 @@ class NmpPacket:
                 cancel_epoch=self.cancel_epoch,
                 action="result_stands",
             )
-        if self.state in TERMINAL_STATES:
+        if self.state in ALL_TERMINAL_STATES:
             return NmpCancellation(
                 packet=self,
                 status="terminal",
@@ -1287,6 +1391,8 @@ class NmpPacket:
         """Alias for :meth:`request_cancel`."""
         return self.request_cancel(**kwargs)
 
+    cancel_request = cancel
+
     # -- result binding -----------------------------------------------------
 
     def accepts_result(
@@ -1410,9 +1516,7 @@ class NmpGateDecision:
             raise NmpValidationError("an accepted gate decision cannot carry a failure")
         if not self.ok and self.failure is None:
             raise NmpValidationError("a refused gate decision requires a typed failure")
-        if self.failure is not None and self.failure not in TERMINAL_STATES | {
-            INVALID, EXPERIMENTAL
-        }:
+        if self.failure is not None and self.failure not in ALL_TERMINAL_STATES:
             raise NmpValidationError(f"unknown gate failure state: {self.failure!r}")
 
     @property
@@ -2267,6 +2371,11 @@ class NmpBatch:
         object.__setattr__(self, "children", tuple(normalized))
         object.__setattr__(self, "batch_id", batch_id)
 
+    @classmethod
+    def create(cls, parent: NmpPacket, children: Sequence[NmpPacket], *,
+               batch_id: str | None = None) -> "NmpBatch":
+        return cls(parent, tuple(children), batch_id=batch_id)
+
     @property
     def parent_lease(self) -> None:
         """A parent lease never exists."""
@@ -2458,7 +2567,7 @@ class NmpProjection:
             updates["ring_incarnation"] = self.ring_incarnation
         if self.ring_epoch is not None:
             updates["ring_epoch"] = self.ring_epoch
-        if self.reason is not None and target in TERMINAL_STATES:
+        if self.reason is not None and target in ALL_TERMINAL_STATES:
             updates["reason"] = self.reason
         if target == COMMITTED:
             updates.setdefault("provenance", dict(template.provenance))
@@ -2507,7 +2616,7 @@ def _claim_supported(claimed: str, effective: str, packet: NmpPacket) -> bool:
     if effective in (FAILED, CANCELLED, STALE):
         if claimed in (effective, STALE):
             return True
-        if claimed in TERMINAL_STATES:
+        if claimed in ALL_TERMINAL_STATES:
             return False
         return _STATE_ORDER.get(claimed, 99) <= _STATE_ORDER[EXECUTING]
     if effective == EXECUTING:
@@ -2775,6 +2884,63 @@ def reconstruct_packet(
     return projection.to_packet(packet, tick=tick)
 
 
+class NmpProjector:
+    """Convenience wrapper around job/lease projection.
+
+    ``store`` is any WaveStore-like object exposing ``get_job(job_id)``.
+    This class never writes to the store and owns no durable state.
+    """
+
+    durable = False
+    owns_jobs = False
+
+    def __init__(self, store: Any = None) -> None:
+        self.store = store
+
+    def project(
+        self,
+        packet: NmpPacket,
+        *,
+        job: Any = None,
+        lease: Any = None,
+        now_tick: int | None = None,
+        allow_newer: bool = False,
+    ) -> NmpProjection:
+        return project_packet(
+            packet,
+            job=job,
+            lease=lease,
+            store=self.store,
+            now_tick=now_tick,
+            allow_newer=allow_newer,
+        )
+
+    def reconstruct(
+        self,
+        packet: NmpPacket,
+        *,
+        job: Any = None,
+        lease: Any = None,
+        now_tick: int | None = None,
+        allow_newer: bool = False,
+        tick: int = 0,
+    ) -> NmpPacket:
+        return reconstruct_packet(
+            packet,
+            job=job,
+            lease=lease,
+            store=self.store,
+            now_tick=now_tick,
+            allow_newer=allow_newer,
+            tick=tick,
+        )
+
+
+# Common discoverable aliases.
+NmpStateProjection = NmpProjection
+NmpDeduplicator = NmpInFlightTable
+
+
 def admission_is_current(packet: NmpPacket, admission: Any) -> bool:
     """True when an admission record is still bound to the packet snapshot."""
     verdict, data = _admission_verdict(admission)
@@ -2796,8 +2962,21 @@ def admission_is_current(packet: NmpPacket, admission: Any) -> bool:
     return True
 
 
+# Module-level discoverable aliases.
+prepare_packet = prepare
+gate = execution_gate
+project_state = project_packet
+restore_packet = reconstruct_packet
+
+
+def can_execute(packet: NmpPacket, **kwargs: Any) -> bool:
+    """Module-level boolean execution gate."""
+    return execution_gate(packet, **kwargs).ok
+
+
 __all__ = [
     "ALL_STATES",
+    "ALL_TERMINAL_STATES",
     "CANCELLED",
     "CLASSIFIED",
     "COMMITTED",
@@ -2813,6 +2992,7 @@ __all__ = [
     "NANNET0_LANE",
     "NMP_SCHEMA",
     "NULL",
+    "OPTIONAL_TERMINAL_STATES",
     "NmpBatch",
     "NmpBatchError",
     "NmpBatchSeal",
@@ -2820,14 +3000,18 @@ __all__ = [
     "NmpCancellationResult",
     "NmpDedupeError",
     "NmpDedupeResult",
+    "NmpDeduplicator",
     "NmpError",
     "NmpGateDecision",
     "NmpGateError",
     "NmpInFlightTable",
+    "NmpLaneError",
     "NmpPacket",
     "NmpProjection",
     "NmpProjectionError",
+    "NmpProjector",
     "NmpSealError",
+    "NmpStateProjection",
     "NmpTransitionError",
     "NmpValidationError",
     "PREFLIGHTED",
@@ -2846,17 +3030,22 @@ __all__ = [
     "UNDEFINED",
     "admission_is_current",
     "batch_id_for",
+    "can_execute",
     "check_execution_gate",
     "dedupe_key",
     "dedupe_key_for",
     "execution_gate",
+    "gate",
     "is_valid_lane",
     "make_batch",
     "normalize_digest",
     "packet_id_for",
     "prepare",
+    "prepare_packet",
     "project",
     "project_packet",
+    "project_state",
     "reconstruct_packet",
+    "restore_packet",
     "validate_lane",
 ]

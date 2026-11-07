@@ -8,7 +8,7 @@ function/rule/capability context, and returns candidate transforms.
 It deliberately does **not**:
 
 * execute or evaluate mathematics;
-* import an executor, ``MthSystem``, or ``WaveService``;
+* import an execution engine or service-layer authority;
 * produce an admission/verdict or any other authorization;
 * persist leaves, candidates, or snapshots.
 
@@ -365,6 +365,12 @@ class LinkSnapshot:
     declared_capabilities: tuple[dict[str, Any], ...] = ()
     implementation_capabilities: tuple[dict[str, Any], ...] = ()
 
+    def __getitem__(self, key: str) -> Any:
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_dict().get(key, default)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "snapshot_id": self.snapshot_id,
@@ -377,6 +383,24 @@ class LinkSnapshot:
             "declared_capabilities": [dict(row) for row in self.declared_capabilities],
             "implementation_capabilities": [dict(row) for row in self.implementation_capabilities],
         }
+
+
+class _TypedNullLeaf(MathLeaf):
+    """A typed null leaf with read-only mapping-style field access."""
+
+    @property
+    def reason(self) -> str:
+        return str(self.metadata.get("reason", ""))
+
+    def __getitem__(self, key: str) -> Any:
+        if key == "reason":
+            return self.reason
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if key == "reason":
+            return self.reason
+        return self.to_dict().get(key, default)
 
 
 @dataclass(frozen=True)
@@ -418,12 +442,22 @@ class LinkResult:
         return tuple(candidate.candidate_id for candidate in self.candidates)
 
     @property
+    def omitted(self) -> int:
+        return self.omitted_candidate_count
+
+    @property
     def null_leaf(self) -> MathLeaf | None:
         return self.null
 
     @property
     def null_record(self) -> dict[str, Any] | None:
         return None if self.null is None else self.null.to_dict()
+
+    @property
+    def null_reason(self) -> str | None:
+        if self.null is None:
+            return None
+        return str(self.null.metadata.get("reason", ""))
 
     @property
     def snapshot_id(self) -> str:
@@ -439,6 +473,15 @@ class LinkResult:
     @property
     def candidate_set_id(self) -> str:
         return "cset:" + self.digest()
+
+    def __getitem__(self, key: str) -> Any:
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_dict().get(key, default)
+
+    def as_dict(self) -> dict[str, Any]:
+        return self.to_dict()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -554,6 +597,22 @@ def parse_ref(value: Any, *, aliases: Mapping[str, Any] | None = None,
         if isinstance(value.get("ref"), (str, MathRef, MathLeaf)):
             return parse_ref(value["ref"], aliases=aliases, _depth=_depth + 1)
         leaf_id = value.get("leaf_id", value.get("id"))
+        if isinstance(leaf_id, bool) or isinstance(leaf_id, (int, float)):
+            raise LinkError("raw_offset", "numeric offsets are not mathematical leaves")
+        if isinstance(leaf_id, str):
+            lowered = leaf_id.strip().lower()
+            if lowered.startswith("nan://"):
+                raise LinkError(
+                    "address_context_mismatch",
+                    "nan:// is a routing grammar, not a math leaf identity",
+                )
+            if _HW_RE.match(leaf_id.strip()):
+                raise LinkError(
+                    "unbound_head_reference",
+                    "HW0:* is a hierarchy head unless an explicit alias binds it",
+                )
+            if _RAW_OFFSET_RE.fullmatch(leaf_id.strip()):
+                raise LinkError("raw_offset", "numeric offsets are not mathematical leaves")
         if not isinstance(leaf_id, str) or not _validate_leaf_id(leaf_id):
             raise LinkError("invalid_reference", "leaf_id must be an nml: identifier")
         if "version" not in value or value.get("version") is None:
@@ -696,8 +755,8 @@ def _resolve_leaf(operand: Any, ref: MathRef, leaves: Any) -> MathLeaf:
     if isinstance(operand, Mapping):
         if isinstance(operand.get("leaf"), MathLeaf):
             return operand["leaf"]
-        if operand.get("schema") == LEAF_SCHEMA and "kind" in operand:
-            return _leaf_from_mapping(operand)
+        if operand.get("kind") is not None and operand.get("type") is not None:
+            return _leaf_from_mapping(_leaf_document_for_ref(operand, ref))
     value: Any = None
     if leaves is None:
         raise LinkError("unknown_leaf", f"no leaf resolver supplied for {ref.leaf_id}")
@@ -715,7 +774,7 @@ def _resolve_leaf(operand: Any, ref: MathRef, leaves: Any) -> MathLeaf:
         except AttributeError as exc:
             raise LinkError("invalid_resolver", "leaf resolver must be mapping/callable") from exc
     if isinstance(value, Mapping):
-        value = _leaf_from_mapping(value)
+        value = _leaf_from_mapping(_leaf_document_for_ref(value, ref))
     if not isinstance(value, MathLeaf):
         raise LinkError("unknown_leaf", f"leaf not found: {ref.leaf_id}@v{ref.version}")
     if value.leaf_id != ref.leaf_id:
@@ -727,14 +786,37 @@ def _resolve_leaf(operand: Any, ref: MathRef, leaves: Any) -> MathLeaf:
     return value
 
 
+def _leaf_document_for_ref(document: Mapping[str, Any], ref: MathRef) -> dict[str, Any]:
+    payload = dict(document)
+    payload.setdefault("leaf_id", ref.leaf_id)
+    payload.setdefault("version", ref.version)
+    if "content_digest" in payload and not isinstance(payload.get("content"), Mapping):
+        digest = _optional_digest(payload.pop("content_digest"), "content_digest")
+        if digest is not None:
+            payload["content"] = {"digest": digest}
+    return payload
+
+
 def _call_resolver(resolver: Any, ref: MathRef) -> Any:
     signature = _safe_signature(resolver)
-    attempts = (
+    attempts: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    if signature is not None:
+        names = set(signature.parameters)
+        kwargs = {}
+        if "ref" in names or "reference" in names:
+            kwargs["ref" if "ref" in names else "reference"] = ref
+        if "leaf_id" in names:
+            kwargs["leaf_id"] = ref.leaf_id
+        if "version" in names:
+            kwargs["version"] = ref.version
+        if kwargs:
+            attempts.append(((), kwargs))
+    attempts.extend([
         ((ref,), {}),
         ((ref.leaf_id,), {}),
         ((ref.leaf_id, ref.version), {}),
         ((), {}),
-    )
+    ])
     return _call_first(resolver, signature, attempts)
 
 
@@ -2335,7 +2417,7 @@ def _typed_null(reason: str, inputs: tuple[dict[str, Any], ...], snapshot_id: st
         "incomplete_reasons": list(incomplete_reasons),
     }
     suffix = digest_object(metadata)[:24]
-    return MathLeaf(
+    return _TypedNullLeaf(
         leaf_id=f"nml:U0:null:{suffix}",
         kind="null",
         type={

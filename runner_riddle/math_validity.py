@@ -78,6 +78,10 @@ _OP_ALIASES = {
     "not_equals": "ne",
     "non_zero": "nonzero",
     "is_zero": "zero",
+    "equals_zero": "zero",
+    "divisor_zero": "zero",
+    "divisor_nonzero": "nonzero",
+    "nonzero_divisor": "nonzero",
 }
 
 _LAYOUT_ALIASES = {
@@ -412,11 +416,28 @@ class MathSnapshot:
             raise MathSnapshotError("snapshot_id must be a non-empty string")
         if not _is_int(self.version, minimum=1):
             raise MathSnapshotError("snapshot version must be an integer >= 1")
-        functions = tuple(_function_from_mapping(item) for item in (self.functions or ()))
-        rules = tuple(_rule_from_mapping(item) for item in (self.rules or ()))
-        object.__setattr__(self, "functions", functions)
-        object.__setattr__(self, "rules", rules)
-        object.__setattr__(self, "leaf_pins", _tuple_of_mappings(self.leaf_pins, "leaf_pins"))
+        functions = self.functions or ()
+        rules = self.rules or ()
+        if isinstance(functions, Mapping):
+            functions = tuple(functions.values())
+        if isinstance(rules, Mapping):
+            rules = tuple(rules.values())
+        leaf_pins = self.leaf_pins
+        if isinstance(leaf_pins, Mapping):
+            leaf_pins = tuple(
+                dict(pin, leaf_id=pin.get("leaf_id", leaf_id))
+                if isinstance(pin, Mapping) else pin
+                for leaf_id, pin in leaf_pins.items()
+            )
+        object.__setattr__(
+            self, "functions",
+            tuple(_function_from_mapping(item) for item in functions),
+        )
+        object.__setattr__(
+            self, "rules",
+            tuple(_rule_from_mapping(item) for item in rules),
+        )
+        object.__setattr__(self, "leaf_pins", _tuple_of_mappings(leaf_pins, "leaf_pins"))
         object.__setattr__(self, "aliases", _normalise_aliases(self.aliases))
         object.__setattr__(self, "capabilities", _normalise_capabilities(self.capabilities))
         object.__setattr__(self, "authorization", _mapping_copy(self.authorization, "authorization"))
@@ -469,8 +490,8 @@ class MathSnapshot:
             version=value.get("version", 1),
             parent_snapshot_id=value.get("parent_snapshot_id", ""),
             rule_snapshot_id=value.get("rule_snapshot_id", ""),
-            functions=tuple(value.get("functions", ()) or ()),
-            rules=tuple(value.get("rules", ()) or ()),
+            functions=value.get("functions", ()) or (),
+            rules=value.get("rules", ()) or (),
             leaf_pins=value.get("leaf_pins", value.get("leaves", ())) or (),
             aliases=value.get("aliases", ()) or (),
             capabilities=value.get("capabilities", ()) or (),
@@ -747,8 +768,47 @@ def _resolve_ref(ref: Any, context: _PredicateContext) -> Any:
     return ref
 
 
+def _legacy_expr_predicate(predicate: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Translate the small symbolic expressions used by the function catalogue.
+
+    This is deliberately a closed, audited vocabulary.  It does not evaluate
+    arbitrary text and it never performs numeric arithmetic.
+    """
+    expr = predicate.get("expr")
+    if not isinstance(expr, str):
+        return None
+    compact = re.sub(r"\s+", "", expr).lower()
+    shape = {"input": 0, "field": "type.shape"}
+    shape_b = {"input": 1, "field": "type.shape"}
+    domain = {"input": 0, "field": "type.domain"}
+    domain_b = {"input": 1, "field": "type.domain"}
+    translated: dict[str, Any] = {}
+    if compact in {"shape(a)==shape(b)", "shape(a)equalshape(b)"}:
+        translated = {"op": "shape_equal", "left": shape, "right": shape_b}
+    elif compact in {"shape(a)!=shape(b)", "shape(a)notequalshape(b)"}:
+        translated = {"op": "ne", "left": shape, "right": shape_b}
+    elif compact in {"domain(a)compatibledomain(b)", "domain(a)==domain(b)"}:
+        translated = {"op": "domain_compatible", "left": domain, "right": domain_b}
+    elif compact in {"incompatibledomains", "domain(a)incompatibledomain(b)"}:
+        translated = {"op": "ne", "left": domain, "right": domain_b}
+    elif compact in {"result==sum_ia[i]*b[i]underthedeclarednumericalpolicy",}:
+        translated = {"op": "certificate"}  # a numeric postcondition needs evidence
+    else:
+        return None
+    for key in ("reason", "failure_class", "certificate_digest", "certificate", "value"):
+        if key in predicate:
+            translated[key] = predicate[key]
+    return translated
+
+
 def _predicate_op(predicate: Mapping[str, Any]) -> str:
-    raw = predicate.get("op", predicate.get("kind", predicate.get("predicate")))
+    raw = predicate.get(
+        "op",
+        predicate.get(
+            "kind",
+            predicate.get("predicate", predicate.get("operator", predicate.get("type"))),
+        ),
+    )
     if not isinstance(raw, str) or not raw:
         return ""
     op = _normalise_key(raw)
@@ -817,6 +877,10 @@ def _evaluate_predicate(predicate: Any, phase: str, index: int,
         )
     if _contains_float(predicate):
         return _predicate_result(phase, index, "", "UNKNOWN", "HOST_FLOAT_FORBIDDEN")
+    if not _predicate_op(predicate):
+        translated = _legacy_expr_predicate(predicate)
+        if translated is not None:
+            predicate = translated
     op = _predicate_op(predicate)
     if op not in _ALL_OPS:
         return _predicate_result(phase, index, op, "UNSUPPORTED", "PREDICATE_OP_UNSUPPORTED")
@@ -909,6 +973,13 @@ def _evaluate_predicate(predicate: Any, phase: str, index: int,
     if op in {"eq", "ne"}:
         if left is _MISSING or right is _MISSING:
             return _predicate_result(phase, index, op, "UNKNOWN", "OPERAND_NOT_ESTABLISHED")
+        left_zero = _declared_zero(left)
+        right_zero = _declared_zero(right)
+        if (left_zero is True or right_zero is True) and \
+                left_zero is not None and right_zero is not None:
+            equal = left_zero == right_zero
+            status = "SATISFIED" if (equal if op == "eq" else not equal) else "VIOLATED"
+            return _predicate_result(phase, index, op, status, custom_reason)
         if (_is_int(left) or _is_int(right)) and not isinstance(left, (list, tuple, Mapping)) \
                 and not isinstance(right, (list, tuple, Mapping)):
             return _evaluate_numeric_certificate(
@@ -1479,8 +1550,13 @@ class MathValidityEngine:
                   enforce_postconditions: bool = False) -> MathAdmission:
         candidate = _coerce_candidate(candidate)
         if isinstance(snapshot, MathFunction):
-            if function is None:
-                function = snapshot
+            if function is not None and rules is None:
+                rules = function
+            function = snapshot
+            snapshot = None
+        elif isinstance(snapshot, MathRule):
+            if rules is None:
+                rules = (snapshot,)
             snapshot = None
         elif isinstance(snapshot, (tuple, list)) and all(
                 isinstance(item, MathRule) for item in snapshot):
@@ -2263,13 +2339,29 @@ class MathValidityEngine:
                 contract.get("promote_self") is True:
             return "SELF_PROMOTION_FORBIDDEN"
         for key in ("promote_to_level", "promoted_to_level", "level_override",
-                    "acts_as_level", "authority_level"):
+                    "acts_as_level", "authority_level", "requested_level",
+                    "promoted_level", "target_level", "claimed_level",
+                    "effective_level"):
             if key in contract:
                 value = contract[key]
                 if not _is_int(value, minimum=0) or value != rule.level:
                     return "SELF_PROMOTION_FORBIDDEN"
         source = contract.get("promoted_from_level")
         if source is not None and _is_int(source, minimum=0) and source > rule.level:
+            return "SELF_PROMOTION_FORBIDDEN"
+        if rule.level == 0 and (
+            contract.get("mutable") is True
+            or contract.get("immutable") is False
+            or contract.get("learnable") is True
+        ):
+            return "LEVEL0_IMMUTABLE"
+        if rule.level == 3 and (
+            contract.get("production") is True
+            or contract.get("authoritative") is True
+            or contract.get("promote_to_production") is True
+            or rule.scope.get("production") is True
+            or rule.scope.get("isolated") is False
+        ):
             return "SELF_PROMOTION_FORBIDDEN"
         return ""
 
@@ -2686,7 +2778,8 @@ class MathValidityEngine:
             statuses = [
                 str(item.get("status", "available")).lower() for item in matching
             ]
-            if any(status in {"unavailable", "revoked", "disabled", "missing"}
+            if any(status in {"unavailable", "revoked", "disabled", "missing",
+                              "absent", "none", "unregistered"}
                    for status in statuses):
                 continue
             if any(status in {"unsupported", "removed"} for status in statuses):
@@ -2720,7 +2813,7 @@ class MathValidityEngine:
                     authorization_outcome.get("status") == "DENIED":
                 verdict = UNAUTHORIZED
                 reason = authorization_outcome.get("reason", "AUTHORIZATION_DENIED")
-            elif capability_outcome is not None:
+            elif capability_outcome is not None and verdict != EXPERIMENTAL:
                 capability_status = capability_outcome.get("status")
                 if capability_status == "UNAVAILABLE":
                     verdict = UNAVAILABLE
@@ -2782,8 +2875,8 @@ class MathValidityEngine:
         self._issued[admission.preflight_digest] = admission
         self._issued_by_id[admission.admission_id] = admission
 
-    def require_admission(self, admission: MathAdmission | None = None, *,
-                          plan: Any = None, job: Any = None,
+    def require_admission(self, admission: MathAdmission | None = None,
+                          plan: Any = None, job: Any = None, *,
                           allow_experimental: bool = False,
                           authorization: Any = None,
                           capabilities: Any = None) -> MathAdmission:
@@ -2814,6 +2907,14 @@ class MathValidityEngine:
                 raise AdmissionRejected(
                     "experimental admission requires an isolated plan/job binding",
                     verdict=admission.verdict, reason="ISOLATION_BINDING_REQUIRED",
+                    admission=admission,
+                )
+            capability_record = admission.scope.get("capability", {})
+            if isinstance(capability_record, Mapping) and \
+                    capability_record.get("status") in {"UNAVAILABLE", "UNSUPPORTED"}:
+                raise AdmissionRejected(
+                    "experimental admission has no available isolated capability",
+                    verdict=admission.verdict, reason="ISOLATED_CAPABILITY_UNAVAILABLE",
                     admission=admission,
                 )
         elif admission.verdict != VALID:
@@ -3065,6 +3166,11 @@ def require_admission(admission: MathAdmission | None = None, snapshot: Any = No
     authoritative.  Otherwise a snapshot is required and the admission is
     checked structurally against it.
     """
+    if isinstance(snapshot, Mapping) and plan is None and \
+            ("admission_id" in snapshot or "preflight_digest" in snapshot) and \
+            not any(key in snapshot for key in ("functions", "rules", "leaf_pins", "leaves")):
+        plan = snapshot
+        snapshot = None
     if engine is not None:
         return engine.require_admission(
             admission, plan=plan, job=job,
@@ -3127,19 +3233,28 @@ def require_admission(admission: MathAdmission | None = None, snapshot: Any = No
             verdict=UNKNOWN, reason="PREFLIGHT_DIGEST_MALFORMED",
             admission=admission,
         )
-    authorization = admission.scope.get("authorization", {})
-    if isinstance(authorization, Mapping) and authorization.get("context_digest"):
-        if authorization["context_digest"] != digest_object(
-                _safe_value(current.authorization)):
+    authorization_config = dict(current.authorization)
+    if authorization is not None:
+        authorization_config.update(_mapping_copy(authorization, "authorization"))
+    capability_config = (
+        current.capabilities if capabilities is None
+        else _normalise_capabilities(capabilities)
+    )
+    authorization_record = admission.scope.get("authorization", {})
+    if isinstance(authorization_record, Mapping) and \
+            authorization_record.get("context_digest"):
+        if authorization_record["context_digest"] != digest_object(
+                _safe_value(authorization_config)):
             raise AdmissionRejected(
                 "authorization context changed",
                 verdict=STALE, reason="AUTHORIZATION_CONTEXT_CHANGED",
                 admission=admission,
             )
-    capability = admission.scope.get("capability", {})
-    if isinstance(capability, Mapping) and capability.get("context_digest"):
-        if capability["context_digest"] != digest_object(
-                [_safe_value(item) for item in current.capabilities]):
+    capability_record = admission.scope.get("capability", {})
+    if isinstance(capability_record, Mapping) and \
+            capability_record.get("context_digest"):
+        if capability_record["context_digest"] != digest_object(
+                [_safe_value(item) for item in capability_config]):
             raise AdmissionRejected(
                 "capability context changed",
                 verdict=STALE, reason="CAPABILITY_CONTEXT_CHANGED",

@@ -305,633 +305,987 @@
   },
   "$defs": {
     "math_schema": {
-      "primary_key": [
-        "store"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "store",
-        "version",
-        "applied_tick"
-      ],
-      "columns": {
-        "store": "TEXT",
-        "version": "INTEGER",
-        "applied_tick": "INTEGER"
-      },
-      "constraints": [
-        "store is BS0DB or MC0DB",
-        "version is the math schema version, independent of wave_schema"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "store"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "store",
+            "version",
+            "applied_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "store": "TEXT",
+            "version": "INTEGER",
+            "applied_tick": "INTEGER"
+          }
+        },
+        "constraints": {
+          "const": [
+            "store is BS0DB or MC0DB",
+            "version is the math schema version, independent of wave_schema"
+          ]
+        }
+      }
     },
     "math_leaf": {
-      "primary_key": [
-        "leaf_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "leaf_id",
-        "current_version",
-        "generation",
-        "kind",
-        "type_digest",
-        "status",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "leaf_id": "TEXT",
-        "current_version": "INTEGER",
-        "generation": "INTEGER",
-        "kind": "TEXT",
-        "type_digest": "TEXT",
-        "content_digest": "TEXT",
-        "status": "TEXT",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "content_digest"
-      ],
-      "digest_fields": [
-        "type_digest",
-        "content_digest"
-      ],
-      "status_field": "status",
-      "status_enum": [
-        "scratch",
-        "committed",
-        "superseded",
-        "quarantined",
-        "tombstoned"
-      ],
-      "constraints": [
-        "current_version and generation advance only by compare-and-swap",
-        "a failed CAS leaves the previous current pointer active",
-        "content_digest is null only for typed null/void/undefined leaves"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "leaf_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "leaf_id",
+            "current_version",
+            "generation",
+            "kind",
+            "type_digest",
+            "status",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "leaf_id": "TEXT",
+            "current_version": "INTEGER",
+            "generation": "INTEGER",
+            "kind": "TEXT",
+            "type_digest": "TEXT",
+            "content_digest": "TEXT",
+            "status": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "content_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "type_digest",
+            "content_digest"
+          ]
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "scratch",
+            "committed",
+            "superseded",
+            "quarantined",
+            "tombstoned"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "current_version and generation advance only by compare-and-swap",
+            "a failed CAS leaves the previous current pointer active",
+            "content_digest is null only for typed null/void/undefined leaves"
+          ]
+        }
+      }
     },
     "math_leaf_version": {
-      "primary_key": [
-        "leaf_id",
-        "version"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "leaf_id",
-        "version",
-        "leaf_digest",
-        "kind",
-        "type_json",
-        "type_digest",
-        "storage_tier",
-        "leaf_json",
-        "created_tick"
-      ],
-      "columns": {
-        "leaf_id": "TEXT",
-        "version": "INTEGER",
-        "leaf_digest": "TEXT",
-        "kind": "TEXT",
-        "type_json": "TEXT",
-        "type_digest": "TEXT",
-        "content_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "storage_tier": "TEXT",
-        "leaf_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "content_digest",
-        "payload_ref"
-      ],
-      "digest_fields": [
-        "leaf_digest",
-        "type_digest",
-        "content_digest",
-        "payload_ref"
-      ],
-      "append_only": true,
-      "constraints": [
-        "immutable: UPDATE and DELETE are rejected by triggers",
-        "payload_ref addresses the canonical content in math_payload",
-        "a missing or corrupt payload is a reference error, never zero/null"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "leaf_id",
+            "version"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "leaf_id",
+            "version",
+            "leaf_digest",
+            "kind",
+            "type_json",
+            "type_digest",
+            "storage_tier",
+            "leaf_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "leaf_id": "TEXT",
+            "version": "INTEGER",
+            "leaf_digest": "TEXT",
+            "kind": "TEXT",
+            "type_json": "TEXT",
+            "type_digest": "TEXT",
+            "content_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "storage_tier": "TEXT",
+            "leaf_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "content_digest",
+            "payload_ref"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "leaf_digest",
+            "type_digest",
+            "content_digest",
+            "payload_ref"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "immutable: UPDATE and DELETE are rejected by triggers",
+            "payload_ref addresses the canonical content in math_payload",
+            "a missing or corrupt payload is a reference error, never zero/null"
+          ]
+        }
+      }
     },
     "math_function": {
-      "primary_key": [
-        "function_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "function_id",
-        "current_version",
-        "generation",
-        "contract_digest",
-        "status",
-        "proof_status",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "function_id": "TEXT",
-        "current_version": "INTEGER",
-        "generation": "INTEGER",
-        "contract_digest": "TEXT",
-        "status": "TEXT",
-        "proof_status": "TEXT",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "contract_digest"
-      ],
-      "status_field": "status",
-      "status_enum": [
-        "proposed",
-        "active",
-        "deprecated",
-        "revoked"
-      ],
-      "constraints": [
-        "semantic contract identity; kernels remain implementations"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "function_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "function_id",
+            "current_version",
+            "generation",
+            "contract_digest",
+            "status",
+            "proof_status",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "function_id": "TEXT",
+            "current_version": "INTEGER",
+            "generation": "INTEGER",
+            "contract_digest": "TEXT",
+            "status": "TEXT",
+            "proof_status": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "contract_digest"
+          ]
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "proposed",
+            "active",
+            "deprecated",
+            "revoked"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "semantic contract identity; kernels remain implementations"
+          ]
+        }
+      }
     },
     "math_function_version": {
-      "primary_key": [
-        "function_id",
-        "version"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "function_id",
-        "version",
-        "contract_digest",
-        "payload_ref",
-        "function_json",
-        "status",
-        "proof_status",
-        "created_tick"
-      ],
-      "columns": {
-        "function_id": "TEXT",
-        "version": "INTEGER",
-        "contract_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "function_json": "TEXT",
-        "status": "TEXT",
-        "proof_status": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "contract_digest",
-        "payload_ref"
-      ],
-      "append_only": true,
-      "constraints": [
-        "immutable canonical contract and implementation bindings",
-        "one function may bind multiple implementation digests"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "function_id",
+            "version"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "function_id",
+            "version",
+            "contract_digest",
+            "payload_ref",
+            "function_json",
+            "status",
+            "proof_status",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "function_id": "TEXT",
+            "version": "INTEGER",
+            "contract_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "function_json": "TEXT",
+            "status": "TEXT",
+            "proof_status": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "contract_digest",
+            "payload_ref"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "immutable canonical contract and implementation bindings",
+            "one function may bind multiple implementation digests"
+          ]
+        }
+      }
     },
     "math_rule": {
-      "primary_key": [
-        "rule_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "rule_id",
-        "current_version",
-        "generation",
-        "level",
-        "rule_digest",
-        "status",
-        "proof_status",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "rule_id": "TEXT",
-        "current_version": "INTEGER",
-        "generation": "INTEGER",
-        "level": "INTEGER",
-        "rule_digest": "TEXT",
-        "status": "TEXT",
-        "proof_status": "TEXT",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "rule_digest"
-      ],
-      "status_field": "status",
-      "status_enum": [
-        "proposed",
-        "validated",
-        "active",
-        "deprecated",
-        "revoked",
-        "blocked"
-      ],
-      "constraints": [
-        "level is 0..3",
-        "level-0 rules are immutable authority"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "rule_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "rule_id",
+            "current_version",
+            "generation",
+            "level",
+            "rule_digest",
+            "status",
+            "proof_status",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "rule_id": "TEXT",
+            "current_version": "INTEGER",
+            "generation": "INTEGER",
+            "level": "INTEGER",
+            "rule_digest": "TEXT",
+            "status": "TEXT",
+            "proof_status": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "rule_digest"
+          ]
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "proposed",
+            "validated",
+            "active",
+            "deprecated",
+            "revoked",
+            "blocked"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "level is 0..3",
+            "level-0 rules are immutable authority"
+          ]
+        }
+      }
     },
     "math_rule_version": {
-      "primary_key": [
-        "rule_id",
-        "version"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "rule_id",
-        "version",
-        "level",
-        "rule_digest",
-        "payload_ref",
-        "rule_json",
-        "status",
-        "proof_status",
-        "created_tick"
-      ],
-      "columns": {
-        "rule_id": "TEXT",
-        "version": "INTEGER",
-        "level": "INTEGER",
-        "rule_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "rule_json": "TEXT",
-        "status": "TEXT",
-        "proof_status": "TEXT",
-        "certificate_digest": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "certificate_digest"
-      ],
-      "digest_fields": [
-        "rule_digest",
-        "payload_ref",
-        "certificate_digest"
-      ],
-      "append_only": true
+      "properties": {
+        "primary_key": {
+          "const": [
+            "rule_id",
+            "version"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "rule_id",
+            "version",
+            "level",
+            "rule_digest",
+            "payload_ref",
+            "rule_json",
+            "status",
+            "proof_status",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "rule_id": "TEXT",
+            "version": "INTEGER",
+            "level": "INTEGER",
+            "rule_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "rule_json": "TEXT",
+            "status": "TEXT",
+            "proof_status": "TEXT",
+            "certificate_digest": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "certificate_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "rule_digest",
+            "payload_ref",
+            "certificate_digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        }
+      }
     },
     "math_relation": {
-      "primary_key": [
-        "relation_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "relation_id",
-        "current_version",
-        "generation",
-        "relation_digest",
-        "status",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "relation_id": "TEXT",
-        "current_version": "INTEGER",
-        "generation": "INTEGER",
-        "relation_digest": "TEXT",
-        "status": "TEXT",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "relation_digest"
-      ],
-      "status_field": "status",
-      "status_enum": [
-        "proposed",
-        "active",
-        "deprecated",
-        "revoked"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "relation_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "relation_id",
+            "current_version",
+            "generation",
+            "relation_digest",
+            "status",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "relation_id": "TEXT",
+            "current_version": "INTEGER",
+            "generation": "INTEGER",
+            "relation_digest": "TEXT",
+            "status": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "relation_digest"
+          ]
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "proposed",
+            "active",
+            "deprecated",
+            "revoked"
+          ]
+        }
+      }
     },
     "math_relation_version": {
-      "primary_key": [
-        "relation_id",
-        "version"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "relation_id",
-        "version",
-        "relation_digest",
-        "payload_ref",
-        "relation_json",
-        "created_tick"
-      ],
-      "columns": {
-        "relation_id": "TEXT",
-        "version": "INTEGER",
-        "relation_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "relation_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "relation_digest",
-        "payload_ref"
-      ],
-      "append_only": true
+      "properties": {
+        "primary_key": {
+          "const": [
+            "relation_id",
+            "version"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "relation_id",
+            "version",
+            "relation_digest",
+            "payload_ref",
+            "relation_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "relation_id": "TEXT",
+            "version": "INTEGER",
+            "relation_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "relation_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "relation_digest",
+            "payload_ref"
+          ]
+        },
+        "append_only": {
+          "const": true
+        }
+      }
     },
     "math_candidate": {
-      "primary_key": [
-        "candidate_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "candidate_id",
-        "snapshot_id",
-        "function_id",
-        "function_version",
-        "rank",
-        "preflight_hint",
-        "candidate_digest",
-        "payload_ref",
-        "candidate_json",
-        "created_tick"
-      ],
-      "columns": {
-        "candidate_id": "TEXT",
-        "snapshot_id": "TEXT",
-        "function_id": "TEXT",
-        "function_version": "INTEGER",
-        "rank": "INTEGER",
-        "preflight_hint": "TEXT",
-        "candidate_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "candidate_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "candidate_digest",
-        "payload_ref"
-      ],
-      "append_only": true,
-      "constraints": [
-        "candidate identity is content-derived and immutable"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "candidate_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "candidate_id",
+            "snapshot_id",
+            "function_id",
+            "function_version",
+            "rank",
+            "preflight_hint",
+            "candidate_digest",
+            "payload_ref",
+            "candidate_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "candidate_id": "TEXT",
+            "snapshot_id": "TEXT",
+            "function_id": "TEXT",
+            "function_version": "INTEGER",
+            "rank": "INTEGER",
+            "preflight_hint": "TEXT",
+            "candidate_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "candidate_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "candidate_digest",
+            "payload_ref"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "candidate identity is content-derived and immutable"
+          ]
+        }
+      }
     },
     "math_admission": {
-      "primary_key": [
-        "admission_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "admission_id",
-        "candidate_id",
-        "snapshot_id",
-        "verdict",
-        "rule_snapshot_id",
-        "preflight_digest",
-        "admission_digest",
-        "payload_ref",
-        "admission_json",
-        "created_tick"
-      ],
-      "columns": {
-        "admission_id": "TEXT",
-        "candidate_id": "TEXT",
-        "snapshot_id": "TEXT",
-        "verdict": "TEXT",
-        "rule_snapshot_id": "TEXT",
-        "preflight_digest": "TEXT",
-        "admission_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "admission_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "admission_digest",
-        "payload_ref"
-      ],
-      "status_field": "verdict",
-      "status_enum": [
-        "VALID",
-        "INVALID",
-        "UNDEFINED",
-        "UNAUTHORIZED",
-        "UNSUPPORTED",
-        "UNAVAILABLE",
-        "STALE",
-        "EXPERIMENTAL",
-        "UNKNOWN",
-        "NULL",
-        "VOID"
-      ],
-      "append_only": true,
-      "constraints": [
-        "verdict is a typed validity outcome, never a numerical answer",
-        "preflight_digest may be empty only before a preflight binding exists"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "admission_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "admission_id",
+            "candidate_id",
+            "snapshot_id",
+            "verdict",
+            "rule_snapshot_id",
+            "preflight_digest",
+            "admission_digest",
+            "payload_ref",
+            "admission_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "admission_id": "TEXT",
+            "candidate_id": "TEXT",
+            "snapshot_id": "TEXT",
+            "verdict": "TEXT",
+            "rule_snapshot_id": "TEXT",
+            "preflight_digest": "TEXT",
+            "admission_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "admission_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "admission_digest",
+            "payload_ref"
+          ]
+        },
+        "status_field": {
+          "const": "verdict"
+        },
+        "status_enum": {
+          "const": [
+            "VALID",
+            "INVALID",
+            "UNDEFINED",
+            "UNAUTHORIZED",
+            "UNSUPPORTED",
+            "UNAVAILABLE",
+            "STALE",
+            "EXPERIMENTAL",
+            "UNKNOWN",
+            "NULL",
+            "VOID"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "verdict is a typed validity outcome, never a numerical answer",
+            "preflight_digest may be empty only before a preflight binding exists"
+          ]
+        }
+      }
     },
     "math_mapping": {
-      "primary_key": [
-        "mapping_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "mapping_id",
-        "object_type",
-        "object_id",
-        "current_version",
-        "generation",
-        "target_digest",
-        "storage_tier",
-        "route",
-        "status",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "mapping_id": "TEXT",
-        "object_type": "TEXT",
-        "object_id": "TEXT",
-        "current_version": "INTEGER",
-        "generation": "INTEGER",
-        "target_digest": "TEXT",
-        "storage_tier": "TEXT",
-        "route": "TEXT",
-        "status": "TEXT",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "target_digest"
-      ],
-      "status_field": "status",
-      "status_enum": [
-        "active",
-        "rolled_back",
-        "disabled"
-      ],
-      "constraints": [
-        "stable identity maps to an existing immutable version",
-        "updates CAS on expected version and generation",
-        "rollback is a new mapping event; versions are never destroyed",
-        "mapping rows are not a job or lease authority"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "mapping_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "mapping_id",
+            "object_type",
+            "object_id",
+            "current_version",
+            "generation",
+            "target_digest",
+            "storage_tier",
+            "route",
+            "status",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "mapping_id": "TEXT",
+            "object_type": "TEXT",
+            "object_id": "TEXT",
+            "current_version": "INTEGER",
+            "generation": "INTEGER",
+            "target_digest": "TEXT",
+            "storage_tier": "TEXT",
+            "route": "TEXT",
+            "status": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "target_digest"
+          ]
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "active",
+            "rolled_back",
+            "disabled"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "stable identity maps to an existing immutable version",
+            "updates CAS on expected version and generation",
+            "rollback is a new mapping event; versions are never destroyed",
+            "mapping rows are not a job or lease authority"
+          ]
+        }
+      }
     },
     "math_preflight_cache": {
-      "primary_key": [
-        "cache_key"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "cache_key",
-        "snapshot_id",
-        "candidate_id",
-        "verdict",
-        "result_digest",
-        "invalidation_digest",
-        "result_json",
-        "generation",
-        "created_tick",
-        "updated_tick"
-      ],
-      "columns": {
-        "cache_key": "TEXT",
-        "snapshot_id": "TEXT",
-        "candidate_id": "TEXT",
-        "verdict": "TEXT",
-        "result_digest": "TEXT",
-        "invalidation_digest": "TEXT",
-        "result_json": "TEXT",
-        "generation": "INTEGER",
-        "created_tick": "INTEGER",
-        "updated_tick": "INTEGER",
-        "expires_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "expires_tick"
-      ],
-      "digest_fields": [
-        "result_digest",
-        "invalidation_digest"
-      ],
-      "status_field": "verdict",
-      "status_enum": [
-        "VALID",
-        "INVALID",
-        "UNDEFINED",
-        "UNAUTHORIZED",
-        "UNSUPPORTED",
-        "UNAVAILABLE",
-        "STALE",
-        "EXPERIMENTAL",
-        "UNKNOWN",
-        "NULL",
-        "VOID"
-      ],
-      "constraints": [
-        "disposable: eviction never deletes canonical math data"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "cache_key"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "cache_key",
+            "snapshot_id",
+            "candidate_id",
+            "verdict",
+            "result_digest",
+            "invalidation_digest",
+            "result_json",
+            "generation",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "cache_key": "TEXT",
+            "snapshot_id": "TEXT",
+            "candidate_id": "TEXT",
+            "verdict": "TEXT",
+            "result_digest": "TEXT",
+            "invalidation_digest": "TEXT",
+            "result_json": "TEXT",
+            "generation": "INTEGER",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER",
+            "expires_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "expires_tick"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "result_digest",
+            "invalidation_digest"
+          ]
+        },
+        "status_field": {
+          "const": "verdict"
+        },
+        "status_enum": {
+          "const": [
+            "VALID",
+            "INVALID",
+            "UNDEFINED",
+            "UNAUTHORIZED",
+            "UNSUPPORTED",
+            "UNAVAILABLE",
+            "STALE",
+            "EXPERIMENTAL",
+            "UNKNOWN",
+            "NULL",
+            "VOID"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "disposable: eviction never deletes canonical math data"
+          ]
+        }
+      }
     },
     "math_payload": {
-      "primary_key": [
-        "digest",
-        "chunk_index"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "digest",
-        "encoding",
-        "chunk_index",
-        "chunk_count",
-        "total_length",
-        "chunk_length",
-        "blob",
-        "created_tick"
-      ],
-      "columns": {
-        "digest": "TEXT",
-        "encoding": "TEXT",
-        "chunk_index": "INTEGER",
-        "chunk_count": "INTEGER",
-        "total_length": "INTEGER",
-        "chunk_length": "INTEGER",
-        "blob": "BLOB",
-        "created_tick": "INTEGER"
-      },
-      "digest_fields": [
-        "digest"
-      ],
-      "append_only": true,
-      "constraints": [
-        "digest is SHA-256 over the concatenated chunk bytes",
-        "chunks are contiguous 0..chunk_count-1 and at most chunk_bytes each",
-        "a 2 MiB blob is stored as two 1 MiB chunks by default",
-        "missing, truncated, or digest-mismatched chunks raise a reference error"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "digest",
+            "chunk_index"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "digest",
+            "encoding",
+            "chunk_index",
+            "chunk_count",
+            "total_length",
+            "chunk_length",
+            "blob",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "digest": "TEXT",
+            "encoding": "TEXT",
+            "chunk_index": "INTEGER",
+            "chunk_count": "INTEGER",
+            "total_length": "INTEGER",
+            "chunk_length": "INTEGER",
+            "blob": "BLOB",
+            "created_tick": "INTEGER"
+          }
+        },
+        "digest_fields": {
+          "const": [
+            "digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "digest is SHA-256 over the concatenated chunk bytes",
+            "chunks are contiguous 0..chunk_count-1 and at most chunk_bytes each",
+            "a 2 MiB blob is stored as two 1 MiB chunks by default",
+            "missing, truncated, or digest-mismatched chunks raise a reference error"
+          ]
+        }
+      }
     },
     "math_event": {
-      "primary_key": [
-        "event_seq"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "event_seq",
-        "event_id",
-        "event_type",
-        "object_type",
-        "object_id",
-        "actor",
-        "tick",
-        "payload_json",
-        "created_tick"
-      ],
-      "columns": {
-        "event_seq": "INTEGER",
-        "event_id": "TEXT",
-        "event_type": "TEXT",
-        "object_type": "TEXT",
-        "object_id": "TEXT",
-        "version": "INTEGER",
-        "generation": "INTEGER",
-        "digest": "TEXT",
-        "actor": "TEXT",
-        "tick": "INTEGER",
-        "payload_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "version",
-        "generation",
-        "digest"
-      ],
-      "digest_fields": [
-        "digest"
-      ],
-      "append_only": true,
-      "constraints": [
-        "event_seq and event_id are unique",
-        "propose/preflight/execute/commit/null/void/rollback/mapping are append-only",
-        "UPDATE and DELETE are rejected by triggers"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "event_seq"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "event_seq",
+            "event_id",
+            "event_type",
+            "object_type",
+            "object_id",
+            "actor",
+            "tick",
+            "payload_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "event_seq": "INTEGER",
+            "event_id": "TEXT",
+            "event_type": "TEXT",
+            "object_type": "TEXT",
+            "object_id": "TEXT",
+            "version": "INTEGER",
+            "generation": "INTEGER",
+            "digest": "TEXT",
+            "actor": "TEXT",
+            "tick": "INTEGER",
+            "payload_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "version",
+            "generation",
+            "digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "event_seq and event_id are unique",
+            "propose/preflight/execute/commit/null/void/rollback/mapping are append-only",
+            "UPDATE and DELETE are rejected by triggers"
+          ]
+        }
+      }
     },
     "math_certificate": {
-      "primary_key": [
-        "certificate_id"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
       ],
-      "required_fields": [
-        "certificate_id",
-        "subject_type",
-        "subject_id",
-        "kind",
-        "certificate_digest",
-        "certificate_json",
-        "created_tick"
-      ],
-      "columns": {
-        "certificate_id": "TEXT",
-        "subject_type": "TEXT",
-        "subject_id": "TEXT",
-        "kind": "TEXT",
-        "certificate_digest": "TEXT",
-        "payload_ref": "TEXT",
-        "certificate_json": "TEXT",
-        "created_tick": "INTEGER"
-      },
-      "nullable_fields": [
-        "payload_ref"
-      ],
-      "digest_fields": [
-        "certificate_digest",
-        "payload_ref"
-      ],
-      "append_only": true,
-      "constraints": [
-        "native residual/proof/test certificates are append-only"
-      ]
+      "properties": {
+        "primary_key": {
+          "const": [
+            "certificate_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "certificate_id",
+            "subject_type",
+            "subject_id",
+            "kind",
+            "certificate_digest",
+            "certificate_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "certificate_id": "TEXT",
+            "subject_type": "TEXT",
+            "subject_id": "TEXT",
+            "kind": "TEXT",
+            "certificate_digest": "TEXT",
+            "payload_ref": "TEXT",
+            "certificate_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "payload_ref"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "certificate_digest",
+            "payload_ref"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "native residual/proof/test certificates are append-only"
+          ]
+        }
+      }
     }
   }
 }

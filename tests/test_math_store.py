@@ -287,12 +287,13 @@ class MathStoreTests(unittest.TestCase):
                 }
             for table_name, ref in table_refs.items():
                 definition = spec["$defs"][ref["$ref"].split("/")[-1]]
+                columns = definition["properties"]["columns"]["const"]
+                required_fields = definition["properties"][
+                    "required_fields"
+                ]["const"]
                 self.assertIn(table_name, actual)
-                self.assertEqual(definition["columns"], actual[table_name])
-                self.assertTrue(
-                    set(definition["required_fields"])
-                    <= set(definition["columns"])
-                )
+                self.assertEqual(columns, actual[table_name])
+                self.assertTrue(set(required_fields) <= set(columns))
 
     # -- immutable leaves and content addressing ---------------------------
 
