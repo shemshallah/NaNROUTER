@@ -38,8 +38,14 @@ mth_rot_loop:
   MOVI r1,@mth_word
   CALL @mth_double_endian
   LDN r12,r6,0
-  CMP r12,r10
-  JMP[EQ] @mth_fail
+  MOVI r8,9
+  CMP r12,r8
+  JMP[NE] @mth_fail
+  LD r14,r6,0
+  MOVI r8,0x3100
+  MOVHI r8,0x0200
+  CMP r14,r8
+  JMP[NE] @mth_fail
   CALL @mth_double_endian
   LD r2,r6,0
   LDN r3,r6,0
