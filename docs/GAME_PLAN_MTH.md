@@ -745,12 +745,18 @@ These are not forbidden forever. They are simply not prerequisites for a useful 
 
 ## 16. Immediate next actions
 
-1. Add this plan to the NaNROUTER documentation.
-2. Cross-check the MTH Stage 0 encoding table against the frozen NaN16 specification and the actual NaN16 interpreter.
-3. Create the NaN16 MTH source directory and a minimal manifest only after confirming the repository's canonical source/build conventions.
-4. Implement the Stage 0 word inspection and double-endian tests in NaN16.
-5. Implement the Boolean/integer kernel next.
-6. Do not add a large operator catalogue until the first vertical slice runs and is independently checked.
+The first NaN16 source slice is now committed under `mth/`. The next work is implementation validation, not another architecture expansion:
+
+1. Assemble every `mth/nan16/*.nas` module and its corresponding `mth/tests/*.nas` fixture with the canonical NaN16 assembler.
+2. Run the fixtures in the canonical interpreter and native guest; record exact output, toolchain revision, and source digests.
+3. Fix assembler/runtime discrepancies before adding more operators.
+4. Convert the pair codec's static return-address slots to a caller-owned frame so it is safe for concurrent use.
+5. Add signed integer operations and exact multiword integer add/subtract/multiply/divide.
+6. Add typed vector descriptors and the first vector operations; then implement model-facing fixed-point/float operations only against the frozen float opcode semantics.
+7. Compose dot-product → scale → mask → stable softmax → weighted-sum as the first attention fixture.
+8. Integrate MTH requests through the existing authorized NaNROUTER task/result path without creating a second registry, runner ring, or task ledger.
+
+Do not expand the catalogue while the current source cannot assemble and run. The first priority is a clean, reproducible NaN16 vertical slice.
 
 **MTH is successful when NaNLMind can ask for a mathematical transformation, execute it in NaN16, inspect exactly what happened, and rely on the result at a clearly stated evidence level.**
 
