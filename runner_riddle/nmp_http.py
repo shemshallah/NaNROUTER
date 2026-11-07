@@ -15,7 +15,6 @@ from .nmp import (
     EXECUTING,
     QUEUED,
     NmpPacket,
-    _check_capabilities,
     validate_native_admission_receipt,
 )
 from .wave_service import WaveService
