@@ -1,0 +1,192 @@
+# MTH Graph-Spectral Implementation Plan
+
+Status: implementation contract and ordered kernel plan. The research-level source of truth is [game_plan_foundations.md](game_plan_foundations.md); the system-level translation is NaNLMind/docs/GRAPH_SPECTRAL_FOUNDATION.md. This document translates those foundations into MTH-native NaN16 work. No host-language math implementation is permitted.
+
+## 1. Scope
+
+MTH will become the numerical substrate for the Relational-Spectral Subsystem (RSS) shared by each 8 MiB universe-bin. It must expose graph, pair-space, spectral, potential, wave, and pattern-analysis kernels. NaNNet runners schedule and transport jobs; they do not reimplement mathematics. NaNLMind consumes validated outputs and retains the canonical semantic ledger.
+
+## 2. Fixed mathematical contracts
+
+### 2.1 K256 exact baseline
+
+For the unweighted complete graph:
+- A=J-I;
+- D=255I;
+- L=256I-J;
+- Lx=256x-(Σ_i x_i)1;
+- spectrum: 0 once and 256 with multiplicity 255.
+
+This is the first native oracle. It tests the entire 256-vector path without requiring dense matrix storage.
+
+### 2.2 General sparse graph
+
+Given symmetric nonnegative edge weights A_ij:
+- degree d_i=Σ_j A_ij;
+- (Lx)_i=d_i x_i-Σ_j A_ij x_j;
+- quadratic energy xᵀLx=(1/2)Σ_ij A_ij(x_i-x_j)²≥0.
+
+The canonical directed relation rails remain untouched. The symmetric coupling is an explicit derived view with named policy and digest. A and L are not aliases for directed W.
+
+### 2.3 Pair-space graph
+
+For U indexed by ordered Head pairs:
+- L_pair=L⊗I+I⊗L;
+- matrix action: L_pair vec(U)=vec(LU+ULᵀ), with layout convention explicitly fixed;
+- never materialize a 65,536×65,536 matrix.
+
+### 2.4 Potential and wave
+
+The first geometry experiment follows `docs/game_plan_foundations.md`: a versioned annular embedding with explicit radial shells and angular positions, excluding r<r_min as the central void. A graph has no intrinsic radius; graph-distance or topology-shell radii remain alternate, separately versioned experiments. V_i=α/(r_i+ε)² with ε>0. The wave operator is H=c²L+V and the equation is ü+Hu=f. The sign convention, fixed-point scales and source bounds must be frozen before implementation.
+
+## 3. Native MTH module inventory
+
+Create modules under mth/nan16 and fixtures under mth/tests:
+
+1. mth_rss_contract.nas — version, status codes, descriptor checks, safe bounds.
+2. mth_graph_degree.nas — deterministic sparse degree accumulation.
+3. mth_graph_laplacian.nas — sparse Lx and K256 baseline Lx.
+4. mth_graph_pair.nas — matrix-free pair-space operator.
+5. mth_graph_energy.nas — quadratic energy and nonnegative/overflow checks.
+6. mth_graph_void.nas — radius lookup, ε guard, inverse-square fixed-point potential.
+7. mth_graph_filter.nas — Chebyshev recurrence / polynomial filter.
+8. mth_graph_lanczos.nas — deterministic symmetric Lanczos with bounded iterations and residual.
+9. mth_graph_wave.nas — leapfrog/symplectic update and bounded DRIVE source.
+10. mth_graph_fold.nas — verified transpose/centrosymmetry and even/odd block transforms.
+11. mth_graph_pattern.nas — degree/motif/neighborhood/spectral signature primitives.
+
+All mathematics above is implemented in NaN16 source. Host code is limited to transport, scheduling, file I/O, job validation, and test harness orchestration.
+
+## 4. ABI and representation decisions required before kernel coding
+
+- NaN16 register and memory ABI; caller-owned scratch frames only.
+- Signed fixed-point representation for wave state and operator outputs.
+- Q format per field, intermediate width, rounding and saturation policy.
+- Sparse edge record format: endpoints, symmetric weight, flags, epoch, provenance ref.
+- Matrix layout for pair-space U and its transpose.
+- Input/output aliasing and overlap rules.
+- Maximum edge count and scratch budget per runner.
+- Status codes: success, invalid descriptor, bad topology digest, overflow, saturation, insufficient workspace, cancellation, nonconvergence, invalid symmetry.
+- All writes preflighted when a failure must leave output unchanged.
+- Every operator is deterministic for identical input pages, operator digest and version.
+
+Do not select signedness or Q format implicitly from existing unsigned vector helpers. The graph-wave state requires signed values; this must be a separately documented ABI.
+
+## 5. Runner and NaNNet integration contract
+
+The NaNLMind runner protocol is NAN-RSS-1, defined in runner/relational_spectral.py. It validates envelopes only; it is not a math implementation.
+
+Each runner publishes capability states:
+- specified;
+- source_written;
+- native_verified.
+
+Only native_verified kernels are dispatchable. Native verification requires the canonical NaN16 assembler/interpreter fixture, kernel digest, workspace limit, and version. A runner must reject unknown operator versions, stale cancellation epochs, mismatched topology/operator digests, insufficient workspace, and aliased input/output refs.
+
+NaNNet transfers immutable/versioned page refs. It does not transmit dense matrix copies by default. Results carry output digest, residual/error bound, saturation count, iteration count, runner/kernel identity, and completion status. Semantic updates return through NaNLMind's existing validation and ledger path.
+
+## 6. Six RSS operations and the foundation API
+
+The runner-facing RSS verbs are:
+
+- ENCODE: preserve directed relation writes and provenance.
+- QUERY: apply graph operator or project into a validated basis.
+- MATCH: compare normalized spectral signatures; report metric and threshold.
+- FILTER: apply g(H) through validated eigensystem or polynomial recurrence.
+- DRIVE: bounded source injection with energy and ledger policy.
+- FOLD: symmetry reduction only after exact invariant checks.
+
+The research foundation's computational API names lower-level stages as ENCODE, DRIVE, PROPAGATE, PROJECT, FILTER/MATCH, and DECODE. These are compatible layers, not competing verb lists: PROPAGATE is the native wave-step primitive called by QUERY/DRIVE workflows; PROJECT is a basis transform used by QUERY/MATCH/FILTER; DECODE is the typed readout/consumer boundary; FOLD is a guarded optimization. Preserve this mapping in runner schemas and avoid adding duplicate top-level operations for internal primitives.
+
+## 7. Pattern analysis
+
+Pattern analysis is part of RSS's reusable API, not a separate model or semantic ledger. Native primitives should support:
+- neighborhood fingerprints;
+- directed motif counts;
+- degree and shell profiles;
+- connected components;
+- local subgraph signatures;
+- spectral signature extraction;
+- epoch-to-epoch operator deltas;
+- candidate matching and confidence metadata.
+
+A spectral signature is lossy. It must point back to exact source relations and never replace provenance or semantic validation. A dedicated MC0 pattern-analysis application is deferred; it will consume the same MTH/RSS API later.
+
+## 8. Test sequence and exact oracles
+
+1. K256 degree: every Head has degree 255.
+2. K256 Laplacian: all-ones vector maps to zero.
+3. K256 basis: for any vector x with Σx_i=0, Lx=256x.
+4. K256 spectrum: one zero mode, 255 modes at 256.
+5. Sparse path graph: compare degree and Lx against hand-computed exact vectors.
+6. Disconnected graph: nullity equals component count.
+7. Product graph: compare matrix-free action against a small explicit Kronecker oracle.
+8. Void: α=0 matches baseline; ε>0 bounds center; radius policy is deterministic.
+9. Energy: xᵀLx is nonnegative within fixed-point error.
+10. Wave: unforced/undamped energy drift stays within declared error.
+11. Lanczos: eigenpair residual and orthogonality thresholds.
+12. FOLD: exact centrosymmetric fixture reduces; one-cell perturbation rejects reduction.
+13. Runner: only native_verified capabilities dispatch; digest, epoch and workspace failures reject.
+14. NANNET: page refs round-trip, stale result rejected, output digest checked.
+15. NaNLMind: read-only query and validated commit preserve the one global ledger.
+
+## 9. Evidence policy
+
+A .nas file is source-written, not verified. A fixture is source-written, not passed, until the canonical toolchain assembles and executes it. Python/C++ tests may validate descriptors, routing, or independent small reference expectations, but they cannot be reported as validation of NaN16 mathematical kernels.
+
+Current gate: the K256 U16-input Laplacian is native_verified by the canonical
+NaN16 toolchain. Existing MTH also has checked U32 arithmetic, shifts,
+multiplication/division, and a raw U32 span-add primitive. The signed
+fixed-point ABI for wave/void/filter kernels remains unfrozen. The next
+implementation step is a sparse weighted-graph Lx kernel with explicit
+symmetric-edge input and a small exact path-graph oracle; do not jump to
+Lanczos or wave evolution yet.
+
+
+## 10. First native kernel: K256 Laplacian over U16 payloads
+
+A first exact integer kernel is now source-written in
+`mth/nan16/mth_k256_laplacian.nas`, with fixture
+`mth/tests/mth_k256_laplacian_test.nas`.
+
+For K256, the matrix-free identity is:
+
+```
+(Lx)[i] = 256*x[i] - sum(x)
+```
+
+The first ABI deliberately avoids prematurely choosing the signed Q format
+for wave evolution. It accepts 256 unsigned 16-bit integer payloads and
+writes 256 signed two's-complement 32-bit results. Since
+`0 <= sum(x) <= 256*65535`, every output is bounded by
+±16,776,960; the kernel is exact with no rounding or saturation. It checks
+all inputs before writing, so an out-of-range payload leaves output
+unchanged. Input and output spans must not overlap.
+
+The fixture checks the impulse oracle `[1,0,...,0] -> [255,-1,...,-1]`
+and invalid-input atomicity. A new GitHub Actions workflow checks out the
+canonical NaN0S source assembler and execution harness, assembles this
+fixture, and runs it. The workflow passed on 2026-11-07 (run #9): the canonical source assembler
+assembled the fixture, and the NaN0S execution harness produced
+`MTH K256 LAPLACIAN PASS` after 5,391 guest steps (rc=3/HALT). The kernel
+is therefore **native_verified** for this exact U16-input K256 operator.
+
+This does not yet establish the signed fixed-point ABI for graph waves,
+void potentials or spectral iteration. It is a narrow exact K256 baseline
+that can be executed before those wider contracts are frozen.
+
+
+## 11. Sparse graph Laplacian v1 implementation update
+
+The signed fixed-point ABI is now frozen in `docs/MTH_SPARSE_GRAPH_ABI.md`. The first sparse native slice is intentionally an exact unweighted symmetric simple-graph CSR operator with Q16.16/I32 input and output. The input state is bounded to [-64,+64], so each edge difference is bounded by 2^23 raw units and a maximum-degree-255 row sum remains below signed-I32 overflow. No rounding or saturation is used.
+
+Source: `mth/nan16/mth_sparse_graph_laplacian.nas`. Fixtures: `mth/tests/mth_sparse_graph_laplacian_test.nas` (path graph, disconnected graph, and invalid-input atomicity). The fixture has been added to the canonical NaN16 CI workflow. Its evidence status is now **native_verified**: canonical NaN16 CI run #58 assembled and executed the path, disconnected, and invalid-input atomicity fixtures successfully (20,737 guest steps). Kernel SHA-256: `013048435c1026643554fb20e3434934cf059dd47cf2857577cac13ed5be6b8f`. The NaNLMind capability can be promoted only with this exact digest, Q format, and workspace contract. Weighted CSR is a separately versioned follow-on, not an implicit extension of this ABI.
+
+
+## 12. Weighted sparse CSR v2 native verification
+
+The first weighted operator is now implemented in `mth/nan16/mth_sparse_weighted_graph_laplacian_v2.nas` with ABI `docs/MTH_WEIGHTED_CSR_ABI_V2.md`. It accepts Q16.16/I32 state in [-64,+64], U8 integer edge weights 1..255, and emits signed I64 Q16.16 outputs. The 16-word caller scratch frame and register ABI are explicit. Per-edge products fit signed I32; each row is accumulated exactly in signed I64 under the proved <2^40 bound.
+
+Canonical NaN16 CI run #107 assembled and executed two weighted path oracles (weights [2,3,5] and [1,7,2]) plus zero-weight rejection/output atomicity successfully: 41,253 guest steps, expected HALT. Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
+
+This verifies the exact U8 integer-weight v2 operator only. Fractional weights, weighted energy, connected components/nullity, pair-space, void potential, spectral filters, Lanczos, and wave evolution remain unverified. Next gate is independent graph energy and component/nullity kernels with symmetry/reciprocal-weight validation fixtures.
