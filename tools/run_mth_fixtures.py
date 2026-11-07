@@ -57,6 +57,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("power128", "mth/tests/mth_power_iter128_test.nas", 50_000_000, "MTH POWER_ITER128 PASS", "native_verified"),
     Fixture("pair_full", "mth/tests/mth_graph_pair_test.nas", 100_000_000, "MTH GRAPH PAIR FULL 128 PASS", "native_verified"),
     Fixture("pair_tile16", "mth/tests/mth_graph_pair_tile16_f32_test.nas", 30_000_000, "MTH PAIR TILE16 F32 PASS", "native_verified"),
+    Fixture("pair_tile16_k16", "mth/tests/mth_graph_pair_tile16_k16_f32_test.nas", 1_000_000, "MTH PAIR TILE16 K16 ACCUM PASS", "native_verified"),
     Fixture("pair_rank1", "mth/tests/mth_graph_pair_rank1_128_test.nas", 30_000_000, "MTH GRAPH PAIR RANK1 128 PASS", "native_verified"),
     Fixture("lowrank128", "mth/tests/mth_lowrank_add_128_test.nas", 20_000_000, "MTH LOWRANK ADD 128 PASS", "native_verified"),
     Fixture("adapter128", "mth/tests/mth_adapter_residual_128_test.nas", 30_000_000, "MTH ADAPTER RESIDUAL 128 PASS", "native_verified"),
