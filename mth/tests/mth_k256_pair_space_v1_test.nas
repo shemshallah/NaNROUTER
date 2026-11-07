@@ -45,11 +45,11 @@ mth_pair_test_main:
   CMP r7,r8
   JMP[NE] @mth_pair_fail
 
-  MOVI r1,@mth_pair_pass
+  LA r1,@mth_pair_pass
   CALL @mth_pair_puts
   HALT
 mth_pair_fail:
-  MOVI r1,@mth_pair_bad
+  LA r1,@mth_pair_bad
   CALL @mth_pair_puts
   HALT
 mth_pair_puts:
