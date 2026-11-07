@@ -63,3 +63,13 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - State: Q16.16/I32 input in [-64,+64]; U8 integer edge weights 1..255; signed I64 Q16.16 output.
 - The caller supplies a 16-word scratch frame. The row accumulator is widened to I64; each edge product is exact signed I32.
 - Exact weighted-path and invalid-zero-weight atomicity fixtures are wired into the canonical NaN16 workflow. Canonical NaN16 CI run #107 passed the weighted path and invalid-zero-weight atomicity fixture (41,253 guest steps). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. This is native_verified only for the stated v2 contract.
+
+## Graph components and Laplacian nullity v1
+
+- ABI: docs/MTH_GRAPH_COMPONENTS_NULLITY_ABI_V1.md.
+- Kernel: nan16/mth_graph_components_nullity_v1.nas.
+- Fixture: tests/mth_graph_components_nullity_v1_test.nas.
+- Uses synchronous minimum-label propagation over an undirected symmetric CSR graph; no matrix or floating point.
+- A 256-vertex graph converges in at most 255 rounds. Count of component-minimum labels equals combinatorial Laplacian nullity.
+- Caller must validate CSR symmetry, sorted uniqueness, no self loops, and graph digest; kernel validates offset monotonicity, degree bounds and endpoint encoding/range.
+- Native verification pending.
