@@ -41,11 +41,7 @@ DEFAULT_WORKSPACE_WORD_BYTES = 8
 from .budget import (
     DEFAULT_GUEST_BUDGET_BYTES,
     DEFAULT_GUEST_BUDGET_PAGES,
-    DEFAULT_GUEST_BUDGET_WORDS,
-    LEGACY_GUEST_BUDGET_BYTES,
     PAGE_BYTES as DEFAULT_PAGE_BYTES,
-    GuestBudget,
-    STANDARD_2MIB,
     from_bytes,
 )
 
@@ -86,7 +82,7 @@ class MthSystem:
     ring they passed in.  The facade only reads the ring snapshot.
 
     ``guest_budget_bytes`` is the separately declared guest working-set budget.
-    When omitted, :data:`DEFAULT_GUEST_BUDGET_BYTES` (1 MiB) is used.  The
+    When omitted, :data:`DEFAULT_GUEST_BUDGET_BYTES` (2 MiB) is used.  The
     effective workspace budget is the smaller of the guest budget and the
     runner ceiling.  Callers can override both values; no hardware size is
     inferred from the 7 GiB runner ceiling.

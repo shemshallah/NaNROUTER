@@ -47,7 +47,7 @@ system = MthSystem(
     store,
     service,
     scheduler,
-    guest_budget_bytes=1024 * 1024,  # 1 MiB target; override per deployment
+    guest_budget_bytes=2 * 1024 * 1024,  # 2 MiB target; override per deployment
     workspace_word_bytes=8,           # 64-bit NaN16 word
     enforce_active_slot=True,
 )
@@ -57,11 +57,11 @@ scheduler.start(now_tick=0)
 The constructor does not start the scheduler. The caller still owns ring
 startup, heartbeat, cycle, failover, and checkpoint policy.
 
-> **Owner update (2026-11-07):** GLT is now reported at 2 MiB and adjustable. The checked-in default is now 2 MiB; the documented 1 MiB path remains a compatibility mode. See `GAME_PLAN_::.md`.
+> **Owner update (2026-11-07):** GLT is now reported at 2 MiB and adjustable. The checked-in default is now 2 MiB; the documented 1 MiB path remains a compatibility mode. See `docs/GAME_PLAN_::.md`.
 
 `guest_budget_bytes` is separate from the plan bound and from the runner
-ceiling. If it is omitted, the 1 MiB target
-(`DEFAULT_GUEST_BUDGET_BYTES = 1024 * 1024`) is used. The effective workspace
+ceiling. If it is omitted, the 2 MiB target
+(`DEFAULT_GUEST_BUDGET_BYTES = 2 * 1024 * 1024`) is used. The effective workspace
 budget is:
 
 ```text
@@ -72,7 +72,7 @@ Health reports derived `guest_budget_words` and `guest_budget_pages` at the
 declared 32 KiB page size, plus `workspace_budget_words`, so an adjustable
 deployment budget is visible without host-side plan math.
 
-The value is adjustable through the constructor; the 1 MiB default is policy,
+The value is adjustable through the constructor; the 2 MiB default is policy,
 not a hardware measurement. No hardware size is invented by this module. `workspace_word_bytes` defaults
 to `8` because the point-0 framing contract counts 64-bit NaN16 words; a caller
 using a different workspace word width must declare it.

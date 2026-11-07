@@ -6,10 +6,10 @@
 **Canonical source language:** NaN16, assembled by `nasm0`, executed by `n16i` or the native NaN16 kernel.  
 **Canonical arithmetic home:** MTH inside the one NaNLMind universe.  
 **Canonical routing home:** NaNROUTER.  
-**Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`, `GAME_PLAN_::.md` (math linker/validity/leaf architecture).
+**Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`, `docs/GAME_PLAN_::.md` (math linker/validity/leaf architecture).
 
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
-**Guest-budget update:** owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults are a compatibility baseline pending GPT's merge. See `GAME_PLAN_::.md` §2 and §16.
+**Guest-budget update:** owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults are a compatibility baseline pending GPT's merge. See `docs/GAME_PLAN_::.md` §2 and §16.
 
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 

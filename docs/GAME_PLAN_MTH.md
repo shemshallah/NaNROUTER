@@ -6,7 +6,7 @@
 **Canonical word:** 64-bit dual-ended NaN word  
 **Repository home:** NaNROUTER  
 **Purpose:** provide the mathematical operations a language model needs, implemented natively in NaN language
-**Linker/validity continuation:** `GAME_PLAN_::.md` — typed leaves, `::` candidate proposals, authoritative validity engine, NMP, and 2 MiB integration.
+**Linker/validity continuation:** `docs/GAME_PLAN_::.md` — typed leaves, `::` candidate proposals, authoritative validity engine, NMP, and 2 MiB integration.
 
 ---
 

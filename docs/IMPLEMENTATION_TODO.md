@@ -4,7 +4,7 @@
 **Canonical plan:** `docs/game_plan_deep.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 **Continuation plan:** `docs/DEEP_PLAN_CONT.md`.
-**Mathematical linker plan:** `GAME_PLAN_::.md`.
+**Mathematical linker plan:** `docs/GAME_PLAN_::.md`.
 **Rule:** math kernels are NaN16; host code is transport/scheduling/storage only. A source file is not CI-verified until the canonical GitHub Actions workflow runs.
 
 ## Current baseline
@@ -27,8 +27,8 @@
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
-**Full architecture, schemas, authority rules, and the complete verification matrix:** `GAME_PLAN_::.md`.
-**Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `GAME_PLAN_::.md` §19–20.
+**Full architecture, schemas, authority rules, and the complete verification matrix:** `docs/GAME_PLAN_::.md`.
+**Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `docs/GAME_PLAN_::.md` §19–20.
 
 - [ ] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split.
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).

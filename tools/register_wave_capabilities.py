@@ -121,6 +121,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bs0db", type=Path, help="BS0DB SQLite path")
     parser.add_argument("--mc0db", type=Path, help="MC0DB SQLite path")
     parser.add_argument("--runner-id", default="MC0:0/R0")
+    parser.add_argument("--all-slots", action="store_true",
+                        help="register the manifest for all six ring slots")
     budget = parser.add_mutually_exclusive_group()
     budget.add_argument("--guest-workspace-words", type=int,
                         help="available guest workspace in NaN16 words")
@@ -144,8 +146,12 @@ def main(argv: list[str] | None = None) -> int:
         print("guest workspace must be non-negative", file=sys.stderr)
         return 2
     manifest = load_manifest(args.manifest)
+    runner_ids = (
+        tuple(f"MC0:0/R{index}" for index in range(6))
+        if args.all_slots else (args.runner_id,)
+    )
     if args.dry_run:
-        rows = register_manifest(None, manifest, runner_id=args.runner_id, dry_run=True)
+        rows = register_manifest(None, manifest, runner_id=runner_ids[0], dry_run=True)
         for row in rows:
             print(f"{row['kernel_id']} {row['source_digest'][:12]} {row['precision']}")
         print(f"{len(rows)} kernels; dry run only")
@@ -156,12 +162,16 @@ def main(argv: list[str] | None = None) -> int:
     from runner_riddle.wave_store import WaveStore
 
     store = WaveStore(args.bs0db, args.mc0db)
-    rows = register_manifest(
-        store, manifest, runner_id=args.runner_id, epoch=args.epoch,
-        nanclock_tick=args.tick,
-        guest_workspace_words=guest_workspace_words,
-    )
-    print(f"registered {len(rows)} kernels for {args.runner_id}")
+    total = 0
+    for runner_id in runner_ids:
+        rows = register_manifest(
+            store, manifest, runner_id=runner_id, epoch=args.epoch,
+            nanclock_tick=args.tick,
+            guest_workspace_words=guest_workspace_words,
+        )
+        total += len(rows)
+        print(f"registered {len(rows)} kernels for {runner_id}")
+    print(f"registered {total} capability rows for {len(runner_ids)} runner slot(s)")
     return 0
 
 

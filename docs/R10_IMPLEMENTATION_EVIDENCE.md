@@ -1,7 +1,7 @@
 # R10 implementation evidence ledger
 
 **Date:** 2026-11-07
-**Guest update:** owner reports GLT is now 2 MiB and adjustable; the 1 MiB evidence below is the compatibility baseline. The 2 MiB integration gate is tracked in `GAME_PLAN_::.md` and `docs/IMPLEMENTATION_TODO.md`.
+**Guest update:** owner reports GLT is now 2 MiB and adjustable; the 1 MiB evidence below is the compatibility baseline. The 2 MiB integration gate is tracked in `docs/GAME_PLAN_::.md` and `docs/IMPLEMENTATION_TODO.md`.
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
