@@ -1,6 +1,6 @@
 # MTH radial energy and localization
 
-Status: source-written and locally executed PASS (39,276 steps); CI/1 MiB
+Status: source-written and locally executed PASS (61,355 steps); CI/1 MiB
 promotion pending.
 
 ## 1. Scope
@@ -44,7 +44,7 @@ Local canonical run:
 
 ```
 MTH RADIAL ENERGY PASS
-39,276 steps, rc=3/HALT
+61,355 steps, rc=3/HALT
 ```
 
 ## 4. Limitations

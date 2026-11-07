@@ -1019,4 +1019,4 @@ Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kerne
 | `mth.lanczos.topk.256.f32` | `float32` | 133,628,629 | pending |
 | `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | pending |
 | `mth.reachability.256.f32` | `float32` | 2,489,116 | pending |
-| `mth.radial.energy.256.f32` | `float32` | 39,276 | pending |
+| `mth.radial.energy.256.f32` | `float32` | 61,355 | pending |
