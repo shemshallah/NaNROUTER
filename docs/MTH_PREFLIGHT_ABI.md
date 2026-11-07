@@ -4,7 +4,7 @@ Status: source written; native CI gate is required before marking this ABI nativ
 
 ## Ownership
 
-The operator/function registry remains the single authority for operator identity, signatures, semantics, and contract versions. The MTH preflight guest receives one already-resolved contract and two concrete leaf descriptors. It does not register, discover, or redefine functions.
+The operator/function registry remains the single authority for operator identity, signatures, semantics, and contract versions. NaN0S `math_registry.nas` stores the immutable 10-word applicability contract under the existing operator ID; `nmr_resolve` returns its descriptor pointer in r6. The MTH preflight guest consumes that exact pointer and two concrete leaf descriptors. It does not register, discover, or redefine functions.
 
 This keeps three responsibilities separate:
 
