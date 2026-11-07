@@ -1,0 +1,36 @@
+name: mth-native-contract
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  k256-native:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+
+      - name: Checkout canonical NaN0S toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: main
+          path: nan0s
+
+      - name: Build NaN0S execution harness
+        run: make -s -C nan0s/aarch64/android nan_cli
+
+      - name: Assemble K256 fixture with NaN16 source assembler
+        run: |
+          mkdir -p build/mth
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_k256_laplacian_test.nas > build/mth/k256.nan
+
+      - name: Execute K256 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/k256.nan --steps 2000000 --serial > build/mth/k256.out 2> build/mth/k256.err
+          cat build/mth/k256.out
+          grep -q '^MTH K256 LAPLACIAN PASS' build/mth/k256.out
