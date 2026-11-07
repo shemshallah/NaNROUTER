@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: shemshallah/NaN0S
-          ref: math-contract-registry
+          ref: main
           path: nan0s
 
       - name: Build NaN0S execution harness
@@ -728,3 +728,4 @@ jobs:
           cat build/mth/linker-preflight.out
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
+          grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
