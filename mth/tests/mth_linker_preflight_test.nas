@@ -291,5 +291,7 @@ mth_link_pf_expression:
 .str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:77::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
 mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
+mth_link_pf_admit_pass:
+.str "MTH LINKER COMPOSED ADMISSION PASS\\n"
 mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
