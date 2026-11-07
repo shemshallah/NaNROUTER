@@ -35,18 +35,21 @@ mth_sparse_path_kernel_success:
   CALL @mth_sparse_test_puts
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
-  LA r8,0xFFFF0000
+  MOVI r8,0
+  MOVHI r8,0xFFFF
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,1
-  LA r8,0xFFFE0000
+  MOVI r8,0
+  MOVHI r8,0xFFFE
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,2
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,3
-  LA r8,0x00050000
+  MOVI r8,0
+  MOVHI r8,0x0005
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   MOVI r1,@mth_sparse_path_values_ok
@@ -65,19 +68,23 @@ mth_sparse_path_kernel_success:
   CALL @mth_sparse_test_puts
   MOVI r6,@mth_sparse_output
   LD r7,r6,0
-  LA r8,0xFFFF0000
+  MOVI r8,0
+  MOVHI r8,0xFFFF
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,1
-  LA r8,0x00010000
+  MOVI r8,0
+  MOVHI r8,0x0001
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,2
-  LA r8,0xFFFB0000
+  MOVI r8,0
+  MOVHI r8,0xFFFB
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   LD r7,r6,3
-  LA r8,0x00050000
+  MOVI r8,0
+  MOVHI r8,0x0005
   CMP r7,r8
   JMP[NE] @mth_sparse_test_fail
   MOVI r1,@mth_sparse_disc_values_ok
@@ -85,7 +92,8 @@ mth_sparse_path_kernel_success:
 
   ; Invalid state must be rejected before any output write.
   MOVI r6,@mth_sparse_x
-  LA r7,0x00400001
+  MOVI r7,1
+  MOVHI r7,0x0040
   ST r7,r6,0
   MOVI r6,@mth_sparse_output
   MOVI r7,77
