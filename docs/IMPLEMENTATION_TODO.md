@@ -22,8 +22,8 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 539 Python tests pass.
-- [x] Previous canonical workflow `42396090387` passed 121 steps for 59 fixtures; the native preflight gate added a dedicated workflow and the unified 124-step run is pending.
+- [x] 540 Python tests pass.
+- [x] Canonical workflow `42405010545` passed 124 steps for the 61-fixture set, including native preflight/admission gates.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -205,7 +205,7 @@ Ran 235 tests
 OK
 ```
 
-CI: `42396090387` — 121/121 steps historically; current workflow has 124 steps after the native preflight gate, pending. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42405010545` — 124/124 steps for the 61-fixture set. GLT 1 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
