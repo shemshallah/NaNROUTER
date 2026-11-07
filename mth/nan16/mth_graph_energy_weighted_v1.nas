@@ -39,20 +39,16 @@ mth_energy_v1_validate_x:
   LD r10,r8,0
   SHR r12,r10,16
   CMP r12,r0
-  JMP[EQ] @mth_energy_v1_check_positive
+  JMP[EQ] @mth_energy_v1_x_valid
   MOVI r1,65535
   CMP r12,r1
+  JMP[EQ] @mth_energy_v1_x_valid
+  MOVI r1,1
+  CMP r12,r1
   JMP[NE] @mth_energy_v1_bad_state
-  MOVI r1,0
-  MOVHI r1,0xFFFF
+  MOVI r1,65536
   CMP r10,r1
-  JMP[LT] @mth_energy_v1_bad_state
-  JMP @mth_energy_v1_x_valid
-mth_energy_v1_check_positive:
-  MOVI r1,0
-  MOVHI r1,1
-  CMP r10,r1
-  JMP[GT] @mth_energy_v1_bad_state
+  JMP[NE] @mth_energy_v1_bad_state
 mth_energy_v1_x_valid:
   ADD r8,r8,r13
   SUB r9,r9,r13
