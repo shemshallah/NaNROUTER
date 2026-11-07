@@ -15,6 +15,12 @@ from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRa
 from .cache import MasterRouteCache, RouteError
 from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
+from .n16t_guest import (
+    MAX_FRAME_BYTES as N16T_MAX_FRAME_BYTES,
+    MIN_FRAME_BYTES as N16T_MIN_FRAME_BYTES,
+    N16TGuestPool,
+    N16TGuestRuntimeError,
+)
 from urllib.parse import parse_qs, urlsplit
 
 ROOT_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
@@ -44,10 +50,24 @@ class RiddleService:
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
         self.route_key = os.environ.get("RIDDLE_ROUTE_HMAC_KEY", "").encode()
         self.feedback_key = os.environ.get("RIDDLE_FEEDBACK_HMAC_KEY", "").encode()
+        self.n16t_token = os.environ.get("RIDDLE_N16T_SUBMIT_TOKEN", "")
+        self.n16t_guest_pool = None
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
         if len(self.feedback_key) < 32:
             raise ServiceConfigError("RIDDLE_FEEDBACK_HMAC_KEY must be 32+ bytes")
+        if self.n16t_token:
+            if len(self.n16t_token) < 32:
+                raise ServiceConfigError("RIDDLE_N16T_SUBMIT_TOKEN must be 32+ characters")
+            try:
+                self.n16t_guest_pool = N16TGuestPool.from_env(max_sessions=8)
+            except Exception as exc:
+                raise ServiceConfigError("N16T guest runtime configuration is incomplete or invalid") from exc
+
+    def close(self) -> None:
+        if self.n16t_guest_pool is not None:
+            self.n16t_guest_pool.close()
+            self.n16t_guest_pool = None
 
     def volume_registry(self):
         if not self.volume_registry_path.exists() or len(self.volume_key) < 32:
@@ -102,6 +122,65 @@ def make_handler(service: RiddleService):
             supplied = self.headers.get("Authorization", "")
             expected = "Bearer " + token
             return hmac.compare_digest(supplied, expected)
+
+        def _n16t_body(self) -> bytes:
+            if self.headers.get("Transfer-Encoding"):
+                raise ValueError("chunked N16T request bodies are not supported")
+            encoding = self.headers.get("Content-Encoding")
+            if encoding and encoding.strip().lower() != "identity":
+                raise ValueError("N16T Content-Encoding is not supported")
+            if self.headers.get_content_type() not in (
+                "application/x-n16t", "application/vnd.nan16.n16t"
+            ):
+                raise ValueError("Content-Type must identify an N16T frame")
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1:
+                raise ValueError("exactly one Content-Length is required")
+            raw_length = lengths[0].strip()
+            if not raw_length.isascii() or not raw_length.isdigit():
+                raise ValueError("invalid N16T Content-Length")
+            length = int(raw_length)
+            if length < N16T_MIN_FRAME_BYTES or length > min(
+                MAX_REQUEST_BYTES, N16T_MAX_FRAME_BYTES
+            ):
+                raise ValueError("N16T frame is outside the transport bounds")
+            raw = self.rfile.read(length)
+            if len(raw) != length:
+                raise ValueError("N16T frame is truncated")
+            return raw
+
+        def _n16t_binary(self, status: int, frame: bytes) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/x-n16t")
+            self.send_header("Content-Length", str(len(frame)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Connection", "close")
+            self.close_connection = True
+            self.end_headers()
+            self.wfile.write(frame)
+
+        def _n16t(self) -> None:
+            if service.n16t_guest_pool is None or len(service.n16t_token) < 32:
+                self._json(503, {"error": "N16T guest peer is not configured"})
+                return
+            if not self._authorized(service.n16t_token):
+                self._json(401, {"error": "N16T submit authorization required"})
+                return
+            try:
+                request_frame = self._n16t_body()
+                response_frame = service.n16t_guest_pool.exchange(request_frame)
+                if not isinstance(response_frame, bytes) or not (
+                    N16T_MIN_FRAME_BYTES <= len(response_frame) <= N16T_MAX_FRAME_BYTES
+                ):
+                    raise N16TGuestRuntimeError("NaN16 guest returned an invalid frame")
+                self._n16t_binary(200, response_frame)
+            except (TypeError, ValueError) as exc:
+                self._json(400, {"error": str(exc)})
+            except N16TGuestRuntimeError:
+                self._json(502, {"error": "NaN16 N16T guest exchange failed"})
+            except Exception:
+                self._json(502, {"error": "NaN16 N16T guest exchange failed"})
 
         def _ring_health(self, service):
             try:
@@ -181,6 +260,9 @@ def make_handler(service: RiddleService):
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if self.path == "/n16t":
+                self._n16t()
+                return
             try:
                 body = self._body()
                 if self.path == "/v1/riddle/intake":
@@ -334,7 +416,11 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer(("0.0.0.0", port), make_handler(service))
     server.daemon_threads = True
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+        service.close()
 
 
 if __name__ == "__main__":

@@ -46,6 +46,10 @@ _WWW_AUTHENTICATE = 'Bearer realm="wave"'
 
 _GET_ROUTES = ("/healthz",)
 _POST_ROUTES = (
+    "/n16t",
+    "/v1/nmp/packets",
+    "/v1/nmp/lease",
+    "/v1/nmp/complete",
     "/v1/wave/jobs",
     "/v1/wave/lease",
     "/v1/wave/complete",
@@ -132,7 +136,9 @@ def _int_field(body: dict[str, Any], name: str, *,
 
 
 def make_wave_handler(service: WaveService, *,
-                      max_body_bytes: int = MAX_BODY_BYTES):
+                      max_body_bytes: int = MAX_BODY_BYTES,
+                      nmp_adapter: Any = None,
+                      n16t_adapter: Any = None):
     """Build a request handler bound to *service*.
 
     The handler never echoes the ``Authorization`` header, request body, or an
@@ -173,6 +179,24 @@ def make_wave_handler(service: WaveService, *,
             # raw request line, which could contain credential material.
             text = self.responses.get(int(code), ("request failed",))[0]
             self._safe_error(_HttpError(int(code), _bounded_text(text)))
+
+        def _send_binary(self, status: int, value: bytes, *,
+                         content_type: str = "application/x-n16t") -> None:
+            if not isinstance(value, bytes):
+                raise _HttpError(502, "N16T worker returned an invalid response")
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(value)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Connection", "close")
+            self.close_connection = True
+            self.end_headers()
+            if getattr(self, "command", None) != "HEAD":
+                try:
+                    self.wfile.write(value)
+                except (BrokenPipeError, ConnectionResetError):
+                    self.close_connection = True
 
         def _send_json(self, status: int, value: Any, *,
                        headers: dict[str, str] | None = None) -> None:
@@ -307,6 +331,37 @@ def make_wave_handler(service: WaveService, *,
                     return
                 remaining -= len(chunk)
 
+        def _binary_body(self) -> bytes:
+            if self.headers.get("Transfer-Encoding"):
+                raise _HttpError(400, "chunked request bodies are not supported")
+            encoding = self.headers.get("Content-Encoding")
+            if encoding and encoding.strip().lower() != "identity":
+                raise _HttpError(400, "Content-Encoding is not supported")
+            if self.headers.get_content_type() not in (
+                "application/x-n16t", "application/vnd.nan16.n16t"
+            ):
+                raise _HttpError(400, "Content-Type must identify an N16T frame")
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1:
+                raise _HttpError(400, "exactly one Content-Length is required")
+            raw_length = lengths[0].strip()
+            if not raw_length.isascii() or not raw_length.isdigit():
+                raise _HttpError(400, "invalid Content-Length")
+            length = int(raw_length)
+            if length < 36:
+                raise _HttpError(400, "N16T frame is shorter than its fixed header and CRC")
+            if length > min(max_body_bytes, 65_572):
+                if length <= max_body_bytes + _MAX_DRAIN_BYTES:
+                    self._discard_body(length)
+                raise _HttpError(400, "N16T frame exceeds the transport limit")
+            try:
+                raw = self.rfile.read(length)
+            except (OSError, TimeoutError) as exc:
+                raise _HttpError(400, "N16T frame could not be read") from exc
+            if len(raw) != length:
+                raise _HttpError(400, "N16T frame is truncated")
+            return raw
+
         def _json_body(self) -> dict[str, Any]:
             if self.headers.get("Transfer-Encoding"):
                 raise _HttpError(400, "chunked request bodies are not supported")
@@ -427,6 +482,50 @@ def make_wave_handler(service: WaveService, *,
             )
             self._send_json(200, {"capability": record})
 
+        def _post_nmp_packet(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            packet = body.get("packet")
+            if not isinstance(packet, dict):
+                raise _HttpError(400, "packet must be an object")
+            result = nmp_adapter.submit(
+                token, packet, now_tick=_int_field(body, "now_tick", default=0)
+            )
+            self._send_json(200, result)
+
+        def _post_nmp_lease(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            result = nmp_adapter.lease(
+                token,
+                _text_field(body, "owner"),
+                now_tick=_int_field(body, "now_tick"),
+                lease_ticks=_int_field(body, "lease_ticks", default=64, minimum=1),
+                expected_generation=_int_field(body, "expected_generation", default=None),
+                max_attempts=_int_field(body, "max_attempts", default=8, minimum=1),
+                job_id=_text_field(body, "job_id", default=None),
+            )
+            self._send_json(200, {"lease": result})
+
+        def _post_nmp_complete(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            packet = body.get("packet")
+            if not isinstance(packet, dict):
+                raise _HttpError(400, "packet must be an object")
+            result = nmp_adapter.complete(
+                token, packet,
+                job_id=_text_field(body, "job_id"),
+                lease_token=_text_field(body, "lease_token"),
+                lease_epoch=_int_field(body, "lease_epoch", minimum=1),
+                result_digest=_text_field(body, "result_digest"),
+                now_tick=_int_field(body, "now_tick"),
+                execution_evidence=body.get("execution_evidence"),
+                result_generation=_int_field(body, "result_generation", default=None),
+                lease_owner=_text_field(body, "lease_owner", default=None),
+            )
+            self._send_json(200, result)
+
         # -- Routing -----------------------------------------------------------
 
         def _path(self) -> str:
@@ -479,6 +578,35 @@ def make_wave_handler(service: WaveService, *,
         def do_POST(self) -> None:
             try:
                 path = self._path()
+                if path == "/n16t":
+                    token = self._bearer_token()
+                    self._authorize(token, _SUBMIT_ROLE)
+                    if n16t_adapter is None:
+                        raise _HttpError(503, "N16T worker is not configured")
+                    frame = self._binary_body()
+                    try:
+                        response = n16t_adapter.exchange(frame)
+                    except Exception:
+                        raise _HttpError(502, "NaN16 N16T worker exchange failed") from None
+                    if not isinstance(response, bytes) or not 36 <= len(response) <= 65_572:
+                        raise _HttpError(502, "NaN16 N16T worker returned an invalid frame")
+                    self._send_binary(200, response)
+                    return
+                if path == "/v1/nmp/packets":
+                    token = self._bearer_token()
+                    self._authorize(token, _SUBMIT_ROLE)
+                    self._post_nmp_packet(token, self._json_body())
+                    return
+                if path == "/v1/nmp/lease":
+                    token = self._bearer_token()
+                    self._authorize(token, _WORKER_ROLE)
+                    self._post_nmp_lease(token, self._json_body())
+                    return
+                if path == "/v1/nmp/complete":
+                    token = self._bearer_token()
+                    self._authorize(token, _WORKER_ROLE)
+                    self._post_nmp_complete(token, self._json_body())
+                    return
                 if path == "/v1/wave/jobs":
                     token = self._bearer_token()
                     self._authorize(token, _SUBMIT_ROLE)
@@ -533,7 +661,9 @@ class WaveHttpServer:
     def __init__(self, service: WaveService, host: str = DEFAULT_HOST,
                  port: int = DEFAULT_PORT, *,
                  store: WaveStore | None = None,
-                 max_body_bytes: int = MAX_BODY_BYTES) -> None:
+                 max_body_bytes: int = MAX_BODY_BYTES,
+                 nmp_adapter: Any = None,
+                 n16t_adapter: Any = None) -> None:
         # Accept ``WaveHttpServer(service, store)`` as a convenience while
         # keeping the usual ``(service, host, port)`` form.
         if isinstance(host, WaveStore):
@@ -546,11 +676,15 @@ class WaveHttpServer:
         if (isinstance(max_body_bytes, bool)
                 or not isinstance(max_body_bytes, int) or max_body_bytes < 1):
             raise ValueError("max_body_bytes must be a positive integer")
+        if nmp_adapter is not None and getattr(nmp_adapter, "service", None) is not service:
+            raise ValueError("NMP adapter must share the WaveHttpServer WaveService instance")
         self.service = service
         self.store: WaveStore = service.store if store is None else store
         self.host = host
         self._requested_port = port
         self.max_body_bytes = max_body_bytes
+        self.nmp_adapter = nmp_adapter
+        self.n16t_adapter = n16t_adapter
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self._lock = threading.RLock()
@@ -617,7 +751,9 @@ class WaveHttpServer:
             httpd = ThreadingHTTPServer(
                 (bind_host, bind_port),
                 make_wave_handler(
-                    self.service, max_body_bytes=self.max_body_bytes
+                    self.service, max_body_bytes=self.max_body_bytes,
+                    nmp_adapter=self.nmp_adapter,
+                    n16t_adapter=self.n16t_adapter,
                 ),
             )
             httpd.daemon_threads = True

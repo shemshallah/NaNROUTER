@@ -452,6 +452,21 @@ def validate_native_admission_receipt(receipt: Any, packet: Any = None) -> dict[
         raise NmpValidationError("native receipt epoch and program_id must be positive")
     if data["guest_status"] != 0:
         raise NmpValidationError("native admission receipt does not record guest ALLOW")
+    # Android's NaN16 adapter may attach the produced output generation and
+    # source/image/output digests. Validate these optional extension fields
+    # when present, while preserving compatibility with v1 receipts emitted
+    # before the Android metadata extension.
+    for key in ("output_descriptor_digest", "guest_source_digest", "guest_image_digest"):
+        if key in data:
+            data[key] = normalize_digest(data[key], f"native_receipt.{key}")
+    if "output_generation" in data:
+        data["output_generation"] = _integer(
+            data["output_generation"], "native_receipt.output_generation"
+        )
+        if data["output_generation"] != data["generation"] + 1:
+            raise NmpValidationError(
+                "native admission receipt output_generation must be generation + 1"
+            )
     body = {key: value for key, value in data.items() if key != "receipt_digest"}
     if digest_object(body) != data["receipt_digest"]:
         raise NmpValidationError("native admission receipt digest does not match its fields")

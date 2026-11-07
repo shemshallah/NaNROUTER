@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: shemshallah/NaN0S
-          ref: main
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
           path: nan0s
 
       - name: Build NaN0S execution harness
@@ -739,6 +739,7 @@ jobs:
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
           grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
+          grep -q '^MTH NATIVE DISPATCH PASS' build/mth/linker-preflight.out
 
       - name: Assemble and execute Boolean, bitwise, integer, shift, multiply, divide fixtures
         run: |

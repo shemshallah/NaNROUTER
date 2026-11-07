@@ -138,7 +138,8 @@ class WaveService:
                   lease_ticks: int = 64, *,
                   expected_generation: int | None = None,
                   max_attempts: int = 8,
-                  job_id: str | None = None) -> dict[str, Any] | None:
+                  job_id: str | None = None,
+                  kind: str | None = None) -> dict[str, Any] | None:
         """Lease one queued job.  Requires the ``worker`` token."""
         self._authorize(token, ("worker",))
         return self.store.lease_job(
@@ -148,6 +149,7 @@ class WaveService:
             expected_generation=expected_generation,
             max_attempts=max_attempts,
             job_id=job_id,
+            kind=kind,
         )
 
     def complete_job(self, token: str, job_id: str, lease_token: str,
