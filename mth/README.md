@@ -168,6 +168,6 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_lanczos_256.nas`: bounded orthogonal/deflated Lanczos top-k; local canonical execution PASS (133,628,629 steps).
 - `nan16/mth_graph_pair_tile16_k16_driver_f32.nas`: one-tile 16-slice K16 driver; local canonical execution PASS (4,449,894 steps).
 - `nan16/mth_reachability_256.nas`: deterministic directed BFS reachability; local canonical execution PASS (2,489,116 steps).
-- `nan16/mth_radial_energy.nas`: radial quadratic energy and localization; local canonical execution PASS (61,355 steps).
+- `nan16/mth_radial_energy.nas`: radial quadratic energy and localization; local canonical execution PASS (61,373 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and passed canonical CI run 42395852453. GLT-enforced 1 MiB page-limit loading remains the separate pending gate.

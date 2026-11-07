@@ -71,7 +71,7 @@
 | 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,628,629 | PASS | yes |
 | 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | yes |
 | 60 | Reachability 256 | `mth/tests/mth_reachability_256_test.nas` | 2,489,116 | PASS | yes |
-| 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,355 | PASS | yes |
+| 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,373 | PASS | yes |
 
 ## Python tests
 

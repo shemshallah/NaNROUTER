@@ -954,6 +954,7 @@ The shortest correct sentence is:
 
 
 
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kernels; all 59 fixtures pass canonical CI run 42395852453 (121 steps). GLT 1 MiB page-limit enforcement remains a separate pending gate.
@@ -1020,4 +1021,4 @@ Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kerne
 | `mth.lanczos.topk.256.f32` | `float32` | 133,628,629 | yes |
 | `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | yes |
 | `mth.reachability.256.f32` | `float32` | 2,489,116 | yes |
-| `mth.radial.energy.256.f32` | `float32` | 61,355 | yes |
+| `mth.radial.energy.256.f32` | `float32` | 61,373 | yes |
