@@ -1144,7 +1144,15 @@ class NativePreflightReceiptTests(unittest.TestCase):
         )
         self.assertFalse(stale_digest.ok)
         self.assertIn("rule digest", stale_digest.reason)
-        queued = preflighted.queue(gate=decision)
+        queued = preflighted.queue(
+            gate=decision,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
         tampered_evidence = dict(queued.evidence)
         tampered_evidence.pop("native_preflight_receipt")
         tampered = nmp.replace(queued, evidence=tampered_evidence)
@@ -1224,10 +1232,16 @@ class NativePreflightReceiptTests(unittest.TestCase):
         self.assertTrue(gate.ok, gate.reason)
         executing = bound.start_execution(
             gate=gate,
-            job_id="job-1",
-            lease_epoch=1,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ruleset_snapshot=live_ruleset,
             ring_incarnation="ring-inc-1",
             ring_epoch=1,
+            job=job,
+            lease=lease,
+            job_id="job-1",
+            lease_epoch=1,
         )
         self.assertEqual(executing.state, nmp.EXECUTING)
         self.assertEqual(executing.job_id, "job-1")
@@ -1236,19 +1250,31 @@ class NativePreflightReceiptTests(unittest.TestCase):
         with self.assertRaises(nmp.NmpGateError):
             bound.start_execution(
                 gate=gate,
-                lease_epoch=2,
-                job_id="job-1",
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ruleset_snapshot=live_ruleset,
                 ring_incarnation="ring-inc-1",
                 ring_epoch=1,
+                job=job,
+                lease=lease,
+                lease_epoch=2,
+                job_id="job-1",
             )
         cancelled = nmp.replace(bound, cancel_epoch=1)
         with self.assertRaises(nmp.NmpGateError):
             cancelled.start_execution(
                 gate=gate,
-                job_id="job-1",
-                lease_epoch=1,
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ruleset_snapshot=live_ruleset,
                 ring_incarnation="ring-inc-1",
                 ring_epoch=1,
+                job=job,
+                lease=lease,
+                job_id="job-1",
+                lease_epoch=1,
             )
 
     def test_native_lease_binding_rejects_wrong_ring_epoch_and_owner(self):
