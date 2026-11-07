@@ -485,7 +485,7 @@ jobs:
 
       - name: Execute full 16-slice pair tile driver fixture
         run: |
-          nan0s/aarch64/android/nan_cli --img build/mth/pair-tile16-driver.nan --steps 12000000 --serial > build/mth/pair-tile16-driver.out 2> build/mth/pair-tile16-driver.err
+          nan0s/aarch64/android/nan_cli --img build/mth/pair-tile16-driver.nan --steps 50000000 --serial > build/mth/pair-tile16-driver.out 2> build/mth/pair-tile16-driver.err
           cat build/mth/pair-tile16-driver.out
           cat build/mth/pair-tile16-driver.err
           grep -q '^MTH PAIR TILE16 K16 DRIVER PASS' build/mth/pair-tile16-driver.out
