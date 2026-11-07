@@ -11,6 +11,7 @@ from hashlib import sha256
 from typing import Any, Mapping
 
 from .math_objects import digest_object
+from .wave_ring_scheduler import JAHS_SEAL
 
 RECEIPT_SCHEMA = "nanrouter.native-preflight-receipt.v1"
 LEASE_BINDING_SCHEMA = "nanrouter.native-preflight-lease-binding.v1"
@@ -159,7 +160,12 @@ class NativePreflightReceipt:
         if not isinstance(words, (list, tuple)) or len(words) != 8:
             raise NativePreflightReceiptError("guest must return all eight 256-bit rule digest words")
         try:
-            rule_digest = "".join(f"{_integer(word, 'rule digest word') & 0xffffffff:08x}" for word in words)
+            normalized_words = []
+            for word in words:
+                if isinstance(word, bool) or not isinstance(word, int) or not -(1 << 31) <= word < (1 << 32):
+                    raise NativePreflightReceiptError("malformed rule digest word")
+                normalized_words.append(word & 0xffffffff)
+            rule_digest = "".join(f"{word:08x}" for word in normalized_words)
         except (TypeError, ValueError) as exc:
             raise NativePreflightReceiptError("malformed rule digest words") from exc
         output = field("output_descriptor")
@@ -293,12 +299,12 @@ class NativePreflightLeaseBinding:
         if ring_snapshot.get("started") is not True or ring_snapshot.get("health") != "green":
             raise NativePreflightReceiptError("runner ring is not started and healthy")
         jahs = ring_snapshot.get("jahs")
-        if not isinstance(jahs, Mapping) or jahs.get("seal") != "JAHS-1":
+        if not isinstance(jahs, Mapping) or jahs.get("seal") != JAHS_SEAL:
             raise NativePreflightReceiptError("runner ring handoff seal is missing")
-        if packet.ring_epoch is not None and packet.ring_epoch != ring_epoch:
-            raise NativePreflightReceiptError("packet ring epoch is stale")
-        if packet.ring_incarnation is not None and packet.ring_incarnation != ring_incarnation:
-            raise NativePreflightReceiptError("packet ring incarnation is stale")
+        if packet.ring_epoch is None or packet.ring_epoch != ring_epoch:
+            raise NativePreflightReceiptError("packet must bind the current ring epoch")
+        if not packet.ring_incarnation or packet.ring_incarnation != ring_incarnation:
+            raise NativePreflightReceiptError("packet must bind the current ring incarnation")
         active_aliases = {
             ring_snapshot.get("active_slot_id"),
             ring_snapshot.get("active_alias"),
