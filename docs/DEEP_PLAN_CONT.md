@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **40 native MTH kernels with fixtures**: 38 pass in the local harness, the prior tile/K16 fixtures pass canonical CI, and all fixtures pass the combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **43 native MTH kernels with fixtures**: 41 pass in the local harness and all prior fixtures pass canonical CI; the two-level, phase-coherence, and 256-block adapter fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -54,10 +54,10 @@ The 255 + 1 rule remains:
 | Fold / symmetry | 256/255 fold vectors, 128×128 certificate, 16×256 streaming 256 certificate, 15×255 streaming 255 certificate | Native + CI |
 | Spectral | 256/255-point DFT, 128×128 power iteration, 128×128 SVD top pair, 128×128 matvec, 16×256 block matvec, 16×256 streaming certificate | Native + CI |
 | Wave | velocity-Verlet step, step energy, harmonic energy, damped energy, C256 graph-H energy | Native + CI |
-| Coupling / creativity primitive | two-region coupling, transmission metric | Native + CI |
+| Coupling / creativity primitive | two-region coupling, transmission metric, two-level avoided-crossing spectrum, 128 phase coherence | Native + CI (new two-level/phase pending CI) |
 | Pair / product | K256 closed-form 256×256 pair, full 128×128 pair, rank-1 pair, rank-1 low-rank add, native-verified 16×16 dense pair-tile reference, bounded K16 streaming pair-tile accumulator | Native + CI |
 | Vector / match | dot, norm, axpy, cosine similarity | Native + CI |
-| Adapter | 128-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI |
+| Adapter | 128/256-dimensional `h + beta*C*u` residual, 256↔128 ENCODE/DECODE | Native + CI (256-block pending CI) |
 
 ### 1.2 System/control plane
 
@@ -74,16 +74,16 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
 | `tools/register_wave_capabilities.py` | registers 40 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 40-kernel capability manifest |
+| `spec/wave-capabilities.json` | 43-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 81 steps, 39 fixtures, all passing |
+| `.github/workflows/mth-native-contract.yml` | 87 steps, 42 fixtures; combined run pending |
 
 ### 1.3 Evidence baseline
 
 ```
-38/38 locally runnable fixtures pass; K256 pair passed canonical CI
-39/39 total native fixtures; 235/235 Python tests pass
-GitHub Actions run 42389138279: 81/81 steps passed (39-fixture set)
+41/41 locally runnable fixtures pass; K256 pair passed canonical CI
+42/42 total native fixtures; 235/235 Python tests pass
+Prior GitHub Actions run 42389138279: 81/81 steps; combined 42-fixture/87-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -95,9 +95,9 @@ GitHub Actions run 42389138279: 81/81 steps passed (39-fixture set)
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k deflation, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
 | R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; full-U pair-tile reference exceeds 512 KiB and is not dispatchable; K256 closed-form 256×256 done |
-| R7 | avoided-crossing sweep, phase-coherence metric, held-out creativity/association experiment |
+| R7 | avoided-crossing sweep driver, held-out creativity/association experiment; two-level spectrum and phase metric done |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
-| R9 | 256-dimensional residual, frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE done |
+| R9 | frozen-base ablations, measured LM benefit; 256↔128 ENCODE/DECODE and 256-block residual done |
 | R10 | production digest registration, capability promotion |
 
 ---
@@ -919,6 +919,8 @@ The shortest correct sentence is:
 
 
 
+
+
 ## Appendix A — Current native kernel catalog
 
 Machine-readable source: `spec/wave-capabilities.json`.
@@ -954,6 +956,9 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.power_iter.128.f32` | `float32` | 758,847 | yes |
 | `mth.svd.top128.f32` | `float32` | 1,311,632 | yes |
 | `mth.adapter.residual.128.f32` | `float32` | 420,587 | yes |
+| `mth.adapter.residual.256.block16.f32` | `float32` | 113,055 | pending |
+| `mth.phase.coherence.128.f32` | `float32` | 11,381 | pending |
+| `mth.two_level.spectrum.f32` | `float32` | 390 | pending |
 | `mth.decode.128_256.f32` | `float32` | 996,358 | yes |
 | `mth.encode.256_128.f32` | `float32` | 996,358 | yes |
 | `mth.graph.pair.full.128.f32` | `float32` | 68,195,822 | yes |

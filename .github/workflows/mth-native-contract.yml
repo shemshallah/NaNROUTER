@@ -225,6 +225,28 @@ jobs:
           cat build/mth/dot256.err
           grep -q '^MTH DOT256 PASS' build/mth/dot256.out
 
+      - name: Assemble two-level spectrum fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_two_level_spectrum_test.nas > build/mth/two-level.nan
+
+      - name: Execute two-level spectrum fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/two-level.nan --steps 1000000 --serial > build/mth/two-level.out 2> build/mth/two-level.err
+          cat build/mth/two-level.out
+          cat build/mth/two-level.err
+          grep -q '^MTH TWO LEVEL SPECTRUM PASS' build/mth/two-level.out
+
+      - name: Assemble phase-coherence fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_phase_coherence_128_test.nas > build/mth/phase-coherence.nan
+
+      - name: Execute phase-coherence fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/phase-coherence.nan --steps 4000000 --serial > build/mth/phase-coherence.out 2> build/mth/phase-coherence.err
+          cat build/mth/phase-coherence.out
+          cat build/mth/phase-coherence.err
+          grep -q '^MTH PHASE COHERENCE 128 PASS' build/mth/phase-coherence.out
+
       - name: Assemble two-region transmission fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_transmission_128_test.nas > build/mth/transmission128.nan
@@ -323,6 +345,17 @@ jobs:
           cat build/mth/pairfull.out
           cat build/mth/pairfull.err
           grep -q '^MTH GRAPH PAIR FULL 128 PASS' build/mth/pairfull.out
+
+      - name: Assemble 256-block adapter residual fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_adapter_residual_256_block16_test.nas > build/mth/adapter256b.nan
+
+      - name: Execute 256-block adapter residual fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/adapter256b.nan --steps 20000000 --serial > build/mth/adapter256b.out 2> build/mth/adapter256b.err
+          cat build/mth/adapter256b.out
+          cat build/mth/adapter256b.err
+          grep -q '^MTH ADAPTER RESIDUAL 256 BLOCK16 PASS' build/mth/adapter256b.out
 
       - name: Assemble encode/decode fixture with NaN16 source assembler
         run: |

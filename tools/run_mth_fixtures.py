@@ -62,12 +62,15 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("pair_rank1", "mth/tests/mth_graph_pair_rank1_128_test.nas", 30_000_000, "MTH GRAPH PAIR RANK1 128 PASS", "native_verified"),
     Fixture("lowrank128", "mth/tests/mth_lowrank_add_128_test.nas", 20_000_000, "MTH LOWRANK ADD 128 PASS", "native_verified"),
     Fixture("adapter128", "mth/tests/mth_adapter_residual_128_test.nas", 30_000_000, "MTH ADAPTER RESIDUAL 128 PASS", "native_verified"),
+    Fixture("adapter256b", "mth/tests/mth_adapter_residual_256_block16_test.nas", 20_000_000, "MTH ADAPTER RESIDUAL 256 BLOCK16 PASS", "native_verified"),
     Fixture("encode_decode", "mth/tests/mth_encode_decode_test.nas", 30_000_000, "MTH ENCODE DECODE PASS", "native_verified"),
     Fixture("svd128", "mth/tests/mth_svd_top128_test.nas", 100_000_000, "MTH SVD TOP128 PASS", "native_verified"),
     Fixture("dft256", "mth/tests/mth_graph_dft256_test.nas", 50_000_000, "MTH GRAPH DFT256 PASS", "native_verified"),
     Fixture("dft255", "mth/tests/mth_graph_dft255_test.nas", 40_000_000, "MTH GRAPH DFT255 PASS", "native_verified"),
     Fixture("couple128", "mth/tests/mth_graph_couple_128_test.nas", 4_000_000, "MTH GRAPH COUPLE 128 PASS", "native_verified"),
     Fixture("transmission128", "mth/tests/mth_graph_transmission_128_test.nas", 4_000_000, "MTH GRAPH TRANSMISSION 128 PASS", "native_verified"),
+    Fixture("two_level", "mth/tests/mth_two_level_spectrum_test.nas", 1_000_000, "MTH TWO LEVEL SPECTRUM PASS", "native_verified"),
+    Fixture("phase_coherence", "mth/tests/mth_phase_coherence_128_test.nas", 4_000_000, "MTH PHASE COHERENCE 128 PASS", "native_verified"),
 )
 
 

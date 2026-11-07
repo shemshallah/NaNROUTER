@@ -36,6 +36,9 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_svd_top128.nas`: top singular pair of a dense 128×128 matrix; local canonical execution PASS.
 - `nan16/mth_encode256_128.nas`, `nan16/mth_decode128_256.nas`: dense 256↔128 encoder/decoder; local canonical execution PASS.
 - `nan16/mth_centrosymmetry255_block15.nas`: 15×255 streaming certificate for the odd 255-head block; local canonical execution PASS.
+- `nan16/mth_two_level_spectrum.nas`: two-level avoided-crossing spectrum; local canonical execution PASS.
+- `nan16/mth_phase_coherence_128.nas`: 128-element complex phase coherence; local canonical execution PASS.
+- `nan16/mth_adapter_residual_256_block16.nas`: 16-row 256-dimensional adapter residual block; local canonical execution PASS.
 - `nan16/mth_graph_couple_128.nas`: two-region coupling primitive; local canonical execution PASS.
 - `nan16/mth_graph_transmission_128.nas`: two-region energy/transmission metric; local canonical execution PASS.
 - `runner_riddle/wave_store.py`: BS0DB/MC0DB wave job, lease, capability, seal, signature, and trace store; 12 tests pass.
@@ -73,6 +76,9 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `tests/mth_svd_top128_test.nas`: 128×128 top singular pair.
 - `tests/mth_encode_decode_test.nas`: 256↔128 encoder/decoder.
 - `tests/mth_centrosymmetry255_block15_test.nas`: 255-head odd streaming certificate.
+- `tests/mth_two_level_spectrum_test.nas`: two-level spectrum.
+- `tests/mth_phase_coherence_128_test.nas`: phase coherence.
+- `tests/mth_adapter_residual_256_block16_test.nas`: 256-block adapter residual.
 - `tests/mth_graph_couple_128_test.nas`: eta=0/0.5/1 coupling and invalid-eta atomicity.
 - `tests/mth_graph_transmission_128_test.nas`: energy ratio and zero-denominator checks.
 - `tests/test_wave_store.py`, `tests/test_ring_csr.py`, `tests/test_wave_capabilities.py`, `tests/test_wave_adapter.py`: Python storage, ring, capability, and adapter contracts.
@@ -131,7 +137,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures passed local `nan_cli` and GitHub Actions run `42386209524` (71/71 steps); the CI workflow includes all 37 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures pass local `nan_cli`; the prior GitHub Actions run passed 81 steps, and the combined 42-fixture/87-step run is pending. The CI workflow includes all 42 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space

@@ -421,6 +421,49 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.adapter.residual.256.block16.f32",
+      "source": "mth/nan16/mth_adapter_residual_256_block16.nas",
+      "fixture": "mth/tests/mth_adapter_residual_256_block16_test.nas",
+      "marker": "MTH ADAPTER RESIDUAL 256 BLOCK16 PASS",
+      "steps": 113055,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.phase.coherence.128.f32",
+      "source": "mth/nan16/mth_phase_coherence_128.nas",
+      "fixture": "mth/tests/mth_phase_coherence_128_test.nas",
+      "marker": "MTH PHASE COHERENCE 128 PASS",
+      "steps": 11381,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.two_level.spectrum.f32",
+      "source": "mth/nan16/mth_two_level_spectrum.nas",
+      "fixture": "mth/tests/mth_two_level_spectrum_test.nas",
+      "marker": "MTH TWO LEVEL SPECTRUM PASS",
+      "steps": 390,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.decode.128_256.f32",
       "source": "mth/nan16/mth_decode128_256.nas",
       "fixture": "mth/tests/mth_encode_decode_test.nas",

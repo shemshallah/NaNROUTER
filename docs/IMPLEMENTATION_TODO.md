@@ -16,9 +16,9 @@
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 38/38 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 41/41 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 235 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42389138279` (81/81 steps).
+- [x] Expanded GitHub Actions native workflow passed prior run `42389138279` (81/81 steps); combined 42-fixture/87-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -103,8 +103,8 @@
 - [x] Add block-coupling `eta` primitive.
 - [x] Add transmission metric primitive.
 - [x] Add experiment protocol with conditions, metrics, baselines, kill criteria.
-- [ ] Add avoided-crossing sweep fixture.
-- [ ] Add phase-coherence metric kernel.
+- [x] Add two-level avoided-crossing spectrum kernel.
+- [x] Add 128-element phase-coherence metric kernel.
 - [ ] Run held-out creativity/association experiment.
 - [ ] Record supported/rejected/inconclusive result.
 
@@ -136,7 +136,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 40 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 43 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -162,14 +162,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-38/38 local fixtures passed; 39/39 total (K256 pair CI-only)
+41/41 local fixtures passed; 42/42 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI: `42389138279` — 81/81 steps for the 39-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42389138279` — 81/81 steps; combined 42-fixture/87-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
