@@ -292,6 +292,6 @@ mth_link_pf_expression:
 mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
 mth_link_pf_admit_pass:
-.str "MTH LINKER COMPOSED ADMISSION PASS\\n"
+.str "MTH LINKER COMPOSED ADMISSION PASS\n"
 mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
