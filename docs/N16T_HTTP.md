@@ -32,7 +32,13 @@ logical routing, and state transitions are validated by the guest entry
 The pool supports bounded concurrent sessions. Each VM serializes its own
 state transitions; different sessions can execute in parallel. At capacity, the pool refuses new sessions rather than evicting a live
 protocol state and erasing its replay cursor. A guest-validated CLOSE response
-signals the pool to destroy that session VM and reclaim its slot. The HTTP adapter passes the exact request bytes to this guest pool
+signals the pool to destroy that session VM and reclaim its slot.
+
+Session VM state is persistent only for the lifetime of the service process.
+It is not yet checkpointed to durable storage, so a service restart loses
+in-memory replay cursors and active session state. Clients must establish a
+fresh session ID after reconnect; durable cross-restart replay protection is
+a remaining hardening task. The HTTP adapter passes the exact request bytes to this guest pool
 and returns the exact guest-built response bytes.
 
 Configure the runtime artifacts with:
