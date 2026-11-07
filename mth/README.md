@@ -116,4 +116,4 @@ The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step
 - Fixture: `tests/mth_k256_pair_space_v1_test.nas`.
 - Closed-form K256 action: `512U-colsum(U)-rowsum(U)`; matrix-free, O(256²) storage/work.
 - Exact I32 output bound ±2^30 for input raw range ±2^20.
-- Canonical native CI verification pending.
+- Canonical native CI verification passed in workflow run 180 (all workflow steps green).
