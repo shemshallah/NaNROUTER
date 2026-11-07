@@ -4,7 +4,7 @@ JMP @mth_pair_tile_test_main
 
 mth_pair_tile_test_main:
   MOVI r13,1
-  MOVI r4,@mth_pair_tile_li
+  LA r4,@mth_pair_tile_li
   MOVI r5,0
   MOVI r6,0
   MOVHI r6,0x4000
@@ -18,7 +18,7 @@ mth_pair_tile_fill_li:
   MOVI r8,16
   CMP r5,r8
   JMP[LT] @mth_pair_tile_fill_li
-  MOVI r4,@mth_pair_tile_lj
+  LA r4,@mth_pair_tile_lj
   MOVI r5,0
 mth_pair_tile_fill_lj:
   ADD r7,r5,r0
@@ -30,7 +30,7 @@ mth_pair_tile_fill_lj:
   MOVI r8,16
   CMP r5,r8
   JMP[LT] @mth_pair_tile_fill_lj
-  MOVI r4,@mth_pair_tile_u
+  LA r4,@mth_pair_tile_u
   MOVI r5,0
   MOVHI r5,0x3F80
   ST r5,r4,0
@@ -39,18 +39,18 @@ mth_pair_tile_fill_lj:
   MOVI r5,0
   MOVHI r5,0x4000
   ST r5,r4,0
-  MOVI r1,@mth_pair_tile_u
-  MOVI r2,@mth_pair_tile_li
-  MOVI r3,@mth_pair_tile_lj
-  MOVI r4,@mth_pair_tile_y
+  LA r1,@mth_pair_tile_u
+  LA r2,@mth_pair_tile_li
+  LA r3,@mth_pair_tile_lj
+  LA r4,@mth_pair_tile_y
   MOVI r5,0
   MOVI r6,0
-  MOVI r7,@mth_pair_tile_scratch
+  LA r7,@mth_pair_tile_scratch
   CALL @mth_graph_pair_tile16_f32
   MOVI r8,1
   CMP r1,r8
   JMP[NE] @mth_pair_tile_fail
-  MOVI r4,@mth_pair_tile_y
+  LA r4,@mth_pair_tile_y
   MOVI r5,0
 mth_pair_tile_check:
   LD r6,r4,0
@@ -79,11 +79,11 @@ mth_pair_tile_check_next:
   MOVI r7,256
   CMP r5,r7
   JMP[LT] @mth_pair_tile_check
-  MOVI r1,@mth_pair_tile_pass
+  LA r1,@mth_pair_tile_pass
   CALL @mth_pair_tile_puts
   HALT
 mth_pair_tile_fail:
-  MOVI r1,@mth_pair_tile_bad
+  LA r1,@mth_pair_tile_bad
   CALL @mth_pair_tile_puts
   HALT
 mth_pair_tile_puts:
