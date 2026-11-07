@@ -111,6 +111,8 @@ mth_link_pf_main:
   CMP r10,r0
   JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
+  MOVI r1,@mth_link_pf_stage_linker
+  CALL @mth_link_pf_puts
 
   ; mth_admit performs both gates; pass the exact registry contract pointer.
   MOVI r12,@mth_link_pf_scratch
@@ -128,6 +130,8 @@ mth_link_pf_main:
   CALL @mth_admit
   CMP r1,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_admit
+  CALL @mth_link_pf_puts
 
   ; A stale rule epoch is rejected before typed applicability.
   MOVI r8,@mth_link_pf_candidate
@@ -148,6 +152,8 @@ mth_link_pf_main:
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
+  MOVI r1,@mth_link_pf_stage_stale
+  CALL @mth_link_pf_puts
 
   ; Concrete dimension mismatch is rejected by the second gate and leaves
   ; the caller's output descriptor untouched.
@@ -173,6 +179,8 @@ mth_link_pf_main:
   MOVI r8,@mth_link_pf_right
   MOVI r9,256
   ST r9,r8,2
+  MOVI r1,@mth_link_pf_stage_shape
+  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0
   ST r9,r8,0
@@ -429,3 +437,11 @@ mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
 mth_link_pf_dispatch_status_bad:
 .str "MTH NATIVE DISPATCH STATUS FAIL\n"
+mth_link_pf_stage_linker:
+.str "STAGE LINKER OK\n"
+mth_link_pf_stage_admit:
+.str "STAGE ADMIT OK\n"
+mth_link_pf_stage_stale:
+.str "STAGE STALE OK\n"
+mth_link_pf_stage_shape:
+.str "STAGE SHAPE OK\n"
