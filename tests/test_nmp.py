@@ -1196,6 +1196,23 @@ class NativePreflightReceiptTests(unittest.TestCase):
         self.assertEqual(executing.job_id, "job-1")
         self.assertEqual(executing.lease_epoch, 1)
         self.assertEqual(executing.ring_epoch, 1)
+        with self.assertRaises(nmp.NmpGateError):
+            bound.start_execution(
+                gate=gate,
+                lease_epoch=2,
+                job_id="job-1",
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+            )
+        cancelled = nmp.replace(bound, cancel_epoch=1)
+        with self.assertRaises(nmp.NmpGateError):
+            cancelled.start_execution(
+                gate=gate,
+                job_id="job-1",
+                lease_epoch=1,
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+            )
 
     def test_native_lease_binding_rejects_wrong_ring_epoch_and_owner(self):
         packet = make_packet().resolve().classify().propose()
