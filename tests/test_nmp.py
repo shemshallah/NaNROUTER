@@ -1032,6 +1032,30 @@ class NativePreflightReceiptTests(unittest.TestCase):
             guest_image_digest="b" * 64,
         )
 
+    def test_prepare_can_defer_to_guest_then_attach_native_receipt(self):
+        candidate = make_candidate()
+        packet = nmp.prepare(
+            candidate,
+            snapshot_id=SNAP,
+            base_generation=7,
+            capability_set=(
+                {"required": "vector.dot", "workspace": 256, "precision": "float32"},
+            ),
+            capability_epoch=1,
+            ruleset_snapshot_id=RULES,
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+            defer_preflight=True,
+        )
+        self.assertEqual(packet.state, nmp.PROPOSED)
+        receipt = self.make_receipt(packet)
+        preflighted = packet.mark_preflight(
+            receipt=receipt,
+            admission=make_admission(preflight_digest=receipt.receipt_digest),
+        )
+        self.assertEqual(preflighted.state, nmp.PREFLIGHTED)
+        self.assertEqual(preflighted.admission_verdict, "VALID")
+
     def test_native_receipt_binds_packet_and_survives_canonical_round_trip(self):
         packet = self.make_proposed_packet()
         receipt = self.make_receipt(packet)
