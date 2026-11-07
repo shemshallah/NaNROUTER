@@ -230,3 +230,12 @@ OK
 ```
 
 The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42382908574` (49/49 steps); the harmonic-energy fixture passed the same workflow. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+
+
+## Matrix-free K256 pair-space v1
+
+A closed-form K256 pair-space kernel is source-written at `mth/nan16/mth_k256_pair_space_v1.nas`, with ABI `docs/MTH_K256_PAIR_SPACE_ABI_V1.md` and a native fixture.
+
+For the special K256 Laplacian `L=256I-J`, the implementation computes `LU+UL^T = 512U-colsum(U)-rowsum(U)` using two 256-element work vectors and three linear passes over U. It does not construct the 65,536-by-65,536 Kronecker matrix. State range is bounded to ±2^20 raw Q16.16 so every result is exact signed I32 (bound ±2^30).
+
+This is specifically the K256 closed-form case, not yet a generic CSR pair-space kernel. Native verification is pending.
