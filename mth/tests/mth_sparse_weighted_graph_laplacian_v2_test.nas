@@ -14,8 +14,10 @@ mth_weighted_v2_test_main:
   MOVI r6,6
   MOVI r7,@mth_weighted_v2_scratch
   CALL @mth_sparse_weighted_graph_laplacian_q16_16_i64_v2
+  ADD r12,r1,r0
   MOVI r1,@mth_weighted_v2_after
   CALL @mth_weighted_v2_puts
+  ADD r1,r12,r0
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
 
@@ -1232,3 +1234,8 @@ mth_weighted_v2_pass:
 .str "MTH WEIGHTED CSR LAPLACIAN V2 PASS\n"
 mth_weighted_v2_bad:
 .str "MTH WEIGHTED CSR LAPLACIAN V2 FAIL\n"
+
+mth_weighted_v2_before:
+.str "BEFORE WEIGHTED CALL\\n"
+mth_weighted_v2_after:
+.str "AFTER WEIGHTED CALL\\n"
