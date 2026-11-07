@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/math-function.schema.json",
+  "title": "NaNROUTER semantic mathematical function",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "function_id", "version", "signature", "status"],
+  "properties": {
+    "schema": {"const": "nanrouter.math-function.v1"},
+    "function_id": {"type": "string", "pattern": "^math\\.[a-z0-9][a-z0-9_.-]{0,120}$"},
+    "version": {"type": "integer", "minimum": 1},
+    "family": {"type": "string"},
+    "title": {"type": "string"},
+    "signature": {"type": "object"},
+    "semantics": {"type": "object"},
+    "preconditions": {"type": "array", "items": {"type": "object"}},
+    "postconditions": {"type": "array", "items": {"type": "object"}},
+    "undefined_conditions": {"type": "array", "items": {"type": "object"}},
+    "numerical_policy": {"type": "object"},
+    "implementations": {"type": "array", "items": {"type": "object"}},
+    "proof_status": {"enum": ["none", "stated", "axiom", "proven", "verified", "tested", "empirical", "experimental", "rejected"]},
+    "status": {"enum": ["proposed", "active", "deprecated", "revoked"]},
+    "contract_digest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+  }
+}

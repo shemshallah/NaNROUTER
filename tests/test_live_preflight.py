@@ -216,6 +216,19 @@ class LivePreflightValidOfflineTests(unittest.TestCase):
             "pass",
         )
 
+    def test_2_mib_guest_profile_is_green_and_1_mib_legacy_still_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _ = write_registry(tmp)
+            two = preflight_report(deployment_env(
+                path, NANROUTER_GUEST_BUDGET_BYTES="2097152"
+            ))
+            one = preflight_report(deployment_env(path))
+        self.assertEqual(two["status"], "green")
+        self.assertEqual(two["evidence"]["runtime"]["guest_budget_bytes"], 2097152)
+        self.assertEqual(two["evidence"]["runtime"]["guest_pages"], 64)
+        self.assertEqual(one["status"], "green")
+        self.assertEqual(one["evidence"]["runtime"]["guest_budget_bytes"], 1048576)
+
     def test_injected_probe_transport_is_bounded_and_green(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, _ = write_registry(tmp)

@@ -305,6 +305,43 @@ class MthSystemTests(unittest.TestCase):
         with self.assertRaises(MthSystemWorkspaceError):
             self.submit(plan, system=small_system, job_id="job-full-u-small")
 
+    def test_2_mib_default_admits_full_pair_and_legacy_1_mib_rejects(self):
+        words = 196_608
+        descriptor = MthKernelDescriptor(
+            kernel_id="mth.test.full_pair.f32",
+            source="full_pair.nas",
+            fixture="full_pair_test.nas",
+            marker="TEST FULL PAIR",
+            steps=1,
+            precision="float32",
+            workspace_words=words,
+            shape=(1,),
+            status="native_verified",
+            ci_verified=True,
+            source_digest="a" * 64,
+            fixture_digest="b" * 64,
+        )
+        registry = MthRegistry([descriptor])
+        plan = registry.compose({
+            "plan_id": "full-pair",
+            "steps": [{
+                "name": "step",
+                "kernel_id": descriptor.kernel_id,
+                "inputs": [],
+                "outputs": [],
+                "depends_on": [],
+            }],
+        })
+        default_system = MthSystem(registry, self.store, self.service, self.scheduler)
+        job = self.submit(plan, system=default_system, job_id="job-full-pair")
+        self.assertEqual(job["workspace"], words)
+        legacy_system = MthSystem(
+            registry, self.store, self.service, self.scheduler,
+            guest_budget_words=131_072,
+        )
+        with self.assertRaises(MthSystemWorkspaceError):
+            self.submit(plan, system=legacy_system, job_id="job-full-pair-legacy")
+
     def test_separately_declared_guest_budget_is_enforced(self):
         plan = self.make_plan()
         guest_system = self.make_system(guest_budget_bytes=16)

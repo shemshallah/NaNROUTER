@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/math-leaf.schema.json",
+  "title": "NaNROUTER typed mathematical leaf",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "leaf_id", "version", "kind", "type", "content", "status"],
+  "properties": {
+    "schema": {"const": "nanrouter.math-leaf.v1"},
+    "leaf_id": {"type": "string", "pattern": "^nml:[A-Za-z0-9_.:-]{1,180}$"},
+    "version": {"type": "integer", "minimum": 1},
+    "kind": {"enum": ["scalar", "vector", "matrix", "tensor", "function", "relation", "rule", "result", "null", "void", "undefined", "unknown", "error", "hypergraph", "basis", "operator", "mask", "index", "proof", "certificate"]},
+    "type": {"type": "object"},
+    "content": {
+      "type": ["object", "null"],
+      "properties": {
+        "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "word_count": {"type": "integer", "minimum": 0},
+        "storage": {"type": "string"},
+        "payload_ref": {"type": "string"}
+      }
+    },
+    "parents": {"type": "array", "items": {"type": "object"}},
+    "operation": {"type": ["object", "null"]},
+    "status": {"enum": ["scratch", "committed", "superseded", "quarantined", "tombstoned"]},
+    "provenance": {"type": "object"},
+    "aliases": {"type": "array", "items": {"type": "object"}},
+    "metadata": {"type": "object"}
+  }
+}
