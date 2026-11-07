@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .math_objects import digest_object
 from .wave_ring_scheduler import JAHS_SEAL
@@ -157,7 +157,7 @@ class NativePreflightReceipt:
         if status != 0:
             raise NativePreflightReceiptError("denied guest result cannot issue a VALID receipt")
         words = field("rule_digest_words")
-        if not isinstance(words, (list, tuple)) or len(words) != 8:
+        if not isinstance(words, Sequence) or isinstance(words, (str, bytes)) or len(words) != 8:
             raise NativePreflightReceiptError("guest must return all eight 256-bit rule digest words")
         try:
             normalized_words = []
@@ -169,7 +169,7 @@ class NativePreflightReceipt:
         except (TypeError, ValueError) as exc:
             raise NativePreflightReceiptError("malformed rule digest words") from exc
         output = field("output_descriptor")
-        if not isinstance(output, (list, tuple)) or len(output) != 8:
+        if not isinstance(output, Sequence) or isinstance(output, (str, bytes)) or len(output) != 8:
             raise NativePreflightReceiptError("guest must return the complete 8-word output descriptor")
         output_words = []
         for word in output:
@@ -234,6 +234,7 @@ class NativePreflightLeaseBinding:
     ring_incarnation: str
     ring_epoch: int
     output_generation: int
+    cancel_epoch: int
     binding_digest: str = ""
 
     def __post_init__(self) -> None:
@@ -243,6 +244,7 @@ class NativePreflightLeaseBinding:
             object.__setattr__(self, name, _digest(getattr(self, name), name))
         for name in ("lease_epoch", "ring_epoch", "output_generation"):
             _integer(getattr(self, name), name, minimum=1)
+        _integer(self.cancel_epoch, "cancel_epoch")
         expected = digest_object(self._payload())
         if self.binding_digest:
             if _digest(self.binding_digest, "binding_digest") != expected:
@@ -263,6 +265,7 @@ class NativePreflightLeaseBinding:
             "ring_incarnation": self.ring_incarnation,
             "ring_epoch": self.ring_epoch,
             "output_generation": self.output_generation,
+            "cancel_epoch": self.cancel_epoch,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -309,6 +312,13 @@ class NativePreflightLeaseBinding:
         jahs = ring_snapshot.get("jahs")
         if not isinstance(jahs, Mapping) or jahs.get("seal") != JAHS_SEAL:
             raise NativePreflightReceiptError("runner ring handoff seal is missing")
+        if str(job.get("state", "")).lower() != "leased":
+            raise NativePreflightReceiptError("job is not in the leased state")
+        job_generation = job.get("generation")
+        if job_generation is not None and job_generation != packet.generation:
+            raise NativePreflightReceiptError("job generation does not match the receipt packet")
+        if packet.lease_epoch is not None and packet.lease_epoch != lease_epoch:
+            raise NativePreflightReceiptError("packet lease epoch is stale")
         if packet.ring_epoch is None or packet.ring_epoch != ring_epoch:
             raise NativePreflightReceiptError("packet must bind the current ring epoch")
         if not packet.ring_incarnation or packet.ring_incarnation != ring_incarnation:
@@ -330,6 +340,7 @@ class NativePreflightLeaseBinding:
             ring_incarnation=_required_text(ring_incarnation, "ring_incarnation"),
             ring_epoch=ring_epoch,
             output_generation=receipt.output_generation,
+            cancel_epoch=packet.cancel_epoch,
         )
 
 
