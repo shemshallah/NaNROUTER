@@ -56,7 +56,8 @@ mth_weighted_v2_test_main:
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail_high2
   LD r7,r6,6
-  MOVI r8,0x0019
+  MOVI r8,0
+  MOVHI r8,0x0019
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail_low3
   LD r7,r6,7
@@ -100,14 +101,16 @@ mth_weighted_v2_test_main:
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,4
-  MOVI r8,0x000B
+  MOVI r8,0
+  MOVHI r8,0x000B
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,5
   CMP r7,r0
   JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,6
-  MOVI r8,0x000A
+  MOVI r8,0
+  MOVHI r8,0x000A
   CMP r7,r8
   JMP[NE] @mth_weighted_v2_fail
   LD r7,r6,7
