@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2]
+    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian, mth-weighted-csr-v2, mth-graph-invariants]
   pull_request:
   workflow_dispatch:
 
@@ -59,3 +59,25 @@ jobs:
           cat build/mth/weighted-sparse.out
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
+
+      - name: Assemble connected-component fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_components_256_test.nas > build/mth/components.nan
+
+      - name: Execute connected-component fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/components.nan --steps 4000000 --serial > build/mth/components.out 2> build/mth/components.err
+          cat build/mth/components.out
+          cat build/mth/components.err
+          grep -q '^MTH GRAPH COMPONENTS PASS' build/mth/components.out
+
+      - name: Assemble weighted graph energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_energy_weighted_u8_q32_32_test.nas > build/mth/energy.nan
+
+      - name: Execute weighted graph energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/energy.nan --steps 8000000 --serial > build/mth/energy.out 2> build/mth/energy.err
+          cat build/mth/energy.out
+          cat build/mth/energy.err
+          grep -q '^MTH WEIGHTED GRAPH ENERGY PASS' build/mth/energy.out
