@@ -226,4 +226,4 @@ Ran 111 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` has not yet run on GitHub Actions. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42352593144` (43/43 steps). Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
