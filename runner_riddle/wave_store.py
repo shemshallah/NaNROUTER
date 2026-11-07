@@ -463,7 +463,8 @@ class WaveStore:
     def lease_job(self, *, owner: str, now_tick: int, lease_ticks: int = 64,
                   expected_generation: int | None = None,
                   max_attempts: int = 8,
-                  job_id: str | None = None) -> dict[str, Any] | None:
+                  job_id: str | None = None,
+                  kind: str | None = None) -> dict[str, Any] | None:
         _require_text("owner", owner)
         _require_int("now_tick", now_tick)
         _require_int("lease_ticks", lease_ticks, minimum=1)
@@ -472,6 +473,8 @@ class WaveStore:
             _require_int("expected_generation", expected_generation)
         if job_id is not None:
             _require_text("job_id", job_id)
+        if kind is not None:
+            _require_text("kind", kind)
 
         query = "SELECT * FROM wave_job WHERE state='queued' AND attempts < ?"
         args: list[Any] = [max_attempts]
@@ -481,6 +484,9 @@ class WaveStore:
         if job_id is not None:
             query += " AND job_id=?"
             args.append(job_id)
+        if kind is not None:
+            query += " AND kind=?"
+            args.append(kind)
         query += " ORDER BY created_tick, job_id LIMIT 1"
 
         with self._connect(self.mc0_path) as db:
