@@ -9,6 +9,7 @@
 ;   r6 = available capability bits
 ;   r7 = output typed leaf descriptor
 ;   r8 = program ID returned by the canonical :: operator linker
+;   r9 = operator ID returned by the canonical :: operator linker
 ;   r12 = caller scratch base (57 words)
 ;   r13 = constant 1 (set internally)
 ;
@@ -37,17 +38,16 @@ mth_execute:
 
 mth_execute_check_dot:
   ; Program 900 is bound only to canonical operator 77 (vector dot).
-  LD r10,r1,1
-  MOVI r9,77
-  CMP r10,r9
+  ; r9 is the operator ID returned by the canonical expression linker.
+  MOVI r10,77
+  CMP r9,r10
   JMP[NE] @mth_execute_unsupported
   JMP @mth_execute_supported
 
 mth_execute_check_cosine:
   ; Program 901 is bound only to canonical operator 78 (vector cosine).
-  LD r10,r1,1
-  MOVI r9,78
-  CMP r10,r9
+  MOVI r10,78
+  CMP r9,r10
   JMP[NE] @mth_execute_unsupported
 
 mth_execute_supported:
