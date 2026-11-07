@@ -9,7 +9,7 @@ mth_pair_tile_test_main:
   MOVI r6,0
   MOVHI r6,0x4000
 mth_pair_tile_fill_li:
-  MOV r7,r5
+  ADD r7,r5,r0
   SHL r7,r7,8
   ADD r7,r7,r5
   ADD r7,r4,r7
@@ -21,7 +21,7 @@ mth_pair_tile_fill_li:
   MOVI r4,@mth_pair_tile_lj
   MOVI r5,0
 mth_pair_tile_fill_lj:
-  MOV r7,r5
+  ADD r7,r5,r0
   SHL r7,r7,8
   ADD r7,r7,r5
   ADD r7,r4,r7
