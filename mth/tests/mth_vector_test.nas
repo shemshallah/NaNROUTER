@@ -33,8 +33,6 @@ mth_vec_test_main:
 
   ; Repair A[1], then expect [3,11,7].
   MOVI r2,@mth_vec_a
-  MOVI r1,10
-  STW r1,r2,r0
   ADD r2,r2,r13
   MOVI r1,10
   STW r1,r2,r0
