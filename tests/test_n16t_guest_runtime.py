@@ -1,5 +1,9 @@
 import os
+import tempfile
 import unittest
+from pathlib import Path
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from runner_riddle.n16t_guest import (
     N16TGuestPool,
@@ -9,6 +13,10 @@ from runner_riddle.n16t_guest import (
     SESSION_BASE,
     _NaN16GuestVM,
 )
+from runner_riddle.n16t_http import N16THttpAdapter
+from runner_riddle.wave_http import WaveHttpServer
+from runner_riddle.wave_service import WaveService
+from runner_riddle.wave_store import WaveStore
 
 
 _REQUIRED = ("NAN16_LIBRARY", "N16T_GUEST_IMAGE", "N16T_GUEST_LABELS")
@@ -110,6 +118,61 @@ class N16TGuestRuntimeTests(unittest.TestCase):
         finally:
             client.close()
             pool.close()
+
+
+    def test_authenticated_http_route_uses_the_real_nan16_guest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            store = WaveStore(root / "bs0.sqlite3", root / "mc0.sqlite3")
+            submit_token = "submit-token-real-n16t-000000"
+            service = WaveService(
+                store,
+                submit_token,
+                "worker-token-real-n16t-111111",
+                "admin-token-real-n16t-222222",
+            )
+            pool = N16TGuestPool(
+                os.environ["NAN16_LIBRARY"],
+                os.environ["N16T_GUEST_IMAGE"],
+                os.environ["N16T_GUEST_LABELS"],
+            )
+            server = WaveHttpServer(service, n16t_adapter=N16THttpAdapter(pool.exchange))
+            server.start()
+            client = self.make_client(bytes(range(65, 81)))
+            try:
+                request_frame = self.send_hello(client)
+                unauthorized = Request(
+                    server.base_url + "/n16t",
+                    data=request_frame,
+                    headers={"Content-Type": "application/x-n16t"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(unauthorized, timeout=5)
+                self.assertEqual(caught.exception.code, 401)
+
+                authorized = Request(
+                    server.base_url + "/n16t",
+                    data=request_frame,
+                    headers={
+                        "Content-Type": "application/x-n16t",
+                        "Authorization": "Bearer " + submit_token,
+                    },
+                    method="POST",
+                )
+                with urlopen(authorized, timeout=5) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(response.headers.get_content_type(), "application/x-n16t")
+                    peer_frame = response.read()
+                client.write_bytes(REQUEST_BASE, peer_frame)
+                client.call("n16_android_route", {1: REQUEST_BASE, 2: len(peer_frame)})
+                self.assertEqual(client.reg(3), 2)
+                self.assertEqual(client.reg(4), 0xA001)
+            finally:
+                client.close()
+                server.stop()
+                pool.close()
+                store.close()
 
     def test_opaque_session_affinity_keeps_guest_states_separate(self):
         pool = N16TGuestPool(
