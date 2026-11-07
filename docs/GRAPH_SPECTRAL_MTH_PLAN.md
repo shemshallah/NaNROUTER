@@ -249,3 +249,8 @@ For the exact K256 baseline `L=256I-J`, the kernel applies `L_pair(U)=LU+UL^T=51
 Canonical NaN16 CI workflow run 180 passed the assembler and runtime fixture. The fixture checks the exact E00 response (510 at [0,0], −1 at [0,1] and [1,0], zero at [1,1]) and row/column sums of 1.
 
 Scope boundary: this verifies the K256 closed-form special case only. It does not establish generic sparse-CSR pair-space support for arbitrary L.
+
+
+## 14. Weighted CSR v2 mainline integration
+
+The weighted symmetric CSR v2 kernel and exact fixture have been ported onto the current K256 pair-space mainline as an isolated change. The native workflow now assembles and executes the weighted fixture after the unweighted sparse fixture. The earlier development branch recorded run #107; mainline promotion remains conditional on this branch's own CI result. Symmetry, sorted-row, duplicate-edge and reciprocal-weight checks remain descriptor-validation responsibilities and are not falsely claimed as native kernel checks. Lanczos remains gated on weighted energy and connected-component/nullity invariants.
