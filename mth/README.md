@@ -31,7 +31,8 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_cosine256_f32.nas`: float32 cosine similarity; local canonical execution PASS.
 - `nan16/mth_matvec256_block16.nas`: 16-row × 256-column block matvec; local canonical execution PASS.
 - `nan16/mth_centrosymmetry_block16.nas`: 16-row streaming 256 certificate; local canonical execution PASS.
-- `nan16/mth_k256_pair_space_v1.nas`: closed-form K256 256×256 pair action; canonical CI run 180 PASS.\n- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, emitted as one 16×16 tile per call; source-written, canonical CI pending.
+- `nan16/mth_k256_pair_space_v1.nas`: closed-form K256 256×256 pair action; canonical CI run 180 PASS.
+- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, one 16×16 output tile per call; canonical NaN16 CI run 201 PASS (2,301,554 guest steps).\n- `nan16/mth_graph_pair_tile16_f32.nas`: general dense 256×256 pair action `LU + ULᵀ`, emitted as one 16×16 tile per call; source-written, canonical CI pending.
 - `nan16/mth_graph_couple_128.nas`: two-region coupling primitive; local canonical execution PASS.
 - `nan16/mth_graph_transmission_128.nas`: two-region energy/transmission metric; local canonical execution PASS.
 - `runner_riddle/wave_store.py`: BS0DB/MC0DB wave job, lease, capability, seal, signature, and trace store; 12 tests pass.
