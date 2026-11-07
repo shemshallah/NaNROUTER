@@ -145,7 +145,7 @@ mth_link_pf_main:
   MOVI r7,@mth_link_pf_output
   CALL @mth_admit
   CMP r1,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_fail_1
 
   ; A stale rule epoch is rejected before typed applicability.
   MOVI r8,@mth_link_pf_candidate
@@ -161,7 +161,7 @@ mth_link_pf_main:
   CALL @mth_admit
   MOVI r9,18
   CMP r1,r9
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_fail_2
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
@@ -184,13 +184,13 @@ mth_link_pf_main:
   CALL @mth_admit
   MOVI r9,38
   CMP r1,r9
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_fail_3
   ; mth_admit may clobber r8; reload the output descriptor before checking it.
   MOVI r8,@mth_link_pf_output
   LD r10,r8,0
   MOVI r9,55
   CMP r10,r9
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_fail_4
 
   MOVI r1,@mth_link_pf_pass
   CALL @mth_link_pf_puts
@@ -198,8 +198,25 @@ mth_link_pf_main:
   CALL @mth_link_pf_puts
   HALT
 
+mth_link_pf_fail_1:
+  MOVI r8,1
+  ST r8,r12,47
+  JMP @mth_link_pf_fail
+mth_link_pf_fail_2:
+  MOVI r8,2
+  ST r8,r12,47
+  JMP @mth_link_pf_fail
+mth_link_pf_fail_3:
+  MOVI r8,3
+  ST r8,r12,47
+  JMP @mth_link_pf_fail
+mth_link_pf_fail_4:
+  MOVI r8,4
+  ST r8,r12,47
+  JMP @mth_link_pf_fail
 mth_link_pf_fail:
-  ST r1,r12,47
+  MOVI r8,99
+  ST r8,r12,47
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
   HALT
