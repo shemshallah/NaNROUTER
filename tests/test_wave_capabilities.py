@@ -21,12 +21,12 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.graph.couple128.f32", ids)
         self.assertIn("mth.graph.pair.tile16.f32", ids)
         self.assertIn("mth.graph.pair.full.128.f32", ids)
-        self.assertEqual(len(ids), 43)
+        self.assertEqual(len(ids), 44)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 43)
+        self.assertEqual(len(rows), 44)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
