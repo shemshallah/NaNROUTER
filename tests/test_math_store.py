@@ -16,12 +16,12 @@ from pathlib import Path
 
 from runner_riddle.math_objects import (
     MathAdmission, MathCandidate, MathFunction, MathLeaf, MathRule,
-    candidate_id_for,
+    candidate_id_for, canonical_json, digest_object,
 )
 from runner_riddle.math_store import (
     DEFAULT_CHUNK_BYTES, MATH_SCHEMA_VERSION, MathConflictError,
-    MathReferenceError, MathSchemaError, MathStore, MathStoreError,
-    StaleGenerationError,
+    MathContentDigestError, MathReferenceError, MathSchemaError, MathStore,
+    MathStoreError, StaleGenerationError,
 )
 from runner_riddle.wave_store import WaveStore
 
@@ -45,7 +45,7 @@ class MathStoreTests(unittest.TestCase):
     # -- helpers ------------------------------------------------------------
 
     def make_leaf(self, *, leaf_id=None, content=None, provenance=None,
-                  kind="scalar"):
+                  kind="scalar", metadata_version=None):
         return MathLeaf(
             leaf_id=self.leaf_id if leaf_id is None else leaf_id,
             kind=kind,
@@ -54,6 +54,7 @@ class MathStoreTests(unittest.TestCase):
             provenance=(
                 {"producer": "test"} if provenance is None else provenance
             ),
+            metadata_version=metadata_version,
         )
 
     def make_function(self, *, version=1, signature=None, **kwargs):
@@ -367,6 +368,86 @@ class MathStoreTests(unittest.TestCase):
         self.assertEqual(rows, 1)
         self.assertEqual(self.store.get_leaf("nml:test:leaf:a").content,
                          self.store.get_leaf("nml:test:leaf:b").content)
+
+    def test_declared_content_digest_is_enforced_for_metadata_version(self):
+        content = {"digest": "a" * 64, "value": 7}
+        bad = self.make_leaf(content=content, metadata_version=1)
+        with self.assertRaises(MathContentDigestError):
+            self.store.put_leaf(bad)
+        self.assertEqual(self.store.list_events(), [])
+
+        good_content = {"digest": digest_object({"value": 7}), "value": 7}
+        good = self.make_leaf(content=good_content, metadata_version=1)
+        stored = self.store.put_leaf(good)
+        self.assertEqual(stored.metadata_version, 1)
+        self.assertEqual(stored.content_digest, digest_object({"value": 7}))
+        self.assertEqual(self.store.get_leaf(good.leaf_id).content, good_content)
+
+        strict = MathStore(
+            self.bs0_path, self.mc0_path, strict_content_digest=True,
+        )
+        self.assertEqual(strict.get_leaf(good.leaf_id).content, good_content)
+
+    def test_legacy_leaf_without_metadata_version_remains_compatible(self):
+        # Existing fixtures record an external payload/evidence digest in
+        # content["digest"] rather than the canonical envelope digest.  They
+        # stay readable and writable until the store is opted into strictness.
+        legacy = self.make_leaf(
+            content={"digest": "b" * 64, "value": 8},
+            provenance={"producer": "legacy"},
+        )
+        stored = self.store.put_leaf(legacy)
+        self.assertEqual(stored.content, {"digest": "b" * 64, "value": 8})
+
+        strict = MathStore(
+            self.bs0_path, self.mc0_path, strict_content_digest=True,
+        )
+        with self.assertRaises(MathContentDigestError):
+            strict.get_leaf(legacy.leaf_id)
+        with self.assertRaises(MathContentDigestError):
+            strict.put_leaf(self.make_leaf(
+                leaf_id="nml:test:leaf:strict-new",
+                content={"digest": "c" * 64, "value": 9},
+            ))
+
+    def test_get_leaf_rejects_mismatch_when_metadata_version_is_present(self):
+        leaf = self.store.put_leaf(self.make_leaf(
+            content={"digest": "d" * 64, "value": 10},
+        ))
+        with closing(sqlite3.connect(self.mc0_path)) as db:
+            db.execute("DROP TRIGGER math_leaf_version_no_update")
+            row = db.execute(
+                "SELECT leaf_json FROM math_leaf_version "
+                "WHERE leaf_id=? AND version=1", (leaf.leaf_id,),
+            ).fetchone()
+            document = json.loads(row[0])
+            document["metadata_version"] = 1
+            leaf_json = canonical_json(document)
+            db.execute(
+                "UPDATE math_leaf_version SET leaf_json=?, leaf_digest=? "
+                "WHERE leaf_id=? AND version=1",
+                (leaf_json, hashlib.sha256(leaf_json.encode()).hexdigest(),
+                 leaf.leaf_id),
+            )
+            db.commit()
+        with self.assertRaises(MathContentDigestError):
+            self.store.get_leaf(leaf.leaf_id)
+
+    def test_put_version_rejects_bad_declared_content_digest(self):
+        content = {"digest": digest_object({"value": 1}), "value": 1}
+        leaf = self.store.put_leaf(self.make_leaf(
+            content=content, metadata_version=1,
+        ))
+        with self.assertRaises(MathContentDigestError):
+            self.store.put_version(
+                leaf.leaf_id, {"digest": "e" * 64, "value": 2},
+                expected_version=1, expected_generation=1,
+            )
+        self.assertEqual(self.store.get_leaf(leaf.leaf_id).version, 1)
+        self.assertEqual(
+            [entry["version"] for entry in self.store.list_versions(leaf.leaf_id)],
+            [1],
+        )
 
     def test_cas_rejects_stale_version_and_generation(self):
         self.store.put_leaf(self.make_leaf(content={"value": 1}))

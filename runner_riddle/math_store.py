@@ -75,6 +75,10 @@ class MathPayloadError(MathReferenceError):
     """A stored payload is truncated, missing a chunk, or digest-corrupt."""
 
 
+class MathContentDigestError(MathPayloadError):
+    """A leaf's declared ``content["digest"]`` is not the canonical content."""
+
+
 def _require_text(name: str, value: Any, *, maximum: int = 512) -> str:
     if not isinstance(value, str) or not value or len(value) > maximum:
         raise MathStoreError(
@@ -431,15 +435,22 @@ class MathStore:
 
     def __init__(self, bs0_path: str | Path, mc0_path: str | Path, *,
                  max_payload_bytes: int = DEFAULT_MAX_PAYLOAD_BYTES,
-                 chunk_bytes: int = DEFAULT_CHUNK_BYTES):
+                 chunk_bytes: int = DEFAULT_CHUNK_BYTES,
+                 strict_content_digest: bool = False):
         if Path(bs0_path).resolve() == Path(mc0_path).resolve():
             raise MathStoreError("BS0DB and MC0DB must be distinct databases")
         _require_int("max_payload_bytes", max_payload_bytes, minimum=1)
         _require_int("chunk_bytes", chunk_bytes, minimum=1)
+        if not isinstance(strict_content_digest, bool):
+            raise MathStoreError("strict_content_digest must be a boolean")
         self.bs0_path = str(bs0_path)
         self.mc0_path = str(mc0_path)
         self.max_payload_bytes = max_payload_bytes
         self.chunk_bytes = chunk_bytes
+        # Legacy records without metadata_version remain loadable.  Setting
+        # metadata_version on a leaf (or this flag on the store) opts into
+        # declared-content-digest equality for both writes and reloads.
+        self.strict_content_digest = strict_content_digest
         self._initialize(self.bs0_path, "BS0DB", _BS0_MATH_SCHEMA)
         self._initialize(self.mc0_path, "MC0DB", _MC0_MATH_SCHEMA)
 
@@ -778,6 +789,51 @@ class MathStore:
                 raise MathStoreError(f"invalid leaf document: {exc}") from exc
         raise MathStoreError("leaf must be a MathLeaf, mapping, or keyword fields")
 
+    @staticmethod
+    def _payload_content_digest(leaf: MathLeaf) -> str | None:
+        """Digest the canonical payload, excluding the self-describing field.
+
+        ``content["digest"]`` cannot include itself without becoming a
+        fixed-point equation.  It therefore claims the SHA-256 of the
+        canonical content object with that one envelope key removed.
+        """
+        if leaf.content is None:
+            return None
+        payload = {
+            key: value for key, value in leaf.content.items() if key != "digest"
+        }
+        return sha256_text(_canonical(payload, "leaf content payload"))
+
+    def _verify_declared_content_digest(
+        self, leaf: MathLeaf, computed: str | None, *, operation: str,
+    ) -> None:
+        """Reject a declared content digest that is not the canonical payload.
+
+        Legacy records created before ``metadata_version`` exist may carry an
+        external payload/evidence digest instead; those remain readable and
+        writable unless ``strict_content_digest=True``.  A leaf that declares
+        ``metadata_version`` always opts into equality on both paths.
+        """
+        if leaf.content is None or computed is None:
+            return
+        declared = leaf.content.get("digest")
+        if declared is None:
+            return
+        if not isinstance(declared, str) or len(declared) != 64 \
+                or any(ch not in "0123456789abcdef" for ch in declared):
+            raise MathContentDigestError(
+                f"{operation}: leaf {leaf.leaf_id!r} version {leaf.version} "
+                "content.digest must be 64 lowercase hex characters"
+            )
+        if declared == computed:
+            return
+        if self.strict_content_digest or leaf.metadata_version is not None:
+            raise MathContentDigestError(
+                f"{operation}: leaf {leaf.leaf_id!r} version {leaf.version} "
+                f"declares content digest {declared}, but canonical payload "
+                f"digest is {computed}"
+            )
+
     def _leaf_payload(self, leaf: MathLeaf, *, tick: int) -> tuple[str | None, str | None]:
         if leaf.content is None:
             return None, None
@@ -840,6 +896,10 @@ class MathStore:
         if candidate.version != 1:
             raise MathStoreError("put_leaf only creates version 1")
 
+        self._verify_declared_content_digest(
+            candidate, self._payload_content_digest(candidate),
+            operation="put_leaf",
+        )
         content_digest, payload_ref = self._leaf_payload(candidate, tick=tick)
         leaf_json = _canonical(candidate.to_dict(), "leaf")
         leaf_digest = sha256_text(leaf_json)
@@ -924,6 +984,10 @@ class MathStore:
             )
         except MathObjectError as exc:
             raise MathStoreError(f"invalid next leaf version: {exc}") from exc
+        self._verify_declared_content_digest(
+            next_leaf, self._payload_content_digest(next_leaf),
+            operation="put_version",
+        )
         content_digest, payload_ref = self._leaf_payload(next_leaf, tick=tick)
         leaf_json = _canonical(next_leaf.to_dict(), "leaf")
         leaf_digest = sha256_text(leaf_json)
@@ -1073,6 +1137,9 @@ class MathStore:
                     f"leaf {leaf_id!r} version {row['version']} payload does "
                     "not match the leaf content"
                 )
+        self._verify_declared_content_digest(
+            leaf, self._payload_content_digest(leaf), operation="get_leaf",
+        )
         return leaf
 
     def get_leaf_meta(self, leaf_id: str) -> dict[str, Any]:

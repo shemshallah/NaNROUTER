@@ -36,10 +36,96 @@ _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _LEAF_ID_RE = re.compile(r"^nml:[A-Za-z0-9_.:-]{1,180}$")
 _FUNCTION_ID_RE = re.compile(r"^math\.[a-z0-9][a-z0-9_.-]{0,120}$")
 _RULE_ID_RE = re.compile(r"^math\.rule\.[a-z0-9][a-z0-9_.-]{0,120}$")
+_RESULT_PROVENANCE_KEYS = frozenset({
+    "producer", "candidate_id", "admission_id", "packet_id", "job_id",
+    "linker_id", "runner_id", "output_leaf_id",
+})
 
 
 class MathObjectError(ValueError):
     """Invalid mathematical record or canonical serialization."""
+
+
+class MathImmutabilityError(MathObjectError, TypeError):
+    """Attempted in-place mutation of a frozen mathematical field."""
+
+
+class _FrozenDict(dict):
+    """Read-only ``dict`` that still serializes and compares as a plain dict.
+
+    Subclassing ``dict`` keeps ``json``/``canonical_json``, ``Mapping`` checks,
+    equality with legacy dictionaries, and dataclass ``replace`` compatible
+    while rejecting every normal Python mutator.
+    """
+
+    __slots__ = ()
+
+    def __init__(self, value: Any = (), **kwargs: Any) -> None:
+        dict.__init__(self)
+        source = dict(value, **kwargs)
+        for key, item in source.items():
+            dict.__setitem__(self, key, _freeze_json(item))
+
+    def _immutable(self, *args: Any, **kwargs: Any) -> None:
+        raise MathImmutabilityError("frozen mathematical object is immutable")
+
+    __setitem__ = _immutable
+    __delitem__ = _immutable
+    __ior__ = _immutable
+    clear = _immutable
+    pop = _immutable
+    popitem = _immutable
+    setdefault = _immutable
+    update = _immutable
+
+
+class _FrozenList(list):
+    """Read-only ``list`` that still serializes as a canonical JSON array."""
+
+    __slots__ = ()
+
+    def __init__(self, value: Any = ()) -> None:
+        list.__init__(self, (_freeze_json(item) for item in value))
+
+    def _immutable(self, *args: Any, **kwargs: Any) -> None:
+        raise MathImmutabilityError("frozen mathematical object is immutable")
+
+    __setitem__ = _immutable
+    __delitem__ = _immutable
+    __iadd__ = _immutable
+    __imul__ = _immutable
+    append = _immutable
+    clear = _immutable
+    extend = _immutable
+    insert = _immutable
+    pop = _immutable
+    remove = _immutable
+    reverse = _immutable
+    sort = _immutable
+
+
+def _freeze_json(value: Any) -> Any:
+    """Recursively freeze mappings/lists, preserving JSON-compatible values."""
+    if isinstance(value, (_FrozenDict, _FrozenList)):
+        return value
+    if isinstance(value, Mapping):
+        return _FrozenDict(value)
+    if isinstance(value, list):
+        return _FrozenList(value)
+    if isinstance(value, tuple):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: Any) -> Any:
+    """Return plain mutable containers so ``to_dict()`` never aliases state."""
+    if isinstance(value, Mapping):
+        return {key: _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_thaw_json(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_thaw_json(item) for item in value)
+    return value
 
 
 def canonical_json(value: Any) -> str:
@@ -90,7 +176,7 @@ def _tuple_of_dicts(value: Any, name: str) -> tuple[dict[str, Any], ...]:
     for entry in value:
         if not isinstance(entry, Mapping):
             raise MathObjectError(f"{name} entries must be objects")
-        result.append(dict(entry))
+        result.append(_freeze_json(entry))
     return tuple(result)
 
 
@@ -109,6 +195,7 @@ class MathLeaf:
     provenance: dict[str, Any] = field(default_factory=dict)
     aliases: tuple[dict[str, Any], ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
+    metadata_version: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.leaf_id, str) or not _LEAF_ID_RE.fullmatch(self.leaf_id):
@@ -122,23 +209,49 @@ class MathLeaf:
             raise MathObjectError(f"unknown leaf status: {self.status!r}")
         if self.content is not None and not isinstance(self.content, Mapping):
             raise MathObjectError("content must be an object or null")
-        object.__setattr__(self, "type", dict(self.type))
-        object.__setattr__(self, "content", None if self.content is None else dict(self.content))
+        if self.metadata_version is not None:
+            _require_int(self.metadata_version, "metadata_version", minimum=1)
+        object.__setattr__(self, "type", _freeze_json(self.type))
+        object.__setattr__(
+            self, "content",
+            None if self.content is None else _freeze_json(self.content),
+        )
         object.__setattr__(self, "parents", _tuple_of_dicts(self.parents, "parents"))
-        object.__setattr__(self, "operation", None if self.operation is None else dict(self.operation))
-        object.__setattr__(self, "provenance", dict(self.provenance))
+        object.__setattr__(
+            self, "operation",
+            None if self.operation is None else _freeze_json(self.operation),
+        )
+        object.__setattr__(self, "provenance", _freeze_json(self.provenance))
         object.__setattr__(self, "aliases", _tuple_of_dicts(self.aliases, "aliases"))
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(self, "metadata", _freeze_json(self.metadata))
         if self.kind in {"null", "void", "undefined", "unknown", "error", "cancelled"}:
             if self.content is not None:
                 raise MathObjectError(f"{self.kind} leaves must not carry numeric content")
             if not self.metadata.get("reason") and not self.metadata.get("failure_class"):
                 raise MathObjectError(f"{self.kind} leaf requires reason/failure_class")
-        if self.kind == "result" and self.operation is None:
-            raise MathObjectError("result leaves require an operation record")
+        if self.kind == "result":
+            if self.operation is None:
+                raise MathObjectError("result leaves require an operation record")
+            function_id = self.operation.get("function_id")
+            if not isinstance(function_id, str) or not function_id:
+                raise MathObjectError(
+                    "result leaves require operation.function_id"
+                )
+            if not self.provenance:
+                raise MathObjectError("result leaves require provenance")
+            if not any(self.provenance.get(key) for key in _RESULT_PROVENANCE_KEYS):
+                raise MathObjectError(
+                    "result leaf provenance requires a producer/candidate/job "
+                    "identity"
+                )
 
     @property
     def content_digest(self) -> str | None:
+        """Declared digest of the canonical payload in ``content["digest"]``.
+
+        ``MathStore`` verifies the declaration against the canonical content
+        with the self-describing ``digest`` key removed.
+        """
         if self.content is None:
             return None
         digest = self.content.get("digest")
@@ -150,15 +263,17 @@ class MathLeaf:
             "leaf_id": self.leaf_id,
             "version": self.version,
             "kind": self.kind,
-            "type": dict(self.type),
-            "content": None if self.content is None else dict(self.content),
-            "parents": [dict(parent) for parent in self.parents],
-            "operation": None if self.operation is None else dict(self.operation),
+            "type": _thaw_json(self.type),
+            "content": None if self.content is None else _thaw_json(self.content),
+            "parents": [_thaw_json(parent) for parent in self.parents],
+            "operation": None if self.operation is None else _thaw_json(self.operation),
             "status": self.status,
-            "provenance": dict(self.provenance),
-            "aliases": [dict(alias) for alias in self.aliases],
-            "metadata": dict(self.metadata),
+            "provenance": _thaw_json(self.provenance),
+            "aliases": [_thaw_json(alias) for alias in self.aliases],
+            "metadata": _thaw_json(self.metadata),
         }
+        if self.metadata_version is not None:
+            document["metadata_version"] = self.metadata_version
         return document
 
     def digest(self) -> str:
@@ -182,6 +297,7 @@ class MathLeaf:
             provenance=dict(self.provenance),
             aliases=self.aliases,
             metadata=dict(metadata) if metadata is not None else dict(self.metadata),
+            metadata_version=self.metadata_version,
         )
 
 
@@ -212,12 +328,12 @@ class MathFunction:
             raise MathObjectError(f"unknown proof_status: {self.proof_status!r}")
         if self.status not in {"proposed", "active", "deprecated", "revoked"}:
             raise MathObjectError(f"unknown function status: {self.status!r}")
-        object.__setattr__(self, "signature", dict(self.signature))
-        object.__setattr__(self, "semantics", dict(self.semantics))
+        object.__setattr__(self, "signature", _freeze_json(self.signature))
+        object.__setattr__(self, "semantics", _freeze_json(self.semantics))
         object.__setattr__(self, "preconditions", _tuple_of_dicts(self.preconditions, "preconditions"))
         object.__setattr__(self, "postconditions", _tuple_of_dicts(self.postconditions, "postconditions"))
         object.__setattr__(self, "undefined_conditions", _tuple_of_dicts(self.undefined_conditions, "undefined_conditions"))
-        object.__setattr__(self, "numerical_policy", dict(self.numerical_policy))
+        object.__setattr__(self, "numerical_policy", _freeze_json(self.numerical_policy))
         object.__setattr__(self, "implementations", _tuple_of_dicts(self.implementations, "implementations"))
         if self.contract_digest is not None:
             _require_digest(self.contract_digest, "contract_digest")
@@ -227,13 +343,13 @@ class MathFunction:
             "schema": FUNCTION_SCHEMA,
             "function_id": self.function_id,
             "version": self.version,
-            "signature": dict(self.signature),
-            "semantics": dict(self.semantics),
-            "preconditions": [dict(x) for x in self.preconditions],
-            "postconditions": [dict(x) for x in self.postconditions],
-            "undefined_conditions": [dict(x) for x in self.undefined_conditions],
-            "numerical_policy": dict(self.numerical_policy),
-            "implementations": [dict(x) for x in self.implementations],
+            "signature": _thaw_json(self.signature),
+            "semantics": _thaw_json(self.semantics),
+            "preconditions": [_thaw_json(x) for x in self.preconditions],
+            "postconditions": [_thaw_json(x) for x in self.postconditions],
+            "undefined_conditions": [_thaw_json(x) for x in self.undefined_conditions],
+            "numerical_policy": _thaw_json(self.numerical_policy),
+            "implementations": [_thaw_json(x) for x in self.implementations],
             "proof_status": self.proof_status,
             "status": self.status,
             "contract_digest": self.contract_digest,
@@ -270,8 +386,8 @@ class MathRule:
             raise MathObjectError("contract must be an object")
         if self.certificate_digest is not None:
             _require_digest(self.certificate_digest, "certificate_digest")
-        object.__setattr__(self, "contract", dict(self.contract))
-        object.__setattr__(self, "scope", dict(self.scope))
+        object.__setattr__(self, "contract", _freeze_json(self.contract))
+        object.__setattr__(self, "scope", _freeze_json(self.scope))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -279,8 +395,8 @@ class MathRule:
             "rule_id": self.rule_id,
             "version": self.version,
             "level": self.level,
-            "scope": dict(self.scope),
-            "contract": dict(self.contract),
+            "scope": _thaw_json(self.scope),
+            "contract": _thaw_json(self.contract),
             "proof_status": self.proof_status,
             "status": self.status,
             "certificate_digest": self.certificate_digest,
@@ -388,7 +504,8 @@ def admission_id_for(candidate_id: str, snapshot_id: str, verdict: str,
 __all__ = [
     "ADMISSION_SCHEMA", "CANDIDATE_SCHEMA", "FUNCTION_SCHEMA", "LEAF_SCHEMA",
     "LEAF_KINDS", "LEAF_STATUSES", "MathAdmission", "MathCandidate",
-    "MathFunction", "MathLeaf", "MathObjectError", "MathRule",
+    "MathFunction", "MathImmutabilityError", "MathLeaf", "MathObjectError",
+    "MathRule",
     "PROOF_STATUSES", "RULE_LEVELS", "RULE_STATUSES", "RULE_SCHEMA",
     "VERDICTS", "admission_id_for", "candidate_id_for", "canonical_json",
     "digest_object", "sha256_text",

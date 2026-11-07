@@ -25,6 +25,7 @@
     "status": {"enum": ["scratch", "committed", "superseded", "quarantined", "tombstoned"]},
     "provenance": {"type": "object"},
     "aliases": {"type": "array", "items": {"type": "object"}},
-    "metadata": {"type": "object"}
+    "metadata": {"type": "object"},
+    "metadata_version": {"type": "integer", "minimum": 1}
   }
 }
