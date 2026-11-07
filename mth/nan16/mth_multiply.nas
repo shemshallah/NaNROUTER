@@ -13,8 +13,8 @@ mth_u32_mul_wide:
   MOVI r8,32             ; exactly 32 multiplier bits
 
 mth_mul_loop:
-  MOVI r9,1
-  BOOL.8 r9,r7,r9        ; multiplier bit 0
+  MOVI r10,1
+  BOOL.8 r9,r7,r10       ; multiplier bit 0
   CMP r9,r0
   JMP[EQ] @mth_mul_shift
 
