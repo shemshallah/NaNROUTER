@@ -121,10 +121,12 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_service.py` — authenticated submit/worker/admin facade over the wave store.
 - `runner_riddle/wave_node.py` — one NANNET node binding per universe.
 - `runner_riddle/wave_ring_scheduler.py` — single-active six-slot runner ring with a 7 GiB ceiling and 24/7 cycle/handoff.
+- `runner_riddle/point0_bridge.py` — stable point-0 NaN16↔binary↔NaN16 ingress, routing to the active slot.
+- `runner_riddle/mth_system.py` — one runtime facade over registry, store, service, and ring scheduler.
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 33 locally runnable fixtures and 189 Python tests pass; the 34th (K256 pair) is CI-verified. GitHub Actions run `42386209524` passed all 71 native steps for the 34-fixture set.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 33 locally runnable fixtures and 210 Python tests pass; the 34th (K256 pair) is CI-verified. GitHub Actions run `42386209524` passed all 71 native steps for the 34-fixture set.
 
 ## Runner Riddle
 

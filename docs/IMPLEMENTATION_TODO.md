@@ -17,7 +17,7 @@
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 33/33 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 189 Python tests pass.
+- [x] 210 Python tests pass.
 - [x] Expanded GitHub Actions native workflow passed run `42386209524` (71/71 steps).
 
 ## R0 — Contract and storage freeze
@@ -118,7 +118,9 @@
 - [x] Add job/lease/capability state machine.
 - [x] Add stale/unauthorized/replay rejection tests.
 - [x] Add authenticated WaveService facade over BS0DB/MC0DB.
+- [x] Add point-0 stable ingress and active-slot routing.
 - [x] Add standalone Wave HTTP adapter over WaveService.
+- [x] Add point-0 NaN↔binary↔NaN bridge/router to the active slot (10 tests).
 - [ ] Add live NANNET0/Koyeb integration and signed volume-registry check.
 - [ ] Run signed Koyeb volume-registry integration check.
 
@@ -163,7 +165,7 @@ python3 tools/run_mth_fixtures.py
 33/34 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 189 tests
+Ran 210 tests
 OK
 ```
 
@@ -189,3 +191,5 @@ CI: `42386209524` — 71/71 steps for the 34-fixture set. See `docs/R10_IMPLEMEN
 | A17 | 256×256 streaming certificate | done — native PASS |
 | A18 | Wave HTTP adapter | done — 12 tests |
 | A19 | Single-active runner-ring scheduler | done — 27 tests |
+| A20 | Point-0 NaN/binary bridge/router | done — 10 tests (implemented during integration) |
+| A21 | MthSystem runtime facade | done — 11 tests |

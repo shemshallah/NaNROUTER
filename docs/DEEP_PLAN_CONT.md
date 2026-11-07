@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **34 native MTH kernels with fixtures**: 33 pass in the local harness and all 34 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 189 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **34 native MTH kernels with fixtures**: 33 pass in the local harness and all 34 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 210 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -68,6 +68,8 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_http.py` | standalone authenticated HTTP adapter; 12 tests |
 | `runner_riddle/mth_registry.py` | MTH descriptor registry/planner; 26 tests |
 | `runner_riddle/wave_ring_scheduler.py` | single-active six-slot runner ring, 7 GiB ceiling, cycle/handoff; 27 tests |
+| `runner_riddle/point0_bridge.py` | point-0 NaN16↔binary↔NaN16 bridge and active-slot router; 10 tests |
+| `runner_riddle/mth_system.py` | MthSystem runtime facade over registry/store/service/scheduler; 11 tests |
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
@@ -80,7 +82,7 @@ The 255 + 1 rule remains:
 
 ```
 33/33 locally runnable fixtures pass; K256 pair passed canonical CI
-34/34 total native fixtures; 189/189 Python tests pass
+34/34 total native fixtures; 210/210 Python tests pass
 GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 ```
 
@@ -428,7 +430,7 @@ Rules:
 - `NANNET0` is the universe node; point 0 is the runner-ring ingress used by that node;
 - no two slots receive point-0 work at once.
 
-The point-0 bridge is a distinct object from the address parser and from the scheduler. The scheduler chooses the active slot; the bridge only encodes/decodes and enforces the epoch.
+The point-0 bridge is implemented in `runner_riddle/point0_bridge.py` (10 tests). The scheduler chooses the active slot; the bridge only encodes/decodes and enforces the epoch.
 
 | Object | Identity | Role |
 |---|---|---|
@@ -744,7 +746,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 | P8 | NANNET0 persistence + Koyeb | P4 | signed volume registry |
 | P9 | LM ENCODE/DECODE + ablation | P6/P8 | held-out benefit or rejection |
 | P10 | R7 avoided crossing/phase | coupling kernel | held-out experiment |
-| P11 | Point-0 NaN→binary→NaN bridge/router | scheduler + address grammar | stable ingress, active-slot routing, stale epoch rejection |
+| P11 | Point-0 NaN→binary→NaN bridge/router — implemented | scheduler + address grammar | stable ingress, active-slot routing, stale epoch rejection |
 
 **Runtime rule:** these work packets may be developed in parallel by agents, but execution is serialized by the single-active runner ring. Two packets may not hold live leases or active memory on two slots at the same time. A packet that needs more than the 7 GiB active ceiling must be paged, split, or rejected.
 
@@ -755,6 +757,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 - 256 block matvec (implemented).
 - 256 streaming certificate (implemented).
 - Wave HTTP adapter (implemented).
+- MthSystem runtime facade (implemented).
 
 ### 8.2 Second parallel batch
 
@@ -905,7 +908,8 @@ The shortest correct sentence is:
 | D8 | LM adapter default disabled until held-out ablation | accepted | after P9 evidence |
 | D9 | 255-head odd fold is 127+128, not 128+128 | accepted | none |
 | D10 | Every promoted kernel carries source/fixture digest, workspace, CI/evidence | accepted | none |
-| D11 | Point 0 is the only ring address; NaN16↔binary↔NaN16 routing selects the active slot | accepted | after bridge implementation |
+| D11 | Point 0 is the only ring address; NaN16↔binary↔NaN16 routing selects the active slot | implemented | after live gateway integration |
+| D12 | MthSystem is the one runtime facade over registry/store/service/scheduler | implemented | after live executor integration |
 
 
 
