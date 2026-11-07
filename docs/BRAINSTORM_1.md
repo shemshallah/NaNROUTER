@@ -515,3 +515,30 @@ Start with **Track A** because every other track depends on its interfaces. In p
 - **Track B** can begin deep-freeze/content-digest work independently.
 
 Track C waits until Track A freezes the snapshot/admission interface.
+
+---
+
+# Post-audit implementation log — 2026-11-07
+
+The first parallel implementation batch landed after this brainstorm:
+
+| Commit | Scope | Evidence |
+|---|---|---|
+| `513834a` | Admission/candidate/snapshot/function-version/implementation binding; certificate fail-closed behavior; direct `MathRuntime.submit()` disabled; pre-dispatch lease/deadline/cancel checks; bearer-token redaction; matrix-vector and zero-vector tests | `tests/test_math_execution.py` 11 tests; `tests/test_math_validity.py` 25 tests; `tests/test_math_end_to_end.py` 2 tests |
+| `ab42f95` | Deep-frozen `MathLeaf`/`MathFunction`/`MathRule`; nested mutation rejection; `metadata_version`; result-leaf provenance checks; opt-in strict content-digest enforcement in `MathStore` | `tests/test_math_objects.py` + `tests/test_math_store.py` 35 tests |
+| `7328075` | 1 MiB/2 MiB/4 MiB adjustable live budgets; corrected `--guest-workspace-mib` conversion; exact 262,144/+1 boundary; optional math health in `MthSystem.health()` | `tests/test_wave_capabilities.py`, `test_guest_budget.py`, `test_live_preflight.py`, `test_mth_system.py` |
+
+**Current full-suite result:** 678 tests, 1 skipped, OK.
+
+Still open from the audits:
+
+- learned-rule snapshot binding into runtime/execution;
+- five learning mechanisms and Boolean-head gate;
+- authenticated principal/ACL and separate rule capabilities;
+- scratch filtering in linker/runtime;
+- cross-store intent/finalize and crash injection;
+- work stealing, durable ring epoch, durable NMP packet/transition ledger;
+- math HTTP routes and 2 MiB `wave_http` alignment;
+- XFSC/MOA decision;
+- full T01–T20/A01–A20 negative suite and A01–A20 enumeration;
+- native receipt production/operator dispatch and all P13 live/experiment gates.

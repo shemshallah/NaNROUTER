@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 653 Python tests passed (1 skipped).
+**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 678 Python tests passed (1 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -80,7 +80,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 653 tests in 86.889s
+Ran 678 tests in 68.655s
 OK (skipped=1)
 ```
 
@@ -105,8 +105,8 @@ Covered:
 - rule-learning lifecycle (P9, 20 tests);
 - retention/oscillation/pruning (P10, 10 tests);
 - lane registry (P11, 18 tests);
-- NMP packet/state/dedupe/batch, native admission-receipt validation, and lease binding (P5, 60 tests);
-- host execution bridge (P5, 7 tests);
+- NMP and native admission-receipt binding (P5, 60 tests);
+- authority-hardened host execution bridge with candidate/snapshot/implementation binding, pre-dispatch lease validation, disabled direct runtime submit, and token redaction (P5, 11 tests);
 - end-to-end control-plane demo (P12, 2 tests).
 
 ## Math integration evidence (P0–P12)

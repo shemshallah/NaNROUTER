@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from runner_riddle.wave_store import WaveStore
+from runner_riddle.wave_ring_scheduler import MC0_SLOTS
 from tools.register_wave_capabilities import (
     DEFAULT_GUEST_WORKSPACE_WORDS,
     DEFAULT_MANIFEST,
@@ -60,6 +61,52 @@ class WaveCapabilityTests(unittest.TestCase):
             health = store.health()
             self.assertEqual(health["schema_version"], 1)
 
+
+    def test_all_six_slots_register_at_2_mib_and_legacy_rejects_196608_words(self):
+        manifest = load_manifest(DEFAULT_MANIFEST)
+        target = next(
+            kernel for kernel in manifest["kernels"]
+            if kernel["kernel_id"] == "mth.graph.pair.tile16.f32"
+        )
+        dry_rows = register_manifest(
+            None, manifest, runner_id="dry", dry_run=True
+        )
+        digest = next(
+            row["source_digest"] for row in dry_rows
+            if row["kernel_id"] == target["kernel_id"]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = WaveStore(root / "bs0.sqlite3", root / "mc0.sqlite3")
+            for slot in MC0_SLOTS:
+                register_manifest(
+                    store, manifest, runner_id=slot, epoch=2,
+                    guest_workspace_words=262_144,
+                )
+            rows = store.dispatchable_capabilities(
+                workspace=target["workspace_words"],
+                operator_digest=digest,
+                precision=target["precision"],
+            )
+            self.assertEqual(
+                {row["runner_id"] for row in rows}, set(MC0_SLOTS)
+            )
+
+            legacy = WaveStore(
+                root / "legacy-bs.sqlite3", root / "legacy-mc.sqlite3"
+            )
+            register_manifest(
+                legacy, manifest, runner_id=MC0_SLOTS[0], epoch=1,
+                guest_workspace_words=131_072,
+            )
+            self.assertEqual(
+                legacy.dispatchable_capabilities(
+                    workspace=196_608,
+                    operator_digest=digest,
+                    precision=target["precision"],
+                ),
+                [],
+            )
 
     def test_guest_budget_gates_full_u_reference(self):
         manifest = load_manifest(DEFAULT_MANIFEST)

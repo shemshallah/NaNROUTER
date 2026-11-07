@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 653 Python tests pass (1 skipped).
+- [x] 678 Python tests pass (1 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -32,14 +32,14 @@
 
 - [x] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split. GLT 2 MiB page-limit loading remains the separate pending gate above.
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
-  - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job.
+  - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job; MiB conversion fixed to 131,072 words/MiB and all-six-slot tests added.
   - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
   - [x] P0.4 Peak-liveness admission wired through `MthRegistry.validate_plan` and `MthSystem.submit_plan`; dependent plans admit by peak live workspace, undeclared-liveness plans keep the conservative sum; exact/-1 tests added.
   - [x] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump (`math_store`).
   - [x] P0.6 Authority/`::` context rules frozen; `MathExecutionBridge` binds admission, NMP packet, active-ring incarnation/epoch, JAHS seal, capability, and one MthSystem lease (7 tests + restart projection).
-- [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` (8 object tests + 17 store tests).
+- [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, deep-frozen content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` with opt-in strict content-digest enforcement (8 object tests + 17 store tests). MOA/cell-pair binding remains deferred.
 - [x] **P2 — Semantic function registry.** `math_registry` + `spec/math-functions.v1.json`; 19 contracts/8 implementation bindings; composition tests (17).
-- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); native NaN16 rule and typed-object admission gates are integrated, and capability-to-lease admission is wired through P5. Authorization/ACL remains a separate orthogonal verdict by design.
+- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); native NaN16 rule and typed-object admission gates are integrated, capability-to-lease admission is wired through P5, and unverified numeric certificates now fail closed (`UNKNOWN`/`CERTIFICATE_NOT_PINNED`). Authorization/ACL remains a separate orthogonal verdict by design.
 - [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 26 tests; does not execute.
 - [ ] **P5 — NMP + execution bridge.** Host control plane is implemented; native receipt production, native operator dispatch, and numeric end-to-end execution remain external gates.
   - [x] P5.a Native NaN16 rule gate + typed operand preflight; exact epoch, signature, domain, shape, capability subset, proof level, enabled state, and 256-bit rule digest.
@@ -48,7 +48,7 @@
   - [x] P5.d NMP validates immutable native-admission receipts (candidate/rule/preflight digests, epoch, operands, guest ALLOW, receipt digest) and binds them to one live job/lease/ring/JAHS snapshot; 3 dedicated tests. Receipt production remains the native `mth_admit` caller's responsibility.
   - [ ] P5.e Add native NaN16 operator dispatch after admission; dispatch only allowlisted program IDs to matching kernel ABI, with output commit only after success.
   - [x] P5.f Host bridge binds packet/admission/active-ring incarnation/epoch/JAHS/capability/durable job/one lease and denies stale generation, replay, duplicate, cancellation, and restart violations before executor or commit. Point-0 HTTP remains a transport ingress, not a second execution authority.
-  - [x] P5.g Host control-plane execution, immutable result commit, provenance, and output feedback are implemented in `MathExecutionBridge` and the P12 demo. The demo executor returns an evidence digest; native numeric execution remains external.
+  - [x] P5.g Host control-plane execution, immutable result commit, provenance, and output feedback are implemented in `MathExecutionBridge` and the P12 demo. Admission is candidate/snapshot/function-version/implementation-bound, direct `MathRuntime.submit()` is disabled, executor dispatch is pre-validated against the active lease/cancel/deadline, and bearer tokens are redacted from serialized evidence. Native numeric execution remains external.
 - [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 17 tests.
 - [x] **P7 — Null/void/undefined algebra.** Typed `ZERO/NULL/VOID/EMPTY/UNDEFINED/INFINITY/UNKNOWN/ERROR/CANCELLED` states, explicit conjunction semantics, missing-reference dominance; 59 tests (`docs/MATH_ABSENCE_ALGEBRA.md`).
 - [x] **P8 — Relations/hyperedges/hypergraphs.** Typed schema/roles/arity/duplicate policy, immutable relation versions, incidence, bounded nested traversal, digest stability; 9 tests (`docs/MATH_RELATIONS_HYPERGRAPHS.md`).
@@ -208,7 +208,7 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -q
-Ran 653 tests
+Ran 678 tests
 OK (skipped=1)
 ```
 
