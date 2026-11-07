@@ -13,7 +13,24 @@ mth_sparse_test_main:
   MOVI r5,6
   CALL @mth_sparse_graph_laplacian_q16_16
   CMP r1,r13
-  JMP[NE] @mth_sparse_test_fail
+  JMP[EQ] @mth_sparse_path_kernel_success
+  CMP r1,r0
+  JMP[EQ] @mth_sparse_path_state_error
+  MOVI r6,2
+  CMP r1,r6
+  JMP[EQ] @mth_sparse_path_offsets_error
+  MOVI r1,@mth_sparse_path_neighbors_error
+  CALL @mth_sparse_test_puts
+  JMP @mth_sparse_test_fail
+mth_sparse_path_state_error:
+  MOVI r1,@mth_sparse_path_state_error_text
+  CALL @mth_sparse_test_puts
+  JMP @mth_sparse_test_fail
+mth_sparse_path_offsets_error:
+  MOVI r1,@mth_sparse_path_offsets_error_text
+  CALL @mth_sparse_test_puts
+  JMP @mth_sparse_test_fail
+mth_sparse_path_kernel_success:
   MOVI r1,@mth_sparse_path_kernel_ok
   CALL @mth_sparse_test_puts
   MOVI r6,@mth_sparse_output
@@ -1173,3 +1190,9 @@ mth_sparse_disc_kernel_ok:
 .str "DISCONNECTED KERNEL OK\n"
 mth_sparse_disc_values_ok:
 .str "DISCONNECTED VALUES OK\n"
+mth_sparse_path_state_error_text:
+.str "PATH STATE PREFLIGHT ERROR\n"
+mth_sparse_path_offsets_error_text:
+.str "PATH CSR OFFSET PREFLIGHT ERROR\n"
+mth_sparse_path_neighbors_error:
+.str "PATH CSR NEIGHBOR PREFLIGHT ERROR\n"
