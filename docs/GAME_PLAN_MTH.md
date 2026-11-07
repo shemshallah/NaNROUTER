@@ -762,7 +762,9 @@ These are not forbidden forever. They are simply not prerequisites for a useful 
 The first native source slice now lives under `mth/`:
 
 - `mth/nan16/mth_core.nas` contains a NaN16 implementation of the ordered class rotation and an explicit wrapper around the existing `BSWAPM` primitive.
-- `mth/tests/mth_stage0_test.nas` checks the full 16-entry class-rotation table, verifies that rotation is an involution, and checks that two face swaps restore the original test word.
+- `mth/nan16/mth_bool.nas` contains a generic two-input Boolean transform that dynamically selects one of the frozen `BOOL.n` instruction classes and executes it as NaN16.
+- `mth/tests/mth_stage0_test.nas` checks the 16-entry class-rotation table, rotation involution, and double-face-swap restoration.
+- `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
 
 This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. In particular, the pair-voting codec has not yet been imported into MTH; its source path, ABI, and corruption behavior must be confirmed before reuse.
