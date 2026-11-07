@@ -10,6 +10,8 @@
 ; Spans must not overlap. Outputs are committed only after convergence.
 
 mth_graph_components_nullity_v1:
+  MOVI r10,88
+  PUTC r10
   ADD r11,r7,r0
   ST r1,r11,0
   ST r2,r11,1
@@ -71,6 +73,8 @@ mth_comp_neighbor_ok:
   JMP @mth_comp_validate_neighbors
 
 mth_comp_initialize:
+  MOVI r10,86
+  PUTC r10
   LD r8,r11,3
   MOVI r9,0
   MOVI r10,256
@@ -180,6 +184,8 @@ mth_comp_round_done:
   JMP @mth_comp_round
 
 mth_comp_converged:
+  MOVI r10,67
+  PUTC r10
   ; Count fixed-point labels in the active buffer.
   MOVI r8,0
   ST r8,r11,7
