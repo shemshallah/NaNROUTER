@@ -1182,12 +1182,14 @@ class NmpPacket:
         digest: str | None = None,
         reason: str | None = None,
         receipt: NativePreflightReceipt | Mapping[str, Any] | None = None,
+        admission: Any = None,
         **kwargs: Any,
     ) -> "NmpPacket":
         """Advance PROPOSED -> PREFLIGHTED; optionally bind a native guest receipt."""
         preflight_result = (result or self.preflight_result or "").upper()
         preflight_digest = digest or self.preflight_digest
         receipt_obj: NativePreflightReceipt | None = None
+        admission_data = _admission_fields(admission) if admission is not None else {}
         if receipt is not None:
             try:
                 receipt_obj = (
@@ -1197,6 +1199,20 @@ class NmpPacket:
                 receipt_obj.verify_packet(self)
             except NativePreflightReceiptError as exc:
                 raise NmpTransitionError(f"native preflight receipt refused: {exc}") from exc
+            if admission is None:
+                raise NmpTransitionError("native preflight receipt requires a VALID admission record")
+            if _preflight_result(admission_data) != "VALID":
+                raise NmpTransitionError("native preflight receipt requires VALID admission")
+            if admission_data.get("candidate_id") != self.candidate_id:
+                raise NmpTransitionError("admission candidate does not match native receipt packet")
+            if admission_data.get("snapshot_id") != self.snapshot_id:
+                raise NmpTransitionError("admission snapshot does not match native receipt packet")
+            admission_ruleset = admission_data.get("rule_snapshot_id") or admission_data.get("ruleset_snapshot_id")
+            if admission_ruleset != self.ruleset_snapshot_id:
+                raise NmpTransitionError("admission ruleset snapshot does not match native receipt packet")
+            admission_digest = admission_data.get("preflight_digest")
+            if admission_digest is not None and admission_digest != receipt_obj.receipt_digest:
+                raise NmpTransitionError("admission digest does not match native receipt")
             if preflight_digest is not None and preflight_digest != receipt_obj.receipt_digest:
                 raise NmpTransitionError("preflight digest does not match native receipt")
             preflight_digest = receipt_obj.receipt_digest
@@ -1211,6 +1227,9 @@ class NmpPacket:
             "preflight_result": "VALID",
             "preflight_digest": preflight_digest,
         }
+        if receipt_obj is not None:
+            updates["admission_id"] = admission_data.get("admission_id")
+            updates["admission_verdict"] = "VALID"
         if reason is not None:
             updates["reason"] = reason
         if receipt_obj is not None:
