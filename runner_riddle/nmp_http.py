@@ -13,6 +13,7 @@ from typing import Any, Callable, Mapping
 from .math_objects import digest_object
 from .nmp import (
     EXECUTING,
+    QUEUED,
     NmpPacket,
     validate_native_admission_receipt,
 )
@@ -142,6 +143,8 @@ class NmpHttpAdapter:
         if not isinstance(payload, Mapping) or not isinstance(payload.get(NMP_PAYLOAD_KEY), Mapping):
             raise NmpHttpError("leased NMP job has no canonical packet")
         packet = _native_packet(payload[NMP_PAYLOAD_KEY])
+        if packet.state != QUEUED:
+            raise NmpHttpError("durable NMP job does not contain a QUEUED packet")
         if packet.job_id != job.get("job_id"):
             raise NmpHttpError("packet/job identity mismatch")
         lease = _lease_from_job(job)
