@@ -68,7 +68,7 @@
 | 55 | CFL guard 256 | `mth/tests/mth_cfl_guard_256_test.nas` | 2,639,509 | PASS | pending |
 | 56 | Radial tridiagonal | `mth/tests/mth_radial_tridiagonal_test.nas` | 42,518 | PASS | pending |
 | 57 | Colored noise 256 | `mth/tests/mth_colored_noise_256_test.nas` | 72,318 | PASS | pending |
-| 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,498,079 | PASS | pending |
+| 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,628,629 | PASS | pending |
 | 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | pending |
 
 ## Python tests
@@ -111,7 +111,7 @@ Run it after any kernel change.
 ## What is not yet proven
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
-- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, JAHS gate, and avoided-crossing sweep pass locally; canonical 1 MiB CI and Lanczos remain open.
+- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; canonical 1 MiB CI remains open.
 - K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.

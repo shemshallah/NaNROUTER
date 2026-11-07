@@ -1,13 +1,13 @@
 # MTH bounded 256×256 symmetric top-k kernel
 
 Status: source-written and locally executed PASS with the canonical NaN0S
-`nan_cli` as a `nan-text` image (72,980 NaN16 words; 133,733,039 guest
+`nan_cli` as a `nan-text` image (72,980 NaN16 words; 133,628,629 guest
 steps). The image is inside the 131,072-word / 1 MiB guest target and
 above the historical 65,536-word / 512 KiB budget. The owned file set for
 this change is the kernel, its fixture, and this document. A concurrent
 integration commit added shared workflow, harness, and README entries
 outside this owned set; those entries use a 200,000,000-step cap, which the
-fixture satisfies (133,733,039 steps).
+fixture satisfies (133,628,629 steps).
 
 ## 1. Scope
 
@@ -71,14 +71,16 @@ intermediate columns. `A` and `q0` are never written.
 
 1. `V_0 = q0 / ||q0||`. A zero norm rejects the call.
 2. For `j = 1..k-1`:
-   - copy `q0` into `V_j`;
-   - project out `V_0..V_{j-1}` with two full reorthogonalization passes;
-   - normalize `V_j` in place.
-3. If `V_j` is exactly zero after the projection (for example `q0 = e0`
-   with `j = 1`), scan the coordinate axes `e_p` for `p = 0,1,...,255`.
-   For each `p`, write `e_p` into `V_j`, project out `V_0..V_{j-1}` with two
-   passes, and normalize. The first axis with a nonzero residual is used.
-   If no axis works, return 0. The scan is deterministic and bounded.
+   - for `j = 1`, skip the `q0` copy and use the coordinate-axis fallback
+     directly: `q0` lies exactly in `span(V_0)`, so normalizing its residual
+     would only amplify cancellation noise;
+   - for `j > 1`, copy `q0` into `V_j`, project out `V_0..V_{j-1}` with two
+     full reorthogonalization passes, and normalize `V_j` in place.
+3. If `V_j` is exactly zero after the projection, scan the coordinate axes
+   `e_p` for `p = 0,1,...,255`. For each `p`, write `e_p` into `V_j`,
+   project out `V_0..V_{j-1}` with two passes, and normalize. The first axis
+   with a nonzero residual is used. If no axis works, return 0. The scan is
+   deterministic and bounded.
 
 The fallback is what lets the fixture's `q0 = e0` case produce the exact
 second eigenvector `e1` instead of breaking down after one Krylov step.
@@ -253,7 +255,7 @@ LC_ALL=C awk -f /data/data/com.termux/files/home/nan0s/tools/nmk.awk \
   > /data/data/com.termux/files/usr/tmp/opencode/kernel_only.nan
 ```
 
-The kernel source alone assembles to **422 words** with `check: 0 mismatches`.
+The kernel source alone assembles to **424 words** with `check: 0 mismatches`.
 The full fixture is assembled and executed with:
 
 ```
@@ -274,13 +276,13 @@ Observed:
 ```
 words 72980
 check: 0 mismatches
-[nan_cli] nan-text: 133733039 steps, rc=3, pc=941, trap=''
+[nan_cli] nan-text: 133628629 steps, rc=3, pc=943, trap=''
 MTH LANCZOS 256 PASS
 ```
 
 The step count is for the whole fixture, including all success and
 rejection cases. A single successful `k=2`, 16-iteration call uses 34
-matvecs and probes at 22,802,185 steps.
+matvecs and probes at 22,787,267 steps.
 
 ## 8. Limitations
 
@@ -312,4 +314,4 @@ matvecs and probes at 22,802,185 steps.
 - No `.github/workflows` entry, README ledger entry, or harness registry
   entry was edited here because those files are outside this change's owned
   file set. Concurrent integration entries exist and use a 200,000,000-step
-  cap; this fixture uses 133,733,039 steps.
+  cap; this fixture uses 133,628,629 steps.

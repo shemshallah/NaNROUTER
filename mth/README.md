@@ -165,7 +165,7 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_cfl_guard_256.nas`: CFL/lambda_max guard; local canonical execution PASS (2,639,509 steps).
 - `nan16/mth_radial_tridiagonal.nas`: radial tridiagonal matvec; local canonical execution PASS (42,518 steps).
 - `nan16/mth_colored_noise_256.nas`: deterministic colored-noise sequence; local canonical execution PASS (72,318 steps).
-- `nan16/mth_lanczos_256.nas`: bounded orthogonal/deflated Lanczos top-k; local canonical execution PASS (133,498,079 steps).
+- `nan16/mth_lanczos_256.nas`: bounded orthogonal/deflated Lanczos top-k; local canonical execution PASS (133,628,629 steps).
 - `nan16/mth_graph_pair_tile16_k16_driver_f32.nas`: one-tile 16-slice K16 driver; local canonical execution PASS (4,449,894 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and await the canonical 1 MiB GLT CI run before promotion from local execution to CI-verified.

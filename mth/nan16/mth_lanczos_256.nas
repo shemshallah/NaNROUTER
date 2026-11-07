@@ -24,11 +24,12 @@
 ; column:
 ;
 ;   1. Build an orthonormal initial basis from q0. Column 0 is q0/||q0||.
-;      Column j>0 starts as q0 with columns 0..j-1 projected out. If that
-;      is exactly zero (e.g. q0 = e0 and j = 1), a deterministic fallback
-;      scans the coordinate axes e_p, p = 0,1,...,255, takes the first
-;      residual with nonzero norm, orthonormalizes it against columns
-;      0..j-1, and uses it. The scan is deterministic and bounded.
+;      Column 1 uses the deterministic axis scan directly because q0 is
+;      exactly inside span(V_0). Columns j>1 start as q0 with columns
+;      0..j-1 projected out. If that is exactly zero, a deterministic
+;      fallback scans the coordinate axes e_p, p = 0,1,...,255, takes the
+;      first residual with nonzero norm, orthonormalizes it against
+;      columns 0..j-1, and uses it. The scan is deterministic and bounded.
 ;   2. For j = 0..k-1, run exactly `iterations` steps of
 ;         w = A * V_j;  project out V_0..V_{j-1} (two passes);
 ;         V_j = w / ||w||.
@@ -133,6 +134,11 @@ mth_lanczos_256_build:
   CMP r8,r9
   JMP[GE] @mth_lanczos_256_build_done
 
+  ; q0 lies exactly in span(V_0) for j=1. Use the deterministic axis
+  ; seed directly instead of normalizing cancellation noise.
+  CMP r8,r13
+  JMP[EQ] @mth_lanczos_256_axis_seed
+
   ; V_j = q0 (copy).
   LD r2,r12,1
   LD r3,r12,5
@@ -171,8 +177,10 @@ mth_lanczos_256_build_copy:
   CMP r1,r13
   JMP[EQ] @mth_lanczos_256_build_next
 
-  ; q0 lay exactly in the span of the existing columns. Scan coordinate
-  ; axes in increasing order and take the first nonzero residual.
+  ; Scan coordinate axes in increasing order and take the first nonzero
+  ; residual. This path is reached when the q0 seed is exhausted and
+  ; directly for the j=1 column.
+mth_lanczos_256_axis_seed:
   MOVI r8,0
   MOVI r12,@mth_lanczos_256_frame
   ST r8,r12,13

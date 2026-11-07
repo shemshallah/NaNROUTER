@@ -833,7 +833,7 @@
       "source": "mth/nan16/mth_lanczos_256.nas",
       "fixture": "mth/tests/mth_lanczos_256_test.nas",
       "marker": "MTH LANCZOS 256 PASS",
-      "steps": 133498079,
+      "steps": 133628629,
       "precision": "float32",
       "workspace_words": 0,
       "shape": [

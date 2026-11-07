@@ -14,6 +14,7 @@ NaNROUTER organizes the networking and learning-control layers around the existi
 - Six BSR heads are reserved for ring/control work. The other 250 heads receive the continuous Boolean/NaN16 curriculum.
 - Runner Riddle is the long-running NaN-source listener and mapping learner. It learns topology and address-to-head mappings before language.
 - The ten mathematical mapping layers are all represented inside one universe. They are not ten independent minds.
+- Every runner-ring handoff and point-0 request carries the mandatory **JAHS** seal ("Just A Handoff Seal", the owner's initials). It is bound into scheduler snapshots and checkpoint digests, required by `MthSystem.lease`, and checked by the native `mth_jahs_gate` kernel. It is an easter egg that is load-bearing, not a cosmetic label.
 
 ## Important namespace rule
 

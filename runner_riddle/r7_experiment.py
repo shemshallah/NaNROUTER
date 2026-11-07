@@ -89,6 +89,11 @@ LIMITATIONS = (
     "quantum-tunneling claim.",
     "Multiple baseline comparisons are reported individually; the caller must "
     "apply any family-wise correction for a broader claim.",
+    "Only the disconnected and random-coupling baselines are scheduled. The "
+    "shuffled-geometry (S1) and phase-scrambled (P1) controls in the R7 "
+    "protocol are not implemented by this runner.",
+    "The harness cannot verify that the random baseline is topology- or "
+    "norm-matched, or that the candidate and baselines are compute-matched.",
 )
 
 CLAIM_SCOPE = {
@@ -227,7 +232,11 @@ def _require_text(
     maximum: int = 256,
     error_cls: type[R7ExperimentError] = R7ExperimentError,
 ) -> str:
-    if not isinstance(value, str) or not value or len(value) > maximum:
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > maximum
+    ):
         raise error_cls(
             f"{name} must be a non-empty string of at most {maximum} characters"
         )
@@ -505,6 +514,11 @@ class R7TaskSet:
                 )
             excluded_ids.add(task.task_id)
             excluded_prompts.add(normalized_prompt)
+
+    @property
+    def train_tasks(self) -> tuple[R7Task, ...]:
+        """Alias for the caller-declared non-held-out material."""
+        return self.excluded_tasks
 
     def split_digest(self) -> str:
         self.validate()
@@ -1606,7 +1620,10 @@ class R7Experiment:
             call_counts["evaluations"] += 1
             return self._coerce_prediction(result, role, request, hook_error=True)
 
-        assert mapping is not None
+        if mapping is None:
+            raise EvaluatorBindingError(
+                f"{role}: prediction mapping was not bound"
+            )
         selected = self._prediction_map_for(mapping, request.condition)
         if request.task_id not in selected:
             raise EvaluatorBindingError(

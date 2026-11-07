@@ -16,7 +16,7 @@
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] Design target updated to 1 MiB guest (131,072 NaN16 words); old 512 KiB evidence is historical.
-- [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate + fixture pending integration.
+- [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture local PASS; CI pending.
 - [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 56/56 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
