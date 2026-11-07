@@ -1,0 +1,90 @@
+{
+  "schema": "nanrouter.p13-gates.v1",
+  "date": "2026-11-07",
+  "claim_policy": "No gate is green without external evidence. Blocked gates are recorded explicitly; they are never converted into success claims.",
+  "gates": [
+    {
+      "id": "live-koyeb-nannet0",
+      "status": "blocked",
+      "reason": "No live Koyeb/NANNET0 credentials, network path, or mounted runtime are available in this environment.",
+      "required_evidence": [
+        "deployment identifier and region",
+        "live point-0 request/response transcript",
+        "runner-ring snapshot with active slot and JAHS seal",
+        "health response from the deployed service"
+      ]
+    },
+    {
+      "id": "signed-volume-registry",
+      "status": "blocked",
+      "reason": "No signed volume-registry fixture or verification key is available.",
+      "required_evidence": [
+        "signed registry payload",
+        "signer key identity and trust root",
+        "verification result with digest and generation"
+      ]
+    },
+    {
+      "id": "production-mc0db",
+      "status": "blocked",
+      "reason": "No deployed BS0DB/MC0DB volumes are mounted; production registration would be a fabricated claim.",
+      "required_evidence": [
+        "store identity and schema version",
+        "capability registration counts per slot",
+        "backup/restore evidence"
+      ]
+    },
+    {
+      "id": "frozen-model-lm-ablation",
+      "status": "blocked",
+      "reason": "No frozen model, tokenizer, or held-out data harness is available.",
+      "required_evidence": [
+        "model and tokenizer digests",
+        "held-out task manifest",
+        "baseline and adapter measurements",
+        "no-benefit or benefit result reported honestly"
+      ]
+    },
+    {
+      "id": "r7-heldout",
+      "status": "blocked",
+      "reason": "No real held-out LM/data experiment is available; the R7 harness has synthetic coverage only.",
+      "required_evidence": [
+        "held-out task set and digest",
+        "avoided-crossing/association measurements",
+        "control and shuffled baselines"
+      ]
+    },
+    {
+      "id": "capacity-vs-snr",
+      "status": "blocked",
+      "reason": "No frozen model/data sweep is available for a real capacity-versus-SNR measurement.",
+      "required_evidence": [
+        "SNR definitions",
+        "capacity measurements",
+        "uncertainty bounds and raw results"
+      ]
+    },
+    {
+      "id": "glt-2mib-enforcement",
+      "status": "blocked",
+      "reason": "Text-loader 2 MiB execution is verified, but GLT-enforced page-limit loading requires the GLT runtime and hardware evidence.",
+      "required_evidence": [
+        "GLT enforcement mode and version",
+        "262,144-word load rejection/acceptance transcript",
+        "overflow and boundary evidence"
+      ]
+    },
+    {
+      "id": "native-numeric-executor",
+      "status": "blocked",
+      "reason": "The NaN0S toolchain/native executor is not present in this checkout; the P12 demo deliberately uses an evidence digest, not a numeric dot product.",
+      "required_evidence": [
+        "native executor and source digest",
+        "admission receipt from the native guest",
+        "numeric result and output leaf",
+        "deterministic replay of the same snapshot"
+      ]
+    }
+  ]
+}

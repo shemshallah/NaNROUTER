@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 680 Python tests pass (1 skipped).
+- [x] 682 Python tests pass (1 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -56,7 +56,7 @@
 - [x] **P10 — Scratch/oscillation/pruning.** Typed retention features/scoring, tier policy, deterministic plans, protected proof objects, shadow/apply/rollback/restore, oscillation budgets, duplicate and rewrite-cycle stops; 10 tests (`docs/MATH_RETENTION_AND_OSCILLATION.md`).
 - [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding is enforced by P5.
 - [x] **P12 — End-to-end demo.** `tools/run_math_demo.py` exercises leaf → `::` → preflight → NMP → active-ring lease → execute → commit → output feedback; 2 tests. The demo is control-plane only: its digest is not a claimed numeric dot product (`docs/MATH_DEMO.md`).
-- [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB, native numeric executor delivery; blocked pending real model/data/credentials/guest runtime. No fabricated claims.
+- [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB, native numeric executor delivery; blocked pending real model/data/credentials/guest runtime. Machine-readable blocked ledger: `spec/p13-gates.json`; explanation: `docs/P13_GATES.md`. No fabricated claims.
 
 ## R0 — Contract and storage freeze
 
@@ -208,7 +208,7 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -q
-Ran 680 tests
+Ran 682 tests
 OK (skipped=1)
 ```
 

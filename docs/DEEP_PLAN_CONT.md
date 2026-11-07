@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **63 native MTH kernels with fixtures**: 60 pass in the local harness and all 61 fixtures pass canonical CI run 42405649076 (132 steps). The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 680 Python tests (1 skipped).
+The project has crossed an important boundary: it is no longer only a plan. There are **63 native MTH kernels with fixtures**: 60 pass in the local harness and all 61 fixtures pass canonical CI run 42405649076 (132 steps). The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 682 Python tests (1 skipped).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -84,7 +84,7 @@ The 255 + 1 rule remains:
 
 ```
 60/60 locally runnable fixtures pass
-60/60 local fixtures pass; 61/61 total fixtures pass canonical CI run 42405649076 (132 steps); 680/680 runnable Python tests pass (1 skipped)
+60/60 local fixtures pass; 61/61 total fixtures pass canonical CI run 42405649076 (132 steps); 682/682 runnable Python tests pass (1 skipped)
 GLT-enforced 2 MiB page-limit verification remains pending
 ```
 
