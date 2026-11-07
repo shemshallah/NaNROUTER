@@ -34,7 +34,6 @@ mth_pair_driver_test_main:
   LA r6,@mth_driver_acc_ult
   LA r7,@mth_driver_scratch
   LA r8,@mth_driver_y
-  LA r14,@mth_driver_frame
   CALL @mth_graph_pair_tile16_k16_driver_f32
   MOVI r2,1
   CMP r1,r2
@@ -114,18 +113,6 @@ mth_driver_y:
 .word 0
 .org 17664
 mth_driver_scratch:
-.word 0
-.word 0
-.word 0
-.word 0
-.word 0
-.word 0
-.org 17670
-mth_driver_frame:
-.word 0
-.word 0
-.word 0
-.word 0
 .word 0
 .word 0
 .word 0
