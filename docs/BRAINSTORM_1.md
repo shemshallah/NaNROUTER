@@ -527,8 +527,9 @@ The first parallel implementation batch landed after this brainstorm:
 | `513834a` | Admission/candidate/snapshot/function-version/implementation binding; certificate fail-closed behavior; direct `MathRuntime.submit()` disabled; pre-dispatch lease/deadline/cancel checks; bearer-token redaction; matrix-vector and zero-vector tests | `tests/test_math_execution.py` 11 tests; `tests/test_math_validity.py` 25 tests; `tests/test_math_end_to_end.py` 2 tests |
 | `ab42f95` | Deep-frozen `MathLeaf`/`MathFunction`/`MathRule`; nested mutation rejection; `metadata_version`; result-leaf provenance checks; opt-in strict content-digest enforcement in `MathStore` | `tests/test_math_objects.py` + `tests/test_math_store.py` 35 tests |
 | `7328075` | 1 MiB/2 MiB/4 MiB adjustable live budgets; corrected `--guest-workspace-mib` conversion; exact 262,144/+1 boundary; optional math health in `MthSystem.health()` | `tests/test_wave_capabilities.py`, `test_guest_budget.py`, `test_live_preflight.py`, `test_mth_system.py` |
+| `539f6f5` | Runtime `rule_provider` binds active learned rules into preflight snapshots; scratch leaves invisible unless `allow_scratch=True`; quarantined/tombstoned/superseded leaves never linkable | `tests/test_math_end_to_end.py` 5 tests; `tests/test_math_linker.py` 27 tests |
 
-**Current full-suite result:** 678 tests, 1 skipped, OK.
+**Current full-suite result:** 680 tests, 1 skipped, OK.
 
 Still open from the audits:
 

@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 678 Python tests passed (1 skipped).
+**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 680 Python tests passed (1 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -80,7 +80,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 678 tests in 68.655s
+Ran 680 tests in 68.528s
 OK (skipped=1)
 ```
 
