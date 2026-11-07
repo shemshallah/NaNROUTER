@@ -22,6 +22,7 @@ from runner_riddle.lm_ablation import (
     AblationSpec,
     AblationTask,
     AblationTaskSet,
+    run_lm_adapter_ablation,
 )
 from runner_riddle.wave_adapter import WaveAdapterConfig
 
@@ -47,7 +48,6 @@ class FakeFrozenModel:
         self.base_correct = base_correct
         self.encode_calls = 0
         self.predict_calls = 0
-        self.predict_conditions: list[str] = []
 
     def encode(self, prompt: str, *, task_id: str, seed: int) -> EncodedState:
         self.encode_calls += 1
@@ -63,21 +63,19 @@ class FakeFrozenModel:
         *,
         task_id: str,
         seed: int,
-        condition: str,
     ) -> str:
         self.predict_calls += 1
-        self.predict_conditions.append(condition)
         correct = self.answers[task_id]
-        if condition == ADAPTER_ON:
-            adapted = (
-                isinstance(state, tuple)
-                and bool(state)
-                and state[0] == "adapted"
-            )
+        adapted = (
+            isinstance(state, tuple)
+            and bool(state)
+            and state[0] == "adapted"
+        )
+        if adapted:
             helps = self.adapter_helps and (
                 self.helpful_seeds is None or seed in self.helpful_seeds
             )
-            if adapted and helps:
+            if helps:
                 return correct
             return f"wrong:{task_id}"
         if self.base_correct:
@@ -202,7 +200,7 @@ class LMAdapterAblationTests(unittest.TestCase):
         spec: AblationSpec | None = None,
     ):
         task_set = task_set or make_task_set(count)
-        model = model or FakeFrozenModel(self.answers,)
+        model = model or FakeFrozenModel(self.answers)
         executor = executor or FakeResidualExecutor()
         harness = LMAdapterAblation(config or self.config, spec=spec or self.spec)
         report = harness.run(
@@ -293,10 +291,6 @@ class LMAdapterAblationTests(unittest.TestCase):
         self.assertEqual(model.encode_calls, 40)
         self.assertEqual(model.predict_calls, 160)
         self.assertEqual(executor.calls, 120)
-        self.assertEqual(
-            set(model.predict_conditions),
-            {BASE_ONLY, ADAPTER_ON, ADAPTER_OFF, ZERO_RESIDUAL},
-        )
 
         by_condition = {condition: [] for condition in (
             ADAPTER_ON, ADAPTER_OFF, ZERO_RESIDUAL
@@ -566,7 +560,7 @@ class LMAdapterAblationTests(unittest.TestCase):
             )
 
         class BadPredictModel(FakeFrozenModel):
-            def predict(self, state, prompt, *, task_id, seed, condition):
+            def predict(self, state, prompt, *, task_id, seed):
                 return 17
 
         with self.assertRaises(ModelHookError):
@@ -601,6 +595,18 @@ class LMAdapterAblationTests(unittest.TestCase):
             harness.adapter_config_digest, restored.adapter_config_digest
         )
 
+        report = run_lm_adapter_ablation(
+            self.config.to_dict(),
+            make_task_set(8),
+            frozen_model=FakeFrozenModel(make_answers(8)),
+            residual_executor=FakeResidualExecutor(),
+            spec=self.spec,
+        )
+        self.assertEqual(report["status"], "ablation_passed")
+        self.assertEqual(
+            report["adapter_config_digest"], harness.adapter_config_digest
+        )
+
     def test_invalid_spec_and_exception_type_are_checked(self):
         with self.assertRaises(LMAdapterAblationError):
             LMAdapterAblation(self.config, spec=object())
@@ -610,6 +616,8 @@ class LMAdapterAblationTests(unittest.TestCase):
             AblationSpec(seeds=(1, 1))
         with self.assertRaises(LMAdapterAblationError):
             AblationSpec(min_tasks=1)
+        with self.assertRaises(LMAdapterAblationError):
+            AblationSpec(min_seeds=1)
 
 
 if __name__ == "__main__":

@@ -198,6 +198,24 @@ class LivePreflightValidOfflineTests(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(first)), first)
         self.assertEqual(len(first["evidence"]["config_digest"]), 64)
 
+    def test_short_registry_aliases_and_active_slot_count_are_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _ = write_registry(tmp)
+            env = deployment_env(path)
+            env.pop("RIDDLE_VOLUME_REGISTRY_PATH")
+            env.pop("RIDDLE_VOLUME_HMAC_KEY")
+            env.pop("RIDDLE_RING_ACTIVE_SLOT_POLICY")
+            env["RIDDLE_RING_ACTIVE_SLOTS"] = "1"
+            report = preflight_report(
+                env, registry_path=path, registry_key=KEY
+            )
+
+        self.assertEqual(report["status"], "green")
+        self.assertEqual(
+            check_by_id(report, "runner_ring.active_slot_policy")["status"],
+            "pass",
+        )
+
     def test_injected_probe_transport_is_bounded_and_green(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, _ = write_registry(tmp)
@@ -312,6 +330,34 @@ class LivePreflightRegistryGateTests(unittest.TestCase):
         self.assertEqual(check["status"], "fail")
         self.assertEqual(check["evidence"]["code"], "digest_mismatch")
         self.assertEqual(caught.exception.code, "digest_mismatch")
+
+    def test_missing_digest_and_wrong_signature_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, registry = write_registry(tmp)
+            missing = dict(registry.document)
+            missing.pop("registry_digest")
+            path.write_text(json.dumps(missing), encoding="utf-8")
+            missing_report = preflight_report(deployment_env(path))
+
+            wrong = dict(registry.document)
+            wrong["signature"] = "0" * 64
+            path.write_text(json.dumps(wrong), encoding="utf-8")
+            wrong_report = preflight_report(deployment_env(path))
+
+        self.assertEqual(missing_report["status"], "blocked")
+        self.assertEqual(
+            check_by_id(missing_report, "volume.registry.signature")[
+                "evidence"
+            ]["code"],
+            "missing_registry_digest",
+        )
+        self.assertEqual(wrong_report["status"], "blocked")
+        self.assertEqual(
+            check_by_id(wrong_report, "volume.registry.signature")[
+                "evidence"
+            ]["code"],
+            "signature_mismatch",
+        )
 
     def test_tampered_volume_record_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

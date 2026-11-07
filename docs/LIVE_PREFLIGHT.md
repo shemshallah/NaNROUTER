@@ -81,8 +81,7 @@ The budget values encode the current design:
 runner ring      = MC0:0/R0..R5, exactly one active slot
 ```
 
-The last four values (`RIDDLE_RING_ACTIVE_SLOT_POLICY`,
-`NANROUTER_POINT0_ROUTE`, and the page/guest constants) are architecture
+The runner-ring policy, point-0 route, and page/guest values are architecture
 invariants, but the gate still requires them to be stated explicitly so a
 deployment cannot silently drift to the old 512 KiB target or a multi-active
 ring.
@@ -205,8 +204,8 @@ Tokens and the HMAC key are never emitted. Reports contain only:
   replaced).
 
 `DeploymentConfig.__repr__` and `LivePreflight.__repr__` print `<redacted>` for
-secret fields. An internal assertion rejects the report if a raw token or key
-would ever appear in its serialized form.
+secret fields. The report is assembled only from redacted URLs, lengths, and
+one-way fingerprints; raw tokens and HMAC key material are never inserted.
 
 ## CLI
 

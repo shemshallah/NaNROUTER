@@ -97,7 +97,6 @@ model.predict(
     *,
     task_id: str,
     seed: int,
-    condition: str,
 ) -> str
 ```
 
@@ -110,7 +109,10 @@ EncodedState(base_state: Any, readout_state: Any)
 The state values are opaque to the harness. It passes `base_state` to the
 base-only, adapter-off, and zero-residual paths, and passes the executor result
 to the adapter-on path. Only returned strings are scored; the harness never
-interprets a state.
+interprets a state. The frozen model is condition-blind: it is not told which
+ablation condition produced a state, so the condition cannot act as a side
+channel. The residual executor, which must distinguish enabled/disabled and
+zero/nonzero beta, does receive the condition in its typed request.
 
 `model.model_id` must be non-empty and must equal
 `adapter_config.base_model_id`; otherwise `ModelBindingError` is raised before
@@ -205,6 +207,9 @@ record. If it is missing or empty, no model or executor is needed and zero
 hooks are called. With a non-empty task set, both `frozen_model` and
 `residual_executor` are required.
 
+`run_lm_adapter_ablation(config, task_set, *, frozen_model, residual_executor,
+spec=None)` is a convenience wrapper that constructs and runs the harness.
+
 ## 4. Conditions and controls
 
 | Name | Model path | Purpose |
@@ -259,7 +264,8 @@ Each task's delta is averaged over seeds. The aggregate reports:
 - per-seed mean deltas;
 - a deterministic percentile paired-bootstrap confidence interval over tasks;
 - `reproducible`, meaning at least `min_seeds` seeds were present and every
-  seed mean exceeded `min_effect`.
+  seed mean exceeded `min_effect`. `min_seeds` must be at least 2, so a pass
+  cannot rest on one seed.
 
 The bootstrap uses a fixed `bootstrap_seed` and a deterministic per-comparison
 seed derived from it. It resamples tasks, not prompts or model calls.

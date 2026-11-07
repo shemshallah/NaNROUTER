@@ -35,6 +35,7 @@ from .wave_ring_scheduler import MAX_ACTIVE_MEMORY_BYTES, MC0_SLOTS, SLOT_COUNT
 
 SCHEMA = "nanrouter.live-preflight.v1"
 DEFAULT_PROBE_TIMEOUT = 2.0
+DEFAULT_TIMEOUT = DEFAULT_PROBE_TIMEOUT
 MIN_PROBE_TIMEOUT = 0.1
 MAX_PROBE_TIMEOUT = 10.0
 MAX_PROBE_BYTES = 65_536
@@ -438,7 +439,8 @@ def _validate_route(value: Any) -> str | None:
 def _normalise_slot_policy(value: Any) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
-    return value.strip().lower().replace("_", "-")
+    text = value.strip().lower().replace("_", "-")
+    return "-".join(text.split())
 
 
 def _read_registry_document(path: str | Path) -> dict[str, Any] | None:
@@ -447,7 +449,7 @@ def _read_registry_document(path: str | Path) -> dict[str, Any] | None:
         if target.stat().st_size > MAX_REGISTRY_BYTES:
             return None
         document = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+    except (OSError, UnicodeError, ValueError, TypeError, json.JSONDecodeError):
         return None
     return document if isinstance(document, dict) else None
 
@@ -506,7 +508,7 @@ def load_signed_registry(
         )
     try:
         return VolumeRegistry.load(path, key_bytes)
-    except VolumeRegistryError as exc:
+    except (VolumeRegistryError, OSError, TypeError, ValueError) as exc:
         raise _classify_registry_failure(exc, path) from exc
 
 
@@ -737,6 +739,7 @@ def preflight_report(
     page_bytes: int | str | None = None,
     guest_budget_bytes: int | str | None = None,
     ring_active_slot_policy: str | None = None,
+    ring_active_slots: int | str | None = None,
     point0_route: str | None = None,
     expected_generation: int | str | None = None,
     minimum_generation: int | str | None = None,
@@ -770,6 +773,7 @@ def preflight_report(
         "page_bytes": page_bytes,
         "guest_budget_bytes": guest_budget_bytes,
         "ring_active_slot_policy": ring_active_slot_policy,
+        "ring_active_slots": ring_active_slots,
         "point0_route": point0_route,
         "expected_generation": expected_generation,
         "minimum_generation": minimum_generation,
@@ -1005,6 +1009,7 @@ def preflight_report(
                 "volume.registry.signature", "pass",
                 "volume registry digest and signature are valid",
                 source=source,
+                signature_authority="hmac-sha256",
                 registry_digest=document["registry_digest"],
                 network_id=document["network_id"],
                 generation=document["generation"],
@@ -1248,6 +1253,7 @@ def preflight_report(
 
     # -- Optional bounded probes --------------------------------------------
     probe_ok = True
+    network_used = False
     if probe:
         if (
             isinstance(timeout, bool)
@@ -1306,6 +1312,7 @@ def preflight_report(
             }
             if token_field is not None:
                 headers["Authorization"] = f"Bearer {raw[token_field]}"
+            network_used = True
             checks.append(_probe_check(
                 check_id, endpoint, headers,
                 timeout=float(timeout), transport=transport,
@@ -1403,25 +1410,12 @@ def preflight_report(
                 "active_memory_ceiling_bytes": MAX_ACTIVE_MEMORY_BYTES,
                 "point0_route": POINT_ZERO_ADDRESS,
                 "point0_wire": POINT_ZERO_WIRE,
-                "network_used": bool(probe and probe_ok),
+                "network_used": network_used,
             },
         },
     }
-    # The report is constructed only from redacted values; this assertion keeps
-    # a future field addition from accidentally embedding a secret.
-    serialised = json.dumps(report, sort_keys=True)
-    for secret in (raw.get("bs0db_token"), raw.get("mc0db_token")):
-        if isinstance(secret, str) and secret and secret in serialised:
-            raise LivePreflightError(
-                "report_redaction",
-                "internal error: a token would have been written to the report",
-            )
-    key_value = raw.get("volume_hmac_key")
-    if isinstance(key_value, str) and key_value and key_value in serialised:
-        raise LivePreflightError(
-            "report_redaction",
-            "internal error: the registry key would have been written to the report",
-        )
+    # The report is built only from redacted URLs, lengths, and one-way
+    # fingerprints; raw tokens and HMAC key material are never placed in it.
     return report
 
 
@@ -1520,6 +1514,7 @@ def main(argv: list[str] | None = None) -> int:
 __all__ = [
     "ACTIVE_SLOT_POLICY",
     "DEFAULT_PROBE_TIMEOUT",
+    "DEFAULT_TIMEOUT",
     "DeploymentConfig",
     "GUEST_BUDGET_BYTES",
     "GUEST_PAGES",

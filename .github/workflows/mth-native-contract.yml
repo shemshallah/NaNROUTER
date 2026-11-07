@@ -236,6 +236,17 @@ jobs:
           cat build/mth/dot256.err
           grep -q '^MTH DOT256 PASS' build/mth/dot256.out
 
+      - name: Assemble stable top-k 256 fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_topk_256_test.nas > build/mth/topk256.nan
+
+      - name: Execute stable top-k 256 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/topk256.nan --steps 10000000 --serial > build/mth/topk256.out 2> build/mth/topk256.err
+          cat build/mth/topk256.out
+          cat build/mth/topk256.err
+          grep -q '^MTH TOPK 256 PASS' build/mth/topk256.out
+
       - name: Assemble two-level spectrum fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_two_level_spectrum_test.nas > build/mth/two-level.nan
@@ -323,6 +334,17 @@ jobs:
           cat build/mth/svd256.out
           cat build/mth/svd256.err
           grep -q '^MTH SVD TOP256 PASS' build/mth/svd256.out
+
+      - name: Assemble full 256 top-2 SVD fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_svd_top2_256_test.nas > build/mth/svd-top2-256.nan
+
+      - name: Execute full 256 top-2 SVD fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/svd-top2-256.nan --steps 150000000 --serial > build/mth/svd-top2-256.out 2> build/mth/svd-top2-256.err
+          cat build/mth/svd-top2-256.out
+          cat build/mth/svd-top2-256.err
+          grep -q '^MTH SVD TOP2 256 PASS' build/mth/svd-top2-256.out
 
       - name: Assemble 128-SVD fixture with NaN16 source assembler
         run: |

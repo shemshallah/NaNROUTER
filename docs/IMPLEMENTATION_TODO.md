@@ -19,9 +19,9 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate + fixture pending integration.
 - [ ] Verify the 1 MiB guest in the canonical NaN16 CI toolchain.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 48/48 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 317 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 49-fixture/101-step run pending.
+- [x] 50/50 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
+- [x] 319 Python tests pass.
+- [x] Expanded GitHub Actions native workflow passed prior run `42389738332` (87/87 steps); 51-fixture/105-step run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -64,7 +64,7 @@
 - [x] Add 128×128, 16×256, and 15×255 certificates.
 - [x] Add 16×256 and 15×255 streaming certificates.
 - [x] Add 128×128 power-iteration kernel.
-- [x] Add deterministic 256-tile page-window orchestration and atomic publication (`wave_tile_orchestrator`, 28 tests).
+- [x] Add deterministic 256-tile page-window orchestration and atomic publication (`wave_tile_orchestrator`, 31 tests).
 - [ ] Add Lanczos/top-k deflation (SVD top-2 and Lanczos kernels in progress).
 - [ ] Add residual/orthogonality fixture for a real operator.
 
@@ -143,7 +143,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 51 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 53 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -169,14 +169,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-48/48 local fixtures passed; 49/49 total (K256 pair CI-only)
+50/50 local fixtures passed; 51/51 total (K256 pair CI-only)
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-CI prior: `42389738332` — 87/87 steps; 49-fixture/101-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42389738332` — 87/87 steps; 51-fixture/105-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

@@ -4,7 +4,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 48/48 locally runnable fixtures passed; 49/49 total including CI-only K256 pair; 317 Python tests passed.
+**Result:** 50/50 locally runnable fixtures passed; 51/51 total including CI-only K256 pair; 319 Python tests passed.
 **CI:** the expanded `mth-native-contract` workflow passed all 81 steps on `main` for commit `777673f`.
 
 ## Native fixtures
@@ -61,7 +61,9 @@
 | 48 | JAHS handoff gate | `mth/tests/mth_jahs_gate_test.nas` | 201 | PASS | pending |
 | 49 | Full 256 adapter residual | `mth/tests/mth_adapter_residual_256_full_test.nas` | 2,839,172 | PASS | pending |
 | 50 | Avoided-crossing sweep | `mth/tests/mth_avoided_crossing_sweep_test.nas` | 11,651 | PASS | pending |
-| 51 | Full 255 certificate | `mth/tests/mth_centrosymmetry_255_full_test.nas` | 2,699,773 | PASS | pending |
+| 51 | Full 255 certificate | `mth/tests/mth_centrosymmetry_255_full_test.nas` | 2,700,726 | PASS | pending |
+| 52 | Full 256 SVD top-2 | `mth/tests/mth_svd_top2_256_test.nas` | 40,216,927 | PASS | pending |
+| 53 | Stable top-k 256 | `mth/tests/mth_topk_256_test.nas` | 1,158,106 | PASS | pending |
 
 ## Python tests
 
@@ -91,14 +93,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-48/48 local fixtures passed; 49/49 total
+50/50 local fixtures passed; 51/51 total
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 51 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 53 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 

@@ -71,6 +71,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("encode_decode256", "mth/tests/mth_encode_decode256_test.nas", 30_000_000, "MTH ENCODE DECODE 256 PASS", "native_verified"),
     Fixture("svd128", "mth/tests/mth_svd_top128_test.nas", 100_000_000, "MTH SVD TOP128 PASS", "native_verified"),
     Fixture("svd256", "mth/tests/mth_svd_top256_test.nas", 150_000_000, "MTH SVD TOP256 PASS", "native_verified"),
+    Fixture("svd_top2_256", "mth/tests/mth_svd_top2_256_test.nas", 150_000_000, "MTH SVD TOP2 256 PASS", "native_verified"),
     Fixture("dft256", "mth/tests/mth_graph_dft256_test.nas", 50_000_000, "MTH GRAPH DFT256 PASS", "native_verified"),
     Fixture("dft255", "mth/tests/mth_graph_dft255_test.nas", 40_000_000, "MTH GRAPH DFT255 PASS", "native_verified"),
     Fixture("couple128", "mth/tests/mth_graph_couple_128_test.nas", 4_000_000, "MTH GRAPH COUPLE 128 PASS", "native_verified"),
@@ -78,6 +79,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("two_level", "mth/tests/mth_two_level_spectrum_test.nas", 1_000_000, "MTH TWO LEVEL SPECTRUM PASS", "native_verified"),
     Fixture("avoided_crossing_sweep", "mth/tests/mth_avoided_crossing_sweep_test.nas", 4_000_000, "MTH AVOIDED CROSSING SWEEP PASS", "native_verified"),
     Fixture("phase_coherence", "mth/tests/mth_phase_coherence_128_test.nas", 4_000_000, "MTH PHASE COHERENCE 128 PASS", "native_verified"),
+    Fixture("topk256", "mth/tests/mth_topk_256_test.nas", 10_000_000, "MTH TOPK 256 PASS", "native_verified"),
 )
 
 

@@ -137,7 +137,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 49-fixture/101-step run is pending. The CI workflow includes all 49 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 51-fixture/105-step run is pending. The CI workflow includes all 51 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space
@@ -154,10 +154,12 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 
 - `nan16/mth_matvec256_full.nas`: full 256×256 float32 matvec; 66,048-word working set; local canonical execution PASS (2,978,362 steps); 1 MiB target.
 - `nan16/mth_svd_top256.nas`: full 256×256 top singular pair; local canonical execution PASS (11,002,235 steps); 1 MiB target.
+- `nan16/mth_svd_top2_256.nas`: deflated top-2 singular pairs; local canonical execution PASS (40,216,927 steps); 1 MiB target.
 - `nan16/mth_encode256_full.nas`, `nan16/mth_decode256_full.nas`: full 256×256 ENCODE/DECODE; local canonical execution PASS (1,655,853 steps).
 - `nan16/mth_adapter_residual_256_full.nas`: full 256×256 adapter residual `h + beta*W*u`; local canonical execution PASS (2,839,172 steps).
 - `nan16/mth_centrosymmetry_255_full.nas`: full 255×255 centrosymmetry certificate; local canonical execution PASS (2,699,773 steps).
 - `nan16/mth_avoided_crossing_sweep.nas`: R7 avoided-crossing sweep; local canonical execution PASS (11,651 steps).
 - `nan16/mth_jahs_gate.nas`: mandatory "Just A Handoff Seal" gate; accepts only `0x4A414853`; local canonical execution PASS (201 steps).
+- `nan16/mth_topk_256.nas`: stable descending top-k with index tie-break; local canonical execution PASS (1,158,106 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and await the canonical 1 MiB GLT CI run before promotion from local execution to CI-verified.

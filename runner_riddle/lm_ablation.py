@@ -6,7 +6,8 @@ Callers supply every piece of model behaviour:
 
 * a frozen model object exposing ``model_id``,
   ``encode(prompt, *, task_id, seed) -> EncodedState`` and
-  ``predict(state, prompt, *, task_id, seed, condition) -> str``;
+  ``predict(state, prompt, *, task_id, seed) -> str``; the model is
+  condition-blind and sees only the state, prompt, task ID, and seed;
 * a held-out :class:`AblationTaskSet`; and
 * a residual executor ``executor(ResidualRequest) -> ResidualResult`` that is
   expected to wrap the verified native NaN16 residual kernel.
@@ -454,8 +455,10 @@ class AblationSpec:
             raise LMAdapterAblationError("bootstrap_samples must be >= 1")
         if self.min_tasks < 2:
             raise LMAdapterAblationError("min_tasks must be >= 2")
-        if self.min_seeds < 1:
-            raise LMAdapterAblationError("min_seeds must be >= 1")
+        if self.min_seeds < 2:
+            raise LMAdapterAblationError(
+                "min_seeds must be >= 2 so a pass cannot rest on one seed"
+            )
         if self.label_control_shift < 1:
             raise LMAdapterAblationError("label_control_shift must be >= 1")
         if isinstance(self.confidence, bool) or not isinstance(
@@ -535,7 +538,10 @@ class LMAdapterAblation:
         if isinstance(adapter_config, WaveAdapterConfig):
             config = adapter_config
         elif isinstance(adapter_config, Mapping):
-            config = WaveAdapterConfig.from_dict(dict(adapter_config))
+            try:
+                config = WaveAdapterConfig.from_dict(dict(adapter_config))
+            except WaveAdapterError as exc:
+                raise LMAdapterAblationError(str(exc)) from exc
         else:
             raise LMAdapterAblationError(
                 "adapter_config must be a WaveAdapterConfig or mapping"
@@ -630,7 +636,7 @@ class LMAdapterAblation:
                 encoder_calls += 1
 
                 base_prediction = self._call_predict(
-                    predict, encoded.base_state, task, seed, BASE_ONLY
+                    predict, encoded.base_state, task, seed
                 )
                 predict_calls += 1
 
@@ -646,7 +652,7 @@ class LMAdapterAblation:
                         "adapter_on executor result must report applied=True"
                     )
                 on_prediction = self._call_predict(
-                    predict, on_result.state, task, seed, ADAPTER_ON
+                    predict, on_result.state, task, seed
                 )
                 predict_calls += 1
 
@@ -665,7 +671,7 @@ class LMAdapterAblation:
                     off_result.state, encoded.base_state, ADAPTER_OFF
                 )
                 off_prediction = self._call_predict(
-                    predict, off_result.state, task, seed, ADAPTER_OFF
+                    predict, off_result.state, task, seed
                 )
                 predict_calls += 1
 
@@ -684,7 +690,7 @@ class LMAdapterAblation:
                     zero_result.state, encoded.base_state, ZERO_RESIDUAL
                 )
                 zero_prediction = self._call_predict(
-                    predict, zero_result.state, task, seed, ZERO_RESIDUAL
+                    predict, zero_result.state, task, seed
                 )
                 predict_calls += 1
 
@@ -946,7 +952,6 @@ class LMAdapterAblation:
         state: Any,
         task: AblationTask,
         seed: int,
-        condition: str,
     ) -> str:
         try:
             prediction = predict(
@@ -954,17 +959,15 @@ class LMAdapterAblation:
                 task.prompt,
                 task_id=task.task_id,
                 seed=seed,
-                condition=condition,
             )
         except Exception as exc:  # noqa: BLE001 - caller hook boundary
             raise ModelHookError(
-                f"predict failed for task {task.task_id!r}, seed {seed}, "
-                f"condition {condition!r}: {exc}"
+                f"predict failed for task {task.task_id!r}, seed {seed}: {exc}"
             ) from exc
         if not isinstance(prediction, str):
             raise ModelHookError(
                 "predict must return a string for task "
-                f"{task.task_id!r}, seed {seed}, condition {condition!r}"
+                f"{task.task_id!r}, seed {seed}"
             )
         return prediction
 
