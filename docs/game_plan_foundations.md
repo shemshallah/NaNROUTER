@@ -379,3 +379,14 @@ Use explicit labels in all reports:
 - **Rejected / unsupported claim:** contradicted by derivation or not supported by evidence.
 
 The architecture succeeds only if its mathematical invariants hold, its implementation matches the reference, and its downstream LM experiments outperform meaningful baselines. The central void, spectral structure, and product-wave modes are tools to investigate—not conclusions to assume.
+
+
+## Product-space implementation update — tiled pair action
+
+The general dense pair action now has a source-written NaN16 tile kernel:
+`Y = LU + UL^T`, one 16×16 output tile per invocation. It stages U plus
+two 16-row windows of L, rather than materializing the 65,536×65,536
+Kronecker matrix. The L=2I exact fixture passed canonical NaN16 CI run 218 (4,643,414 guest
+steps), checking all 256 cells for tile origins (0,0) and (16,32). This is one verified tile,
+not full product-space orchestration and not a claim that all 65,536 product
+modes are independently controllable.
