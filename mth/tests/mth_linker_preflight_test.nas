@@ -22,24 +22,24 @@ mth_link_pf_main:
   MOVI r4,0x1234
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_10
+  JMP[NE] @mth_link_pf_fail
   MOVI r1,234
   MOVI r2,4
   MOVI r3,2
   MOVI r4,0x5678
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_11
+  JMP[NE] @mth_link_pf_fail
   MOVI r1,123
   MOVI r2,@mth_link_pf_left_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_12
+  JMP[NE] @mth_link_pf_fail
   MOVI r1,234
   MOVI r2,@mth_link_pf_right_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_13
+  JMP[NE] @mth_link_pf_fail
 
   ; Existing shape metadata is used by the legacy route-expression parser.
   MOVI r1,123
@@ -49,7 +49,7 @@ mth_link_pf_main:
   MOVI r5,3
   CALL @nmr_shape_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_14
+  JMP[NE] @mth_link_pf_fail
   MOVI r1,234
   MOVI r2,1
   MOVI r3,3
@@ -57,7 +57,7 @@ mth_link_pf_main:
   MOVI r5,3
   CALL @nmr_shape_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_15
+  JMP[NE] @mth_link_pf_fail
 
   ; Register the operator once, then attach its immutable typed contract.
   MOVI r1,77
@@ -67,7 +67,7 @@ mth_link_pf_main:
   MOVI r5,900
   CALL @nmr_op_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_16
+  JMP[NE] @mth_link_pf_fail
   MOVI r1,77
   MOVI r2,1
   MOVI r3,1
@@ -78,7 +78,7 @@ mth_link_pf_main:
   MOVI r8,0
   CALL @nmr_contract_put
   CMP r3,r0
-  JMP[NE] @mth_link_pf_fail_pre_17
+  JMP[NE] @mth_link_pf_fail
 
   ; The literal ::op: expression is parsed and resolved by the canonical
   ; NaN0S linker. Its r10 is the registered 10-word contract descriptor.
@@ -86,27 +86,27 @@ mth_link_pf_main:
   SHL r1,r1,2
   CALL @nmr_expr_resolve
   CMP r8,r0
-  JMP[NE] @mth_link_pf_fail_pre_18
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,123
   CMP r1,r6
-  JMP[NE] @mth_link_pf_fail_pre_19
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,234
   CMP r2,r6
-  JMP[NE] @mth_link_pf_fail_pre_20
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,77
   CMP r3,r6
-  JMP[NE] @mth_link_pf_fail_pre_21
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,3
   CMP r4,r6
-  JMP[NE] @mth_link_pf_fail_pre_22
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,900
   CMP r5,r6
-  JMP[NE] @mth_link_pf_fail_pre_23
+  JMP[NE] @mth_link_pf_fail
   MOVI r6,3
   CMP r9,r6
-  JMP[NE] @mth_link_pf_fail_pre_24
+  JMP[NE] @mth_link_pf_fail
   CMP r10,r0
-  JMP[EQ] @mth_link_pf_fail_pre_25
+  JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
 
   ; mth_admit performs both gates; pass the exact registry contract pointer.
@@ -124,7 +124,7 @@ mth_link_pf_main:
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_admit
   CMP r1,r0
-  JMP[NE] @mth_link_pf_fail_1
+  JMP[NE] @mth_link_pf_fail
 
   ; A stale rule epoch is rejected before typed applicability.
   MOVI r8,@mth_link_pf_candidate
@@ -141,7 +141,7 @@ mth_link_pf_main:
   CALL @mth_admit
   MOVI r9,18
   CMP r1,r9
-  JMP[NE] @mth_link_pf_fail_2
+  JMP[NE] @mth_link_pf_fail
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
@@ -165,13 +165,13 @@ mth_link_pf_main:
   CALL @mth_admit
   MOVI r9,38
   CMP r1,r9
-  JMP[NE] @mth_link_pf_fail_3
+  JMP[NE] @mth_link_pf_fail
   ; mth_admit may clobber r8; reload the output descriptor before checking it.
   MOVI r8,@mth_link_pf_output
   LD r10,r8,0
   MOVI r9,55
   CMP r10,r9
-  JMP[NE] @mth_link_pf_fail_4
+  JMP[NE] @mth_link_pf_fail
 
   MOVI r1,@mth_link_pf_pass
   CALL @mth_link_pf_puts
@@ -179,135 +179,7 @@ mth_link_pf_main:
   CALL @mth_link_pf_puts
   HALT
 
-mth_link_pf_fail_pre_10:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,10
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_11:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,11
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_12:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,12
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_13:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,13
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_14:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,14
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_15:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,15
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_16:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,16
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_17:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,17
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_18:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,18
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_19:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,19
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_20:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,20
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_21:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,21
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_22:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,22
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_23:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,23
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_24:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,24
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_25:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,25
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_26:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,26
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_27:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,27
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_28:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,28
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_29:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,29
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_pre_30:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,30
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_1:
-  MOVI r12,@mth_link_pf_scratch
-  ST r1,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_2:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,2
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_3:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,3
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
-mth_link_pf_fail_4:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,4
-  ST r8,r12,47
-  JMP @mth_link_pf_fail_print
 mth_link_pf_fail:
-  MOVI r12,@mth_link_pf_scratch
-  MOVI r8,99
-  ST r8,r12,47
-mth_link_pf_fail_print:
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
   HALT
