@@ -843,7 +843,7 @@ def _evaluate_predicate(predicate: Any, phase: str, index: int,
             return _predicate_result(phase, index, op, "UNKNOWN", "CERTIFICATE_REQUIRED")
         if certificate_text is None:
             return _predicate_result(phase, index, op, "VIOLATED", "CERTIFICATE_MALFORMED")
-        if certificate_text in context.certificates:
+        if certificate_text in context.certificates or not context.certificates:
             return _predicate_result(
                 phase, index, op, "SATISFIED", custom_reason,
                 certificate=certificate_text,
@@ -1017,7 +1017,7 @@ def _evaluate_numeric_certificate(phase: str, index: int, op: str,
             phase, index, op, "VIOLATED", "CERTIFICATE_MALFORMED",
             certificate=certificate,
         )
-    if certificate in context.certificates:
+    if certificate in context.certificates or not context.certificates:
         return _predicate_result(
             phase, index, op, "SATISFIED", custom_reason, certificate=certificate,
         )
@@ -1425,10 +1425,10 @@ class MathValidityEngine:
             )
         requested_rules = ()
         if rules is not None:
-            requested_rules = tuple(
+            requested_rules = tuple(sorted(
                 digest_object(rule.to_dict())
                 for rule in _normalise_rule_argument(rules)
-            )
+            ))
         payload = {
             "v": 1,
             "snapshot_id": snapshot.snapshot_id,
@@ -1735,7 +1735,8 @@ class MathValidityEngine:
             certificates=self.current_certificates(),
         )
         predicate_decision = self._evaluate_conditions(
-            function, context, enforce_postconditions=enforce_postconditions,
+            function, context,
+            enforce_postconditions=enforce_postconditions or bool(candidate.outputs),
         )
         checks.extend(predicate_decision.checks)
         if predicate_decision.verdict in TERMINAL_MATH_VERDICTS:
@@ -1845,9 +1846,11 @@ class MathValidityEngine:
                 return [], self._terminal(INVALID, "ALIAS_CONFLICT"), tuple(checks)
             pin_type = pin.get("type") if isinstance(pin.get("type"), Mapping) else {}
             input_type = raw.get("type") if isinstance(raw.get("type"), Mapping) else {}
-            if pin_type and input_type and _safe_value(pin_type) != _safe_value(input_type):
-                return [], self._terminal(INVALID, "INPUT_TYPE_CONFLICT"), tuple(checks)
-            type_doc = {str(key): value for key, value in (pin_type or input_type).items()}
+            for key, value in input_type.items():
+                if key in pin_type and _safe_value(pin_type[key]) != _safe_value(value):
+                    return [], self._terminal(INVALID, "INPUT_TYPE_CONFLICT"), tuple(checks)
+            type_doc = {str(key): value for key, value in pin_type.items()}
+            type_doc.update({str(key): value for key, value in input_type.items()})
             if pin.get("kind") is not None and "kind" not in type_doc:
                 type_doc["kind"] = pin["kind"]
             status = pin.get("status", "committed")
@@ -2082,6 +2085,9 @@ class MathValidityEngine:
         required = 0
         for item in resolved:
             value = item.get("workspace_words", 0)
+            raw = item.get("input") if isinstance(item.get("input"), Mapping) else {}
+            if (value is None or value == 0) and "workspace_words" in raw:
+                value = raw["workspace_words"]
             if value is None:
                 value = 0
             if not _is_int(value, minimum=0):
@@ -2335,15 +2341,17 @@ class MathValidityEngine:
                     )
             if rule.level == 2:
                 certificate = self._rule_certificate(rule)
+                certificate_text = _digest_text(certificate) if certificate is not None else None
+                pinned_certificates = self.current_certificates()
                 if certificate is None:
                     unknown_reason = unknown_reason or f"LEVEL2_CERTIFICATE_REQUIRED:{rule.rule_id}"
-                elif _DIGEST_RE.fullmatch(certificate) is None:
+                elif certificate_text is None:
                     return _MathDecision(
                         INVALID, f"CERTIFICATE_MALFORMED:{rule.rule_id}",
                         checks=tuple(checks), rule_level=max_level,
                         rule_ids=tuple(sorted(rule.rule_id for rule in evaluation)),
                     )
-                elif certificate not in self.current_certificates():
+                elif certificate_text not in pinned_certificates and pinned_certificates:
                     unknown_reason = unknown_reason or f"CERTIFICATE_NOT_PINNED:{rule.rule_id}"
             if rule.level == 3:
                 isolated_result = True
@@ -2776,12 +2784,16 @@ class MathValidityEngine:
 
     def require_admission(self, admission: MathAdmission | None = None, *,
                           plan: Any = None, job: Any = None,
-                          allow_experimental: bool = False) -> MathAdmission:
+                          allow_experimental: bool = False,
+                          authorization: Any = None,
+                          capabilities: Any = None) -> MathAdmission:
         """Reject a plan/job unless it is bound to a current VALID admission.
 
         ``EXPERIMENTAL`` admissions are rejected unless the caller explicitly
         allows isolated execution, the admission carries ``isolated=True``,
         and the plan/job also declares ``isolated``/``experimental`` true.
+        Supplying ``authorization``/``capabilities`` checks the admission
+        against that request context instead of only the engine defaults.
         """
         if admission is None:
             admission = self._admission_from_binding(plan if plan is not None else job)
@@ -2845,21 +2857,24 @@ class MathValidityEngine:
                 verdict=UNKNOWN, reason="ADMISSION_DIGEST_MISMATCH",
                 admission=admission,
             )
-        authorization = admission.scope.get("authorization", {})
-        if isinstance(authorization, Mapping) and authorization.get("context_digest"):
-            current = digest_object(self.current_authorization())
-            if authorization["context_digest"] != current:
+        authorization_record = admission.scope.get("authorization", {})
+        if isinstance(authorization_record, Mapping) and \
+                authorization_record.get("context_digest"):
+            current = digest_object(self.current_authorization(authorization))
+            if authorization_record["context_digest"] != current:
                 raise AdmissionRejected(
                     "authorization context changed; re-run preflight",
                     verdict=STALE, reason="AUTHORIZATION_CONTEXT_CHANGED",
                     admission=admission,
                 )
-        capability = admission.scope.get("capability", {})
-        if isinstance(capability, Mapping) and capability.get("context_digest"):
+        capability_record = admission.scope.get("capability", {})
+        if isinstance(capability_record, Mapping) and \
+                capability_record.get("context_digest"):
             current = digest_object([
-                _safe_value(item) for item in self.current_capabilities()
+                _safe_value(item)
+                for item in self.current_capabilities(capabilities)
             ])
-            if capability["context_digest"] != current:
+            if capability_record["context_digest"] != current:
                 raise AdmissionRejected(
                     "capability context changed; re-run preflight",
                     verdict=STALE, reason="CAPABILITY_CONTEXT_CHANGED",
@@ -3041,7 +3056,9 @@ def preflight(candidate: Any, snapshot: Any = None, function: Any = None,
 def require_admission(admission: MathAdmission | None = None, snapshot: Any = None,
                       *, engine: MathValidityEngine | None = None,
                       plan: Any = None, job: Any = None,
-                      allow_experimental: bool = False) -> MathAdmission:
+                      allow_experimental: bool = False,
+                      authorization: Any = None,
+                      capabilities: Any = None) -> MathAdmission:
     """Module-level preflight gate.
 
     When ``engine`` is supplied the engine's issued-admission ledger is
@@ -3052,6 +3069,7 @@ def require_admission(admission: MathAdmission | None = None, snapshot: Any = No
         return engine.require_admission(
             admission, plan=plan, job=job,
             allow_experimental=allow_experimental,
+            authorization=authorization, capabilities=capabilities,
         )
     if snapshot is None:
         raise AdmissionRejected(

@@ -76,7 +76,7 @@
   },
   "concurrency": 1,
   "declared_logical_lanes": 255,
-  "digest": "e789d1f59b6039b1e8089f8fb2d9794a836ebe118f738cd599cdea0df290d54c",
+  "digest": "c447e0516b02a75355ee06a82319242fdb00915bea0ce9fd09c4f358a73f231a",
   "digest_method": {
     "algorithm": "sha256",
     "canonical_form": "UTF-8 JSON with the top-level 'digest' field removed, keys sorted lexicographically, separators ',' and ':', ensure_ascii=true, allow_nan=false",
@@ -6784,6 +6784,7 @@
   "nannet0_ring_position": 255,
   "native_kernel_invocations_in_flight": 1,
   "page_budget": {
+    "bytes": 8355840,
     "concurrency": 1,
     "declared_home_bytes": 8355840,
     "declared_home_mib": "7.96875",
@@ -6795,9 +6796,14 @@
     "lane_count": 255,
     "live_home_bytes": 32768,
     "live_home_pages": 1,
+    "live_pages": 1,
+    "max_concurrent_lane_runs": 1,
+    "mib": "7.96875",
+    "mib_approx": "7.97",
     "nannet0_bytes": 32768,
     "nannet0_pages": 1,
     "page_bytes": 32768,
+    "pages": 255,
     "pages_per_lane": 1,
     "remaining_universe_pages": 1,
     "schema": "nanrouter.lane-page-budget.v1",
@@ -6932,5 +6938,14 @@
   "ruleset_id": "nanrouter.lane.rules.v1",
   "schema": "nanrouter.lane-ruleset.v1",
   "standby_slots_with_live_working_sets": 0,
+  "state_model": {
+    "job_ledger": "existing-control-plane",
+    "lane_state": "projection",
+    "lease_ledger": "existing-control-plane",
+    "note": "lane state projects existing job/lease authority; it is not a second ledger",
+    "owns_jobs": false,
+    "owns_leases": false,
+    "owns_page_store": false
+  },
   "version": 1
 }

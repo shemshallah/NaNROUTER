@@ -20,7 +20,8 @@ from runner_riddle.math_objects import (
 )
 from runner_riddle.math_store import (
     DEFAULT_CHUNK_BYTES, MATH_SCHEMA_VERSION, MathConflictError,
-    MathReferenceError, MathStore, MathStoreError, StaleGenerationError,
+    MathReferenceError, MathSchemaError, MathStore, MathStoreError,
+    StaleGenerationError,
 )
 from runner_riddle.wave_store import WaveStore
 
@@ -207,6 +208,52 @@ class MathStoreTests(unittest.TestCase):
                 self.assertEqual(db.execute(
                     "SELECT version FROM math_schema WHERE store='MC0DB'"
                 ).fetchone()[0], MATH_SCHEMA_VERSION)
+
+    def test_unsupported_math_schema_version_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bs0_path = tmp + "/bs0.sqlite3"
+            mc0_path = tmp + "/mc0.sqlite3"
+            for path, store in ((bs0_path, "BS0DB"), (mc0_path, "MC0DB")):
+                with closing(sqlite3.connect(path)) as db:
+                    db.execute("""
+                        CREATE TABLE math_schema (
+                            store TEXT PRIMARY KEY,
+                            version INTEGER NOT NULL,
+                            applied_tick INTEGER NOT NULL DEFAULT 0
+                        )
+                    """)
+                    db.execute(
+                        "INSERT INTO math_schema(store, version, applied_tick) "
+                        "VALUES (?, 2, 0)", (store,),
+                    )
+                    db.commit()
+            with self.assertRaises(MathSchemaError):
+                MathStore(bs0_path, mc0_path)
+
+    def test_mapping_recovery_uses_immutable_version_rows(self):
+        self.store.put_leaf(self.make_leaf(content={"value": 1}))
+        self.store.put_version(
+            self.leaf_id, {"value": 2}, expected_version=1,
+            expected_generation=1,
+        )
+        mapping_id = "leaf:" + self.leaf_id
+        with closing(sqlite3.connect(self.mc0_path)) as db:
+            db.execute("DELETE FROM math_mapping WHERE mapping_id=?",
+                       (mapping_id,))
+            db.commit()
+        with self.assertRaises(MathReferenceError):
+            self.store.get_mapping(mapping_id)
+
+        latest = self.store.list_versions(self.leaf_id)[-1]
+        recovered = self.store.set_mapping(
+            mapping_id, object_type="leaf", object_id=self.leaf_id,
+            version=latest["version"], digest=latest["leaf_digest"],
+            expected_version=0, expected_generation=0, tick=30,
+        )
+        self.assertEqual(recovered["current_version"], latest["version"])
+        self.assertEqual(recovered["generation"], 1)
+        self.assertEqual(self.store.resolve("map:" + mapping_id).content,
+                         {"value": 2})
 
     def test_spec_matches_implemented_table_contract(self):
         spec_path = Path(__file__).resolve().parents[1] / "spec" / \

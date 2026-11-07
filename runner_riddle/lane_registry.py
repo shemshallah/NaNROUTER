@@ -59,9 +59,9 @@ EXECUTING_LANE_RUNS = 1
 STANDBY_SLOTS_WITH_LIVE_WORKING_SETS = 0
 NATIVE_KERNEL_INVOCATIONS_IN_FLIGHT = 1
 
-_LANE_KEY_RE = re.compile(r"^lane:(\d{3})$")
-_PAGE_KEY_RE = re.compile(r"^page:(\d{3})$")
-_GROUP_KEY_RE = re.compile(r"^group:(\d{2})$")
+_LANE_KEY_RE = re.compile(r"^lane:(\d{1,3})$")
+_PAGE_KEY_RE = re.compile(r"^page:(\d{1,3})$")
+_GROUP_KEY_RE = re.compile(r"^group:(\d{1,2})$")
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _CAPABILITY_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
 _ROLE_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
@@ -374,6 +374,18 @@ def _fp_policy_documents() -> dict[str, dict[str, Any]]:
     return {name: _plain(policy) for name, policy in sorted(FP_POLICIES.items())}
 
 
+def _state_model_document() -> dict[str, Any]:
+    return {
+        "lane_state": "projection",
+        "job_ledger": "existing-control-plane",
+        "lease_ledger": "existing-control-plane",
+        "owns_jobs": False,
+        "owns_leases": False,
+        "owns_page_store": False,
+        "note": "lane state projects existing job/lease authority; it is not a second ledger",
+    }
+
+
 def _duplicate_role_policy() -> dict[str, str]:
     return {
         "lane_roles": "repeat_allowed",
@@ -406,6 +418,10 @@ def page_budget_document() -> dict[str, Any]:
         "page_bytes": PAGE_BYTES,
         "pages_per_lane": HOME_PAGES_PER_LANE,
         "lane_count": LANE_COUNT,
+        "pages": LANE_HOME_PAGES,
+        "bytes": LANE_HOME_BYTES,
+        "mib": "7.96875",
+        "mib_approx": "7.97",
         "declared_home_pages": LANE_HOME_PAGES,
         "declared_home_bytes": LANE_HOME_BYTES,
         "declared_home_mib": "7.96875",
@@ -419,6 +435,8 @@ def page_budget_document() -> dict[str, Any]:
         "concurrency": CONCURRENCY,
         "live_home_pages": CONCURRENCY,
         "live_home_bytes": CONCURRENCY * PAGE_BYTES,
+        "live_pages": CONCURRENCY,
+        "max_concurrent_lane_runs": CONCURRENCY,
         "standby_home_pages": STANDBY_SLOTS_WITH_LIVE_WORKING_SETS,
         "fits_universe": LANE_HOME_BYTES <= UNIVERSE_BYTES,
         "heavy_matrices": "transient page-sets, never per-lane persistent state",
@@ -546,6 +564,22 @@ class LaneRecord:
     @property
     def roles(self) -> tuple[str, ...]:
         return roles_from_mask(self.role_mask)
+
+    @property
+    def assigned_role(self) -> str:
+        return self.role
+
+    @property
+    def generic_role(self) -> str:
+        return self.role
+
+    @property
+    def capability(self) -> dict[str, Any]:
+        return {
+            "class": self.capability_class,
+            "max_fanout": self.max_fanout,
+            "fp_policy": self.fp_policy,
+        }
 
     @property
     def fp(self) -> dict[str, Any]:
@@ -846,6 +880,7 @@ def build_ruleset() -> dict[str, Any]:
         "concurrency": CONCURRENCY,
         "nannet0": _nannet0_document(),
         "page_budget": page_budget_document(),
+        "state_model": _state_model_document(),
         "roles": _role_documents(),
         "duplicate_role_policy": _duplicate_role_policy(),
         "global_authorities": [_authority_document(role) for role in GLOBAL_ROLES],
@@ -864,6 +899,20 @@ def _check_int_field(container: Mapping[str, Any], key: str, expected: int,
     if not _is_int(value) or value != expected:
         raise error_cls(f"{key} must be {expected}")
     return value
+
+
+def _validate_state_model(state_model: Any) -> None:
+    if not isinstance(state_model, Mapping):
+        raise LanePolicyError("state_model must be an object")
+    if state_model.get("lane_state") != "projection":
+        raise LanePolicyError("lane state must be a projection of existing authority")
+    for key in ("owns_jobs", "owns_leases", "owns_page_store"):
+        if state_model.get(key) is not False:
+            raise LanePolicyError(f"state_model.{key} must be false")
+    if not isinstance(state_model.get("job_ledger"), str) or not state_model["job_ledger"]:
+        raise LanePolicyError("state_model.job_ledger must name the existing authority")
+    if not isinstance(state_model.get("lease_ledger"), str) or not state_model["lease_ledger"]:
+        raise LanePolicyError("state_model.lease_ledger must name the existing authority")
 
 
 def _validate_page_budget(budget: Any) -> None:
@@ -1124,6 +1173,7 @@ def validate_ruleset(document: Mapping[str, Any], *,
 
     _validate_nannet0(document.get("nannet0"))
     _validate_page_budget(document.get("page_budget"))
+    _validate_state_model(document.get("state_model"))
     _validate_duplicate_policy(document.get("duplicate_role_policy"))
     _validate_capability_classes(document.get("capability_classes"))
     _validate_fp_policies(document.get("fp_policies"))
@@ -1237,12 +1287,18 @@ def load_ruleset(path: str | Path | None = None, *,
     return validate_ruleset(document, require_digest=require_digest)
 
 
+Lane = LaneRecord
+NANNET0 = NANNET0_RING_POSITION
+
+
 class LaneRegistry:
     """Deterministic, read-only registry over the 255 logical lanes."""
 
-    def __init__(self, document: Mapping[str, Any] | None = None):
+    def __init__(self, document: Mapping[str, Any] | str | Path | None = None):
         if document is None:
             document = build_ruleset()
+        elif isinstance(document, (str, Path)):
+            document = load_ruleset(document, require_digest=True)
         normalized = validate_ruleset(document, require_digest=False)
         self._document = normalized
         lanes = tuple(
@@ -1352,6 +1408,14 @@ class LaneRegistry:
     @property
     def duplicate_role_policy(self) -> _CallableDict:
         return _CallableDict(_plain(self._document["duplicate_role_policy"]))
+
+    @property
+    def state_model(self) -> _CallableDict:
+        return _CallableDict(_plain(self._document["state_model"]))
+
+    @property
+    def nannet0_ring_position(self) -> int:
+        return self._document["nannet0_ring_position"]
 
     def __len__(self) -> int:
         return len(self._lanes)
@@ -1517,7 +1581,12 @@ class LaneRegistry:
             "global_authorities": authority_counts,
             "concurrency": self.concurrency,
             "active_runner_slots": self.active_runner_slots,
+            "declared_logical_lanes": LANE_COUNT,
+            "executing_lane_runs": EXECUTING_LANE_RUNS,
+            "standby_slots_with_live_working_sets": STANDBY_SLOTS_WITH_LIVE_WORKING_SETS,
+            "native_kernel_invocations_in_flight": NATIVE_KERNEL_INVOCATIONS_IN_FLIGHT,
             "active_execution_identity": self.execution_identity(),
+            "state_model": self.state_model,
             "nannet0_ring_position": NANNET0_RING_POSITION,
             "nannet0_is_lane": False,
             "lane_255_rejected": True,
@@ -1584,12 +1653,14 @@ __all__ = [
     "LANE_VERSION",
     "LaneBoundsError",
     "LaneDuplicateError",
+    "Lane",
     "LaneGroup",
     "LanePolicyError",
     "LaneRecord",
     "LaneRegistry",
     "LaneRegistryError",
     "LaneRoleError",
+    "NANNET0",
     "NANNET0_BYTES",
     "NANNET0_PAGE_KEY",
     "NANNET0_PAGES",

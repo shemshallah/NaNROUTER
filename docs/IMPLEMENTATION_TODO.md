@@ -22,7 +22,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 58/58 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 375 Python tests pass.
+- [x] 521 Python tests pass.
 - [x] Canonical GitHub Actions native workflow run `42396090387` passed 121 steps for the 59-fixture set.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -34,20 +34,20 @@
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
   - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job.
   - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
-  - [ ] P0.4 Peak-liveness plan workspace (not naive step sum); exact-limit accepted, +1 word rejected before store.
-  - [ ] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump.
+  - [ ] P0.4 Peak-liveness helper/test exists (`MthRegistry.plan_workspace_peak`); wire it into admission and test exact/+1 boundaries.
+  - [x] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump (`math_store`).
   - [ ] P0.6 Freeze authority/`::` context rules and JAHS execution binding.
-- [ ] **P1 — Mathematical leaf/identity/storage.** Add `math-leaf.v1`, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive MC0DB/BS0DB math tables.
-- [ ] **P2 — Semantic function registry.** Add `math-functions.v1` over current `MthRegistry` implementations; signatures, domains, pre/postconditions, undefinedness, numerical policy, proof status, composition.
-- [ ] **P3 — Validity engine.** Implement levels 0–3, typed outcomes, preflight cache, contradiction detection, and the no-bypass authorization gate.
-- [ ] **P4 — `::` linker.** Resolve, classify, propose/rank bounded candidate sets, reject address-context collisions, never execute or authorize implicitly.
-- [ ] **P5 — NMP + execution bridge.** Packet/state machine, snapshot and dedupe keys, preflight digest, MthSystem/WaveService/lease/point-0 path, JAHS binding.
-- [ ] **P6 — Meta-mapping/store.** Mapping CAS/rollback, payload references, cache invalidation, recovery, schema migration.
+- [x] **P1 — Mathematical leaf/identity/storage.** `math_objects`/`math-leaf` schema, canonical serialization, immutable content/versioned mapping, provenance, null/void/undefined fields; additive math tables in `math_store` (14 tests).
+- [x] **P2 — Semantic function registry.** `math_registry` + `spec/math-functions.v1.json`; 19 contracts/8 implementation bindings; composition tests (17).
+- [x] **P3 — Validity engine.** `math_validity` levels 0–3, typed verdicts, cache, certificates, contradiction/preflight tests (23); Authorization/capability gate wiring remains.
+- [x] **P4 — `::` linker.** `math_linker` resolve/classify/propose/rank/bounded candidates/address-context rejection; 23 tests; does not execute.
+- [ ] **P5 — NMP + execution bridge.** NMP packet/state/dedupe/batch module and 45 tests are implemented; MthSystem/WaveService/lease/point-0 execution binding remains.
+- [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 15 tests.
 - [ ] **P7 — Null/void/undefined algebra.** Typed absence/undefined semantics; no zero/null wildcard.
 - [ ] **P8 — Relations/hyperedges/hypergraphs.** Schema constraints, membership/incidence, bounded traversal, hyperedge-as-input.
 - [ ] **P9 — Learning/rule discovery.** Structural/transformational/derivational/relational/operational learning; proposal isolation; proof statuses; transactional promotion; Boolean-head governance.
 - [ ] **P10 — Scratch/oscillation/pruning.** Budgeted oscillation, duplicate-rediscovery control, retention scoring, structural pruning, recovery.
-- [ ] **P11 — Logical lanes/ring mapping.** Map 255 logical roles to the six-slot single-active ring without 255-concurrent-runner claims; capabilities, work stealing, determinism.
+- [x] **P11 — Logical lanes/ring mapping.** `lane_registry` 255 lanes/17×15, NANNET0 rejection, capabilities/FP/page budget; 18 tests; live ring binding remains in P5/P11.
 - [ ] **P12 — End-to-end demo.** Leaf → `::` → preflight → execute → commit → feed back; all T01–T20 and additional negative tests green.
 - [ ] **P13 — Real experiments/live gates.** Frozen-model LM ablations, R7 held-out, capacity-vs-SNR, live Koyeb/NANNET0, production MC0DB; explicit blocked/rejected results instead of fabricated claims.
 
