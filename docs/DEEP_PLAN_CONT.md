@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **35 native MTH kernels with fixtures**: 33 prior fixtures pass in the local harness and all 35 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **36 native MTH kernels with fixtures**: 33 prior fixtures pass in the local harness and all 36 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -73,8 +73,8 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 35 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 35-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 36 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 36-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 69 steps, 33 fixtures, all passing |
 
@@ -94,7 +94,7 @@ GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 | R3 | Lanczos/top-k deflation, residual/orthogonality fixture for a real operator; 128/256 block certificates done |
 | R4 | bounded DRIVE source fixture, CFL/λ_max guard fixture, long-run paged graph trace |
 | R5 | Full aperture SVD/top-k, QUERY/MATCH/FILTER/DRIVE composition, observability/reachability, capacity-vs-SNR, colored noise |
-| R6 | 16×16 dense pair tile native_verified; next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; K256 closed-form 256×256 done |
+| R6 | bounded K16 streaming pair-tile accumulator native_verified (1,542 NaN16 words); next: page-window orchestration, full 256-tile atomic publication, rank-R sum, matrix-free product; full-U tile reference exceeds 512 KiB and is not dispatchable; K256 closed-form 256×256 done |
 | R7 | avoided-crossing sweep, phase-coherence metric, held-out creativity/association experiment |
 | R8 | Live Koyeb volume-registry check, NANNET0 persistence; HTTP adapter done |
 | R9 | typed ENCODE/DECODE, frozen-base ablations, measured LM benefit |
@@ -724,7 +724,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 
 ### 7.10 From R10 promotion
 
-- Register all 35+ kernels in production MC0DB.
+- Register all 36+ kernels in production MC0DB.
 - Add registry/plan evidence.
 - Add capability promotion gate.
 - Do not promote source-only or stale kernels.
@@ -821,7 +821,7 @@ No silent exact→approximate coercion. No NaN payload arithmetic without decode
 
 ### 10.2 System gates
 
-- registry loads 35+ kernels;
+- registry loads 36+ kernels;
 - plan validation rejects stale/unverified/over-budget;
 - executor dispatch refuses unverified kernels;
 - BS0DB/MC0DB lease/idempotency/stale rejection;
@@ -875,7 +875,7 @@ It does not mean every mathematical theorem is implemented.
 
 ## 12. The one-page continuation
 
-1. **Keep the 35 verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
+1. **Keep the 36 verified kernels as the arithmetic core.** Do not rewrite them to chase a new architecture.
 2. **Build MTH System v1**: registry, plan, executor, evidence, capability.
 3. **Use 256×256 dense only where it fits** (256 KiB); use 16×256 blocks for full matvec/certificate; use matrix-free/low-rank for the 65,536 product.
 4. **Use NANROUTER-0..5 as a single-active runner ring with a 7 GiB active ceiling**, not six parallel runners; use NANNET0 as the one node per universe.
