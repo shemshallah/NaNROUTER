@@ -689,3 +689,14 @@ jobs:
           cat build/mth/preflight.out
           cat build/mth/preflight.err
           grep -q '^MTH TYPED PREFLIGHT PASS' build/mth/preflight.out
+
+      - name: Assemble composed mathematical admission fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_admission_test.nas > build/mth/admission.nan
+
+      - name: Execute composed mathematical admission fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/admission.nan --steps 2000000 --serial > build/mth/admission.out 2> build/mth/admission.err
+          cat build/mth/admission.out
+          cat build/mth/admission.err
+          grep -q '^MTH COMPOSED ADMISSION PASS' build/mth/admission.out
