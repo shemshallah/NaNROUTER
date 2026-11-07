@@ -1,9 +1,26 @@
 .org 0
 JMP @mth_dispatch_test_main
+.include "../nan16/mth_preflight_gate.nas"
+.include "../nan16/mth_preflight.nas"
+.include "../nan16/mth_admission.nas"
 .include "../nan16/mth_native_dispatch.nas"
 
 mth_dispatch_test_main:
   MOVI r13,1
+
+  ; The exact native rule and typed-object admission must pass before dispatch.
+  MOVI r1,@mth_dispatch_candidate
+  MOVI r2,@mth_dispatch_rule
+  MOVI r3,@mth_dispatch_left_desc
+  MOVI r4,@mth_dispatch_right_desc
+  MOVI r5,@mth_dispatch_contract
+  MOVI r6,1
+  MOVI r7,@mth_dispatch_output_desc
+  MOVI r12,@mth_dispatch_admit_scratch
+  CALL @mth_admit
+  CMP r1,r0
+  JMP[NE] @mth_dispatch_fail_admit
+
   ; Fill x=2.0 and y=3.0; dot must be exactly 1536.0.
   MOVI r1,@mth_dispatch_x
   MOVI r2,@mth_dispatch_y
@@ -98,6 +115,10 @@ mth_dispatch_fill_y:
   CALL @mth_dispatch_puts
   HALT
 
+mth_dispatch_fail_admit:
+  MOVI r1,@mth_dispatch_admit_bad
+  CALL @mth_dispatch_puts
+  HALT
 mth_dispatch_fail_dot:
   MOVI r1,@mth_dispatch_dot_bad
   CALL @mth_dispatch_puts
@@ -143,6 +164,23 @@ mth_dispatch_out:
 .org 3584
 mth_dispatch_scratch:
 .word 0,0,0,0,0,0,0,0,0,0,0
+.org 40000
+mth_dispatch_left_desc:
+.word 4,1,256,1,1,@mth_dispatch_x,256,1
+mth_dispatch_right_desc:
+.word 4,1,256,1,1,@mth_dispatch_y,256,1
+mth_dispatch_output_desc:
+.word 3,0,0,0,1,@mth_dispatch_out,1,0
+mth_dispatch_contract:
+.word 4,4,3,1,1,0,1,1,1,0
+mth_dispatch_candidate:
+.word 1,7,4,4,3,1,1,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
+mth_dispatch_rule:
+.word 1,7,4,4,3,1,1,1,1,100,101,102,103,104,105,106,107
+mth_dispatch_admit_scratch:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_dispatch_pass:
 .str "MTH NATIVE DISPATCH PASS\n"
 mth_dispatch_dot_bad:
