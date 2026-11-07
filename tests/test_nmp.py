@@ -214,6 +214,22 @@ class NativeAdmissionReceiptTests(unittest.TestCase):
         self.assertEqual(bound.admission_receipt["packet_id"], bound.packet_id)
         self.assertEqual(nmp.NmpPacket.from_dict(bound.to_dict()).admission_receipt,
                          bound.admission_receipt)
+        stale_rules = gate(
+            bound,
+            ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 8, "rule_digest": "a" * 64},
+        )
+        self.assertFalse(stale_rules.ok)
+        self.assertEqual(stale_rules.failure, nmp.STALE)
+        with self.assertRaises(nmp.NmpGateError):
+            bound.queue(
+                gate=gate(bound),
+                admission=make_admission(),
+                preflight={"result": "VALID", "digest": PREFLIGHT, "rule_snapshot_id": RULES},
+                capability=make_capability(),
+                ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 8, "rule_digest": "a" * 64},
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+            )
 
     def test_native_receipt_digest_and_candidate_binding_are_checked(self):
         packet = self.make_preflighted()
