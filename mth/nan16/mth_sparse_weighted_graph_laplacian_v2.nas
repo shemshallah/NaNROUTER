@@ -174,7 +174,39 @@ mth_weighted_v2_apply_edge:
   SUB r1,r0,r1
 mth_weighted_v2_abs_ready:
   LD r2,r11,13
-  CALL @mth_u32_mul_wide
+  ; Inline unsigned 32x32->64 shift/add multiply. NaN16 CALL is
+  ; single-link and this routine is already a callee, so no nested CALL.
+  MOVI r3,0
+  MOVI r4,0
+  MOVI r5,0
+  ADD r6,r1,r0
+  ADD r7,r2,r0
+  MOVI r8,32
+mth_weighted_v2_mul_loop:
+  MOVI r10,1
+  BOOL.8 r9,r7,r10
+  CMP r9,r0
+  JMP[EQ] @mth_weighted_v2_mul_shift
+  ADD r10,r4,r0
+  ADD r4,r4,r6
+  CMP r4,r10
+  JMP[LT] @mth_weighted_v2_mul_carry
+  ADD r3,r3,r5
+  JMP @mth_weighted_v2_mul_shift
+mth_weighted_v2_mul_carry:
+  ADD r3,r3,r5
+  ADD r3,r3,r13
+mth_weighted_v2_mul_shift:
+  SHR r9,r6,31
+  SHL r6,r6,1
+  SHL r5,r5,1
+  BOOL.14 r5,r5,r9
+  SHR r7,r7,1
+  SUB r8,r8,r13
+  CMP r8,r0
+  JMP[GT] @mth_weighted_v2_mul_loop
+  ADD r1,r4,r0
+  ADD r2,r3,r0
   ; Product is exact signed-magnitude <= 2,139,095,040; high word is zero.
   LD r3,r11,10
   LD r4,r11,11
