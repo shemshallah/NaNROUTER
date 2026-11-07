@@ -5,19 +5,15 @@ import unittest
 from pathlib import Path
 
 from runner_riddle import nmp
-from runner_riddle.math_objects import MathAdmission
 from runner_riddle.nmp_http import NmpHttpAdapter, NmpServerContextProvider
 from runner_riddle.wave_service import WaveService
 from runner_riddle.wave_store import WaveStore
 
 from test_nmp_http_adapter import (
-    CANDIDATE,
     FUNCTION,
     PREFLIGHT,
     RULES,
-    SNAP,
     admission,
-    native_receipt,
     preflighted_packet,
 )
 
