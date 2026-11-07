@@ -65,7 +65,6 @@ def make_packet(*, metadata=None):
         capability_set=({
             "required": "vector.dot",
             "workspace": 256,
-        "expected_program_id": 900,
             "precision": "float32",
         },),
         capability_epoch=1,
@@ -124,6 +123,7 @@ def gate_context(*, packet, stage, job, lease):
         "ring_incarnation": "ring-inc-1",
         "ring_epoch": 1,
         "workspace": 256,
+        "expected_program_id": 900,
     }
     if stage in {"lease", "complete"}:
         context["expected_worker_owner"] = lease["lease_owner"]
