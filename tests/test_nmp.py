@@ -1100,7 +1100,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
     def test_native_receipt_is_checked_by_nmp_queue_gate(self):
         packet = make_packet().resolve().classify().propose()
         receipt = self.make_receipt(packet)
-        preflighted = packet.mark_preflight(receipt=receipt)
+        preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         admission = make_admission(preflight_digest=receipt.receipt_digest)
         preflight = {
             "result": "VALID",
@@ -1134,7 +1134,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
     def test_native_receipt_must_be_bound_to_active_lease_before_execution(self):
         packet = make_packet().resolve().classify().propose()
         receipt = self.make_receipt(packet)
-        preflighted = packet.mark_preflight(receipt=receipt)
+        preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         admission = make_admission(preflight_digest=receipt.receipt_digest)
         preflight = {
             "result": "VALID",
@@ -1217,7 +1217,7 @@ class NativePreflightReceiptTests(unittest.TestCase):
     def test_native_lease_binding_rejects_wrong_ring_epoch_and_owner(self):
         packet = make_packet().resolve().classify().propose()
         receipt = self.make_receipt(packet)
-        preflighted = packet.mark_preflight(receipt=receipt)
+        preflighted = packet.mark_preflight(receipt=receipt, admission=make_admission(preflight_digest=receipt.receipt_digest))
         queued = preflighted.transition(nmp.QUEUED)
         scheduler = WaveRingScheduler(cycle_ticks=10, now_tick=0)
         scheduler.start(0)
