@@ -36,7 +36,7 @@ mth_rot_loop:
   LD r10,r6,0
   LDN r11,r6,0
   MOVI r1,@mth_word
-  CALL @mth_double_endian
+  CALL @mth_bswapm64
   LDN r12,r6,0
   MOVI r8,9
   CMP r12,r8
@@ -46,7 +46,7 @@ mth_rot_loop:
   MOVHI r8,0x0200
   CMP r14,r8
   JMP[NE] @mth_fail
-  CALL @mth_double_endian
+  CALL @mth_bswapm64
   LD r2,r6,0
   LDN r3,r6,0
   CMP r2,r11
