@@ -230,6 +230,25 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
             )
         self.assertEqual(self.store.get_job(job_id)["state"], "leased")
 
+
+    def test_completion_rejects_execution_evidence_from_another_worker(self):
+        packet = preflighted_packet()
+        submitted = self.adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
+        job_id = submitted["job"]["job_id"]
+        leased = self.adapter.lease(self.worker_token, "worker-A", now_tick=110,
+                                    lease_ticks=64, job_id=job_id)
+        evidence = execution_evidence(
+            packet, lease_epoch=leased["lease"]["epoch"], lease_owner="worker-B",
+        )
+        with self.assertRaisesRegex(NmpHttpError, "durable lease owner"):
+            self.adapter.complete(
+                self.worker_token, leased["packet"], job_id=job_id,
+                lease_token=leased["lease"]["token"], lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=evidence,
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
+
     def test_completion_rejects_execution_output_digest_mismatch(self):
         packet = preflighted_packet()
         submitted = self.adapter.submit(self.submit_token, packet.to_dict(), now_tick=100)
