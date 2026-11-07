@@ -127,13 +127,15 @@ mth_weighted_v2_apply_setup:
 mth_weighted_v2_apply_row:
   LD r8,r11,6
   LD r1,r11,0
-  LD r9,r1,r8
-  ADD r10,r8,r13
-  LD r12,r1,r10
+  ADD r1,r1,r8
+  LD r9,r1,0
+  ADD r1,r1,r13
+  LD r12,r1,0
   ST r9,r11,7
   ST r12,r11,8
   LD r1,r11,3
-  LD r10,r1,r8
+  ADD r1,r1,r8
+  LD r10,r1,0
   ST r10,r11,9
   MOVI r1,0
   ST r1,r11,10
@@ -146,12 +148,15 @@ mth_weighted_v2_apply_edge:
   JMP[EQ] @mth_weighted_v2_store_row
 
   LD r1,r11,1
-  LD r10,r1,r8
+  ADD r1,r1,r8
+  LD r10,r1,0
   LD r2,r11,2
-  LD r2,r2,r8
+  ADD r2,r2,r8
+  LD r2,r2,0
   ST r2,r11,13
   LD r1,r11,3
-  LD r3,r1,r10
+  ADD r1,r1,r10
+  LD r3,r1,0
   LD r4,r11,9
   SUB r1,r4,r3
   SHR r2,r1,31
@@ -203,9 +208,10 @@ mth_weighted_v2_store_row:
   SHL r8,r8,1
   LD r3,r11,10
   LD r4,r11,11
-  ST r3,r1,r8
-  ADD r8,r8,r13
-  ST r4,r1,r8
+  ADD r1,r1,r8
+  ST r3,r1,0
+  ADD r1,r1,r13
+  ST r4,r1,0
   LD r8,r11,6
   ADD r8,r8,r13
   ST r8,r11,6
