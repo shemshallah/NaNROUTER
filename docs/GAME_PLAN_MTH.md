@@ -876,3 +876,40 @@ Both new fixtures are source-level checks only. Until assembled and executed, th
 4. Add vector copy/fill, elementwise checked add/subtract, dot product with a two-word accumulator, squared norm, and normalization status.
 5. Add exact rational primitives only after the integer kernel has differential fixtures.
 6. Build attention from explicit dot-product, scale, mask, stable-softmax, and weighted-sum operations; do not add an opaque attention opcode.
+
+
+---
+
+## 20. Relational-spectral foundation for every 8 MiB universe-bin
+
+**Architecture decision:** MTH is the native mathematical substrate for the shared Relational-Spectral Subsystem (RSS). The full mathematical and system contract is in [GRAPH_SPECTRAL_MTH_PLAN.md](GRAPH_SPECTRAL_MTH_PLAN.md), with the shared system-level specification in NaNLMind's docs/GRAPH_SPECTRAL_FOUNDATION.md.
+
+### 20.1 Mathematical foundation
+
+The 256 Heads and 32,640 unordered pair cells define the exact topology. The directed relation matrix W remains lossless and asymmetric when needed. A separately derived symmetric nonnegative coupling A defines D and L=D-A. For K256, L=256I-J, with spectrum 0 once and 256 with multiplicity 255.
+
+Head-state wave dynamics use ü+c²Lu=0. Optional potential/source dynamics use ü+[c²L+V]u=f. Pair-indexed fields use L_pair=L⊗I+I⊗L and must be applied matrix-free as LU+ULᵀ. A 256×256 operator has 256 eigenvalues; the 65,536 pair-space state is a different operator and must not be conflated with it.
+
+The void potential V_i=α/(r_i+ε)² is optional. Radius is a versioned graph-distance, embedding, or topology-shell coordinate. A central barrier, boundary ring, 256 antinodes, and tunneling-like transfer are hypotheses to measure, not guaranteed outcomes.
+
+### 20.2 Structural invariants
+
+- Keep directed W rails independent.
+- Derive A/L as an explicit view; never overwrite W with its symmetric part.
+- Address reversal is matrix transpose, not centrosymmetry.
+- FOLD's 128+128 block reduction is allowed only after verifying J W J=W and the relevant symmetric/Hermitian condition.
+- Never materialize a 65,536×65,536 dense operator.
+- Every numeric kernel must declare signedness, Q format, intermediate width, overflow/saturation behavior, scratch budget, and caller-owned frame ABI.
+- All mathematical kernels remain native NaN16 .nas; host languages may only orchestrate/transport/validate envelopes.
+
+### 20.3 RSS operations and execution
+
+The shared operations are ENCODE, QUERY, MATCH, FILTER, DRIVE, and FOLD. The kernel roadmap includes sparse degree, Laplacian apply, pair-space apply, energy, inverse-square potential, polynomial filters, deterministic Lanczos, wave stepping, verified symmetry transforms, and pattern-analysis primitives.
+
+NaNNet runners advertise per-kernel capability and workspace. Only a capability marked native-verified after canonical assembler/interpreter execution is dispatchable. NaNLMind validates operator/topology/output digests and retains its existing single semantic ledger. Pattern analysis is a shared RSS consumer; a dedicated MC0 application is deferred.
+
+### 20.4 Immediate gate
+
+The signed fixed-point/vector ABI is not yet frozen. Do not write a speculative signed wave solver before choosing the exact NaN16 representation and overflow semantics. First establish the canonical NaN16 assembler/interpreter, freeze the signed Q ABI, then implement K256 degree and matrix-free Lx with exact fixtures. Only after those pass should the void, eigensolver, filter, and wave modules proceed.
+
+**Evidence:** specification added; no graph-spectral MTH kernel or native runner capability is yet claimed complete or verified.
