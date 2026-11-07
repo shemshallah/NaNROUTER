@@ -5,17 +5,17 @@ JMP @mth_pair_test_main
 mth_pair_test_main:
   MOVI r13,1
   MOVI r1,@mth_pair_input
-  MOVI r2,@mth_pair_output
-  MOVI r3,@mth_pair_rows
-  MOVI r4,@mth_pair_cols
-  MOVI r5,@mth_pair_scratch
+  LA r2,@mth_pair_output
+  LA r3,@mth_pair_rows
+  LA r4,@mth_pair_cols
+  LA r5,@mth_pair_scratch
   CALL @mth_k256_pair_space_q16_16
   CMP r1,r13
   JMP[NE] @mth_pair_fail
 
   ; U[0,0]=1, all other entries zero.
   ; Y[0,0]=510, Y[0,1]=-1, Y[1,0]=-1, Y[1,1]=0.
-  MOVI r6,@mth_pair_output
+  LA r6,@mth_pair_output
   LD r7,r6,0
   MOVI r8,0
   MOVHI r8,0x01FE
@@ -34,13 +34,13 @@ mth_pair_test_main:
   JMP[NE] @mth_pair_fail
 
   ; Independent row/column sums are both exactly 1.0 in Q16.16.
-  MOVI r6,@mth_pair_rows
+  LA r6,@mth_pair_rows
   LD r7,r6,0
   MOVI r8,0
   MOVHI r8,1
   CMP r7,r8
   JMP[NE] @mth_pair_fail
-  MOVI r6,@mth_pair_cols
+  LA r6,@mth_pair_cols
   LD r7,r6,0
   CMP r7,r8
   JMP[NE] @mth_pair_fail
