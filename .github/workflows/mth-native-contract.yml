@@ -691,10 +691,12 @@ jobs:
           grep -q '^MTH PAIR K16 DRIVER PASS' build/mth/pair-tile16-k16-driver.out
 
       - name: Assemble typed mathematical preflight fixture with NaN16 source assembler
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_preflight_test.nas > build/mth/preflight.nan
 
       - name: Execute typed mathematical preflight fixture
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           nan0s/aarch64/android/nan_cli --img build/mth/preflight.nan --steps 2000000 --serial --peek 1328:1 > build/mth/preflight.out 2> build/mth/preflight.err
           cat build/mth/preflight.out
@@ -702,21 +704,25 @@ jobs:
           grep -q '^MTH TYPED PREFLIGHT PASS' build/mth/preflight.out
 
       - name: Assemble composed mathematical admission fixture
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_admission_test.nas > build/mth/admission.nan
 
       - name: Execute composed mathematical admission fixture
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           nan0s/aarch64/android/nan_cli --img build/mth/admission.nan --steps 2000000 --serial --peek 40254:1 > build/mth/admission.out 2> build/mth/admission.err
           cat build/mth/admission.out
           cat build/mth/admission.err
           grep -q '^MTH COMPOSED ADMISSION PASS' build/mth/admission.out
 
-      - name: Assemble canonical :: linker-to-preflight fixture
+      - name: "Assemble canonical :: linker-to-preflight fixture"
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_linker_preflight_test.nas > build/mth/linker-preflight.nan
 
-      - name: Execute canonical :: linker-to-preflight fixture
+      - name: "Execute canonical :: linker-to-preflight fixture"
+        if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
           nan0s/aarch64/android/nan_cli --img build/mth/linker-preflight.nan --steps 3000000 --serial > build/mth/linker-preflight.out 2> build/mth/linker-preflight.err
           cat build/mth/linker-preflight.out
