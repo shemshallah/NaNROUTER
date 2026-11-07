@@ -64,6 +64,7 @@ context = WaveStoreNmpContextProvider(
     ruleset_provider=current_ruleset_snapshot,
     ring_provider=current_ring_state,
     cancel_epoch_provider=current_cancel_epoch,
+    guest_binary_pin_provider=current_approved_guest_binary_pins,
 )
 def verify_worker_identity(token, owner):
     # Compare the authenticated credential principal with the capability owner.
@@ -138,3 +139,20 @@ evidence*, not server-certified binary identity. Operators should pin
 approved artifacts for production deployments. A digest pin alone also does
 not prove a remote host executed the binary; a separately established
 attestation mechanism would be required for that stronger guarantee.
+
+## Trusted binary pin provider
+
+`WaveStoreNmpContextProvider` optionally accepts `guest_binary_pin_provider`.
+The callback is called at the **complete** stage with the canonical packet,
+durable job and lease, and must return both
+`expected_guest_image_digest` and `expected_guest_source_digest` as full
+SHA-256 hexadecimal digests. Both must match the worker evidence or the
+completion is rejected before `complete_job` changes durable state.
+
+The callback must read an independently approved deployment registry; never
+use packet metadata or worker-submitted evidence as the source of these pins.
+If configured but unavailable, malformed or incomplete, it fails closed.
+Leaving the callback unset retains the original unpinned, self-reported
+evidence behavior for compatibility; production operators should configure it.
+Binary pins are integrity checks against an approved artifact identity, not
+remote execution attestation.
