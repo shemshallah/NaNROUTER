@@ -785,7 +785,7 @@ The first native source slice now lives under `mth/`:
 - `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
 
-This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. The pair codec source path and basic behavior have been inspected. Its inherited static return-address slots make it non-reentrant; this must be converted to caller-owned stack state before concurrent multi-runner use. The smoke test remains unverified until assembled and run.
+This is source committed to the repository, not a claim that it has assembled or passed in the canonical runtime. The test remains **unverified** until run with the current NaN16 assembler/interpreter. The original pair codec used shared static return-address slots. The current source has replaced those with caller-owned frames in r12; the updated ABI is still unverified until the canonical NaN16 toolchain executes it. The smoke test remains unverified until assembled and run.
 
 ### Stage 0 next gate
 
