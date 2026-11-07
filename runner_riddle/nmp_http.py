@@ -23,6 +23,10 @@ NMP_JOB_KIND = "nmp"
 NMP_PAYLOAD_KEY = "nmp_packet"
 # Keep admission aligned with the Android NaN16 worker and completion ABI.
 NMP_WORKER_PROGRAM_IDS = frozenset({78, 79})
+NMP_WORKER_FUNCTION_PROGRAMS = {
+    "math.vector.add.v1": 78,
+    "math.vector.dot.v1": 79,
+}
 
 
 class NmpHttpError(ValueError):
@@ -52,6 +56,9 @@ def _require_server_program_binding(packet: NmpPacket, context: dict[str, Any]) 
     expected = context.pop("expected_program_id", None)
     if isinstance(expected, bool) or not isinstance(expected, int) or expected not in NMP_WORKER_PROGRAM_IDS:
         raise NmpHttpError("server admission context has no supported NaN16 worker program_id")
+    canonical_program = NMP_WORKER_FUNCTION_PROGRAMS.get(packet.function_id)
+    if canonical_program is None or expected != canonical_program:
+        raise NmpHttpError("server registry program_id does not match the NaN16 worker function ABI")
     receipt = packet.admission_receipt
     if not isinstance(receipt, Mapping) or receipt.get("program_id") != expected:
         raise NmpHttpError("native receipt program_id does not match the server-owned function registry")
