@@ -29,7 +29,8 @@ mth_energy_test_main:
   MOVI r6,@mth_energy_x
   MOVI r7,49152
   ST r7,r6,2
-  MOVI r7,65536
+  MOVI r7,0
+  MOVHI r7,1
   ST r7,r6,3
   MOVI r1,@mth_energy_offsets
   MOVI r2,@mth_energy_neighbors
