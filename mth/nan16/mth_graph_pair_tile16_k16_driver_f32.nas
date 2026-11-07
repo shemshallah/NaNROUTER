@@ -20,6 +20,7 @@ mth_graph_pair_tile16_k16_driver_f32:
   ST r0,r12,8
   ST r0,r12,9
   ST r14,r12,10
+  ST r15,r12,11
 
 mth_pair_driver_slice:
   ; Build the four input pointers for the current 256-word K block.
@@ -65,18 +66,21 @@ mth_pair_driver_slice:
   ; Return the completed pair of accumulators to the caller for finalization.
   LA r12,@mth_pair_driver_state
   LD r14,r12,10
+  LD r15,r12,11
   MOVI r1,1
   RET
 
 mth_pair_driver_fail:
   LA r12,@mth_pair_driver_state
   LD r14,r12,10
+  LD r15,r12,11
   MOVI r1,0
   RET
 
-; Private 11-word frame; r12 is recomputed after each callee call.
+; Private 12-word frame; r12 is recomputed after each callee call.
 .org 400
 mth_pair_driver_state:
+.word 0
 .word 0
 .word 0
 .word 0
