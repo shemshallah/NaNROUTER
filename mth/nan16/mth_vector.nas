@@ -17,9 +17,10 @@
 
 mth_u32_span_add_checked:
   STW r1,r12,r0
-  STW r2,r12,r13
-  MOVI r9,2
-  STW r3,r12,r9
+  ADD r10,r12,r13
+  STW r2,r10,r0
+  ADD r10,r10,r13
+  STW r3,r10,r0
 
   ADD r5,r4,r0
 mth_u32_span_add_validate:
