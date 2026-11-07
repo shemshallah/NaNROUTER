@@ -1,6 +1,6 @@
 # MTH 256×256 pair-space K16 streaming ABI v1
 
-Status: SOURCE-WRITTEN; canonical execution pending.
+Status: NATIVE_VERIFIED by canonical NaN16 CI run 242 (283,436 guest steps).
 
 ## Purpose
 
