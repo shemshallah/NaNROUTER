@@ -19,7 +19,7 @@ INPUTS = (
     {"leaf_id": "nml:U0:vector:1", "version": 1, "digest": "1" * 64},
     {"leaf_id": "nml:U0:vector:2", "version": 1, "digest": "2" * 64},
 )
-CANDIDATE = "candidate-native-http"
+CANDIDATE = "cnd:" + "b" * 64
 
 
 def admission():
