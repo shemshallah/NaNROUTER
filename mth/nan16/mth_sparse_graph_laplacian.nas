@@ -35,16 +35,20 @@ mth_sparse_graph_laplacian_q16_16:
   ; Complete state-range preflight.
   ADD r6,r3,r0
   MOVI r7,256
-  MOVI r8,0
-  MOVHI r8,0x0040
-  MOVI r9,0
-  MOVHI r9,0xFFC0
 mth_sparse_graph_validate_x:
   LD r10,r6,0
-  CMP r10,r9
-  JMP[LT] @mth_sparse_graph_invalid_input
-  CMP r10,r8
-  JMP[GT] @mth_sparse_graph_invalid_input
+  ; Unsigned shift extracts the ten high sign/range bits. Valid Q16.16
+  ; values in [-2^22,+2^22] yield 0, 1, or 1023 respectively.
+  SHR r11,r10,22
+  MOVI r12,1
+  CMP r11,r12
+  JMP[LT] @mth_sparse_graph_x_valid
+  JMP[EQ] @mth_sparse_graph_x_valid
+  MOVI r12,1023
+  CMP r11,r12
+  JMP[EQ] @mth_sparse_graph_x_valid
+  JMP @mth_sparse_graph_invalid_input
+mth_sparse_graph_x_valid:
   ADD r6,r6,r13
   SUB r7,r7,r13
   CMP r7,r0
