@@ -40,6 +40,7 @@ class NmpHttpRouteTests(unittest.TestCase):
             self.store, self.submit_token, self.worker_token, self.admin_token
         )
         self.adapter = FakeNmpAdapter()
+        self.adapter.service = self.service
         self.server = WaveHttpServer(self.service, nmp_adapter=self.adapter)
         self.server.start()
         self.addCleanup(self.server.stop)
