@@ -14,24 +14,24 @@ mth_pf_test_main:
   MOVI r4,0x1234
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_1
   MOVI r1,234
   MOVI r2,4
   MOVI r3,1
   MOVI r4,0x5678
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_2
   MOVI r1,123
   MOVI r2,@mth_pf_left_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_3
   MOVI r1,234
   MOVI r2,@mth_pf_right_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_4
 
   ; The existing registry owns the operator identity and its typed contract.
   MOVI r1,77
@@ -41,7 +41,7 @@ mth_pf_test_main:
   MOVI r5,900
   CALL @nmr_op_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_5
   MOVI r1,77
   MOVI r2,1
   MOVI r3,1
@@ -52,7 +52,7 @@ mth_pf_test_main:
   MOVI r8,0
   CALL @nmr_contract_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_6
 
   ; Resolve through the real object/operator registry; r6 is its contract.
   MOVI r1,123
@@ -60,13 +60,13 @@ mth_pf_test_main:
   MOVI r3,77
   CALL @nmr_resolve
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_7
   MOVI r7,3
   CMP r1,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_8
   MOVI r7,900
   CMP r2,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_9
   CMP r6,r0
   JMP[EQ] @mth_pf_fail
   ST r6,r0,@mth_pf_contract
@@ -87,22 +87,22 @@ mth_pf_test_main:
   MOVI r5,@mth_pf_output
   CALL @mth_preflight
   CMP r1,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_10
   LD r6,r5,0
   MOVI r7,3
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_11
   LD r6,r5,1
   CMP r6,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_12
   LD r6,r5,4
   MOVI r7,1
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_13
   LD r6,r5,5
   MOVI r7,@mth_pf_output_payload
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_14
 
   ; Dimension mismatch rejects and leaves output metadata untouched.
   MOVI r6,@mth_pf_right
@@ -120,11 +120,11 @@ mth_pf_test_main:
   CALL @mth_preflight
   MOVI r7,6
   CMP r1,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_15
   LD r6,r5,0
   MOVI r7,99
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_16
 
   ; Restore shape. Missing capability is a resource rejection, not NULL.
   MOVI r6,@mth_pf_right
@@ -138,7 +138,7 @@ mth_pf_test_main:
   CALL @mth_preflight
   MOVI r7,7
   CMP r1,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_17
 
   ; Register scalar division contract with an explicit nonzero precondition.
   MOVI r1,9
@@ -147,24 +147,24 @@ mth_pf_test_main:
   MOVI r4,0x2222
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_18
   MOVI r1,10
   MOVI r2,3
   MOVI r3,1
   MOVI r4,0x3333
   CALL @nmr_obj_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_19
   MOVI r1,9
   MOVI r2,@mth_pf_scalar_left_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_20
   MOVI r1,10
   MOVI r2,@mth_pf_scalar_right_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_21
   MOVI r1,78
   MOVI r2,3
   MOVI r3,3
@@ -172,7 +172,7 @@ mth_pf_test_main:
   MOVI r5,901
   CALL @nmr_op_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_22
   MOVI r1,78
   MOVI r2,0
   MOVI r3,0
@@ -183,13 +183,13 @@ mth_pf_test_main:
   MOVI r8,1
   CALL @nmr_contract_put
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_23
   MOVI r1,9
   MOVI r2,10
   MOVI r3,78
   CALL @nmr_resolve
   CMP r3,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_24
   ST r6,r0,@mth_pf_scalar_contract
   ST r4,r0,@mth_pf_scalar_left_data
   ST r5,r0,@mth_pf_scalar_right_data
@@ -214,11 +214,11 @@ mth_pf_test_main:
   CALL @mth_preflight
   MOVI r7,8
   CMP r1,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_25
   LD r6,r5,0
   MOVI r7,55
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_26
 
   ; A nonzero divisor passes the same registered contract.
   MOVI r6,@mth_pf_scalar_right_payload
@@ -231,11 +231,11 @@ mth_pf_test_main:
   MOVI r5,@mth_pf_scalar_output
   CALL @mth_preflight
   CMP r1,r0
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_27
   LD r6,r5,0
   MOVI r7,3
   CMP r6,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_28
 
   ; Output capacity is a distinct rejection and remains atomic.
   MOVI r6,@mth_pf_output
@@ -249,12 +249,128 @@ mth_pf_test_main:
   CALL @mth_preflight
   MOVI r7,9
   CMP r1,r7
-  JMP[NE] @mth_pf_fail
+  JMP[NE] @mth_pf_fail_29
 
   MOVI r1,@mth_pf_pass
   CALL @mth_pf_puts
   HALT
 
+mth_pf_fail_1:
+  MOVI r1,1
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_2:
+  MOVI r1,2
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_3:
+  MOVI r1,3
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_4:
+  MOVI r1,4
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_5:
+  MOVI r1,5
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_6:
+  MOVI r1,6
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_7:
+  MOVI r1,7
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_8:
+  MOVI r1,8
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_9:
+  MOVI r1,9
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_10:
+  MOVI r1,10
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_11:
+  MOVI r1,11
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_12:
+  MOVI r1,12
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_13:
+  MOVI r1,13
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_14:
+  MOVI r1,14
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_15:
+  MOVI r1,15
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_16:
+  MOVI r1,16
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_17:
+  MOVI r1,17
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_18:
+  MOVI r1,18
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_19:
+  MOVI r1,19
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_20:
+  MOVI r1,20
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_21:
+  MOVI r1,21
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_22:
+  MOVI r1,22
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_23:
+  MOVI r1,23
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_24:
+  MOVI r1,24
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_25:
+  MOVI r1,25
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_26:
+  MOVI r1,26
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_27:
+  MOVI r1,27
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_28:
+  MOVI r1,28
+  ST r1,r12,38
+  JMP @mth_pf_fail
+mth_pf_fail_29:
+  MOVI r1,29
+  ST r1,r12,38
+  JMP @mth_pf_fail
 mth_pf_fail:
   MOVI r1,@mth_pf_bad
   CALL @mth_pf_puts
