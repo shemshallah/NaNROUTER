@@ -143,7 +143,7 @@ mth_pf_puts_byte:
   ADD r1,r1,r13
   JMP @mth_pf_puts_word
 
-.org 256
+.org 1024
 mth_pf_left:
 .word 4,1,3,1,1,@mth_pf_left_payload,3,1
 mth_pf_right:
@@ -161,7 +161,7 @@ mth_pf_scalar_contract:
 mth_pf_scalar_output:
 .word 0,0,0,0,0,@mth_pf_scalar_output_payload,1,0
 
-.org 512
+.org 1280
 mth_pf_left_payload:
 .word 1,2,3
 mth_pf_right_payload:
