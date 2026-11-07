@@ -819,3 +819,60 @@ A data stream declares its record family. In that context, the class nibble can 
 For larger structures, each 64-bit word is one element or fragment in a typed multiword object. The object descriptor carries the full type, length, shape, stride/layout, version, and endianness policy. This lets MTH use the entire class/payload space without pretending that one 32-bit payload can hold every scalar or tensor value.
 
 The key property is **orientation-preserving addressability**: a word and its BSWAPM image remain distinct, inspectable representations linked by a known involution. MTH may exploit that relation for paired fields, integrity checks, and transformations, but must not collapse the two encodings or assume that only palindromic words are useful.
+
+
+---
+
+## 19. Reentrant pair codec and first vector arithmetic slice
+
+**Source status:** implemented in NaN16 source on branch `mth-reentrant-vector-kernel`.  
+**Execution status:** unverified; the canonical assembler/interpreter has not yet run these fixtures.
+
+### 19.1 Caller-owned frame replaces static codec state
+
+The double-endian codec no longer stores return addresses, chunks, or destination pointers in shared labels.
+
+- `mth_de_encode` now receives a caller-owned three-word frame in `r12`: saved return address, chunk, destination address.
+- `mth_de_decode` receives a caller-owned one-word frame in `r12`: saved return address.
+- The BSWAP16 helper remains leaf-only and uses no static storage.
+- Two callers can use distinct frames without overwriting one another's saved state.
+- The caller must not share one frame between overlapping invocations.
+
+The fixture now uses two distinct frames and two output destinations, verifies both round trips, corrupts one member and verifies rejection, and checks wrong-class rejection.
+
+**Gate:** assemble and execute the updated codec fixture; add wrong-tag, missing-member, wrong-second-class, and resynchronization cases before claiming full pair-codec validation.
+
+### 19.2 First model-facing vector primitive
+
+`mth/nan16/mth_vector.nas` adds `mth_u32_span_add_checked`, a contiguous unsigned-32 vector addition kernel.
+
+ABI:
+- `r1`: first input word address
+- `r2`: second input word address
+- `r3`: output word address
+- `r4`: element count
+- `r12`: caller-owned three-word scratch frame
+- return `r1=1` on success, `r1=0` on unsigned overflow
+
+The implementation performs a complete validation pass before writing any output. Overflow therefore leaves the output span unchanged. Zero-length spans succeed without memory access. The caller is responsible for valid spans and non-overlap between output and inputs.
+
+This is deliberately a low-level contiguous U32 span primitive, **not yet the typed vector descriptor layer**. Shape/stride/type descriptors, alias analysis, dot product, norms, cosine similarity, and stable top-k remain future work. Do not claim those are implemented.
+
+The NaN16 fixture covers:
+- successful elementwise results;
+- overflow rejection;
+- output unchanged after overflow;
+- zero-length success.
+
+### 19.3 Evidence grade
+
+Both new fixtures are source-level checks only. Until assembled and executed, their status is **DEFINED / SOURCE-WRITTEN**, not ASSEMBLED, EXECUTED, REGRESSION-TESTED, or PROMOTED. No source comment or game-plan status may imply otherwise.
+
+### 19.4 Next implementation order
+
+1. Run the full MTH source/test set with the canonical NaN16 assembler and interpreter; fix syntax/ABI discrepancies before expanding the kernel.
+2. Add pair-codec wrong-tag, missing-member, wrong-second-class, and resynchronization tests.
+3. Add typed vector descriptors with explicit element type, length, stride, and layout validation.
+4. Add vector copy/fill, elementwise checked add/subtract, dot product with a two-word accumulator, squared norm, and normalization status.
+5. Add exact rational primitives only after the integer kernel has differential fixtures.
+6. Build attention from explicit dot-product, scale, mask, stable-softmax, and weighted-sum operations; do not add an opaque attention opcode.
