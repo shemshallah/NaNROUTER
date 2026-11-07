@@ -1,7 +1,7 @@
 .org 0
 JMP @mth_pf_test_main
 .include "../nan16/mth_preflight.nas"
-.include "../../../nan0s/src/nannet/math_registry.nas"
+.include "../../nan0s/src/nannet/math_registry.nas"
 
 mth_pf_test_main:
   MOVI r13,1
