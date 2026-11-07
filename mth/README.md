@@ -30,3 +30,8 @@ Important distinction:
 - The existing double-endian pair codec is separate: it emits a big-endian member and a byte-swapped little-endian member, then validates agreement on decode. This redundant pair-voting representation is not the same operation as BSWAPM.
 
 The pair codec is adapted from `NaN0S/src/lib/n16de.nas` (blob `47d64c3446d57669160317228258c35d2184ad17`). Its original inherited static return slots have been replaced by caller-owned frames in the current MTH source. This removes shared static state, but the new ABI remains unverified until the canonical NaN16 toolchain executes the updated fixture. The smoke test is committed but has not yet been assembled or executed in the canonical runtime.
+
+
+## Relational-spectral subsystem
+
+The shared 8 MiB universe-bin graph-spectral architecture is specified in `docs/GRAPH_SPECTRAL_MTH_PLAN.md` and NaNLMind's `docs/GRAPH_SPECTRAL_FOUNDATION.md`. It defines K256 and sparse graph Laplacians, pair-space matrix-free application, optional inverse-square void potential, spectral filters/Lanczos, graph-wave stepping, validated FOLD, pattern analysis, and runner capability gating. No graph-spectral `.nas` kernel is claimed implemented yet; the signed fixed-point ABI and canonical toolchain gate come first.
