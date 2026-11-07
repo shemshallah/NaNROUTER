@@ -1,6 +1,6 @@
 # Typed absence algebra
 
-Status: implemented in `runner_riddle/math_absence.py`; 8 tests pass.
+Status: implemented in `runner_riddle/math_absence.py`; 59 tests pass.
 
 `ZERO`, `NULL`, `VOID`, `EMPTY`, `UNDEFINED`, `INFINITY`, `UNKNOWN`, `ERROR`,
 and `CANCELLED` are distinct typed states. They are never collapsed into a
