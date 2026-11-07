@@ -187,7 +187,7 @@ mth_link_pf_main:
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   CMP r1,r0
-  JMP[NE] @mth_link_pf_fail
+  JMP[NE] @mth_link_pf_dispatch_status_fail
   MOVI r8,@mth_link_pf_output_payload
   LD r9,r8,0
   MOVI r10,0x4200
@@ -310,6 +310,11 @@ mth_link_pf_main:
   CALL @mth_link_pf_puts
   HALT
 
+mth_link_pf_dispatch_status_fail:
+  MOVI r1,@mth_link_pf_dispatch_status_bad
+  CALL @mth_link_pf_puts
+  HALT
+
 mth_link_pf_fail:
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
@@ -422,3 +427,5 @@ mth_link_pf_dispatch_pass:
 .str "MTH NATIVE DISPATCH PASS\n"
 mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
+mth_link_pf_dispatch_status_bad:
+.str "MTH NATIVE DISPATCH STATUS FAIL\n"
