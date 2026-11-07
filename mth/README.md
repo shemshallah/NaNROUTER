@@ -137,7 +137,7 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 51-fixture/105-step run is pending. The CI workflow includes all 51 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
+The native fixtures pass local `nan_cli`; the combined GitHub Actions run last passed 87 steps for the 42-fixture set; the current 57-fixture/117-step run is pending. The CI workflow includes all 57 fixtures, including the K256 pair-space fixture that is CI-only locally because of guest image size.
 
 
 ## K256 pair-space
@@ -161,5 +161,11 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_avoided_crossing_sweep.nas`: R7 avoided-crossing sweep; local canonical execution PASS (11,651 steps).
 - `nan16/mth_jahs_gate.nas`: mandatory "Just A Handoff Seal" gate; accepts only `0x4A414853`; local canonical execution PASS (201 steps).
 - `nan16/mth_topk_256.nas`: stable descending top-k with index tie-break; local canonical execution PASS (1,158,106 steps).
+- `nan16/mth_drive_source_256.nas`: bounded DRIVE source `state + dt*source`; local canonical execution PASS (13,092 steps).
+- `nan16/mth_cfl_guard_256.nas`: CFL/lambda_max guard; local canonical execution PASS (2,639,509 steps).
+- `nan16/mth_radial_tridiagonal.nas`: radial tridiagonal matvec; local canonical execution PASS (42,518 steps).
+- `nan16/mth_colored_noise_256.nas`: deterministic colored-noise sequence; local canonical execution PASS (72,318 steps).
+- `nan16/mth_lanczos_256.nas`: bounded orthogonal/deflated Lanczos top-k; local canonical execution PASS (133,498,079 steps).
+- `nan16/mth_graph_pair_tile16_k16_driver_f32.nas`: one-tile 16-slice K16 driver; local canonical execution PASS (4,449,894 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and await the canonical 1 MiB GLT CI run before promotion from local execution to CI-verified.

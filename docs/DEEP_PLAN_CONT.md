@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **53 native MTH kernels with fixtures**: 50 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, JAHS, full-255, adapter, and avoided-crossing fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 319 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **59 native MTH kernels with fixtures**: 56 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial, DRIVE, CFL, colored-noise, and K16-driver fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 321 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -73,17 +73,17 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 53 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 53-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 59 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 59-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 105 steps, 51 fixtures; 1 MiB additions pending |
+| `.github/workflows/mth-native-contract.yml` | 117 steps, 57 fixtures; 1 MiB additions pending |
 
 ### 1.3 Evidence baseline
 
 ```
-50/50 locally runnable fixtures pass; K256 pair passed canonical CI
-51/51 total native fixtures; 319/319 Python tests pass
-GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 51-fixture/105-step run pending
+56/56 locally runnable fixtures pass; K256 pair passed canonical CI
+57/57 total native fixtures; 321/321 Python tests pass
+GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 57-fixture/117-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -733,7 +733,7 @@ The public route remains point 0. The active slot is an internal scheduling deta
 
 ### 7.8 From R8 NANNET
 
-- HTTP endpoints implemented; live Koyeb deployment remains.
+- Point-0 HTTP, offline live preflight, and signed-volume gate implemented; live Koyeb deployment remains blocked on credentials.
 - Persist NANNET0 bindings in MC0DB.
 - Run signed Koyeb volume-registry check.
 - Add phase-invariant signature exchange.
@@ -741,9 +741,8 @@ The public route remains point 0. The active slot is an internal scheduling deta
 
 ### 7.9 From R9 LM adapter
 
-- Add 256-dimensional residual.
-- ENCODE/DECODE 256↔128 implemented; add 256-dimensional residual/ablation.
-- Run frozen-base ablations.
+- Full 256-dimensional residual and ENCODE/DECODE implemented.
+- Frozen-base ablation harness implemented with paired controls; real-model/data ablation remains blocked.
 - Enable only after measured held-out benefit.
 
 ### 7.10 From R10 promotion
@@ -765,11 +764,11 @@ The public route remains point 0. The active slot is an internal scheduling deta
 | P3 | 256 streaming certificate | R3/fold | 16-block certificate + perturbation |
 | P4 | wave HTTP adapter — implemented | WaveService | auth/lease/complete HTTP tests |
 | P5 | 256 block pair / low-rank | P2 | 256 paged pair oracle |
-| P6 | 256 aperture SVD/top-k | P2/P5 | singular residual + top-k |
+| P6 | 256 aperture SVD/top-k | P2/P5 | full top pair, deflated top-2, and stable top-k local PASS; Lanczos in progress |
 | P7 | 255/256 dense/paged eigenbasis | P2/P6 | versioned page/eigenbasis test |
 | P8 | NANNET0 persistence + Koyeb | P4 | signed volume registry |
-| P9 | LM ablation | P6/P8 | held-out benefit or rejection |
-| P10 | R7 avoided crossing/phase | coupling kernel | held-out experiment |
+| P9 | LM ablation | P6/P8 | harness implemented; real held-out benefit or rejection still needed |
+| P10 | R7 avoided crossing/phase | coupling kernel | native sweep PASS; held-out protocol harness in progress |
 | P11 | Point-0 NaN→binary→NaN bridge/router — implemented | scheduler + address grammar | stable ingress, active-slot routing, stale epoch rejection |
 
 **Runtime rule:** these work packets may be developed in parallel by agents, but execution is serialized by the single-active runner ring. Two packets may not hold live leases or active memory on two slots at the same time. A packet that needs more than the 7 GiB active ceiling must be paged, split, or rejected.
@@ -949,9 +948,12 @@ The shortest correct sentence is:
 
 
 
+
+
+
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 59 kernels; 56 fixtures run locally and the K256 pair fixture is CI-only locally.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|
@@ -1002,3 +1004,15 @@ Machine-readable source: `spec/wave-capabilities.json`.
 | `mth.graph.transmission.128.f32` | `float32` | 7,147 | yes |
 | `mth.graph.pair.tile16.f32` | `float32` | 4,643,414 | yes |
 | `mth.graph.pair.tile16.k16.f32` | `float32` | 283,436 | yes |
+| `mth.jahs.gate.u64` | `u32` | 201 | pending |
+| `mth.adapter.residual.256.full.f32` | `float32` | 2,839,172 | pending |
+| `mth.graph.avoided_crossing_sweep.f32` | `float32` | 11,651 | pending |
+| `mth.centrosymmetry255.full.f32` | `float32` | 2,700,726 | pending |
+| `mth.svd.top2.256.f32` | `float32` | 40,216,927 | pending |
+| `mth.topk.256.f32` | `float32` | 1,158,106 | pending |
+| `mth.drive.source.256.f32` | `float32` | 13,092 | pending |
+| `mth.cfl.guard.256.f32` | `float32` | 2,639,509 | pending |
+| `mth.radial.tridiagonal.256.f32` | `float32` | 42,518 | pending |
+| `mth.noise.colored.256.f32` | `float32` | 72,318 | pending |
+| `mth.lanczos.topk.256.f32` | `float32` | 133,498,079 | pending |
+| `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | pending |

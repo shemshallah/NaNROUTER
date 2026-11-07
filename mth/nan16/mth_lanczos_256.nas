@@ -241,9 +241,7 @@ mth_lanczos_256_build_next:
   JMP @mth_lanczos_256_build
 
 mth_lanczos_256_build_done:
-  ; Default start direction for q0 = e0 is e0; the fallback scan above
-  ; supplies e1, e2, ... as needed. Now run the bounded deflated power
-  ; iteration for each stored column.
+  ; Now run the bounded deflated power iteration for each stored column.
   MOVI r8,0
   MOVI r12,@mth_lanczos_256_frame
   ST r8,r12,7
@@ -466,6 +464,7 @@ mth_lanczos_256_invalid:
 ;   r1 = A, r2 = v, r3 = out, r13 = 1
 ;   returns r1=1; clobbers r4-r12, r14
 ; out[i] = sum_{j=0}^{255} A[i,j]*v[j], increasing j, one accumulator.
+; The A and out pointers advance one row and one word per output row.
 mth_lanczos_256_matvec:
   ADD r4,r1,r0
   ADD r5,r2,r0
@@ -487,8 +486,10 @@ mth_lanczos_256_matvec_col:
   MOVI r12,256
   CMP r8,r12
   JMP[LT] @mth_lanczos_256_matvec_col
-  ADD r12,r6,r7
-  ST r9,r12,0
+  ST r9,r6,0
+  MOVI r12,256
+  ADD r4,r4,r12
+  ADD r6,r6,r13
   ADD r7,r7,r13
   MOVI r12,256
   CMP r7,r12

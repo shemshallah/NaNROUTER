@@ -230,14 +230,14 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-50/50 local fixtures passed; 51/51 total
+56/56 local fixtures passed; 57/57 total
 
 python3 -m unittest discover -s tests -v
 Ran 235 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42389738332` (87/87 steps); the 51-fixture/105-step run is pending. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full-grid driver, Lanczos, live NANNET deployment, and real LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed prior run `42389738332` (87/87 steps); the 57-fixture/117-step run is pending. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
 
 
 ## K256 closed-form pair-space v1 — native verified

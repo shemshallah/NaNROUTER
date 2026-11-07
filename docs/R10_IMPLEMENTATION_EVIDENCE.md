@@ -4,8 +4,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 50/50 locally runnable fixtures passed; 51/51 total including CI-only K256 pair; 319 Python tests passed.
-**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 51-fixture/105-step run is pending (local 1 MiB text-loader execution passed).
+**Result:** 56/56 locally runnable fixtures passed; 57/57 total including CI-only K256 pair; 321 Python tests passed.
+**CI:** the expanded workflow last passed 87 steps on `main` for the historical 42-fixture set; the current 57-fixture/117-step run is pending (local 1 MiB text-loader execution passed).
 
 ## Native fixtures
 
@@ -64,6 +64,12 @@
 | 51 | Full 255 certificate | `mth/tests/mth_centrosymmetry_255_full_test.nas` | 2,700,726 | PASS | pending |
 | 52 | Full 256 SVD top-2 | `mth/tests/mth_svd_top2_256_test.nas` | 40,216,927 | PASS | pending |
 | 53 | Stable top-k 256 | `mth/tests/mth_topk_256_test.nas` | 1,158,106 | PASS | pending |
+| 54 | DRIVE source 256 | `mth/tests/mth_drive_source_256_test.nas` | 13,092 | PASS | pending |
+| 55 | CFL guard 256 | `mth/tests/mth_cfl_guard_256_test.nas` | 2,639,509 | PASS | pending |
+| 56 | Radial tridiagonal | `mth/tests/mth_radial_tridiagonal_test.nas` | 42,518 | PASS | pending |
+| 57 | Colored noise 256 | `mth/tests/mth_colored_noise_256_test.nas` | 72,318 | PASS | pending |
+| 58 | Lanczos top-k 256 | `mth/tests/mth_lanczos_256_test.nas` | 133,498,079 | PASS | pending |
+| 59 | K16 full-slice driver | `mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas` | 4,449,894 | PASS | pending |
 
 ## Python tests
 
@@ -93,14 +99,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-50/50 local fixtures passed; 51/51 total
+56/56 local fixtures passed; 57/57 total
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 53 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 59 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **59 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 

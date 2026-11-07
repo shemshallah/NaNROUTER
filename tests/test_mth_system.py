@@ -261,6 +261,46 @@ class MthSystemTests(unittest.TestCase):
         larger = self.make_system(guest_budget_bytes=2 * 1024 * 1024)
         self.assertEqual(larger.workspace_budget_bytes, 2 * 1024 * 1024)
 
+    def test_1_mib_default_admits_full_u_and_512_kib_override_rejects(self):
+        words = 73_990
+        descriptor = MthKernelDescriptor(
+            kernel_id="mth.test.full_u.f32",
+            source="full_u.nas",
+            fixture="full_u_test.nas",
+            marker="TEST FULL U",
+            steps=1,
+            precision="float32",
+            workspace_words=words,
+            shape=(1,),
+            status="native_verified",
+            ci_verified=True,
+            source_digest="a" * 64,
+            fixture_digest="b" * 64,
+        )
+        registry = MthRegistry([descriptor])
+        plan = registry.compose({
+            "plan_id": "full-u",
+            "steps": [{
+                "name": "step",
+                "kernel_id": descriptor.kernel_id,
+                "inputs": [],
+                "outputs": [],
+                "depends_on": [],
+            }],
+        })
+        default_system = MthSystem(registry, self.store, self.service, self.scheduler)
+        job = self.submit(plan, system=default_system, job_id="job-full-u")
+        self.assertEqual(job["workspace"], words)
+        small_system = MthSystem(
+            registry,
+            self.store,
+            self.service,
+            self.scheduler,
+            guest_budget_bytes=512 * 1024,
+        )
+        with self.assertRaises(MthSystemWorkspaceError):
+            self.submit(plan, system=small_system, job_id="job-full-u-small")
+
     def test_separately_declared_guest_budget_is_enforced(self):
         plan = self.make_plan()
         guest_system = self.make_system(guest_budget_bytes=16)

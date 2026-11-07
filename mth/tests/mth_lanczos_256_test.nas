@@ -4,7 +4,7 @@
 ; 131,072-word / 1 MiB guest target and above the historical 65,536-word /
 ; 512 KiB budget.
 ;
-; Case 1: A = diag(3,2,1,0,...), q0 = 1, k = 2, iterations = 20.
+; Case 1: A = diag(3,2,1,0,...), q0 = 1, k = 2, iterations = 16.
 ;   The top two Ritz values are 3 and 2; the two vectors are unit-norm and
 ;   orthogonal, and their dominant components align with e0 and e1.
 ;
@@ -15,7 +15,7 @@
 ;   and the four checked components are bit-exact.
 ;
 ; Case 3: A = [[2,1],[1,2]] in the leading 2x2 block, zero elsewhere,
-;   q0 = 1, k = 2, iterations = 20. Eigenvalues 3 and 1 with vectors
+;   q0 = 1, k = 2, iterations = 16. Eigenvalues 3 and 1 with vectors
 ;   (1,1)/sqrt(2) and (1,-1)/sqrt(2). This exercises the full matvec and
 ;   a non-diagonal Rayleigh quotient.
 ;
@@ -24,10 +24,19 @@
 ; Bounds: k = 0, k = 9, iterations = 0, iterations = 33, and zero q0 all
 ;   return status 0 with values_out untouched.
 ;
-; Case 5: A = diag(3,2,1,0,...), k = 1, iterations = 20: value 3.
+; Case 5: A = diag(3,2,1,0,...), k = 1, iterations = 16: value 3.
 ;
 ; Case 6: A = diag(8,6,4,2,0,...), k = 4, iterations = 16: values
 ;   {8,6,4,2}, four unit-norm mutually orthogonal vectors.
+;
+; Case 8: A = diag(8,7,6,5,4,3,2,1,0,...), q0 = e0, k = 8,
+;   iterations = 1. q0 is exhausted after the first column, so the
+;   coordinate-axis fallback supplies e1..e7; the exact output is values
+;   8..1 and eight unit-norm mutually orthogonal axis vectors.
+;
+; Case 7: the same A as Case 1 with q0 = e1, k = 2, iterations = 4.
+;   The extraction order is lambda 2 then lambda 3, so the final
+;   descending selection sort must swap both values and vector columns.
 
 .org 0
 JMP @mth_lanczos_256_test_main
@@ -45,7 +54,7 @@ mth_lanczos_256_test_main:
   CALL @mth_lanczos_256_test_fill_vec
 
   MOVI r3,2
-  MOVI r4,20
+  MOVI r4,16
   CALL @mth_lanczos_256_test_run
   CMP r1,r13
   JMP[NE] @mth_lanczos_256_test_fail
@@ -198,7 +207,7 @@ mth_lanczos_256_test_main:
   CALL @mth_lanczos_256_test_fill_vec
 
   MOVI r3,2
-  MOVI r4,20
+  MOVI r4,16
   CALL @mth_lanczos_256_test_run
   CMP r1,r13
   JMP[NE] @mth_lanczos_256_test_fail
@@ -336,7 +345,7 @@ mth_lanczos_256_test_main:
   CALL @mth_lanczos_256_test_fill_vec
 
   MOVI r3,1
-  MOVI r4,20
+  MOVI r4,16
   CALL @mth_lanczos_256_test_run
   CMP r1,r13
   JMP[NE] @mth_lanczos_256_test_fail
@@ -428,6 +437,162 @@ mth_lanczos_256_test_main:
   MOVI r2,4
   CALL @mth_lanczos_256_test_basis_ok
   CMP r1,r13
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; ---------- Case 8: k = 8 exact diagonal via fallback axes ----------
+  CALL @mth_lanczos_256_test_zero_a
+  LA r4,@mth_lanczos_256_test_a
+  MOVI r7,0
+  MOVHI r7,0x4100
+  ST r7,r4,0
+  MOVI r7,0
+  MOVHI r7,0x40E0
+  ST r7,r4,257
+  MOVI r7,0
+  MOVHI r7,0x40C0
+  ST r7,r4,514
+  MOVI r7,0
+  MOVHI r7,0x40A0
+  ST r7,r4,771
+  MOVI r7,0
+  MOVHI r7,0x4080
+  ST r7,r4,1028
+  MOVI r7,0
+  MOVHI r7,0x4040
+  ST r7,r4,1285
+  MOVI r7,0
+  MOVHI r7,0x4000
+  ST r7,r4,1542
+  MOVI r7,0
+  MOVHI r7,0x3F80
+  ST r7,r4,1799
+
+  LA r1,@mth_lanczos_256_test_q0
+  CALL @mth_lanczos_256_test_zero_vec
+  LA r4,@mth_lanczos_256_test_q0
+  MOVI r5,0
+  MOVHI r5,0x3F80
+  ST r5,r4,0
+
+  MOVI r3,8
+  MOVI r4,1
+  CALL @mth_lanczos_256_test_run
+  CMP r1,r13
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; values are bit-exactly 8,7,6,5,4,3,2,1.
+  LA r4,@mth_lanczos_256_test_values
+  LD r5,r4,0
+  MOVI r6,0
+  MOVHI r6,0x4100
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,1
+  MOVI r6,0
+  MOVHI r6,0x40E0
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,2
+  MOVI r6,0
+  MOVHI r6,0x40C0
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,3
+  MOVI r6,0
+  MOVHI r6,0x40A0
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,4
+  MOVI r6,0
+  MOVHI r6,0x4080
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,5
+  MOVI r6,0
+  MOVHI r6,0x4040
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,6
+  MOVI r6,0
+  MOVHI r6,0x4000
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,7
+  MOVI r6,0
+  MOVHI r6,0x3F80
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  LA r1,@mth_lanczos_256_test_vectors
+  MOVI r2,8
+  CALL @mth_lanczos_256_test_basis_ok
+  CMP r1,r13
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; V0[0]^2 == 1 and V7[7]^2 == 1.
+  LA r4,@mth_lanczos_256_test_vectors
+  LD r5,r4,0
+  FMUL r5,r5,r5
+  MOVI r6,0
+  MOVHI r6,0x3F80
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  MOVI r6,1792
+  ADD r4,r4,r6
+  LD r5,r4,7
+  FMUL r5,r5,r5
+  MOVI r6,0
+  MOVHI r6,0x3F80
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; ---------- Case 7: extraction order 2 then 3 must be sorted ----------
+  ; q0 = e1 makes the first power vector e1 (lambda 2) and the fallback
+  ; second vector e0 (lambda 3). The final selection sort must swap both
+  ; the values and the two vector columns.
+  CALL @mth_lanczos_256_test_zero_a
+  CALL @mth_lanczos_256_test_set_diag_321
+  LA r1,@mth_lanczos_256_test_q0
+  CALL @mth_lanczos_256_test_zero_vec
+  LA r4,@mth_lanczos_256_test_q0
+  MOVI r5,0
+  MOVHI r5,0x3F80
+  ST r5,r4,1
+
+  MOVI r3,2
+  MOVI r4,4
+  CALL @mth_lanczos_256_test_run
+  CMP r1,r13
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; values are bit-exactly 3.0 then 2.0.
+  LA r4,@mth_lanczos_256_test_values
+  LD r5,r4,0
+  MOVI r6,0
+  MOVHI r6,0x4040
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  LD r5,r4,1
+  MOVI r6,0
+  MOVHI r6,0x4000
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+
+  ; Columns were swapped: V0[0]^2 == 1, V1[1]^2 == 1.
+  LA r4,@mth_lanczos_256_test_vectors
+  LD r5,r4,0
+  FMUL r5,r5,r5
+  MOVI r6,0
+  MOVHI r6,0x3F80
+  CMP r5,r6
+  JMP[NE] @mth_lanczos_256_test_fail
+  MOVI r6,256
+  ADD r4,r4,r6
+  LD r5,r4,1
+  FMUL r5,r5,r5
+  MOVI r6,0
+  MOVHI r6,0x3F80
+  CMP r5,r6
   JMP[NE] @mth_lanczos_256_test_fail
 
   LA r1,@mth_lanczos_256_test_pass

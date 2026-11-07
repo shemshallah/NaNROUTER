@@ -269,6 +269,50 @@ jobs:
           cat build/mth/avoided-crossing-sweep.err
           grep -q '^MTH AVOIDED CROSSING SWEEP PASS' build/mth/avoided-crossing-sweep.out
 
+      - name: Assemble DRIVE source fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_drive_source_256_test.nas > build/mth/drive-source-256.nan
+
+      - name: Execute DRIVE source fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/drive-source-256.nan --steps 5000000 --serial > build/mth/drive-source-256.out 2> build/mth/drive-source-256.err
+          cat build/mth/drive-source-256.out
+          cat build/mth/drive-source-256.err
+          grep -q '^MTH DRIVE SOURCE 256 PASS' build/mth/drive-source-256.out
+
+      - name: Assemble CFL guard fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_cfl_guard_256_test.nas > build/mth/cfl-guard-256.nan
+
+      - name: Execute CFL guard fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/cfl-guard-256.nan --steps 5000000 --serial > build/mth/cfl-guard-256.out 2> build/mth/cfl-guard-256.err
+          cat build/mth/cfl-guard-256.out
+          cat build/mth/cfl-guard-256.err
+          grep -q '^MTH CFL GUARD 256 PASS' build/mth/cfl-guard-256.out
+
+      - name: Assemble radial-tridiagonal fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_radial_tridiagonal_test.nas > build/mth/radial-tridiagonal.nan
+
+      - name: Execute radial-tridiagonal fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/radial-tridiagonal.nan --steps 5000000 --serial > build/mth/radial-tridiagonal.out 2> build/mth/radial-tridiagonal.err
+          cat build/mth/radial-tridiagonal.out
+          cat build/mth/radial-tridiagonal.err
+          grep -q '^MTH RADIAL TRIDIAGONAL PASS' build/mth/radial-tridiagonal.out
+
+      - name: Assemble colored-noise fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_colored_noise_256_test.nas > build/mth/colored-noise-256.nan
+
+      - name: Execute colored-noise fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/colored-noise-256.nan --steps 10000000 --serial > build/mth/colored-noise-256.out 2> build/mth/colored-noise-256.err
+          cat build/mth/colored-noise-256.out
+          cat build/mth/colored-noise-256.err
+          grep -q '^MTH COLORED NOISE 256 PASS' build/mth/colored-noise-256.out
+
       - name: Assemble phase-coherence fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_phase_coherence_128_test.nas > build/mth/phase-coherence.nan
@@ -345,6 +389,17 @@ jobs:
           cat build/mth/svd-top2-256.out
           cat build/mth/svd-top2-256.err
           grep -q '^MTH SVD TOP2 256 PASS' build/mth/svd-top2-256.out
+
+      - name: Assemble Lanczos 256 fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_lanczos_256_test.nas > build/mth/lanczos-256.nan
+
+      - name: Execute Lanczos 256 fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/lanczos-256.nan --steps 200000000 --serial > build/mth/lanczos-256.out 2> build/mth/lanczos-256.err
+          cat build/mth/lanczos-256.out
+          cat build/mth/lanczos-256.err
+          grep -q '^MTH LANCZOS 256 PASS' build/mth/lanczos-256.out
 
       - name: Assemble 128-SVD fixture with NaN16 source assembler
         run: |
@@ -587,3 +642,14 @@ jobs:
           cat build/mth/pair-tile16-k16.out
           cat build/mth/pair-tile16-k16.err
           grep -q '^MTH PAIR TILE16 K16 ACCUM PASS' build/mth/pair-tile16-k16.out
+
+      - name: Assemble full K16 slice driver fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_pair_tile16_k16_driver_f32_test.nas > build/mth/pair-tile16-k16-driver.nan
+
+      - name: Execute full K16 slice driver fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/pair-tile16-k16-driver.nan --steps 50000000 --serial > build/mth/pair-tile16-k16-driver.out 2> build/mth/pair-tile16-k16-driver.err
+          cat build/mth/pair-tile16-k16-driver.out
+          cat build/mth/pair-tile16-k16-driver.err
+          grep -q '^MTH PAIR K16 DRIVER PASS' build/mth/pair-tile16-k16-driver.out
