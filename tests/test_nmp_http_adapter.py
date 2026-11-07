@@ -148,7 +148,7 @@ class NmpHttpAdapterIntegrationTests(unittest.TestCase):
         self.assertEqual(submitted["packet"]["state"], nmp.QUEUED)
         job_id = submitted["job"]["job_id"]
         self.assertEqual(submitted["job"]["kind"], "nmp")
-        self.assertEqual(submitted["packet"]["job_id"], job_id)
+        self.assertEqual(submitted["packet"]["evidence"]["job_id"], job_id)
 
         leased = self.adapter.lease(
             self.worker_token, "worker-A", now_tick=110,
