@@ -2031,27 +2031,36 @@ A rule record must preserve the orthogonal axes. At minimum:
 A client may **claim** a validity level; the validator assigns `earned_validity`. The claimed value can never be used as authority. Until a trusted proof checker exists, production validity is capped at V2 and proof candidates are explicitly unchecked.
 
 
-## 23. Native preflight gate implementation (2026-11-07)
+## 23. Native typed mathematical preflight (2026-11-07)
 
-The first executable gate is implemented at `mth/nan16/mth_preflight_gate.nas`.
-It is native NaN16 guest code, not a host-language math implementation.
+The canonical applicability gate is `mth/nan16/mth_preflight.nas`, implemented
+entirely in NaN16. It consumes the immutable 10-word operator contract returned
+by the canonical NaN0S mathematical registry and two concrete 8-word leaf
+descriptors. It does not create a second function registry.
 
-The gate checks:
-- ABI version and exact rule epoch;
-- ordered input/output type signature;
-- both operand domains against the authoritative rule domain;
-- optional equal-dimension shape policy;
-- required capability subset against available capabilities;
-- minimum proof level and enabled policy;
-- four words of the authoritative rule digest.
+The gate checks concrete object kinds, ranks, scalar domains, shape rules,
+input/output payload capacities, required capability bits, and declared
+preconditions. Output metadata is committed only after every check succeeds;
+all rejection paths leave the output descriptor unchanged.
 
-It returns status 0 for allow and typed denial statuses 1–9. The caller must bind
-the exact candidate, rule epoch, and digest into NMP/lease admission. This
-primitive does not replace ACL authorization, numerical definedness, proof
-verification, or runner health/capacity checks.
+ABI: `r1` left leaf, `r2` right leaf, `r3` resolved contract,
+`r4` available capabilities, `r5` reserved output leaf, `r12` caller-owned
+39-word scratch. Status 0 is applicable; statuses 1–9 distinguish descriptor,
+payload, kind, rank, domain, shape, capability, precondition, and capacity
+rejections. This is applicability validation, not theorem proving, numerical
+execution, or an ACL grant.
 
-A native guest fixture is added at `mth/tests/mth_preflight_gate_test.nas`.
-It checks the accepted descriptor and a stale candidate epoch. The dedicated
-workflow `.github/workflows/native-preflight-gate.yml` assembles the fixture
-with the canonical NaN0S toolchain and executes it under `nan_cli`. CI evidence
-must be observed before claiming the fixture passes.
+The executable fixture `mth/tests/mth_preflight_test.nas` resolves contracts
+through the NaN0S registry and covers vector dot, dimension mismatch,
+capability rejection, scalar division preconditions, output capacity, and
+atomic output metadata. The native CI workflow assembles and executes this
+fixture using the canonical NaN16 toolchain.
+
+## 24. Preflight payload-range safety
+
+Precondition bit 1 is enforced over half-open word ranges, not merely pointer
+equality. The reserved output capacity must not overlap either input capacity.
+Address-plus-capacity wrap is rejected before metadata commit. The regression
+now includes a deliberately offset output pointer inside an input allocation;
+it must return PRECONDITION and leave the output descriptor unchanged.
+
