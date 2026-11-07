@@ -1,0 +1,136 @@
+import os
+import unittest
+
+from runner_riddle.n16t_guest import (
+    N16TGuestPool,
+    N16TGuestRuntimeError,
+    REQUEST_BASE,
+    RESPONSE_PAYLOAD_BASE,
+    SESSION_BASE,
+    _NaN16GuestVM,
+)
+
+
+_REQUIRED = ("NAN16_LIBRARY", "N16T_GUEST_IMAGE", "N16T_GUEST_LABELS")
+_SKIP = not all(os.environ.get(name) for name in _REQUIRED)
+
+
+@unittest.skipIf(_SKIP, "native NaN16 guest runtime artifacts are not configured")
+class N16TGuestRuntimeTests(unittest.TestCase):
+    def make_client(self, session_id):
+        vm = _NaN16GuestVM(
+            os.environ["NAN16_LIBRARY"],
+            os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"],
+        )
+        vm.write_bytes(SESSION_BASE, session_id)
+        # HELLO payload selects the runner portal logical point 1.
+        vm.write_bytes(RESPONSE_PAYLOAD_BASE, b"\x01\x00")
+        return vm
+
+    def send_hello(self, client):
+        client.call(
+            "n16_android_build",
+            {
+                1: REQUEST_BASE,
+                2: 1,
+                4: RESPONSE_PAYLOAD_BASE,
+                5: 2,
+                6: SESSION_BASE,
+            },
+        )
+        self.assertEqual(client.reg(3), 0)
+        self.assertEqual(client.reg(1), 38)
+        request = client.read_bytes(REQUEST_BASE, client.reg(1))
+        client.call("n16_android_advance")
+        self.assertEqual(client.reg(3), 0)
+        return request
+
+    def test_guest_owned_hello_capabilities_crc_route_and_replay(self):
+        pool = N16TGuestPool(
+            os.environ["NAN16_LIBRARY"],
+            os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"],
+        )
+        client = self.make_client(bytes(range(1, 17)))
+        try:
+            request = self.send_hello(client)
+
+            corrupt = bytearray(request)
+            corrupt[-1] ^= 0x01
+            with self.assertRaises(N16TGuestRuntimeError):
+                pool.exchange(bytes(corrupt))
+
+            response = pool.exchange(request)
+            self.assertEqual(len(response), 44)
+
+            client.write_bytes(REQUEST_BASE, response)
+            client.call("n16_android_route", {1: REQUEST_BASE, 2: len(response)})
+            self.assertEqual(client.reg(3), 2)
+            self.assertEqual(client.reg(4), 0xA001)
+
+            with self.assertRaises(N16TGuestRuntimeError):
+                pool.exchange(request)
+        finally:
+            client.close()
+            pool.close()
+
+    def test_guest_close_resets_the_server_session(self):
+        pool = N16TGuestPool(
+            os.environ["NAN16_LIBRARY"],
+            os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"],
+        )
+        client = self.make_client(bytes(range(33, 49)))
+        try:
+            request = self.send_hello(client)
+            response = pool.exchange(request)
+            client.write_bytes(REQUEST_BASE, response)
+            client.call("n16_android_route", {1: REQUEST_BASE, 2: len(response)})
+            self.assertEqual(client.reg(3), 2)
+
+            client.call(
+                "n16_android_build",
+                {
+                    1: REQUEST_BASE,
+                    2: 13,
+                    4: RESPONSE_PAYLOAD_BASE,
+                    5: 0,
+                    6: SESSION_BASE,
+                },
+            )
+            self.assertEqual(client.reg(3), 0)
+            close_request = client.read_bytes(REQUEST_BASE, client.reg(1))
+            client.call("n16_android_advance")
+            self.assertEqual(client.reg(3), 0)
+
+            close_response = pool.exchange(close_request)
+            self.assertEqual(len(close_response), 36)
+            self.assertEqual(close_response[:4], b"N16T")
+        finally:
+            client.close()
+            pool.close()
+
+    def test_opaque_session_affinity_keeps_guest_states_separate(self):
+        pool = N16TGuestPool(
+            os.environ["NAN16_LIBRARY"],
+            os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"],
+            max_sessions=2,
+        )
+        first = self.make_client(bytes(range(1, 17)))
+        second = self.make_client(bytes(range(17, 33)))
+        try:
+            first_response = pool.exchange(self.send_hello(first))
+            second_response = pool.exchange(self.send_hello(second))
+            self.assertEqual(len(first_response), 44)
+            self.assertEqual(len(second_response), 44)
+            self.assertEqual(len(pool._sessions), 2)
+        finally:
+            first.close()
+            second.close()
+            pool.close()
+
+
+if __name__ == "__main__":
+    unittest.main()
