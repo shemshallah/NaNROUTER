@@ -15,6 +15,7 @@ from .nmp import (
     EXECUTING,
     QUEUED,
     NmpPacket,
+    _check_capabilities,
     validate_native_admission_receipt,
 )
 from .wave_service import WaveService
@@ -63,6 +64,149 @@ def _lease_from_job(job: Mapping[str, Any]) -> dict[str, Any]:
         "deadline_tick": job.get("deadline_tick"),
         "state": "active",
     }
+
+
+class WaveStoreNmpContextProvider:
+    """Compose trusted external evidence with WaveStore's live operator/capability registry.
+
+    Admission, preflight, ruleset, ring and cancellation snapshots remain
+    explicit trusted callbacks because WaveStore does not own those registries.
+    Operator identity, active lifecycle, verified capability digest, workspace,
+    precision and runner ownership are resolved from the durable WaveStore.
+    """
+
+    def __init__(
+        self,
+        service: WaveService,
+        *,
+        admission_provider: ContextProvider,
+        preflight_provider: ContextProvider,
+        ruleset_provider: ContextProvider,
+        ring_provider: ContextProvider,
+        cancel_epoch_provider: ContextProvider,
+    ) -> None:
+        if not hasattr(service, "store"):
+            raise TypeError("service must expose its WaveStore")
+        providers = {
+            "admission_provider": admission_provider,
+            "preflight_provider": preflight_provider,
+            "ruleset_provider": ruleset_provider,
+            "ring_provider": ring_provider,
+            "cancel_epoch_provider": cancel_epoch_provider,
+        }
+        for name, provider in providers.items():
+            if not callable(provider):
+                raise TypeError(f"{name} must be callable")
+        self.service = service
+        self._providers = providers
+
+    def _operator_capabilities(
+        self, packet: NmpPacket, *, owner: str | None = None
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], int, str, dict[str, Any]]:
+        store = self.service.store
+        operator = store.get_operator(packet.function_id, packet.function_version)
+        if not isinstance(operator, Mapping):
+            raise NmpHttpError("native operator is not registered")
+        if operator.get("status") != "active":
+            raise NmpHttpError("native operator is not active")
+        if operator.get("evidence_level") not in ("native_verified", "certified"):
+            raise NmpHttpError("native operator lacks verified execution evidence")
+        digest = operator.get("digest")
+        precision = str(packet.numerical_policy.get("precision") or operator.get("precision") or "")
+        if not precision or precision != operator.get("precision"):
+            raise NmpHttpError("packet precision does not match the registered operator")
+        workspace = max(int(packet.guest_words), int(operator.get("workspace") or 0))
+        rows = store.dispatchable_capabilities(
+            workspace=workspace,
+            operator_digest=digest,
+            precision=precision,
+        )
+        if owner is not None:
+            rows = [row for row in rows if row.get("runner_id") == owner]
+        if not rows:
+            raise NmpHttpError("no native-verified runner capability matches this packet")
+        required = {
+            "required": packet.function_id,
+            "verified_digest": digest,
+            "workspace": workspace,
+            "precision": precision,
+        }
+        return dict(operator), list(rows), workspace, precision, required
+
+    def select_worker(self, packet: NmpPacket, owner: str) -> bool:
+        """Check worker capability before a durable lease is acquired."""
+        try:
+            _, rows, workspace, _, required = self._operator_capabilities(
+                packet, owner=owner
+            )
+            ok, _, _ = _check_capabilities(
+                packet,
+                rows,
+                required_capability=required,
+                workspace=workspace,
+            )
+            return bool(ok)
+        except (NmpHttpError, ValueError, TypeError):
+            return False
+
+    def __call__(
+        self,
+        *,
+        packet: NmpPacket,
+        stage: str,
+        job: Mapping[str, Any] | None = None,
+        lease: Mapping[str, Any] | None = None,
+    ) -> Mapping[str, Any]:
+        owner = None
+        if stage in ("lease", "complete"):
+            owner = lease.get("lease_owner") if isinstance(lease, Mapping) else None
+            if not isinstance(owner, str) or not owner:
+                raise NmpHttpError("active worker owner is unavailable")
+
+        _, rows, workspace, _, required = self._operator_capabilities(
+            packet, owner=owner
+        )
+        evidence: dict[str, Any] = {}
+        for key, provider in self._providers.items():
+            try:
+                evidence[key] = provider(
+                    packet=packet, stage=stage, job=job, lease=lease
+                )
+            except Exception:
+                raise NmpHttpError(f"trusted {key.removesuffix('_provider')} evidence is unavailable") from None
+
+        admission = evidence["admission_provider"]
+        preflight = evidence["preflight_provider"]
+        ruleset = evidence["ruleset_provider"]
+        ring = evidence["ring_provider"]
+        cancel_epoch = evidence["cancel_epoch_provider"]
+        if admission is None or preflight is None or ruleset is None:
+            raise NmpHttpError("admission, preflight and ruleset evidence are required")
+        if not isinstance(ring, Mapping):
+            raise NmpHttpError("trusted ring evidence is unavailable")
+        incarnation = ring.get("incarnation", ring.get("ring_incarnation"))
+        epoch = ring.get("epoch", ring.get("ring_epoch"))
+        if not isinstance(incarnation, str) or not incarnation:
+            raise NmpHttpError("trusted ring incarnation is unavailable")
+        if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch < 1:
+            raise NmpHttpError("trusted ring epoch is unavailable")
+        if isinstance(cancel_epoch, bool) or not isinstance(cancel_epoch, int) or cancel_epoch < 0:
+            raise NmpHttpError("trusted cancellation epoch is unavailable")
+
+        result: dict[str, Any] = {
+            "admission": admission,
+            "preflight": preflight,
+            "ruleset_snapshot": ruleset,
+            "ring_incarnation": incarnation,
+            "ring_epoch": epoch,
+            "cancel_epoch": cancel_epoch,
+            "capability": rows,
+            "required_capability": required,
+            "workspace": workspace,
+        }
+        if owner is not None:
+            result["expected_worker_owner"] = owner
+        return result
 
 
 class NmpHttpAdapter:
@@ -128,6 +272,38 @@ class NmpHttpAdapter:
               lease_ticks: int = 64, job_id: str | None = None,
               expected_generation: int | None = None,
               max_attempts: int = 8) -> dict[str, Any] | None:
+        # Providers that can preselect a runner do so before lease_job writes a
+        # durable lease. A worker with no verified capability must not strand a
+        # queued job in leased state.
+        select_worker = getattr(self.context_provider, "select_worker", None)
+        if callable(select_worker):
+            self.service._authorize(token, ("worker",))
+            if job_id is not None:
+                candidate = self.service.store.get_job(job_id)
+                candidates = [candidate] if isinstance(candidate, Mapping) else []
+            else:
+                candidates = self.service.store.list_jobs(state="queued", limit=1024)
+            selected_id = None
+            for candidate in candidates:
+                if not isinstance(candidate, Mapping) or candidate.get("kind") != NMP_JOB_KIND:
+                    continue
+                payload = candidate.get("payload")
+                record = payload.get(NMP_PAYLOAD_KEY) if isinstance(payload, Mapping) else None
+                if not isinstance(record, Mapping):
+                    continue
+                try:
+                    packet = _native_packet(record)
+                except (NmpHttpError, ValueError):
+                    continue
+                if candidate.get("state") != "queued":
+                    continue
+                if select_worker(packet, owner):
+                    selected_id = candidate.get("job_id")
+                    break
+            if selected_id is None:
+                return None
+            job_id = str(selected_id)
+
         job = self.service.lease_job(
             token, owner, now_tick, lease_ticks,
             expected_generation=expected_generation,
@@ -231,4 +407,4 @@ class NmpHttpAdapter:
         }
 
 
-__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NmpHttpAdapter", "NmpHttpError"]
+__all__ = ["NMP_JOB_KIND", "NMP_PAYLOAD_KEY", "NmpHttpAdapter", "NmpHttpError", "WaveStoreNmpContextProvider"]
