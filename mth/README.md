@@ -119,3 +119,13 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
 The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step-energy, pair, DFT, coupling, and transmission fixtures passed local `nan_cli` and GitHub Actions run `42384223162`. The CI workflow includes all 31 fixtures.
+
+
+## K256 pair-space
+
+- Kernel: `nan16/mth_k256_pair_space_v1.nas`.
+- ABI: `docs/MTH_K256_PAIR_SPACE_ABI_V1.md`.
+- Fixture: `tests/mth_k256_pair_space_v1_test.nas`.
+- Closed-form K256 action: `512U-colsum(U)-rowsum(U)`; matrix-free, O(256²) storage/work.
+- Exact I32 output bound ±2^30 for input raw range ±2^20.
+- Canonical NaN16 verification: workflow run 180 passed.
