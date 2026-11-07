@@ -175,7 +175,7 @@ mth_pf_scalar_right_payload:
 mth_pf_scalar_output_payload:
 .word 0
 mth_pf_scratch:
-\n.word 0
+.word 0
 .word 0
 .word 0
 .word 0
