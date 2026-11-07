@@ -49,7 +49,7 @@ assembled and executed its fixture successfully (5,399 guest steps; HALT). The N
 - `tests/mth_sparse_graph_laplacian_test.nas`: path, disconnected graph, and invalid-input atomicity fixtures.
 - Full ABI and range proof: `docs/MTH_SPARSE_GRAPH_ABI.md`.
 
-The sparse kernel is native-verified by canonical NaN16 CI run #58 (path, disconnected, and invalid-input atomicity fixtures; 20,737 guest steps). Weighted CSR v2 is specified in `docs/MTH_WEIGHTED_CSR_ABI_V2.md`; its NaN16 kernel and exact weighted-path fixture are source-written and awaiting canonical CI. It is not native-verified or dispatchable.
+The sparse kernel is native-verified by canonical NaN16 CI run #58 (path, disconnected, and invalid-input atomicity fixtures; 20,737 guest steps). Weighted CSR v2 is native-verified by canonical NaN16 CI run #107 (two weighted path oracles and invalid-zero-weight atomicity; 41,253 guest steps). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`.
 
 
 The sparse graph fixture emits stage markers to distinguish preflight, path-oracle, and disconnected-oracle failures during initial native bring-up.
@@ -62,4 +62,4 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Fixture: `tests/mth_sparse_weighted_graph_laplacian_v2_test.nas`.
 - State: Q16.16/I32 input in [-64,+64]; U8 integer edge weights 1..255; signed I64 Q16.16 output.
 - The caller supplies a 16-word scratch frame. The row accumulator is widened to I64; each edge product is exact signed I32.
-- Exact weighted-path and invalid-zero-weight atomicity fixtures are wired into the canonical NaN16 workflow. Evidence remains pending until that workflow passes.
+- Exact weighted-path and invalid-zero-weight atomicity fixtures are wired into the canonical NaN16 workflow. Canonical NaN16 CI run #107 passed the weighted path and invalid-zero-weight atomicity fixture (41,253 guest steps). Kernel SHA-256: `8958bf432cd4052576d9b950d9e50c1853bc96d90bc3c50680bf9013ab36d613`. This is native_verified only for the stated v2 contract.
