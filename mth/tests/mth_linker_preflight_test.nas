@@ -123,7 +123,7 @@ mth_link_pf_main:
   CMP r5,r6
   JMP[NE] @mth_link_pf_fail
   ST r5,r0,@mth_link_pf_program_id
-  MOVI r6,3
+  MOVI r6,256
   CMP r9,r6
   JMP[NE] @mth_link_pf_fail
   CMP r10,r0
