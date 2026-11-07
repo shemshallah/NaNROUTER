@@ -7,12 +7,15 @@
 ;   member 1: class 10, tag 1 in payload[31:16], bswap16(chunk) in payload[15:0]
 ; Decode requires both class/tag values and agreement after byte swapping.
 ;
-; ABI: r13=1. mth_de_encode: r1=chunk, r2=destination; writes 2 words.
-;      mth_de_decode: r1=pair address; returns r1=chunk, r2=1 on success;
-;      returns r1=0,r2=0 on invalid/mismatched pair.
-; NOTE: the inherited save slots make encode/decode non-reentrant. Do not call
-; these routines concurrently against the same code/data image until the ABI
-; is converted to caller-owned stack frames and tested.
+; REENTRANT ABI (r13=1):
+;   mth_de_encode: r1=chunk, r2=destination word address, r12=3-word caller frame.
+;     frame[0]=saved return address, frame[1]=chunk, frame[2]=destination.
+;   mth_de_decode: r1=pair address, r12=1-word caller frame.
+;     frame[0]=saved return address.
+;   encode returns no status; decode returns r1=chunk,r2=1 on success,
+;   and r1=0,r2=0 on invalid/mismatched pair.
+; The caller must provide a writable frame that is not shared by overlapping calls.
+; No routine-local static return or operand slots are used.
 
 .equ MTH_DE_CLASS 10
 .equ MTH_DE_TAG_BE 0
@@ -30,32 +33,34 @@ mth_de_bswap16:
   BOOL.14 r1,r2,r3
   RET
 
+; r1=chunk, r2=destination, r12=caller frame[3]
 mth_de_encode:
-  ST r15,r0,@mth_de_enc_ret
-  ST r1,r0,@mth_de_enc_chunk
-  ST r2,r0,@mth_de_enc_dst
+  STW r15,r12,r0
+  ADD r6,r12,r13
+  STW r1,r6,r0
+  ADD r6,r6,r13
+  STW r2,r6,r0
+
   MOVI r4,#MTH_DE_CLASS
   STW r1,r2,r4
-  LD r1,r0,@mth_de_enc_chunk
+  MOVI r6,1
+  LD r1,r12,r6
   CALL @mth_de_bswap16
   MOVI r4,#MTH_DE_TAG_LE
   SHL r4,r4,16
   BOOL.14 r1,r1,r4
-  LD r2,r0,@mth_de_enc_dst
+  MOVI r6,2
+  LD r2,r12,r6
   ADD r2,r2,r13
   MOVI r4,#MTH_DE_CLASS
   STW r1,r2,r4
-  LD r15,r0,@mth_de_enc_ret
-  RET
-mth_de_enc_ret:
-.word 0
-mth_de_enc_chunk:
-.word 0
-mth_de_enc_dst:
-.word 0
 
+  LD r15,r12,r0
+  RET
+
+; r1=pair address, r12=caller frame[1]
 mth_de_decode:
-  ST r15,r0,@mth_de_dec_ret
+  STW r15,r12,r0
   LDN r3,r1,0
   MOVI r4,#MTH_DE_CLASS
   CMP r3,r4
@@ -81,15 +86,14 @@ mth_de_decode:
   JMP[NE] @mth_de_bad
   ADD r1,r4,r0
   MOVI r2,1
-  LD r15,r0,@mth_de_dec_ret
+  LD r15,r12,r0
   RET
+
 mth_de_bad:
   MOVI r1,0
   MOVI r2,0
-  LD r15,r0,@mth_de_dec_ret
+  LD r15,r12,r0
   RET
-mth_de_dec_ret:
-.word 0
 
 mth_de_delim:
   MOVI r2,#MTH_DE_TAG_DELIM
