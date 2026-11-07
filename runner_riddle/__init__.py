@@ -12,6 +12,8 @@ from .wave_adapter import WaveAdapterConfig, WaveAdapterError
 from .wave_node import NannetNodeBinding, NannetNodeError, NannetNodeRegistry
 from .wave_aperture import ApertureDescriptor, ApertureError
 from .wave_service import WaveService, WaveServiceError
+from .wave_http import WaveHttpServer
+from .mth_registry import MthKernelDescriptor, MthPlan, MthPlanError, MthRegistry, MthRegistryError
 from .http_service import RiddleService, ServiceConfigError
 
 __all__ = [
@@ -27,5 +29,7 @@ __all__ = [
     "NannetNodeBinding", "NannetNodeError", "NannetNodeRegistry",
     "ApertureDescriptor", "ApertureError",
     "WaveService", "WaveServiceError",
+    "WaveHttpServer",
+    "MthKernelDescriptor", "MthPlan", "MthPlanError", "MthRegistry", "MthRegistryError",
     "RiddleService", "ServiceConfigError",
 ]

@@ -3,6 +3,7 @@
 **Status:** active implementation ledger.
 **Canonical plan:** `docs/game_plan_deep.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
+**Continuation plan:** `docs/DEEP_PLAN_CONT.md`.
 **Rule:** math kernels are NaN16; host code is transport/scheduling/storage only. A source file is not CI-verified until the canonical GitHub Actions workflow runs.
 
 ## Current baseline
@@ -13,10 +14,11 @@
 - [x] Weighted graph energy Q32.32 — local native_verified.
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
-- [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [x] 31/31 native MTH fixtures pass locally with `nan_cli`.
-- [x] 124 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42384223162` (65/65 steps).
+- [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
+- [ ] Add single-active runner-ring scheduler and handoff tests.
+- [x] 33/33 native MTH fixtures pass locally with `nan_cli`.
+- [x] 161 Python tests pass.
+- [x] Expanded GitHub Actions native workflow passed prior run `42384223162` (65/65 steps); 33-fixture run pending.
 
 ## R0 — Contract and storage freeze
 
@@ -130,13 +132,13 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 31 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 33 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
 - [x] Add `docs/GRAPH_SPECTRAL_MTH_PLAN.md` implementation update.
 - [x] Add `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
-- [x] Run the expanded 31-fixture CI workflow on GitHub Actions.
+- [x] Run the prior 31-fixture CI workflow on GitHub Actions.
 - [ ] Register final CI digests in the production MC0DB.
 
 ## Agent dispatch board
@@ -156,14 +158,14 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-31/31 fixtures passed
+33/33 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 124 tests
+Ran 161 tests
 OK
 ```
 
-CI: `42384223162` — 65/65 steps passed for the 31-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI prior: `42384223162` — 65/65 steps for the 31-fixture set; 33-fixture run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

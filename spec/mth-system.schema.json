@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nanrouter.local/spec/mth-system.schema.json",
+  "title": "NaNROUTER MTH system registry and plan documents",
+  "description": "Read-only registry descriptors and deterministic MTH plan documents. This schema describes contracts; it does not execute kernels or prove numerical results.",
+  "oneOf": [
+    {"$ref": "#/$defs/registryDocument"},
+    {"$ref": "#/$defs/planDocument"}
+  ],
+  "$defs": {
+    "kernelId": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 128,
+      "pattern": "^mth\\.[a-z0-9][a-z0-9_.-]{0,120}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "planName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "typedValue": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z].{0,127}$"
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9_.:>-]{0,63}$"
+    },
+    "precision": {
+      "type": "string",
+      "enum": ["float32", "u16->i32", "u32", "q16.16", "q32.32"]
+    },
+    "kernelStatus": {
+      "type": "string",
+      "enum": ["declared", "source_written", "native_verified", "degraded", "revoked"]
+    },
+    "kernelDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kernel_id",
+        "version",
+        "source",
+        "fixture",
+        "marker",
+        "steps",
+        "precision",
+        "workspace_words",
+        "shape",
+        "status",
+        "ci_verified",
+        "source_digest",
+        "fixture_digest",
+        "tags"
+      ],
+      "properties": {
+        "kernel_id": {"$ref": "#/$defs/kernelId"},
+        "version": {"type": "integer", "minimum": 1},
+        "source": {"$ref": "#/$defs/relativePath"},
+        "fixture": {"$ref": "#/$defs/relativePath"},
+        "marker": {"type": "string", "minLength": 1, "maxLength": 256},
+        "steps": {"type": "integer", "minimum": 1},
+        "precision": {"$ref": "#/$defs/precision"},
+        "workspace_words": {"type": "integer", "minimum": 0},
+        "shape": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "status": {"$ref": "#/$defs/kernelStatus"},
+        "ci_verified": {"type": "boolean"},
+        "source_digest": {"$ref": "#/$defs/digest"},
+        "fixture_digest": {"$ref": "#/$defs/digest"},
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tag"}
+        }
+      }
+    },
+    "planStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kernel_id", "inputs", "outputs", "depends_on"],
+      "properties": {
+        "name": {"$ref": "#/$defs/planName"},
+        "kernel_id": {"$ref": "#/$defs/kernelId"},
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "depends_on": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/planName"}
+        }
+      }
+    },
+    "planSpecStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kernel_id"],
+      "properties": {
+        "name": {"$ref": "#/$defs/planName"},
+        "kernel_id": {"$ref": "#/$defs/kernelId"},
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "depends_on": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/planName"}
+        }
+      }
+    },
+    "planSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps"],
+      "properties": {
+        "schema": {"const": "nanrouter.mth-plan-spec.v1"},
+        "version": {"type": "integer", "minimum": 1},
+        "plan_id": {"$ref": "#/$defs/planName"},
+        "workspace_words": {"type": "integer", "minimum": 0},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/planSpecStep"}
+        }
+      }
+    },
+    "registryDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "manifest", "kernels"],
+      "properties": {
+        "schema": {"const": "nanrouter.mth-registry.v1"},
+        "version": {"type": "integer", "minimum": 1},
+        "manifest": {"type": ["string", "null"]},
+        "kernels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/kernelDescriptor"}
+        }
+      }
+    },
+    "planDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "plan_id",
+        "steps",
+        "kernel_ids",
+        "inputs",
+        "outputs",
+        "workspace_words",
+        "deterministic"
+      ],
+      "properties": {
+        "schema": {"const": "nanrouter.mth-plan.v1"},
+        "version": {"type": "integer", "minimum": 1},
+        "plan_id": {"$ref": "#/$defs/planName"},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/planStep"}
+        },
+        "kernel_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/kernelId"}
+        },
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/typedValue"}
+        },
+        "workspace_words": {"type": "integer", "minimum": 0},
+        "deterministic": {"const": true}
+      }
+    }
+  }
+}

@@ -170,6 +170,17 @@ jobs:
           cat build/mth/void.err
           grep -q '^MTH GRAPH VOID POTENTIAL PASS' build/mth/void.out
 
+      - name: Assemble 256-block centrosymmetry fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry_block16_test.nas > build/mth/centro256b.nan
+
+      - name: Execute 256-block centrosymmetry fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/centro256b.nan --steps 20000000 --serial > build/mth/centro256b.out 2> build/mth/centro256b.err
+          cat build/mth/centro256b.out
+          cat build/mth/centro256b.err
+          grep -q '^MTH CENTROSYMMETRY BLOCK16 PASS' build/mth/centro256b.out
+
       - name: Assemble centrosymmetry certificate fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_centrosymmetry_128_test.nas > build/mth/centro128.nan
@@ -257,6 +268,17 @@ jobs:
           cat build/mth/power128.out
           cat build/mth/power128.err
           grep -q '^MTH POWER_ITER128 PASS' build/mth/power128.out
+
+      - name: Assemble 256-block matvec fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_matvec256_block16_test.nas > build/mth/matvec256b.nan
+
+      - name: Execute 256-block matvec fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/matvec256b.nan --steps 20000000 --serial > build/mth/matvec256b.out 2> build/mth/matvec256b.err
+          cat build/mth/matvec256b.out
+          cat build/mth/matvec256b.err
+          grep -q '^MTH MATVEC256 BLOCK16 PASS' build/mth/matvec256b.out
 
       - name: Assemble 128-matvec fixture with NaN16 source assembler
         run: |

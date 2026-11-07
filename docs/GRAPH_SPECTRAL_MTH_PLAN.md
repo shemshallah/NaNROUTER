@@ -230,10 +230,10 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-31/31 fixtures passed
+33/33 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 124 tests
+Ran 161 tests
 OK
 ```
 

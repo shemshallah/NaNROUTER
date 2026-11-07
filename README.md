@@ -112,17 +112,18 @@ MTH does not add a second execution universe, runner ring, math service, or task
 The 255-head + one-NANNET-node architecture and its NaN16-native implementation are tracked in:
 
 - `docs/game_plan_deep.md` — full ring/void/NANNET game plan.
+- `docs/DEEP_PLAN_CONT.md` — continuation architecture, 256×256 paging, shard/NANNET0 integration, and MTH System v1.
 - `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
 - `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
 - `spec/ring-255.json` — deterministic C255 CSR and 255+1 page map.
-- `spec/wave-capabilities.json` — 31-kernel capability manifest.
+- `spec/wave-capabilities.json` — 33-kernel capability manifest.
 - `runner_riddle/wave_store.py` — BS0DB/MC0DB wave job, lease, capability, seal, and signature store.
 - `runner_riddle/wave_service.py` — authenticated submit/worker/admin facade over the wave store.
 - `runner_riddle/wave_node.py` — one NANNET node binding per universe.
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 31 fixtures and 124 Python tests pass locally. GitHub Actions run `42384223162` passed all 65 native steps for the 31-fixture set.
+The expanded native workflow is `.github/workflows/mth-native-contract.yml`. The 33 fixtures and 161 Python tests pass locally. The prior 31-fixture GitHub Actions run `42384223162` passed 65 native steps; the 33-fixture run is pending.
 
 ## Runner Riddle
 

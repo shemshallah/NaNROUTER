@@ -176,6 +176,21 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.centrosymmetry256.block16.f32",
+      "source": "mth/nan16/mth_centrosymmetry_block16.nas",
+      "fixture": "mth/tests/mth_centrosymmetry_block16_test.nas",
+      "marker": "MTH CENTROSYMMETRY BLOCK16 PASS",
+      "steps": 337623,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.vector.dot256.f32",
       "source": "mth/nan16/mth_dot256_f32.nas",
       "fixture": "mth/tests/mth_dot256_test.nas",
@@ -315,6 +330,21 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.matvec256.block16.f32",
+      "source": "mth/nan16/mth_matvec256_block16.nas",
+      "fixture": "mth/tests/mth_matvec256_block16_test.nas",
+      "marker": "MTH MATVEC256 BLOCK16 PASS",
+      "steps": 148561,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     },
     {
       "kernel_id": "mth.power_iter.128.f32",

@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 31/31 native MTH fixtures passed locally and in GitHub Actions run `42384223162`; 124 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 65 steps on `main` for commit `0c75e24`.
+**Result:** 33/33 native MTH fixtures passed locally; 161 Python tests passed.
+**CI:** the prior 31-fixture set passed run `42384223162` (65/65 steps). The 33-fixture run is pending.
 
 ## Native fixtures
 
@@ -40,12 +40,14 @@
 | 29 | 128×128 power iteration | `mth/tests/mth_power_iter128_test.nas` | 758,847 | PASS | yes |
 | 30 | Rank-1 low-rank add | `mth/tests/mth_lowrank_add_128_test.nas` | 1,056,470 | PASS | yes |
 | 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | yes |
+| 32 | 256 block matvec | `mth/tests/mth_matvec256_block16_test.nas` | 148,561 | PASS | pending |
+| 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | pending |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -v
-Ran 124 tests
+Ran 161 tests
 OK
 ```
 
@@ -58,20 +60,22 @@ Covered:
 - wave aperture descriptor/decomposition selector (9 tests);
 - wave adapter contract (7 tests);
 - authenticated WaveService submit/worker/admin facade (13 tests);
+- MTH system registry/planner (25 tests);
+- standalone authenticated Wave HTTP adapter (12 tests);
 - capability manifest registration into MC0DB (4 tests).
 
 ## Fixture runner
 
 ```
 python3 tools/run_mth_fixtures.py
-23/23 fixtures passed
+33/33 fixtures passed
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 31 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 33 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 

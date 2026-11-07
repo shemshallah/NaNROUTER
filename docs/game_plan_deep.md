@@ -1272,7 +1272,18 @@ The key rule:
 
 > **BS0DB and MC0DB are durable control/evidence stores, not the canonical universe. NaNLMind’s ledger is canonical; the 8 MiB universe is the canonical wave-page store; BS0DB/MC0DB hold durable replicas, indexes, traces, seals, and control state.**
 
-The six CPU runners are execution capacity, not six math authorities and not six per-universe network nodes. Each runner advertises:
+The six-slot runner ring (`MC0:0/R0..R5` / `NANROUTER-0..5`) is **single-active** execution capacity, not six simultaneous math authorities and not six per-universe network nodes.
+
+| Runner-ring rule | Value |
+|---|---|
+| Logical slots | 6 |
+| Active slots at any instant | **1** |
+| Active working-memory ceiling | **7 GiB** |
+| Standby slots | 5, no live working set |
+| Cycle | drain leases, checkpoint, release memory, activate next slot |
+| Purpose | 24/7 availability with clean handoff, not six-way parallel execution |
+
+The other five slots are standby. A slot must not activate while the previous slot has live leases, live memory, or an uncommitted checkpoint. Each runner advertises:
 
 - kernel IDs and native-verification digests;
 - maximum workspace and precision lanes;
@@ -1282,7 +1293,7 @@ The six CPU runners are execution capacity, not six math authorities and not six
 
 A runner rejects a job when the operator digest, workspace, precision lane, ACL, epoch, or cancellation state does not match. The runner ring observes and reconciles control state; it does not own the master route cache or the mathematical truth.
 
-The NANNET node is one logical node per universe, not one per CPU runner. Koyeb BS0:0 is the persistent physical ingress/egress gateway. The six CPU runners are MC0:0 execution slots. A universe’s single NANNET node is registered in MC0DB and uses the Koyeb gateway; it is not a CPU runner, not a head, and not a per-runner socket.
+The NANNET node is one logical node per universe, not one per runner slot. Koyeb BS0:0 is the persistent physical ingress/egress gateway. The six-slot runner ring is MC0:0/R0–R5; only one slot is active at a time. A universe’s single NANNET node is registered in MC0DB and uses the Koyeb gateway; it is not a runner slot, not a head, and not a per-runner socket.
 
 #### Data placement
 
@@ -1304,7 +1315,7 @@ The NANNET node is one logical node per universe, not one per CPU runner. Koyeb 
 
 1. A universe’s NANNET node submits a signed, typed wave/MTH job to Koyeb BS0:0.
 2. BS0DB stores the intake record; NaNROUTER validates identity, ACL, range, lease, and rate.
-3. MC0DB holds the job and lease; one of the six CPU runners leases it.
+3. MC0DB holds the job and lease; the single active runner slot leases it.
 4. The runner fetches the required pages, executes the native NaN16 kernel with the declared digest/workspace, and writes the result and trace.
 5. BS0DB stores the trace envelope, state seal, and signature; MC0DB stores the candidate operator/capability and match index.
 6. NaNLMind validates and, if appropriate, commits through the existing generation-checked ledger.
@@ -1350,16 +1361,17 @@ Freeze before writing wave kernels:
 
 1. The wave engine never becomes the owner of state.
 2. Each universe has exactly 255 local heads and one NANNET node.
-3. The six control heads never become wave-training vertices.
-4. The NANNET node is never counted, trained, or overwritten as a head.
-5. The ring binding is signed, versioned, and ACL-checked.
-6. The NANNET node cannot inject unsolicited state into the universe.
-7. A state seal does not transfer authority.
-8. A candidate operator cannot self-promote.
-9. A spectral match is evidence, not truth.
-10. A mathematical symmetry is not an authorization symmetry.
-11. The host does not compute the mathematics.
-12. A plan is not an implementation.
+3. The six-slot runner ring has exactly one active slot and a 7 GiB active-memory ceiling.
+4. The six control heads never become wave-training vertices.
+5. The NANNET node is never counted, trained, or overwritten as a head.
+6. The ring binding is signed, versioned, and ACL-checked.
+7. The NANNET node cannot inject unsolicited state into the universe.
+8. A state seal does not transfer authority.
+9. A candidate operator cannot self-promote.
+10. A spectral match is evidence, not truth.
+11. A mathematical symmetry is not an authorization symmetry.
+12. The host does not compute the mathematics.
+13. A plan is not an implementation.
 
 ---
 
@@ -1716,7 +1728,7 @@ Open mathematical questions:
 11. **All mathematics is NaN16.** The host launches, transports, and compares bytes; it does not compute the math. Memory is 512 KiB guest working set, 8 MiB persistent universe, no dense 65,536×65,536 product.
 12. **The six BSR heads remain control.** Each universe has 255 heads: 249 learning + 6 control; the 256th ring position is the NANNET port. A mathematical symmetry is not an authorization symmetry.
 13. **The state seal is a cartridge.** A portable, signed, replayable record, not a consciousness claim and not a transfer of authority.
-14. **Use the fabric we have.** NaNROUTER routes; the six CPU runners execute; Koyeb BS0DB stores ingress/egress, traces, seals, and signatures; MC0DB stores control/meta, candidates, capabilities, and match indexes; the 8 MiB universe stores 255 head pages + 1 NANNET page; the 2 GiB overbootstrap stays on Bootstrap.
+14. **Use the fabric we have.** NaNROUTER routes; the single-active six-slot runner ring executes with a 7 GiB active ceiling; Koyeb BS0DB stores ingress/egress, traces, seals, and signatures; MC0DB stores control/meta, candidates, capabilities, and match indexes; the 8 MiB universe stores 255 head pages + 1 NANNET page; the 2 GiB overbootstrap stays on Bootstrap.
 15. **Build the exact small thing first.** R0 contract, R1 exact geometry, R2 void, R3 spectral engine, R4 wave, R5 aperture, R6 product, R7 creativity, R8 NANNET node, R9 LM. No vision stage before its mathematical gate.
 
 The central sentence is:
