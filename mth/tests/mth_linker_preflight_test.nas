@@ -109,32 +109,8 @@ mth_link_pf_main:
   JMP[EQ] @mth_link_pf_fail_pre_25
   ST r10,r0,@mth_link_pf_contract
 
-  ; The registry resolver owns scratch registers; restore the MTH ABI scratch base.
+  ; mth_admit performs both gates; pass the exact registry contract pointer.
   MOVI r12,@mth_link_pf_scratch
-  ; The exact contract pointer returned by :: now gates output publication.
-  MOVI r1,@mth_link_pf_left
-  MOVI r2,@mth_link_pf_right
-  LD r3,r0,@mth_link_pf_contract
-  MOVI r4,1
-  MOVI r5,@mth_link_pf_output
-  CALL @mth_preflight
-  CMP r1,r0
-  JMP[NE] @mth_link_pf_fail_pre_26
-  LD r6,r5,0
-  MOVI r7,3
-  CMP r6,r7
-  JMP[NE] @mth_link_pf_fail_pre_27
-  LD r6,r5,1
-  CMP r6,r0
-  JMP[NE] @mth_link_pf_fail_pre_28
-  LD r6,r5,2
-  MOVI r7,1
-  CMP r6,r7
-  JMP[NE] @mth_link_pf_fail_pre_29
-  LD r6,r5,4
-  MOVI r7,2
-  CMP r6,r7
-  JMP[NE] @mth_link_pf_fail_pre_30
 
   ; Reuse the exact registry-owned contract pointer through composed admission.
   ; This binds the authoritative rule snapshot first, then concrete typed leaves.
