@@ -49,9 +49,37 @@ mth_de_test_main:
   CMP r2,r0
   JMP[NE] @mth_de_fail
 
+  ; Wrong tag in the second member must be rejected.
+  MOVI r2,4100
+  LD r5,r2,1
+  MOVI r6,0xFFFF
+  BOOL.8 r5,r5,r6
+  MOVI r7,2
+  SHL r7,r7,16
+  BOOL.14 r5,r5,r7
+  LDN r6,r2,1
+  STW r5,r2,r6
+  MOVI r1,4100
+  MOVI r12,@mth_de_frame_b
+  CALL @mth_de_decode
+  CMP r2,r0
+  JMP[NE] @mth_de_fail
+
   ; Wrong first-member class must be rejected.
   MOVI r2,4096
   MOVI r5,9
+  MOVI r6,9
+  STW r5,r2,r6
+  MOVI r1,4096
+  MOVI r12,@mth_de_frame_a
+  CALL @mth_de_decode
+  CMP r2,r0
+  JMP[NE] @mth_de_fail
+
+  ; Wrong second-member class must be rejected.
+  MOVI r2,4096
+  ADD r2,r2,r13
+  MOVI r5,0
   MOVI r6,9
   STW r5,r2,r6
   MOVI r1,4096
