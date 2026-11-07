@@ -35,4 +35,5 @@ jobs:
         run: |
           nan0s/aarch64/android/nan_cli --img build/mth/k256.nan --steps 2000000 --serial > build/mth/k256.out 2> build/mth/k256.err
           cat build/mth/k256.out
+          cat build/mth/k256.err
           grep -q '^MTH K256 LAPLACIAN PASS' build/mth/k256.out
