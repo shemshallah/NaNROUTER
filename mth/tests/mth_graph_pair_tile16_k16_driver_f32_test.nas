@@ -1,5 +1,6 @@
 .org 0
 JMP @mth_pair_driver_test_main
+.include "../nan16/mth_graph_pair_tile16_k16_f32.nas"
 .include "../nan16/mth_graph_pair_tile16_k16_driver_f32.nas"
 
 mth_pair_driver_test_main:
