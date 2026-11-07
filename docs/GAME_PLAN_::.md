@@ -2031,27 +2031,61 @@ A rule record must preserve the orthogonal axes. At minimum:
 A client may **claim** a validity level; the validator assigns `earned_validity`. The claimed value can never be used as authority. Until a trusted proof checker exists, production validity is capped at V2 and proof candidates are explicitly unchecked.
 
 
-## 23. Native preflight gate implementation (2026-11-07)
+## 23. Native rule/candidate preflight gate (2026-11-07)
 
-The first executable gate is implemented at `mth/nan16/mth_preflight_gate.nas`.
-It is native NaN16 guest code, not a host-language math implementation.
+The rule-snapshot gate is implemented at `mth/nan16/mth_preflight_gate.nas`.
+It is native NaN16 guest code, not a host-language mathematical validator.
 
-The gate checks:
-- ABI version and exact rule epoch;
-- ordered input/output type signature;
-- both operand domains against the authoritative rule domain;
-- optional equal-dimension shape policy;
-- required capability subset against available capabilities;
-- minimum proof level and enabled policy;
-- eight words (256 bits) of the authoritative rule digest.
+It checks ABI version, exact rule epoch, ordered signature, operand domains,
+optional shape policy, capability subset, minimum proof level, enabled policy,
+and all eight words (256 bits) of the authoritative rule digest. It returns
+status 0 for allow and typed rule/candidate denial statuses 1–9.
 
-It returns status 0 for allow and typed denial statuses 1–9. The caller must bind
-the exact candidate, rule epoch, and digest into NMP/lease admission. This
-primitive does not replace ACL authorization, numerical definedness, proof
-verification, or runner health/capacity checks.
+This is the first gate in a composed admission path. It does not itself validate
+concrete leaf payloads, prove theorems, grant ACL access, execute numerical
+kernels, or check runner health/capacity.
 
-A native guest fixture is added at `mth/tests/mth_preflight_gate_test.nas`.
-It checks the accepted descriptor and a stale candidate epoch. The dedicated
-workflow `.github/workflows/native-preflight-gate.yml` assembles the fixture
-with the canonical NaN0S toolchain and executes it under `nan_cli`. CI evidence
-must be observed before claiming the fixture passes.
+## 24. Typed-object preflight and composed admission
+
+The concrete-object gate is implemented at `mth/nan16/mth_preflight.nas`.
+It consumes the canonical 10-word operator contract returned by the NaN0S
+mathematical registry and two 8-word leaf descriptors. It validates concrete
+object kinds, ranks, scalar domains, shape policy, input/output capacities,
+required capability bits, and declared preconditions. Output metadata is
+published only after all checks pass; denial paths leave the output descriptor
+unchanged.
+
+`mth/nan16/mth_admission.nas` composes the rule/candidate gate with typed
+leaf applicability. The canonical `::` linker resolves the operator contract
+and passes that exact contract pointer into typed preflight; it does not build
+a second registry or reconstruct the contract on the host.
+
+## 25. Payload-range safety
+
+Precondition bit 1 treats payloads as half-open word ranges
+`[base, base + capacity)`, not just base pointers. The NaN16 gate rejects
+partial overlap between the reserved output range and either input range, and
+rejects address-plus-capacity wrap before output metadata is committed. The
+native regression uses full output capacity so the alias predicate—not an
+earlier capacity check—is the rejection under test. It covers partial overlap
+against both left and right operands and verifies output-descriptor atomicity.
+
+## 26. Verification boundary and remaining integration
+
+The native MTH workflow assembles and executes the rule gate, typed preflight,
+composed admission, and linker-to-preflight fixtures with the canonical NaN0S
+toolchain. These are applicability checks, not a theorem prover or a numerical
+execution engine.
+
+The Android integration branch vendors the same NaN16 guest sources and calls
+the composed admission routine through a thin VM adapter. Its allow receipt
+contains the exact rule epoch and all eight digest words; Android compares the
+receipt to the submitted descriptors before exposing it. The receipt is
+correlation evidence, not a cryptographic signature.
+
+**Still required before claiming end-to-end execution authorization:** bind the
+guest receipt to candidate ID, math snapshot, ruleset snapshot, packet digest,
+and current ring incarnation/epoch; then enforce that binding at NMP submission
+and lease admission. `MthSystem.lease()` still enforces the active slot and
+JAHS handoff seal but does not yet consume the native preflight receipt. Do not
+claim there is no bypass until that path is wired and regression-tested.
