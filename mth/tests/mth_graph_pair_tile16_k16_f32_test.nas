@@ -46,6 +46,8 @@ mth_pair_k16_test_main:
   JMP[NE] @mth_pair_k16_fail
 
   ; K block 32..47: clear first-term inputs, then U_IK[1,2]=2 and L_JK[2,2]=2.
+  MOVI r5,0
+  MOVHI r5,0x4000
   LA r4,@mth_pair_k16_li
   MOVI r6,17
   ADD r4,r4,r6
