@@ -100,6 +100,7 @@ class MthSystem:
         workspace_word_bytes: int = DEFAULT_WORKSPACE_WORD_BYTES,
         enforce_active_slot: bool = True,
         math_health: Callable[[], Mapping[str, Any]] | None = None,
+        require_math_admission: bool = False,
     ) -> None:
         if not isinstance(registry, MthRegistry):
             raise MthSystemConfigError("registry must be an MthRegistry")
@@ -115,6 +116,8 @@ class MthSystem:
             )
         if not isinstance(enforce_active_slot, bool):
             raise MthSystemConfigError("enforce_active_slot must be a boolean")
+        if not isinstance(require_math_admission, bool):
+            raise MthSystemConfigError("require_math_admission must be a boolean")
         if math_health is not None and not callable(math_health):
             raise MthSystemConfigError("math_health must be callable")
 
@@ -156,6 +159,7 @@ class MthSystem:
         )
         self.enforce_active_slot = enforce_active_slot
         self.math_health = math_health
+        self.require_math_admission = require_math_admission
 
     def __repr__(self) -> str:
         return (
@@ -229,6 +233,16 @@ class MthSystem:
                 f"job workspace {job_workspace} words is below the plan's "
                 f"required {required_words} words"
             )
+        if self.require_math_admission:
+            admission = payload.get("math_admission") if isinstance(
+                payload, Mapping
+            ) else None
+            if not isinstance(admission, Mapping) or str(
+                admission.get("verdict")
+            ) != "VALID":
+                raise MthSystemPlanError(
+                    "math submission requires a VALID admission payload"
+                )
 
         return self.service.submit_job(
             submit_token,
@@ -521,6 +535,7 @@ class MthSystem:
                 ),
             },
             "enforce_active_slot": self.enforce_active_slot,
+            "require_math_admission": self.require_math_admission,
         }
 
 

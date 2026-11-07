@@ -723,6 +723,12 @@ class MathStore:
                 "commit_evidence": self._table_count(
                     self.bs0_path, "math_commit_evidence"
                 ),
+                "nmp_packets": self._table_count(
+                    self.mc0_path, "math_nmp_packet"
+                ),
+                "nmp_transitions": self._table_count(
+                    self.mc0_path, "math_nmp_transition"
+                ),
                 "events": self._table_count(self.bs0_path, "math_event"),
                 "payloads": self._table_count(self.bs0_path, "math_payload"),
             }

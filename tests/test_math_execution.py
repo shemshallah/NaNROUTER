@@ -258,8 +258,10 @@ class MathExecutionTests(unittest.TestCase):
         self.assertEqual(lease.owner, "MC0:0/R0")
         self.assertEqual(lease.workspace_words, 1)
         self.assertEqual(lease.memory_bytes, 8)
-        result = self.bridge.execute(lease, lambda: "a" * 64, now_tick=1)
-        self.assertEqual(result.state, "COMPLETED")
+        result = self.bridge.execute(
+            lease, lambda: "a" * 64, now_tick=1, commit=True,
+        )
+        self.assertEqual(result.state, "COMMITTED")
         self.assertEqual(result.job_state, "done")
         self.assertTrue(result.ring_released)
         self.assertEqual(dict(self.bridge._ring_resources), {})
@@ -267,8 +269,20 @@ class MathExecutionTests(unittest.TestCase):
         self.assertEqual(job["state"], "done")
         self.assertEqual(job["result_digest"], "a" * 64)
         projection = self.bridge.project(result.packet, job=job, now_tick=1)
-        self.assertEqual(projection.state, "COMPLETED")
+        self.assertEqual(projection.state, "COMMITTED")
         self.assertTrue(projection.supported)
+        packet_row = self.math_store.get_nmp_packet(submission.packet_id)
+        self.assertEqual(packet_row["state"], "COMMITTED")
+        transitions = self.math_store.list_nmp_transitions(submission.packet_id)
+        self.assertEqual(
+            [(row["from_state"], row["to_state"]) for row in transitions],
+            [
+                ("PREFLIGHTED", "QUEUED"),
+                ("QUEUED", "EXECUTING"),
+                ("EXECUTING", "COMPLETED"),
+                ("COMPLETED", "COMMITTED"),
+            ],
+        )
 
     def test_duplicate_submit_reuses_one_durable_job(self):
         self.register_capability()
@@ -296,6 +310,15 @@ class MathExecutionTests(unittest.TestCase):
         job = self.wave_store.get_job(submission.job_id)
         self.assertEqual(job["state"], "failed")
         self.assertIsNone(self.bridge.lease(submission, now_tick=1))
+        self.assertEqual(
+            self.math_store.get_nmp_packet(submission.packet_id)["state"],
+            "CANCELLED",
+        )
+        transitions = self.math_store.list_nmp_transitions(submission.packet_id)
+        self.assertEqual(
+            (transitions[-1]["from_state"], transitions[-1]["to_state"]),
+            ("QUEUED", "CANCELLED"),
+        )
 
     def test_capability_workspace_must_cover_the_guard_word(self):
         self.scheduler.start(0)

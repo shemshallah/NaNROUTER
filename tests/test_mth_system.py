@@ -17,6 +17,7 @@ from runner_riddle.mth_system import (
     POINT_ZERO_ADDRESS,
     MthSystem,
     MthSystemConfigError,
+    MthSystemPlanError,
     MthSystemSlotError,
     MthSystemWorkspaceError,
 )
@@ -92,6 +93,7 @@ class MthSystemTests(unittest.TestCase):
         job_id: str = "job-1",
         generation: int = 7,
         tick: int = 10,
+        payload=None,
         **kwargs,
     ):
         return (system or self.system).submit_plan(
@@ -101,7 +103,7 @@ class MthSystemTests(unittest.TestCase):
             "universe-0",
             self.operator_digest,
             generation,
-            {"step": 1},
+            {"step": 1} if payload is None else payload,
             tick,
             **kwargs,
         )
@@ -531,6 +533,17 @@ class MthSystemTests(unittest.TestCase):
             self.assertNotIn("R1", route)
             self.assertNotIn("NANROUTER", route)
             self.assertNotIn("MC0:0/R", route)
+
+    def test_math_mode_requires_valid_admission_payload(self):
+        system = self.make_system(require_math_admission=True)
+        plan = self.make_plan(system)
+        with self.assertRaises(MthSystemPlanError):
+            self.submit(plan, system=system)
+        job = self.submit(
+            plan, system=system,
+            payload={"math_admission": {"verdict": "VALID"}},
+        )
+        self.assertEqual(job["state"], "queued")
 
     def test_health_includes_and_gates_on_optional_math_health(self):
         healthy = self.make_system(math_health=lambda: {"status": "green"})

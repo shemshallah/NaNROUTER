@@ -30,6 +30,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from . import nmp
 from .math_objects import MathAdmission, canonical_json, digest_object
+from .math_store import MathConflictError
 from .math_runtime import CompiledMathPlan, MathRuntime
 from .mth_registry import MthPlan
 from .mth_system import MthSystem, MthSystemError, MthSystemSlotError
@@ -1238,6 +1239,66 @@ class MathExecutionBridge:
             raise MathExecutionPlanError("compiled must be a CompiledMathPlan")
         return first, second
 
+    def _nmp_ledger_store(self) -> Any:
+        store = getattr(self.runtime, "store", None)
+        if store is None or not hasattr(store, "put_nmp_packet"):
+            return None
+        return store
+
+    def _nmp_ledger_packet(self, packet: nmp.NmpPacket, tick: int) -> None:
+        store = self._nmp_ledger_store()
+        if store is None:
+            return
+        try:
+            store.put_nmp_packet(packet, tick=tick)
+        except MathConflictError:
+            # A packet identity is immutable; state advances through the
+            # transition ledger, not by rewriting the creation record.
+            pass
+
+    def _nmp_ledger_transition(
+        self,
+        packet_id: str,
+        from_state: str,
+        to_state: str,
+        *,
+        tick: int,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> None:
+        store = self._nmp_ledger_store()
+        if store is None:
+            return
+        record = store.get_nmp_packet(packet_id)
+        current = str(record["state"])
+        if current == to_state:
+            return
+        if current != from_state:
+            raise MathExecutionStateError(
+                f"durable NMP state {current} does not match {from_state}"
+            )
+        store.append_nmp_transition(
+            packet_id, from_state, to_state, tick=tick, evidence=evidence,
+        )
+
+    def _nmp_ledger_advance(
+        self,
+        packet_id: str,
+        to_state: str,
+        *,
+        tick: int,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> None:
+        store = self._nmp_ledger_store()
+        if store is None:
+            return
+        record = store.get_nmp_packet(packet_id)
+        current = str(record["state"])
+        if current == to_state:
+            return
+        store.append_nmp_transition(
+            packet_id, current, to_state, tick=tick, evidence=evidence,
+        )
+
     def submit(
         self,
         packet: nmp.NmpPacket | CompiledMathPlan,
@@ -1389,6 +1450,11 @@ class MathExecutionBridge:
         except Exception:
             self._dedupe.remove(packet.dedupe_key)
             raise
+        self._nmp_ledger_packet(packet, now_tick)
+        self._nmp_ledger_transition(
+            packet.packet_id, nmp.PREFLIGHTED, nmp.QUEUED,
+            tick=now_tick, evidence={"job_id": job_id},
+        )
         self._dedupe.replace(queued)
         return MathExecutionSubmission(
             packet=queued,
@@ -1690,6 +1756,10 @@ class MathExecutionBridge:
                     ring_epoch=binding.epoch,
                 )
                 self._remember_packet(packet)
+                self._nmp_ledger_transition(
+                    packet.packet_id, nmp.QUEUED, nmp.EXECUTING,
+                    tick=now_tick, evidence={"job_id": job_id},
+                )
             elif packet.state != nmp.EXECUTING:
                 raise MathExecutionStateError(
                     f"leased job cannot bind packet state {packet.state}"
@@ -1834,6 +1904,15 @@ class MathExecutionBridge:
             memory_bytes,
         )
         self._remember_packet(packet)
+        self._nmp_ledger_transition(
+            packet.packet_id, nmp.QUEUED, nmp.EXECUTING,
+            tick=now_tick, evidence={
+                "job_id": job_id,
+                "lease_epoch": int(leased_job.get("lease_epoch") or 0),
+                "ring_incarnation": binding.incarnation,
+                "ring_epoch": binding.epoch,
+            },
+        )
         return MathExecutionLease(
             packet=packet,
             job=leased_job,
@@ -2194,6 +2273,14 @@ class MathExecutionBridge:
                     job_id=job_id,
                     lease_epoch=lease_epoch,
                 )
+                self._nmp_ledger_transition(
+                    packet.packet_id, nmp.EXECUTING, nmp.COMPLETED,
+                    tick=now_tick, evidence={
+                        "job_id": job_id,
+                        "lease_epoch": lease_epoch,
+                        "result_digest": digest,
+                    },
+                )
             committed = packet.state == nmp.COMMITTED
             if commit and packet.state == nmp.COMPLETED:
                 commit_provenance = {
@@ -2210,6 +2297,13 @@ class MathExecutionBridge:
                     provenance=commit_provenance,
                     evidence=evidence,
                     tick=now_tick,
+                )
+                self._nmp_ledger_transition(
+                    packet.packet_id, nmp.COMPLETED, nmp.COMMITTED,
+                    tick=now_tick, evidence={
+                        "output_leaf_id": output_leaf_id,
+                        "result_digest": digest,
+                    },
                 )
                 committed = True
         finally:
@@ -2304,6 +2398,11 @@ class MathExecutionBridge:
         else:
             raise MathExecutionStateError(
                 f"packet {packet.packet_id} cannot fail from {packet.state}"
+            )
+        if packet.state in (nmp.FAILED, nmp.CANCELLED):
+            self._nmp_ledger_advance(
+                packet.packet_id, packet.state, tick=now_tick,
+                evidence={"job_id": job_id, "failure_class": failure_class},
             )
         self._remember_packet(packet)
         projection = self.project(packet, job=failed, now_tick=now_tick)
@@ -2501,6 +2600,11 @@ class MathExecutionBridge:
         lease_epoch = int(job.get("lease_epoch") or 0) if job else 0
         if lease_epoch:
             released = self._release_ring(job_id, lease_epoch)
+        if packet.state == nmp.CANCELLED:
+            self._nmp_ledger_advance(
+                packet.packet_id, nmp.CANCELLED, tick=now_tick,
+                evidence={"job_id": job_id, "reason": reason},
+            )
         self._remember_packet(packet)
         projection = self.project(packet, job=job, now_tick=now_tick)
         return MathExecutionCancellation(

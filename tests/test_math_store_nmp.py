@@ -345,6 +345,17 @@ class MathStoreNmpTests(unittest.TestCase):
 
     # -- schema and spec ----------------------------------------------------
 
+    def test_health_includes_nmp_ledger_counts(self):
+        packet = self.make_packet()
+        self.store.put_nmp_packet(packet, tick=1)
+        self.store.append_nmp_transition(
+            packet.packet_id, nmp.CREATED, nmp.RESOLVED, tick=2,
+            seed=True,
+        )
+        health = self.store.health()
+        self.assertEqual(health["counts"]["nmp_packets"], 1)
+        self.assertEqual(health["counts"]["nmp_transitions"], 1)
+
     def test_schema_and_spec_cover_nmp_tables(self):
         expected = {"math_nmp_packet", "math_nmp_transition"}
         with closing(sqlite3.connect(self.mc0_path)) as db:
