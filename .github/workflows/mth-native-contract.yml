@@ -2,7 +2,7 @@ name: mth-native-contract
 
 on:
   push:
-    branches: [mth-graph-spectral-foundation]
+    branches: [mth-graph-spectral-foundation, mth-sparse-graph-laplacian]
   pull_request:
   workflow_dispatch:
 
@@ -37,3 +37,14 @@ jobs:
           cat build/mth/k256.out
           cat build/mth/k256.err
           grep -q '^MTH K256 LAPLACIAN PASS' build/mth/k256.out
+
+      - name: Assemble sparse graph fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_sparse_graph_laplacian_test.nas > build/mth/sparse.nan
+
+      - name: Execute sparse graph fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/sparse.nan --steps 4000000 --serial > build/mth/sparse.out 2> build/mth/sparse.err
+          cat build/mth/sparse.out
+          cat build/mth/sparse.err
+          grep -q '^MTH SPARSE GRAPH LAPLACIAN PASS' build/mth/sparse.out
