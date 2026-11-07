@@ -80,6 +80,7 @@ class _NaN16GuestVM:
         if not self._vm:
             raise N16TGuestRuntimeError("could not allocate NaN16 guest VM")
         self._closed = False
+        self.session_closed = False
 
         image_buffer = ctypes.create_string_buffer(image)
         image_kind = ctypes.c_char_p()
@@ -200,6 +201,8 @@ class _NaN16GuestVM:
             response_length = self.reg(1)
             detail = self.reg(2)
             status = self.reg(3)
+            action = self.reg(4)
+            self.session_closed = action == 2
             if status != 0:
                 raise N16TGuestRuntimeError(
                     f"NaN16 N16T guest rejected frame (status={status}, detail={detail})"
@@ -271,17 +274,14 @@ class N16TGuestPool:
         with self._lock:
             if self._closed:
                 raise N16TGuestRuntimeError("NaN16 N16T guest pool is closed")
+            if session_key in self._closing:
+                raise N16TGuestRuntimeError("N16T session is closing")
             vm = self._sessions.get(session_key)
             if vm is None:
                 if len(self._sessions) >= self._max_sessions:
-                    evict_key = next(
-                        (key for key in self._sessions if self._active.get(key, 0) == 0),
-                        None,
-                    )
-                    if evict_key is None:
-                        raise N16TGuestRuntimeError("all NaN16 guest sessions are busy")
-                    self._sessions.pop(evict_key).close()
-                    self._active.pop(evict_key, None)
+                    # Never evict a live protocol state: doing so would erase
+                    # its replay cursor and permit an old frame to start anew.
+                    raise N16TGuestRuntimeError("N16T guest session capacity reached")
                 vm = _NaN16GuestVM(
                     self._library_path,
                     self._image_path,
@@ -294,7 +294,11 @@ class N16TGuestPool:
             self._active[session_key] = self._active.get(session_key, 0) + 1
 
         try:
-            return vm.exchange(frame)
+            response = vm.exchange(frame)
+            if vm.session_closed:
+                with self._lock:
+                    self._closing.add(session_key)
+            return response
         finally:
             with self._lock:
                 remaining = self._active.get(session_key, 1) - 1
