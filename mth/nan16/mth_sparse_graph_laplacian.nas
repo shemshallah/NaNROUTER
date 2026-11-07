@@ -40,10 +40,19 @@ mth_sparse_graph_validate_x:
   ; Unsigned shift extracts the ten high sign/range bits. Valid Q16.16
   ; values in [-2^22,+2^22] yield 0, 1, or 1023 respectively.
   SHR r11,r10,22
+  MOVI r12,0
+  CMP r11,r12
+  JMP[EQ] @mth_sparse_graph_x_valid
   MOVI r12,1
   CMP r11,r12
-  JMP[LT] @mth_sparse_graph_x_valid
+  JMP[NE] @mth_sparse_graph_check_negative
+  ; The only accepted positive value with high bits 1 is +2^22 exactly.
+  MOVI r12,0
+  MOVHI r12,0x0040
+  CMP r10,r12
   JMP[EQ] @mth_sparse_graph_x_valid
+  JMP @mth_sparse_graph_invalid_input
+mth_sparse_graph_check_negative:
   MOVI r12,1023
   CMP r11,r12
   JMP[EQ] @mth_sparse_graph_x_valid
