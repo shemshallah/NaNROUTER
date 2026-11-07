@@ -917,3 +917,10 @@ The signed fixed-point ABI is now frozen for the first sparse operator in [MTH_S
 Next: implement **weighted CSR v2** with an explicit weight scale, signed wide intermediate/accumulator, and deterministic rounding policy. Add symmetry, energy, and component/nullity fixtures. Then proceed to pair-space action. Only after the weighted operator is proven should the void potential, eigensolver/filter, and wave stepper proceed. Keep directed W lossless and derive symmetric A explicitly.
 
 **Evidence boundary:** this pass verifies only the unweighted Q16.16/I32 v1 Laplacian. It does not verify weighted CSR, pair-space, void, spectral filters, Lanczos, or wave evolution.
+
+
+### 20.5 Weighted CSR v2 contract
+
+The next operator is specified separately in `docs/MTH_WEIGHTED_CSR_ABI_V2.md`. It preserves the v1 Q16.16 state range but makes edge weights explicit U8 integer multipliers (1..255) and widens output/row accumulation to signed I64 Q16.16. No fractional weight scaling, rounding, saturation, or wrap is implicit. The proved row bound is 545,469,235,200 (<2^40), so I64 is sufficient. The planned weighted path oracles are [-2,-7,-16,25] for weights [2,3,5] and state [0,1,4,9], and [-1,-20,11,10] for weights [1,7,2].
+
+**Status:** contract specified only. No v2 NaN16 source, fixture execution, digest, or runner capability exists yet. Freeze the scratch/call ABI before coding. Then implement the native kernel and invalid-input atomicity tests, execute them in the canonical NaN16 workflow, and only then add energy and component/nullity checks. Pair-space remains gated behind those graph invariants.
