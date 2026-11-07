@@ -188,6 +188,23 @@ class MathEndToEndTests(unittest.TestCase):
              "status": "native_verified", "workspace": 1},
         ))
 
+    def test_runtime_can_use_disposable_cache_without_losing_canonical_leaf(self):
+        from runner_riddle.math_cache import MathCache
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            math_store = MathStore(root / "bs0.sqlite3", root / "mc0.sqlite3")
+            cache = MathCache(math_store, max_entries=1)
+            runtime = MathRuntime(self.functions, store=math_store, cache=cache)
+            stored = runtime.add_leaf(make_leaf(1, "a"))
+            first = runtime.leaf(stored.leaf_id)
+            second = runtime.leaf(stored.leaf_id)
+            self.assertEqual(first.leaf_id, second.leaf_id)
+            self.assertEqual(cache.stats()["hits"], 1)
+            self.assertEqual(runtime.health()["cache"]["entries"], 1)
+            cache.evict(1)
+            reloaded = runtime.leaf(stored.leaf_id)
+            self.assertEqual(reloaded.content_digest, stored.content_digest)
+
     def test_store_backed_runtime_and_submit(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

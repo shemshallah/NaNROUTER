@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 from .math_objects import MathAdmission, MathCandidate, MathFunction, MathLeaf
 from .math_registry import MathFunctionRegistry, MathRegistryError
 from .math_store import MathStore, MathStoreError
+from .math_cache import MathCache, MathCacheError
 from . import nmp
 from .math_validity import (
     VALID,
@@ -71,11 +72,16 @@ class MathRuntime:
         leaves: Mapping[str, MathLeaf] | None = None,
         rule_provider: Any = None,
         capability_provider: Any = None,
+        cache: MathCache | None = None,
     ) -> None:
         if not isinstance(functions, MathFunctionRegistry):
             raise MathRuntimeConfigError("functions must be a MathFunctionRegistry")
         if store is not None and not isinstance(store, MathStore):
             raise MathRuntimeConfigError("store must be a MathStore")
+        if cache is not None and not isinstance(cache, MathCache):
+            raise MathRuntimeConfigError("cache must be a MathCache")
+        if cache is not None and store is not None and cache.store is not store:
+            raise MathRuntimeConfigError("cache and runtime must share a store")
         if system is not None and not isinstance(system, MthSystem):
             raise MathRuntimeConfigError("system must be an MthSystem")
         if rule_provider is not None and not (
@@ -102,10 +108,16 @@ class MathRuntime:
         self._leaves = dict(leaves or {})
         self.rule_provider = rule_provider
         self.capability_provider = capability_provider
+        self.cache = cache
 
     # -- leaves --------------------------------------------------------------
 
     def leaf(self, leaf_id: str, version: int | None = None) -> MathLeaf:
+        if self.cache is not None:
+            try:
+                return self.cache.get(leaf_id, version=version)
+            except MathCacheError as exc:
+                raise MathRuntimeError(f"cannot resolve leaf {leaf_id!r}") from exc
         if self.store is not None:
             try:
                 return self.store.get_leaf(leaf_id, version=version)
@@ -122,7 +134,10 @@ class MathRuntime:
 
     def add_leaf(self, leaf: MathLeaf) -> MathLeaf:
         if self.store is not None:
-            return self.store.put_leaf(leaf)
+            stored = self.store.put_leaf(leaf)
+            if self.cache is not None:
+                self.cache.put(stored)
+            return stored
         existing = self._leaves.get(leaf.leaf_id)
         if existing is not None and existing.digest() != leaf.digest():
             raise MathRuntimeError(f"leaf {leaf.leaf_id!r} already exists")
@@ -194,6 +209,7 @@ class MathRuntime:
             "functions": function_health,
             "rule_provider": self.rule_provider is not None,
             "capability_provider": self.capability_provider is not None,
+            "cache": None if self.cache is None else self.cache.stats(),
             "rule_snapshot_id": self.current_rule_snapshot_id() or None,
         }
 
