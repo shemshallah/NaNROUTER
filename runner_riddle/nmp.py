@@ -25,6 +25,11 @@ from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
 from .math_objects import canonical_json, digest_object
+from .native_preflight_receipt import (
+    NativePreflightLeaseBinding,
+    NativePreflightReceipt,
+    NativePreflightReceiptError,
+)
 
 NMP_SCHEMA = "nanrouter.nmp.v1"
 JAHS_SEAL = "JAHS"
@@ -1176,11 +1181,26 @@ class NmpPacket:
         result: str | None = None,
         digest: str | None = None,
         reason: str | None = None,
+        receipt: NativePreflightReceipt | Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> "NmpPacket":
-        """Advance PROPOSED -> PREFLIGHTED only for a VALID preflight."""
+        """Advance PROPOSED -> PREFLIGHTED; optionally bind a native guest receipt."""
         preflight_result = (result or self.preflight_result or "").upper()
         preflight_digest = digest or self.preflight_digest
+        receipt_obj: NativePreflightReceipt | None = None
+        if receipt is not None:
+            try:
+                receipt_obj = (
+                    receipt if isinstance(receipt, NativePreflightReceipt)
+                    else NativePreflightReceipt.from_dict(receipt)
+                )
+                receipt_obj.verify_packet(self)
+            except NativePreflightReceiptError as exc:
+                raise NmpTransitionError(f"native preflight receipt refused: {exc}") from exc
+            if preflight_digest is not None and preflight_digest != receipt_obj.receipt_digest:
+                raise NmpTransitionError("preflight digest does not match native receipt")
+            preflight_digest = receipt_obj.receipt_digest
+            preflight_result = "VALID"
         if preflight_result != "VALID":
             raise NmpTransitionError(
                 f"preflight result {preflight_result or 'MISSING'!r} cannot authorize PREFLIGHTED"
@@ -1193,7 +1213,57 @@ class NmpPacket:
         }
         if reason is not None:
             updates["reason"] = reason
-        return replace(self, **updates).transition(PREFLIGHTED, **kwargs)
+        if receipt_obj is not None:
+            updates["evidence"] = {
+                **dict(self.evidence),
+                "native_preflight_receipt": receipt_obj.to_dict(),
+            }
+            updates["metadata"] = {
+                **dict(self.metadata),
+                "native_preflight_required": True,
+            }
+        packet = replace(self, **updates)
+        if "evidence" in kwargs and receipt_obj is not None:
+            kwargs["evidence"] = {
+                **dict(kwargs["evidence"] or {}),
+                "native_preflight_receipt": receipt_obj.to_dict(),
+            }
+        if "metadata" in kwargs and receipt_obj is not None:
+            kwargs["metadata"] = {
+                **dict(kwargs["metadata"] or {}),
+                "native_preflight_required": True,
+            }
+        return packet.transition(PREFLIGHTED, **kwargs)
+
+    def bind_native_lease(
+        self,
+        job: Mapping[str, Any],
+        lease: Mapping[str, Any],
+        ring_snapshot: Mapping[str, Any],
+        *,
+        ring_incarnation: str,
+    ) -> "NmpPacket":
+        """Bind the stored native receipt to one active worker lease and ring epoch."""
+        if not self.metadata.get("native_preflight_required"):
+            raise NmpTransitionError("packet has no native preflight receipt requirement")
+        receipt_data = self.evidence.get("native_preflight_receipt")
+        if not isinstance(receipt_data, Mapping):
+            raise NmpTransitionError("packet is missing its native preflight receipt")
+        try:
+            receipt_obj = NativePreflightReceipt.from_dict(receipt_data)
+            binding = NativePreflightLeaseBinding.from_live_lease(
+                self, receipt_obj, job, lease, ring_snapshot,
+                ring_incarnation=ring_incarnation,
+            )
+        except NativePreflightReceiptError as exc:
+            raise NmpTransitionError(f"native lease binding refused: {exc}") from exc
+        return replace(
+            self,
+            evidence={
+                **dict(self.evidence),
+                "native_preflight_lease_binding": binding.to_dict(),
+            },
+        )
 
     def queue(
         self,
@@ -1234,6 +1304,11 @@ class NmpPacket:
         self,
         *,
         gate: "NmpGateDecision" | None = None,
+        lease_binding: NativePreflightLeaseBinding | Mapping[str, Any] | None = None,
+        job_id: str | None = None,
+        lease_epoch: int | None = None,
+        ring_incarnation: str | None = None,
+        ring_epoch: int | None = None,
         tick: int = 0,
         **gate_kwargs: Any,
     ) -> "NmpPacket":
@@ -1255,11 +1330,71 @@ class NmpPacket:
                 failure=STALE,
                 reason=f"gate was evaluated at {decision.from_state}, packet is {self.state}",
             ))
+        evidence = {"lease_gate": decision.to_dict()}
+        transition_fields: dict[str, Any] = {}
+        if self.metadata.get("native_preflight_required"):
+            stored = self.evidence.get("native_preflight_lease_binding")
+            if not isinstance(stored, Mapping):
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="native preflight receipt has not been bound to a worker lease",
+                ))
+            try:
+                stored_binding = NativePreflightLeaseBinding.from_dict(stored)
+                supplied_binding = (
+                    lease_binding if isinstance(lease_binding, NativePreflightLeaseBinding)
+                    else NativePreflightLeaseBinding.from_dict(lease_binding)
+                    if lease_binding is not None else stored_binding
+                )
+            except NativePreflightReceiptError as exc:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason=f"native lease binding is malformed: {exc}",
+                )) from exc
+            if supplied_binding.binding_digest != stored_binding.binding_digest:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="supplied lease binding differs from the packet-bound receipt",
+                ))
+            if stored_binding.packet_id != self.packet_id or stored_binding.candidate_id != self.candidate_id:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="native lease binding belongs to another packet/candidate",
+                ))
+            for name, supplied, expected in (
+                ("job_id", job_id, stored_binding.job_id),
+                ("lease_epoch", lease_epoch, stored_binding.lease_epoch),
+                ("ring_incarnation", ring_incarnation, stored_binding.ring_incarnation),
+                ("ring_epoch", ring_epoch, stored_binding.ring_epoch),
+            ):
+                if supplied is not None and supplied != expected:
+                    raise NmpGateError(NmpGateDecision(
+                        packet_id=self.packet_id,
+                        from_state=self.state,
+                        failure=STALE,
+                        reason=f"native lease {name} changed after receipt binding",
+                    ))
+            transition_fields = {
+                "job_id": stored_binding.job_id,
+                "lease_epoch": stored_binding.lease_epoch,
+                "ring_incarnation": stored_binding.ring_incarnation,
+                "ring_epoch": stored_binding.ring_epoch,
+            }
+            evidence["native_preflight_lease_binding"] = stored_binding.to_dict()
         return self.transition(
             EXECUTING,
             reason="lease gate accepted",
             tick=tick,
-            evidence={"lease_gate": decision.to_dict()},
+            evidence=evidence,
+            **transition_fields,
         )
 
     def complete(
@@ -2067,6 +2202,23 @@ def _is_cancelled_job(job: Any) -> bool:
     return "cancel" in error
 
 
+def _native_preflight_receipt_gate(packet: NmpPacket) -> tuple[bool, str | None]:
+    """Validate a packet-bound native receipt when the packet requires one."""
+    if not packet.metadata.get("native_preflight_required"):
+        return True, None
+    receipt_data = packet.evidence.get("native_preflight_receipt")
+    if not isinstance(receipt_data, Mapping):
+        return False, "native preflight receipt is missing"
+    try:
+        receipt = NativePreflightReceipt.from_dict(receipt_data)
+        receipt.verify_packet(packet)
+    except NativePreflightReceiptError as exc:
+        return False, f"native preflight receipt is stale or malformed: {exc}"
+    if packet.preflight_result != "VALID" or packet.preflight_digest != receipt.receipt_digest:
+        return False, "packet preflight fields do not match the native receipt"
+    return True, None
+
+
 def execution_gate(
     packet: NmpPacket,
     *,
@@ -2128,6 +2280,11 @@ def execution_gate(
     checks["admission"] = admission_ok
     if not admission_ok:
         return refuse(failure or REJECTED, reason or "admission refused")
+
+    native_receipt_ok, reason = _native_preflight_receipt_gate(packet)
+    checks["native_preflight_receipt"] = native_receipt_ok
+    if not native_receipt_ok:
+        return refuse(STALE, reason or "native preflight receipt refused")
 
     ruleset_ok, failure, reason = _ruleset_gate(packet, ruleset_snapshot)
     checks["ruleset"] = ruleset_ok
