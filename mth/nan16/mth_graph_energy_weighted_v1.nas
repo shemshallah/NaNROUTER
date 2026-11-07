@@ -46,7 +46,8 @@ mth_energy_v1_validate_x:
   MOVI r1,1
   CMP r12,r1
   JMP[NE] @mth_energy_v1_bad_state
-  MOVI r1,65536
+  MOVI r1,0
+  MOVHI r1,1
   CMP r10,r1
   JMP[NE] @mth_energy_v1_bad_state
 mth_energy_v1_x_valid:
