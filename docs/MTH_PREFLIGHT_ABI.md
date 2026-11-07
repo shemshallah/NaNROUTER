@@ -59,7 +59,7 @@ V1 supports ranks 0, 1, and 2. Higher ranks require a separately versioned descr
 | Bit | Meaning |
 |---:|---|
 | 0 | Right operand's first payload word is nonzero (for contracts such as division) |
-| 1 | Output payload does not alias either input payload |
+| 1 | Output payload range does not overlap either input payload range |
 | 2 | Both inputs assert the finite-values flag |
 | 3 | Non-scalar input dimensions are nonzero |
 
@@ -92,6 +92,10 @@ Returns r1 = 0 on success, otherwise:
 | 9 | Payload capacity insufficient |
 
 A capability rejection is not a mathematical null. A failed precondition is not necessarily mathematical undefinedness: the contract determines whether it means undefined input or an inapplicable execution context. Numerical execution errors are reported by the selected kernel, not this gate.
+
+## Payload-range safety
+
+For precondition bit 1, input and output payloads are interpreted as half-open word ranges `[base, base + capacity)`. The gate rejects any overlap, including partial overlap where the output pointer begins inside an input allocation. It also rejects address-plus-capacity wrap as a malformed descriptor before committing output metadata. The regression covers partial overlap with both left and right operands and verifies that the output descriptor remains unchanged on rejection.
 
 ## Evidence boundary
 
