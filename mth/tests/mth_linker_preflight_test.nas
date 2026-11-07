@@ -25,6 +25,8 @@ mth_link_pf_main:
   CALL @nmr_obj_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_obj1
+  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,4
   MOVI r3,2
@@ -37,6 +39,8 @@ mth_link_pf_main:
   CALL @nmr_obj_bind_data
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_bind1
+  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,@mth_link_pf_right_payload
   CALL @nmr_obj_bind_data
@@ -52,6 +56,8 @@ mth_link_pf_main:
   CALL @nmr_shape_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_shape1
+  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,1
   MOVI r3,256
@@ -70,6 +76,8 @@ mth_link_pf_main:
   CALL @nmr_op_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_op
+  CALL @mth_link_pf_puts
   MOVI r1,77
   MOVI r2,1
   MOVI r3,1
@@ -81,6 +89,8 @@ mth_link_pf_main:
   CALL @nmr_contract_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
+  MOVI r1,@mth_link_pf_stage_contract_put
+  CALL @mth_link_pf_puts
 
   ; The literal ::op: expression is parsed and resolved by the canonical
   ; NaN0S linker. Its r10 is the registered 10-word contract descriptor.
@@ -457,3 +467,13 @@ mth_link_pf_stage_after_resolve:
 .str "STAGE AFTER RESOLVE\n"
 mth_link_pf_stage_contract:
 .str "STAGE CONTRACT OK\n"
+mth_link_pf_stage_obj1:
+.str "STAGE OBJ1\n"
+mth_link_pf_stage_bind1:
+.str "STAGE BIND1\n"
+mth_link_pf_stage_shape1:
+.str "STAGE SHAPE1\n"
+mth_link_pf_stage_op:
+.str "STAGE OP\n"
+mth_link_pf_stage_contract_put:
+.str "STAGE CONTRACT PUT\n"
