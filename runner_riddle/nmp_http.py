@@ -263,6 +263,7 @@ class WaveStoreNmpContextProvider:
             ]
             if not context["capability"]:
                 return False
+            context.pop("expected_program_id", None)
             decision = packet.execution_gate(
                 job=job,
                 lease=None,
@@ -290,6 +291,9 @@ class WaveStoreNmpContextProvider:
         _, rows, workspace, _, required = self._operator_capabilities(
             packet, owner=owner
         )
+        expected_program_id = NMP_WORKER_FUNCTION_PROGRAMS.get(packet.function_id)
+        if expected_program_id is None:
+            raise NmpHttpError("no supported NaN16 worker dispatch for registered function")
         evidence: dict[str, Any] = {}
         for key, provider in self._providers.items():
             try:
@@ -327,6 +331,7 @@ class WaveStoreNmpContextProvider:
             "capability": rows,
             "required_capability": required,
             "workspace": workspace,
+            "expected_program_id": expected_program_id,
         }
         if owner is not None:
             result["expected_worker_owner"] = owner
