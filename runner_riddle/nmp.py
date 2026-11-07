@@ -1337,7 +1337,15 @@ class NmpPacket:
 
         There is no unchecked queue path in this API.
         """
-        decision = gate if gate is not None else execution_gate(self, **gate_kwargs)
+        # Native receipt packets require a fresh live ruleset/capability gate;
+        # an earlier decision cannot be replayed after admission state changes.
+        native_required = bool(self.metadata.get("native_admission_required"))
+        decision = (
+            execution_gate(self, **gate_kwargs)
+            if native_required
+            else gate if gate is not None
+            else execution_gate(self, **gate_kwargs)
+        )
         if not decision.ok:
             raise NmpGateError(decision)
         if decision.packet_id != self.packet_id:
@@ -2303,6 +2311,20 @@ def execution_gate(
     checks["ruleset"] = ruleset_ok
     if not ruleset_ok:
         return refuse(failure or STALE, reason or "ruleset snapshot refused")
+
+    if packet.metadata.get("native_admission_required"):
+        snapshot_data = _object_dict(ruleset_snapshot)
+        current_epoch = snapshot_data.get("rule_epoch", snapshot_data.get("epoch"))
+        current_digest = snapshot_data.get("rule_digest", snapshot_data.get("digest"))
+        receipt = packet.admission_receipt or {}
+        if current_epoch is None or current_digest is None:
+            return refuse(STALE, "native admission requires live rule epoch and digest")
+        try:
+            current_digest = normalize_digest(current_digest, "live_rule_digest")
+        except NmpValidationError:
+            return refuse(STALE, "live ruleset digest is malformed")
+        if current_epoch != receipt.get("rule_epoch") or current_digest != receipt.get("rule_digest"):
+            return refuse(STALE, "native admission receipt does not match the live rule snapshot")
 
     ring_ok, failure, reason = _ring_gate(packet, ring_incarnation, ring_epoch)
     checks["ring"] = ring_ok
