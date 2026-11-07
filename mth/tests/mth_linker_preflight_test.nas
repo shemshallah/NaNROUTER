@@ -3,6 +3,8 @@ JMP @mth_link_pf_main
 .include "../nan16/mth_preflight_gate.nas"
 .include "../nan16/mth_preflight.nas"
 .include "../nan16/mth_admission.nas"
+.include "../nan16/mth_dot256_f32.nas"
+.include "../nan16/mth_execute.nas"
 .include "../../nan0s/src/nannet/route_address.nas"
 .include "../../nan0s/src/nannet/object_key_decode.nas"
 .include "../../nan0s/src/nannet/math_registry.nas"
@@ -44,17 +46,17 @@ mth_link_pf_main:
   ; Existing shape metadata is used by the legacy route-expression parser.
   MOVI r1,123
   MOVI r2,1
-  MOVI r3,3
+  MOVI r3,256
   MOVI r4,1
-  MOVI r5,3
+  MOVI r5,256
   CALL @nmr_shape_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
   MOVI r1,234
   MOVI r2,1
-  MOVI r3,3
+  MOVI r3,256
   MOVI r4,1
-  MOVI r5,3
+  MOVI r5,256
   CALL @nmr_shape_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
@@ -102,6 +104,7 @@ mth_link_pf_main:
   MOVI r6,900
   CMP r5,r6
   JMP[NE] @mth_link_pf_fail
+  ST r5,r0,@mth_link_pf_program_id
   MOVI r6,3
   CMP r9,r6
   JMP[NE] @mth_link_pf_fail
@@ -166,16 +169,96 @@ mth_link_pf_main:
   MOVI r9,38
   CMP r1,r9
   JMP[NE] @mth_link_pf_fail
-  ; mth_admit may clobber r8; reload the output descriptor before checking it.
+  ; Restore the admitted 256-vector shape and execute the allowlisted dot kernel.
+  MOVI r8,@mth_link_pf_right
+  MOVI r9,256
+  ST r9,r8,2
+  MOVI r8,@mth_link_pf_output_payload
+  MOVI r9,0
+  ST r9,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  LD r8,r0,@mth_link_pf_program_id
+  MOVI r12,@mth_link_pf_scratch
+  CALL @mth_execute
+  CMP r1,r0
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_output_payload
+  LD r9,r8,0
+  MOVI r10,0x42000000
+  CMP r9,r10
+  JMP[NE] @mth_link_pf_fail
+
+  ; A stale epoch must stop before the numerical kernel writes its output.
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,6
+  ST r9,r8,9
+  MOVI r8,@mth_link_pf_output_payload
+  MOVI r9,0x12345678
+  ST r9,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  LD r8,r0,@mth_link_pf_program_id
+  MOVI r12,@mth_link_pf_scratch
+  CALL @mth_execute
+  MOVI r9,18
+  CMP r1,r9
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_output_payload
+  LD r9,r8,0
+  MOVI r10,0x12345678
+  CMP r9,r10
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,7
+  ST r9,r8,9
+
+  ; Unknown program IDs are rejected before preflight or output publication.
+  MOVI r8,@mth_link_pf_output_payload
+  MOVI r9,0x12345678
+  ST r9,r8,0
   MOVI r8,@mth_link_pf_output
-  LD r10,r8,0
   MOVI r9,55
-  CMP r10,r9
+  ST r9,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  MOVI r8,901
+  MOVI r12,@mth_link_pf_scratch
+  CALL @mth_execute
+  MOVI r9,64
+  CMP r1,r9
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_output_payload
+  LD r9,r8,0
+  MOVI r10,0x12345678
+  CMP r9,r10
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_output
+  LD r9,r8,0
+  MOVI r10,55
+  CMP r9,r10
   JMP[NE] @mth_link_pf_fail
 
   MOVI r1,@mth_link_pf_pass
   CALL @mth_link_pf_puts
   MOVI r1,@mth_link_pf_admit_pass
+  CALL @mth_link_pf_puts
+  MOVI r1,@mth_link_pf_dispatch_pass
   CALL @mth_link_pf_puts
   HALT
 
@@ -202,21 +285,21 @@ mth_link_pf_puts_byte:
 
 .org 30000
 mth_link_pf_left:
-.word 4,1,3,1,2,@mth_link_pf_left_payload,3,1
+.word 4,1,256,1,2,@mth_link_pf_left_payload,256,1
 mth_link_pf_right:
-.word 4,1,3,1,2,@mth_link_pf_right_payload,3,1
+.word 4,1,256,1,2,@mth_link_pf_right_payload,256,1
 mth_link_pf_output:
 .word 0,0,0,0,0,@mth_link_pf_output_payload,1,0
 mth_link_pf_candidate:
-.word 1,7,4,4,3,2,2,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
+.word 1,7,4,4,3,2,2,256,256,7,1,1,2,1,100,101,102,103,104,105,106,107
 mth_link_pf_rule:
 .word 1,7,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
 
 .org 30256
 mth_link_pf_left_payload:
-.word 1,2,3
+.word 1065353216,1073741824,1077936128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_link_pf_right_payload:
-.word 4,5,6
+.word 1082130432,1084227584,1086324736,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_link_pf_output_payload:
 .word 0
 mth_link_pf_scratch:
@@ -268,7 +351,18 @@ mth_link_pf_scratch:
 .word 0
 .word 0
 .word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
 mth_link_pf_contract:
+.word 0
+mth_link_pf_program_id:
 .word 0
 mth_link_pf_expression:
 .str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:77::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
@@ -276,5 +370,7 @@ mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
 mth_link_pf_admit_pass:
 .str "MTH LINKER COMPOSED ADMISSION PASS\n"
+mth_link_pf_dispatch_pass:
+.str "MTH NATIVE DISPATCH PASS\n"
 mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
