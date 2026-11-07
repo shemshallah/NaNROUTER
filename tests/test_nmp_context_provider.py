@@ -19,7 +19,7 @@ from test_nmp_http_adapter import (
 )
 
 
-def make_context_provider(service):
+def make_context_provider(service, guest_binary_pin_provider=None):
     return WaveStoreNmpContextProvider(
         service,
         admission_provider=lambda **_: admission(),
@@ -31,6 +31,7 @@ def make_context_provider(service):
         ruleset_provider=lambda **_: RULES,
         ring_provider=lambda **_: {"incarnation": "ring-inc-1", "epoch": 1},
         cancel_epoch_provider=lambda **_: 0,
+        guest_binary_pin_provider=guest_binary_pin_provider,
     )
 
 
@@ -152,6 +153,98 @@ class NmpServerContextProviderTests(unittest.TestCase):
         )
         self.assertIsNone(result)
         self.assertEqual(self.store.get_job(job_id)["state"], "queued")
+
+
+    def test_server_owned_pins_are_enforced_at_completion(self):
+        packet, job_id = self.submit()
+        provider = make_context_provider(
+            self.service,
+            lambda **_: {
+                "expected_guest_image_digest": "a" * 64,
+                "expected_guest_source_digest": "c" * 64,
+            },
+        )
+        adapter = NmpHttpAdapter(
+            self.service, provider,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        leased = adapter.lease(
+            self.worker_token, "worker-A", now_tick=110,
+            lease_ticks=64, job_id=job_id,
+        )
+        with self.assertRaisesRegex(Exception, "differs from server-pinned guest"):
+            adapter.complete(
+                self.worker_token, leased["packet"],
+                job_id=job_id,
+                lease_token=leased["lease"]["token"],
+                lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=execution_evidence(
+                    packet, lease_epoch=leased["lease"]["epoch"],
+                    lease_owner="worker-A",
+                ),
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
+
+    def test_server_owned_matching_pins_allow_completion(self):
+        packet, job_id = self.submit()
+        provider = make_context_provider(
+            self.service,
+            lambda **_: {
+                "expected_guest_image_digest": "b" * 64,
+                "expected_guest_source_digest": "c" * 64,
+            },
+        )
+        adapter = NmpHttpAdapter(
+            self.service, provider,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        leased = adapter.lease(
+            self.worker_token, "worker-A", now_tick=110,
+            lease_ticks=64, job_id=job_id,
+        )
+        completed = adapter.complete(
+            self.worker_token, leased["packet"], job_id=job_id,
+            lease_token=leased["lease"]["token"],
+            lease_epoch=leased["lease"]["epoch"],
+            lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+            execution_evidence=execution_evidence(
+                packet, lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A",
+            ),
+        )
+        self.assertEqual(completed["packet"]["state"], nmp.COMPLETED)
+
+    def test_invalid_trusted_binary_pin_does_not_complete_job(self):
+        packet, job_id = self.submit()
+        provider = make_context_provider(
+            self.service,
+            lambda **_: {
+                "expected_guest_image_digest": "not-a-digest",
+                "expected_guest_source_digest": "c" * 64,
+            },
+        )
+        adapter = NmpHttpAdapter(
+            self.service, provider,
+            lambda token, owner: token == self.worker_token and owner == "worker-A",
+        )
+        leased = adapter.lease(
+            self.worker_token, "worker-A", now_tick=110,
+            lease_ticks=64, job_id=job_id,
+        )
+        with self.assertRaisesRegex(Exception, "must be a SHA-256 digest"):
+            adapter.complete(
+                self.worker_token, leased["packet"], job_id=job_id,
+                lease_token=leased["lease"]["token"],
+                lease_epoch=leased["lease"]["epoch"],
+                lease_owner="worker-A", result_digest="e" * 64, now_tick=120,
+                execution_evidence=execution_evidence(
+                    packet, lease_epoch=leased["lease"]["epoch"],
+                    lease_owner="worker-A",
+                ),
+            )
+        self.assertEqual(self.store.get_job(job_id)["state"], "leased")
+
 
 
 if __name__ == "__main__":
