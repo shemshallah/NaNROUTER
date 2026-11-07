@@ -238,3 +238,14 @@ OK
 ```
 
 The expanded `.github/workflows/mth-native-contract.yml` passed run `42384223162` (65/65 steps) for the 31-fixture set. Aperture SVD/top-k, Lanczos, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+
+
+## K256 closed-form pair-space v1 — native verified
+
+Kernel: `mth/nan16/mth_k256_pair_space_v1.nas`; ABI: `docs/MTH_K256_PAIR_SPACE_ABI_V1.md`; fixture: `mth/tests/mth_k256_pair_space_v1_test.nas`.
+
+For the exact K256 baseline `L=256I-J`, the kernel applies `L_pair(U)=LU+UL^T=512U-colsum(U)-rowsum(U)` with two 256-word work vectors and three linear passes over the 65,536-cell U matrix. It does not materialize the 65,536×65,536 Kronecker matrix. Q16.16 input is bounded to ±2^20 raw, giving a proved signed-I32 output bound of ±2^30.
+
+Canonical NaN16 CI workflow run 180 passed the assembler and runtime fixture. The fixture checks the exact E00 response (510 at [0,0], −1 at [0,1] and [1,0], zero at [1,1]) and row/column sums of 1.
+
+Scope boundary: this verifies the K256 closed-form special case only. It does not establish generic sparse-CSR pair-space support for arbitrary L.
