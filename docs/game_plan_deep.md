@@ -1102,7 +1102,7 @@ The guest working set is the constraint that shapes the algorithms.
 
 The 8 MiB universe is the persistent store, not the guest working set. At 32 KiB per page, the 8 MiB universe has **256 pages**: 255 head pages plus one NANNET node page. The 512 KiB guest holds 16 pages. That is a direct structural alignment: the 255+1 convention is also the universe page layout.
 
-A 256×256 float32 ring matrix is 256 KiB = 8 pages; a 255×255 head-only matrix is about 249 KiB = 7.8 pages. The universe can hold the matrix, eigenbasis, ring samples, and seal pages; the guest can hold one or two matrices at a time. The wave engine must page, tile, fold, or low-rank. The 2 GiB overbootstrap map is hosted only by the Bootstrap runner and is not copied into the guest or to peers; it may index signatures and candidate operators, not store raw dense wave arrays.
+A 256×256 float32 ring matrix is 256 KiB = 8 pages; a 255×255 float32 head-only matrix is 254 KiB = 7.94 pages (127 KiB at Q16.16). The universe can hold the matrix, eigenbasis, ring samples, and seal pages; the guest can hold one or two matrices at a time. The wave engine must page, tile, fold, or low-rank. The 2 GiB overbootstrap map is hosted only by the Bootstrap runner and is not copied into the guest or to peers; it may index signatures and candidate operators, not store raw dense wave arrays.
 
 ### 10.4 Algorithm choices
 
