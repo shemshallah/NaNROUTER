@@ -172,7 +172,6 @@ class N16TGuestRuntimeTests(unittest.TestCase):
                 client.close()
                 server.stop()
                 pool.close()
-                store.close()
 
     def test_opaque_session_affinity_keeps_guest_states_separate(self):
         pool = N16TGuestPool(
