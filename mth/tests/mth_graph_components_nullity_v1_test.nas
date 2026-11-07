@@ -12,10 +12,10 @@ mth_comp_test_main:
   MOVI r6,@mth_comp_count
   MOVI r7,@mth_comp_scratch
   CALL @mth_graph_components_nullity_v1
-  MOVI r1,65
-  PUTC r1
   CMP r1,r13
   JMP[NE] @mth_comp_fail
+  MOVI r1,65
+  PUTC r1
 
   ; Components: {0,1,2,3}, {4,5}, and 250 isolated vertices.
   ; Nullity = component count = 252.
