@@ -204,22 +204,27 @@ mth_link_pf_main:
   HALT
 
 mth_link_pf_fail_1:
+  MOVI r12,@mth_link_pf_scratch
   MOVI r8,1
   ST r8,r12,47
   JMP @mth_link_pf_fail
 mth_link_pf_fail_2:
+  MOVI r12,@mth_link_pf_scratch
   MOVI r8,2
   ST r8,r12,47
   JMP @mth_link_pf_fail
 mth_link_pf_fail_3:
+  MOVI r12,@mth_link_pf_scratch
   MOVI r8,3
   ST r8,r12,47
   JMP @mth_link_pf_fail
 mth_link_pf_fail_4:
+  MOVI r12,@mth_link_pf_scratch
   MOVI r8,4
   ST r8,r12,47
   JMP @mth_link_pf_fail
 mth_link_pf_fail:
+  MOVI r12,@mth_link_pf_scratch
   MOVI r8,99
   ST r8,r12,47
   MOVI r1,@mth_link_pf_bad
