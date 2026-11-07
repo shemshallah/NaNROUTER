@@ -39,5 +39,5 @@ The shared 8 MiB universe-bin graph-spectral architecture is specified in `docs/
 
 A canonical execution workflow is defined at `.github/workflows/mth-native-contract.yml`.
 It builds the NaN0S CLI harness, assembles the MTH fixture with the NaN0S
-NaN16 source assembler, and executes the emitted image. The first K256 kernel
-is not marked verified until this workflow reports success.
+NaN16 source assembler, and executes the emitted image. The K256 U16-input kernel is marked native_verified after workflow run #9
+assembled and executed its fixture successfully (5,391 guest steps; HALT).
