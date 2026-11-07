@@ -82,6 +82,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("drive_source_256", "mth/tests/mth_drive_source_256_test.nas", 5_000_000, "MTH DRIVE SOURCE 256 PASS", "native_verified"),
     Fixture("cfl_guard_256", "mth/tests/mth_cfl_guard_256_test.nas", 5_000_000, "MTH CFL GUARD 256 PASS", "native_verified"),
     Fixture("radial_tridiagonal", "mth/tests/mth_radial_tridiagonal_test.nas", 5_000_000, "MTH RADIAL TRIDIAGONAL PASS", "native_verified"),
+    Fixture("radial_energy", "mth/tests/mth_radial_energy_test.nas", 5_000_000, "MTH RADIAL ENERGY PASS", "native_verified"),
     Fixture("colored_noise_256", "mth/tests/mth_colored_noise_256_test.nas", 10_000_000, "MTH COLORED NOISE 256 PASS", "native_verified"),
     Fixture("lanczos_256", "mth/tests/mth_lanczos_256_test.nas", 200_000_000, "MTH LANCZOS 256 PASS", "native_verified"),
     Fixture("reachability_256", "mth/tests/mth_reachability_256_test.nas", 20_000_000, "MTH REACHABILITY 256 PASS", "native_verified"),

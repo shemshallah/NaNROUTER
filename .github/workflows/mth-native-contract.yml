@@ -313,6 +313,17 @@ jobs:
           cat build/mth/radial-tridiagonal.err
           grep -q '^MTH RADIAL TRIDIAGONAL PASS' build/mth/radial-tridiagonal.out
 
+      - name: Assemble radial-energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_radial_energy_test.nas > build/mth/radial-energy.nan
+
+      - name: Execute radial-energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/radial-energy.nan --steps 5000000 --serial > build/mth/radial-energy.out 2> build/mth/radial-energy.err
+          cat build/mth/radial-energy.out
+          cat build/mth/radial-energy.err
+          grep -q '^MTH RADIAL ENERGY PASS' build/mth/radial-energy.out
+
       - name: Assemble colored-noise fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_colored_noise_256_test.nas > build/mth/colored-noise-256.nan

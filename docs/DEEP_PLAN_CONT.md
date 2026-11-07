@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **60 native MTH kernels with fixtures**: 57 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial, DRIVE, CFL, colored-noise, K16-driver, and reachability fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 342 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **61 native MTH kernels with fixtures**: 58 pass in the local harness and all prior fixtures pass canonical CI; the new 1 MiB full-256, SVD top-2, top-k, Lanczos, JAHS, full-255, adapter, avoided-crossing, radial energy, DRIVE, CFL, colored-noise, K16-driver, and reachability fixtures await the next combined CI run. There is also a working BS0DB/MC0DB control/evidence plane and 342 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -73,17 +73,17 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 60 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 60-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 61 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 61-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 119 steps, 58 fixtures; 1 MiB additions pending |
+| `.github/workflows/mth-native-contract.yml` | 121 steps, 59 fixtures; 1 MiB additions pending |
 
 ### 1.3 Evidence baseline
 
 ```
-57/57 locally runnable fixtures pass; K256 pair passed canonical CI
-58/58 total native fixtures; 342/342 Python tests pass
-GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 58-fixture/119-step run pending
+58/58 locally runnable fixtures pass; K256 pair passed canonical CI
+59/59 total native fixtures; 342/342 Python tests pass
+GitHub Actions run 42389738332: 87/87 steps passed (historical 42-fixture set); 59-fixture/121-step run pending
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -952,9 +952,10 @@ The shortest correct sentence is:
 
 
 
+
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 60 kernels; 57 fixtures run locally and the K256 pair fixture is CI-only locally.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 61 kernels; 58 fixtures run locally and the K256 pair fixture is CI-only locally.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|
@@ -1018,3 +1019,4 @@ Machine-readable source: `spec/wave-capabilities.json`. The catalog has 60 kerne
 | `mth.lanczos.topk.256.f32` | `float32` | 133,628,629 | pending |
 | `mth.graph.pair.tile16.k16.driver.f32` | `float32` | 4,449,894 | pending |
 | `mth.reachability.256.f32` | `float32` | 2,489,116 | pending |
+| `mth.radial.energy.256.f32` | `float32` | 39,276 | pending |
