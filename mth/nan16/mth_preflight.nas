@@ -386,14 +386,34 @@ mth_pf_noalias:
   BOOL.8 r8,r6,r7
   CMP r8,r0
   JMP[EQ] @mth_pf_finite
+  ; Compare half-open payload ranges, not only equal base pointers.
+  ; Reject address-plus-capacity wrap before interval comparisons.
   LD r6,r12,32
-  LD r7,r12,16
-  CMP r6,r7
-  JMP[EQ] @mth_pf_bad_precondition
-  LD r6,r12,32
-  LD r7,r12,17
-  CMP r6,r7
-  JMP[EQ] @mth_pf_bad_precondition
+  LD r7,r12,18
+  ADD r8,r6,r7
+  CMP r8,r6
+  JMP[LT] @mth_pf_bad_descriptor
+  LD r9,r12,16
+  LD r10,r12,26
+  ADD r11,r9,r10
+  CMP r11,r9
+  JMP[LT] @mth_pf_bad_descriptor
+  CMP r6,r11
+  JMP[GE] @mth_pf_noalias_right
+  CMP r9,r8
+  JMP[GE] @mth_pf_noalias_right
+  JMP @mth_pf_bad_precondition
+mth_pf_noalias_right:
+  LD r9,r12,17
+  LD r10,r12,27
+  ADD r11,r9,r10
+  CMP r11,r9
+  JMP[LT] @mth_pf_bad_descriptor
+  CMP r6,r11
+  JMP[GE] @mth_pf_finite
+  CMP r9,r8
+  JMP[GE] @mth_pf_finite
+  JMP @mth_pf_bad_precondition
 mth_pf_finite:
   ; bit 2: both descriptors must assert finite input values.
   LD r6,r12,9
