@@ -1,6 +1,6 @@
 # K256 matrix-free pair-space ABI v1
 
-Status: source-written; canonical native verification pending.
+Status: native_verified; canonical NaN16 CI workflow run 180 passed.
 
 ## Operator
 
