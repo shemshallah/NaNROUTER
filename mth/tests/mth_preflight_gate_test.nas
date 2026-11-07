@@ -62,11 +62,11 @@ pf_fail:
 ; lhs/rhs dimensions, candidate epoch, required/available caps,
 ; proof level, enabled, then four rule digest words.
 pf_candidate:
-.word 1,7,11,12,13,3,3,8,8,7,3,7,2,1,100,101,102,103
+.word 1,7,11,12,13,3,3,8,8,7,3,7,2,1,100,101,102,103,104,105,106,107
 ; Rule: ABI, epoch, signature, domain, shape policy, minimum proof,
 ; enabled, then four digest words.
 pf_rule:
-.word 1,7,11,12,13,3,1,1,1,100,101,102,103
+.word 1,7,11,12,13,3,1,1,1,100,101,102,103,104,105,106,107
 .org 5000
 pf_result:
 .word 0
