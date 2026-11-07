@@ -5,6 +5,12 @@ import json
 import unittest
 
 from runner_riddle import nmp
+from runner_riddle.native_preflight_receipt import (
+    NativePreflightLeaseBinding,
+    NativePreflightReceipt,
+    NativePreflightReceiptError,
+)
+from runner_riddle.wave_ring_scheduler import WaveRingScheduler
 from runner_riddle.math_objects import (
     MathAdmission,
     MathCandidate,
@@ -999,6 +1005,186 @@ class MathObjectIntegrationTests(unittest.TestCase):
         self.assertEqual(projection.state, nmp.PREFLIGHTED, projection.reason)
         with self.assertRaises(nmp.NmpGateError):
             packet.assert_executable()
+
+
+class NativePreflightReceiptTests(unittest.TestCase):
+    def make_receipt(self, packet):
+        return NativePreflightReceipt.from_guest_result(
+            packet,
+            {
+                "status": 0,
+                "rule_epoch": 7,
+                "rule_digest_words": [
+                    0x01020304, 0x11121314, 0x21222324, 0x31323334,
+                    0x41424344, 0x51525354, 0x61626364, 0x71727374,
+                ],
+                "output_descriptor": [3, 0, 1, 1, 1, 9000, 3, 0],
+            },
+            guest_source_digest="a" * 64,
+            guest_image_digest="b" * 64,
+        )
+
+    def test_native_receipt_binds_packet_and_survives_canonical_round_trip(self):
+        packet = make_packet().resolve().classify().propose()
+        receipt = self.make_receipt(packet)
+        preflighted = packet.mark_preflight(receipt=receipt)
+        self.assertEqual(preflighted.state, nmp.PREFLIGHTED)
+        self.assertTrue(preflighted.metadata["native_preflight_required"])
+        self.assertEqual(preflighted.preflight_digest, receipt.receipt_digest)
+        rebuilt = nmp.NmpPacket.from_dict(preflighted.to_dict())
+        self.assertEqual(rebuilt, preflighted)
+        self.assertEqual(
+            NativePreflightReceipt.from_dict(
+                rebuilt.evidence["native_preflight_receipt"]
+            ),
+            receipt,
+        )
+
+    def test_receipt_rejects_changed_inputs_generation_and_guest_denial(self):
+        packet = make_packet().resolve().classify().propose()
+        receipt = self.make_receipt(packet)
+        changed_inputs = nmp.replace(
+            packet, inputs=({"leaf_id": "nml:U0:vector:changed",
+                             "version": 1, "digest": "f" * 64},)
+        )
+        with self.assertRaises(NativePreflightReceiptError):
+            receipt.verify_packet(changed_inputs)
+        changed_generation = nmp.replace(packet, generation=8)
+        with self.assertRaises(NativePreflightReceiptError):
+            receipt.verify_packet(changed_generation)
+        denied = {
+            "status": 8,
+            "rule_epoch": 7,
+            "rule_digest_words": [1] * 8,
+            "output_descriptor": [0] * 8,
+        }
+        with self.assertRaises(NativePreflightReceiptError):
+            NativePreflightReceipt.from_guest_result(
+                packet, denied,
+                guest_source_digest="a" * 64,
+                guest_image_digest="b" * 64,
+            )
+
+    def test_native_receipt_is_checked_by_nmp_queue_gate(self):
+        packet = make_packet().resolve().classify().propose()
+        receipt = self.make_receipt(packet)
+        preflighted = packet.mark_preflight(receipt=receipt)
+        admission = make_admission(preflight_digest=receipt.receipt_digest)
+        preflight = {
+            "result": "VALID",
+            "digest": receipt.receipt_digest,
+            "rule_snapshot_id": RULES,
+        }
+        decision = nmp.execution_gate(
+            preflighted,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertTrue(decision.ok, decision.reason)
+        queued = preflighted.queue(gate=decision)
+        tampered_evidence = dict(queued.evidence)
+        tampered_evidence.pop("native_preflight_receipt")
+        tampered = nmp.replace(queued, evidence=tampered_evidence)
+        denied = nmp.execution_gate(
+            tampered,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertFalse(denied.ok)
+        self.assertIn("native preflight receipt", denied.reason)
+
+    def test_native_receipt_must_be_bound_to_active_lease_before_execution(self):
+        packet = make_packet().resolve().classify().propose()
+        receipt = self.make_receipt(packet)
+        preflighted = packet.mark_preflight(receipt=receipt)
+        admission = make_admission(preflight_digest=receipt.receipt_digest)
+        preflight = {
+            "result": "VALID",
+            "digest": receipt.receipt_digest,
+            "rule_snapshot_id": RULES,
+        }
+        queued = preflighted.queue(
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        scheduler = WaveRingScheduler(cycle_ticks=10, now_tick=0)
+        scheduler.start(0)
+        ring = scheduler.snapshot()
+        lease = {
+            "job_id": "job-1",
+            "state": "active",
+            "lease_epoch": 1,
+            "lease_owner": ring["active_slot_id"],
+            "lease_token": "c" * 64,
+        }
+        job = {"job_id": "job-1", "state": "leased", "generation": 7}
+        with self.assertRaises(nmp.NmpGateError):
+            queued.start_execution(
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+            )
+        bound = queued.bind_native_lease(
+            job, lease, ring, ring_incarnation="ring-inc-1"
+        )
+        binding = NativePreflightLeaseBinding.from_dict(
+            bound.evidence["native_preflight_lease_binding"]
+        )
+        self.assertEqual(binding.receipt_digest, receipt.receipt_digest)
+        gate = nmp.execution_gate(
+            bound,
+            admission=admission,
+            preflight=preflight,
+            capability=make_capability(),
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+            job=job,
+            lease=lease,
+        )
+        self.assertTrue(gate.ok, gate.reason)
+        executing = bound.start_execution(
+            gate=gate,
+            job_id="job-1",
+            lease_epoch=1,
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+        )
+        self.assertEqual(executing.state, nmp.EXECUTING)
+        self.assertEqual(executing.job_id, "job-1")
+        self.assertEqual(executing.lease_epoch, 1)
+        self.assertEqual(executing.ring_epoch, 1)
+
+    def test_native_lease_binding_rejects_wrong_ring_epoch_and_owner(self):
+        packet = make_packet().resolve().classify().propose()
+        receipt = self.make_receipt(packet)
+        preflighted = packet.mark_preflight(receipt=receipt)
+        queued = preflighted.transition(nmp.QUEUED)
+        scheduler = WaveRingScheduler(cycle_ticks=10, now_tick=0)
+        scheduler.start(0)
+        ring = scheduler.snapshot()
+        lease = {
+            "job_id": "job-1",
+            "state": "active",
+            "lease_epoch": 1,
+            "lease_owner": "MC0:0/R1",
+            "lease_token": "c" * 64,
+        }
+        job = {"job_id": "job-1", "state": "leased", "generation": 7}
+        with self.assertRaises(NativePreflightReceiptError):
+            NativePreflightLeaseBinding.from_live_lease(
+                queued, receipt, job, lease, ring, ring_incarnation="ring-inc-1"
+            )
 
 
 if __name__ == "__main__":
