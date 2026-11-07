@@ -1218,3 +1218,5 @@ mth_comp_scratch:
 .word 0
 .word 0
 .word 0
+.org 4096
+.word 0
