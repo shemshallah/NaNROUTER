@@ -70,4 +70,3 @@ mth_pair_driver_fail:
   MOVI r1,0
   RET
 
-.include "mth_graph_pair_tile16_k16_f32.nas"
