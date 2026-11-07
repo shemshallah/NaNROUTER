@@ -46,7 +46,7 @@
   - [x] P5.b Canonical NaN0S `::op:` expression resolution returns the authoritative MC0 contract pointer; NaNROUTER consumes that exact pointer (no reconstructed contract).
   - [x] P5.c Output/input payload non-aliasing uses half-open ranges and rejects partial overlap and address-plus-capacity wrap; left/right overlap and output atomicity are native-tested.
   - [ ] P5.d Bind composed `mth_admit` result to an immutable NMP admission receipt (candidate/rule digest, epoch, operands, capability snapshot, output generation), then bind the receipt to the worker lease.
-  - [ ] P5.e Add native NaN16 operator dispatch after admission; dispatch only allowlisted program IDs to matching kernel ABI, with output commit only after success.
+  - [ ] P5.e Native NaN16 dispatch source now allowlists program/operator pairs 900/77 (dot256) and 901/78 (cosine256); the canonical linker fixture exercises both after `mth_admit`. Updated two-kernel CI is pending; atomic result commit remains a separate P5.g gate.
   - [ ] P5.f Bind packet/receipt/lease to point-0 and MthSystem ring lifecycle; stale/replay/duplicate/cancel/restart tests must deny before executor or commit.
   - [ ] P5.g End-to-end native execution + immutable result commit + provenance/evidence; no host-side mathematical result computation.
 - [x] **P6 — Meta-mapping/store.** `math_store` additive schema, CAS/rollback, payload references/recovery/chunking; 15 tests.
