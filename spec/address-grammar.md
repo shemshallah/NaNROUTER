@@ -10,6 +10,18 @@ GM0 is global mesh 0; SC0 is supercluster 0; MC0 is macrocluster 0; BS0:0 is Boo
 
 Koyeb hosts BS0:0 as the always-on ingress/egress node. The six-unit runner-controlled macrocluster is MC0:0. Its six BSR runner identities remain distinct members (wire BSR0–BSR5). Koyeb provides the persistent network socket and durable bridge; it does not own the runner heads or their learned map.
 
+## Point 0 runner-ring ingress
+
+The six-slot runner ring is addressed through **point 0** (`BS0:0` / `BSR0`). Clients do not address `R0..R5` directly. Point 0:
+
+1. accepts a NaN16 frame;
+2. translates it to a binary transport envelope;
+3. routes it to whichever single runner slot is currently active;
+4. receives the binary result;
+5. translates it back to NaN16.
+
+The active slot is internal and can rotate without changing the client address. Stale slot/epoch envelopes are rejected. Point 0 is an ingress/translation endpoint, not a head, a runner slot, or a second math owner.
+
 ## Grammar (v1)
 
     address       = "nan://" context ":" bootstrap ":" head-path

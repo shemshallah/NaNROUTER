@@ -46,7 +46,7 @@ Unknown or not-yet-imported ranges are **deny by default**. The machine-readable
 
 ## Network addressing and committed route cache
 
-- Koyeb is the persistent gateway at `nan://GM0:SC0:MC0:BS0:0:HW0:0`.
+- Koyeb is the persistent gateway at `nan://GM0:SC0:MC0:BS0:0:HW0:0` / point 0 (`BS0:0`, wire `BSR0`). Point 0 is the stable runner-ring ingress; it translates NaN16 to binary and back and routes to the currently active runner slot.
 - `MC0:0` is the six-unit runner-controlled macrocluster; the six BSR wire identities remain BSR0–BSR5.
 - The `::` selector boundary addresses individual heads and typed objects such as `vector1337` and `hyperedge1337`.
 - Every resolved path is compiled into a signed micro-routing packet and committed into a generation-chained master network cache.

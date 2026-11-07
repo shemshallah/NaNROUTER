@@ -1283,7 +1283,11 @@ The six-slot runner ring (`MC0:0/R0..R5` / `NANROUTER-0..5`) is **single-active*
 | Cycle | drain leases, checkpoint, release memory, activate next slot |
 | Purpose | 24/7 availability with clean handoff, not six-way parallel execution |
 
-The other five slots are standby. A slot must not activate while the previous slot has live leases, live memory, or an uncommitted checkpoint. Each runner advertises:
+The other five slots are standby. A slot must not activate while the previous slot has live leases, live memory, or an uncommitted checkpoint.
+
+**The ring is addressed through point 0.** Clients use the stable point-0 ingress (`BS0:0` / `BSR0`), not a slot identity. Point 0 translates NaN16 frames to binary transport and back, then routes to whichever slot is currently active. The active slot is internal and can change without renumbering clients. Direct `R0..R5` addressing is an internal control path only.
+
+Each runner advertises:
 
 - kernel IDs and native-verification digests;
 - maximum workspace and precision lanes;
@@ -1371,7 +1375,8 @@ Freeze before writing wave kernels:
 10. A spectral match is evidence, not truth.
 11. A mathematical symmetry is not an authorization symmetry.
 12. The host does not compute the mathematics.
-13. A plan is not an implementation.
+14. Point 0 is the only runner-ring address; the active slot is internal.
+15. A plan is not an implementation.
 
 ---
 
@@ -1728,7 +1733,7 @@ Open mathematical questions:
 11. **All mathematics is NaN16.** The host launches, transports, and compares bytes; it does not compute the math. Memory is 512 KiB guest working set, 8 MiB persistent universe, no dense 65,536×65,536 product.
 12. **The six BSR heads remain control.** Each universe has 255 heads: 249 learning + 6 control; the 256th ring position is the NANNET port. A mathematical symmetry is not an authorization symmetry.
 13. **The state seal is a cartridge.** A portable, signed, replayable record, not a consciousness claim and not a transfer of authority.
-14. **Use the fabric we have.** NaNROUTER routes; the single-active six-slot runner ring executes with a 7 GiB active ceiling; Koyeb BS0DB stores ingress/egress, traces, seals, and signatures; MC0DB stores control/meta, candidates, capabilities, and match indexes; the 8 MiB universe stores 255 head pages + 1 NANNET page; the 2 GiB overbootstrap stays on Bootstrap.
+15. **Use the fabric we have.** NaNROUTER routes through point 0; the single-active six-slot runner ring executes with a 7 GiB active ceiling; Koyeb BS0DB stores ingress/egress, traces, seals, and signatures; MC0DB stores control/meta, candidates, capabilities, and match indexes; the 8 MiB universe stores 255 head pages + 1 NANNET page; the 2 GiB overbootstrap stays on Bootstrap.
 15. **Build the exact small thing first.** R0 contract, R1 exact geometry, R2 void, R3 spectral engine, R4 wave, R5 aperture, R6 product, R7 creativity, R8 NANNET node, R9 LM. No vision stage before its mathematical gate.
 
 The central sentence is:

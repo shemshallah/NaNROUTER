@@ -169,9 +169,11 @@ The plan validator checks:
 
 ```
 NANNET0 / universe
+  -> point 0 (BS0:0 / BSR0) stable ingress
+  -> NaN16 -> binary -> NaN16 bridge
+  -> active MC0:0/R0..R5 slot (one at a time)
   -> WaveService / NaNROUTER authorization
   -> MC0DB job + lease
-  -> one of MC0:0/R0..R5 CPU runners
   -> native NaN16 kernel / plan step
   -> BS0DB trace/seal/signature
   -> NaNLMind validation / ledger
@@ -256,6 +258,8 @@ The aperture’s role determines the decomposition. Do not force a Hermitian eig
 | Purpose | 24/7 availability with a clean handoff, not six-way parallel execution |
 | Persistent state | 8 MiB universe + BS0DB/MC0DB + optional signed durable pages |
 | NANNET0 | one logical network node per universe, separate from the ring |
+
+Clients do not address `R0..R5`. They address the stable **point 0** ingress (`BS0:0` / `BSR0`). Point 0 translates NaN16 frames to binary transport and back, then routes to whatever slot is currently active. The active slot is an internal detail.
 
 The six slots are not six math authorities. They are one service with a rotating execution identity.
 
@@ -396,6 +400,35 @@ Rules:
 - NANNET0 is bound to ring position 255;
 - NANNET0 never receives a learning ACL;
 - the six-slot runner ring is `MC0:0/R0..R5`, with one active slot, not six NANNET0 nodes.
+
+
+### 4.7 Point 0: the stable ring ingress
+
+The runner ring is not addressed slot-by-slot. It is addressed through **point 0**:
+
+```
+client NaN16 frame
+  -> point 0 / BS0:0 / BSR0
+  -> NaN16 -> binary transport envelope
+  -> active runner slot (R0..R5)
+  -> NaN16 execution
+  -> binary result envelope
+  -> point 0
+  -> NaN16 result
+```
+
+Rules:
+
+- the public address is stable; it does not contain the active slot;
+- the resolver asks the single-active scheduler for the current slot and epoch;
+- the active slot can change behind point 0 without renumbering clients;
+- a stale slot/epoch envelope is rejected;
+- point 0 is the only ring ingress/egress; direct R0..R5 addressing is an internal control path only;
+- point 0 does not compute mathematics; it frames, translates, authenticates, and routes;
+- `NANNET0` is the universe node; point 0 is the runner-ring ingress used by that node;
+- no two slots receive point-0 work at once.
+
+The point-0 bridge is a distinct object from the address parser and from the scheduler. The scheduler chooses the active slot; the bridge only encodes/decodes and enforces the epoch.
 
 
 ---
@@ -589,6 +622,26 @@ output adapter residual, evidence, ablation label
 These are plan shapes, not implementations. The registry resolves each kernel, checks workspace/evidence, and the executor returns a typed result. No host math is allowed.
 
 
+### 6.8 Point-0 bridge contract
+
+The bridge envelope should carry:
+
+| Field | Meaning |
+|---|---|
+| `magic` / `version` | Fixed framing identity |
+| `request_id` | Idempotent request key |
+| `nan_word_count` | Number of 64-bit NaN16 words |
+| `payload_bytes` | Binary transport body |
+| `payload_digest` | SHA-256 of the binary body |
+| `point_zero` | Stable ingress identity (`BS0:0` / `BSR0`) |
+| `active_slot` / `epoch` | Internal evidence, not part of the public address |
+| `result_status` | Success / invalid / stale / unauthorized / budget |
+
+The bridge must reject corrupt magic/version, length overflow, digest mismatch, stale epoch, no-active-slot, and direct-slot addressing. It must not decode a frame as a different type just because the bytes fit.
+
+The public route remains point 0. The active slot is an internal scheduling detail.
+
+
 ## 7. Further integrations from completion points
 
 ### 7.1 From R1 ring geometry
@@ -680,6 +733,7 @@ These are plan shapes, not implementations. The registry resolves each kernel, c
 | P8 | NANNET0 persistence + Koyeb | P4 | signed volume registry |
 | P9 | LM ENCODE/DECODE + ablation | P6/P8 | held-out benefit or rejection |
 | P10 | R7 avoided crossing/phase | coupling kernel | held-out experiment |
+| P11 | Point-0 NaN→binary→NaN bridge/router | scheduler + address grammar | stable ingress, active-slot routing, stale epoch rejection |
 
 **Runtime rule:** these work packets may be developed in parallel by agents, but execution is serialized by the single-active runner ring. Two packets may not hold live leases or active memory on two slots at the same time. A packet that needs more than the 7 GiB active ceiling must be paged, split, or rejected.
 
@@ -797,6 +851,7 @@ It does not mean every mathematical theorem is implemented.
 | “NANNET0 is a head/shard/runner.” | NANNET0 is the one network endpoint per universe; heads, runner slots, and durable pages are distinct. |
 | “The aperture is Hermitian.” | Only if certified; otherwise SVD/Schur/left-right. |
 | “The ring is automatically a maximum.” | Measure ring energy/coherence/antinodes; do not assume. |
+| “Clients address R0..R5 directly.” | The stable address is point 0; the active slot is internal and changes behind it. |
 | “The noosphere preserves phase.” | Network clocks do not imply phase coherence; use phase-invariant signatures unless a clock model exists. |
 | “A candidate can self-promote.” | Candidate operators pass validation, authorization, and generation CAS. |
 | “A host can compute the math.” | Host only orchestrates; NaN16 implements. |
@@ -810,14 +865,15 @@ It does not mean every mathematical theorem is implemented.
 2. **Build MTH System v1**: registry, plan, executor, evidence, capability.
 3. **Use 256×256 dense only where it fits** (256 KiB); use 16×256 blocks for full matvec/certificate; use matrix-free/low-rank for the 65,536 product.
 4. **Use NANROUTER-0..5 as a single-active runner ring with a 7 GiB active ceiling**, not six parallel runners; use NANNET0 as the one node per universe.
-5. **Finish the 256×256 block path**, then 256 aperture SVD/top-k, then 256 block pair/low-rank.
-6. **Finish the HTTP/NANNET0 path** and production MC0DB registration.
-7. **Finish the 255/256 streaming certificate** and odd head-only fold.
-8. **Compose QUERY/MATCH/FILTER/DRIVE** from verified primitives; do not add a second math service.
-9. **Run the LM adapter only behind a frozen-base ablation**; default disabled.
-10. **Run R7 as an experiment**, not a claim: avoided crossings, phase coherence, held-out association, kill criteria.
-11. **Promote only native-verified, CI-verified, digest-bound kernels** with explicit workspace/lease/evidence.
-12. **The next document after this one should be an evidence ledger, not another manifesto.**
+5. **Keep point 0 as the only ring address**; route to the active slot behind it.
+6. **Finish the 256×256 block path**, then 256 aperture SVD/top-k, then 256 block pair/low-rank.
+7. **Finish the HTTP/NANNET0 path** and production MC0DB registration.
+8. **Finish the 255/256 streaming certificate** and odd head-only fold.
+9. **Compose QUERY/MATCH/FILTER/DRIVE** from verified primitives; do not add a second math service.
+10. **Run the LM adapter only behind a frozen-base ablation**; default disabled.
+11. **Run R7 as an experiment**, not a claim: avoided crossings, phase coherence, held-out association, kill criteria.
+12. **Promote only native-verified, CI-verified, digest-bound kernels** with explicit workspace/lease/evidence.
+13. **The next document after this one should be an evidence ledger, not another manifesto.**
 
 The shortest correct sentence is:
 
@@ -838,6 +894,7 @@ The shortest correct sentence is:
 | D8 | LM adapter default disabled until held-out ablation | accepted | after P9 evidence |
 | D9 | 255-head odd fold is 127+128, not 128+128 | accepted | none |
 | D10 | Every promoted kernel carries source/fixture digest, workspace, CI/evidence | accepted | none |
+| D11 | Point 0 is the only ring address; NaN16↔binary↔NaN16 routing selects the active slot | accepted | after bridge implementation |
 
 
 
