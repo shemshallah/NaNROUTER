@@ -23,7 +23,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 540 Python tests pass.
-- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Registry-to-`mth_admit` linker integration is in PR #38 and remains pending its rebased CI gate.
+- [x] Canonical workflow `42408220667` passed all 132 native MTH steps, including both operand-range alias regressions and the canonical `::` linker → MC0 contract → composed `mth_admit` path (PR #42).
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -45,7 +45,8 @@
   - [x] P5.a Native NaN16 rule gate + typed operand preflight; exact epoch, signature, domain, shape, capability subset, proof level, enabled state, and 256-bit rule digest.
   - [x] P5.b Canonical NaN0S `::op:` expression resolution returns the authoritative MC0 contract pointer; NaNROUTER consumes that exact pointer (no reconstructed contract).
   - [x] P5.c Output/input payload non-aliasing uses half-open ranges and rejects partial overlap and address-plus-capacity wrap; left/right overlap and output atomicity are native-tested.
-  - [ ] P5.d Bind composed `mth_admit` result to an immutable NMP admission receipt (candidate/rule digest, epoch, operands, capability snapshot, output generation), then bind the receipt to the worker lease.
+    - [x] P5.d.1 NMP validates the NaN16 guest receipt schema and binds candidate/input/capability/snapshot/generation and receipt digest to one packet; worker execution binds that receipt to job, lease-token digest, lease epoch/owner, ring incarnation/epoch, generation, and JAHS (PR #41). This is integrity/correlation binding, not cryptographic attestation.
+  - [ ] P5.d.2 Emit the raw admission receipt from NaN16 only after both gates allow, then have the Android/runner adapter serialize the guest record into the NMP receipt schema; preserve native origin/attestation as a separate trust requirement.
   - [ ] P5.e Add native NaN16 operator dispatch after admission; dispatch only allowlisted program IDs to matching kernel ABI, with output commit only after success.
   - [ ] P5.f Bind packet/receipt/lease to point-0 and MthSystem ring lifecycle; stale/replay/duplicate/cancel/restart tests must deny before executor or commit.
   - [ ] P5.g End-to-end native execution + immutable result commit + provenance/evidence; no host-side mathematical result computation.
