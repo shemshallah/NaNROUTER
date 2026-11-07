@@ -8,46 +8,16 @@ mth_vec_test_main:
   MOVI r12,@mth_vec_frame
 
   ; A = [1, UINT32_MAX, 3], B = [2, 1, 4].
-  MOVI r1,1
-  MOVI r2,8192
-  STW r1,r2,r0
-  MOVI r1,0xFFFFFFFF
-  MOVI r3,1
-  STW r1,r2,r3
-  MOVI r1,3
-  MOVI r3,2
-  STW r1,r2,r3
-
-  MOVI r2,8200
-  MOVI r1,2
-  STW r1,r2,r0
-  MOVI r3,1
-  MOVI r1,1
-  STW r1,r2,r3
-  MOVI r3,2
-  MOVI r1,4
-  STW r1,r2,r3
-
-  ; Sentinel output must survive overflow with no partial writes.
-  MOVI r2,8210
-  MOVI r1,77
-  STW r1,r2,r0
-  MOVI r3,1
-  MOVI r1,88
-  STW r1,r2,r3
-  MOVI r3,2
-  MOVI r1,99
-  STW r1,r2,r3
-
-  MOVI r1,8192
-  MOVI r2,8200
-  MOVI r3,8210
+  MOVI r1,@mth_vec_a
+  MOVI r2,@mth_vec_b
+  MOVI r3,@mth_vec_out
   MOVI r4,3
   CALL @mth_u32_span_add_checked
   CMP r1,r0
   JMP[NE] @mth_vec_fail
 
-  MOVI r2,8210
+  ; Overflow must leave every output sentinel unchanged.
+  MOVI r2,@mth_vec_out
   LD r5,r2,0
   MOVI r6,77
   CMP r5,r6
@@ -62,20 +32,23 @@ mth_vec_test_main:
   JMP[NE] @mth_vec_fail
 
   ; Repair A[1], then expect [3,11,7].
-  MOVI r2,8192
+  MOVI r2,@mth_vec_a
   MOVI r1,10
-  MOVI r3,1
-  STW r1,r2,r3
-  MOVI r1,8192
-  MOVI r2,8200
-  MOVI r3,8210
+  STW r1,r2,r0
+  ADD r2,r2,r13
+  MOVI r1,10
+  STW r1,r2,r0
+
+  MOVI r1,@mth_vec_a
+  MOVI r2,@mth_vec_b
+  MOVI r3,@mth_vec_out
   MOVI r4,3
   CALL @mth_u32_span_add_checked
   MOVI r6,1
   CMP r1,r6
   JMP[NE] @mth_vec_fail
 
-  MOVI r2,8210
+  MOVI r2,@mth_vec_out
   LD r5,r2,0
   MOVI r6,3
   CMP r5,r6
@@ -127,6 +100,18 @@ mth_vec_frame:
 .word 0
 .word 0
 .word 0
+mth_vec_a:
+.word 1
+.word 0xFFFFFFFF
+.word 3
+mth_vec_b:
+.word 2
+.word 1
+.word 4
+mth_vec_out:
+.word 77
+.word 88
+.word 99
 mth_vec_pass:
 .str "MTH U32 VECTOR ADD PASS\n"
 mth_vec_bad:
