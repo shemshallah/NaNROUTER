@@ -887,3 +887,18 @@ set are frozen in `docs/MTH_GRAPH_PAIR_TILE16_ABI_V1.md`. The L=2I
 fixture checks all 256 outputs in one tile. Canonical NaN16 CI run 218
 passed (4,643,414 guest steps), including a nonzero tile-origin case.
 Full page-window orchestration remains open.
+
+
+## 21. Bounded K16 streaming pair-space operation
+
+The dispatchable NaN16 implementation is
+mth/nan16/mth_graph_pair_tile16_k16_f32.nas. It processes one 16×16
+output tile using four 16×16 K-blocks, two persistent partial-sum tiles,
+and a separate finalizer. The caller streams K slices in increasing order.
+The exact two-slice L=2I fixture passed canonical NaN16 CI run 242 in
+283,436 guest steps. Workspace is 1,542 NaN16 words (12,336 bytes).
+
+The earlier full-U tile is retained as a mathematically verified reference,
+but its 73,990-word workspace exceeds the 512 KiB guest budget. It is not
+dispatchable under the standard MthSystem budget. Full page-window
+orchestration and atomic publication of all 256 output tiles remain open.

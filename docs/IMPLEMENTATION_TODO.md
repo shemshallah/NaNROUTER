@@ -96,7 +96,7 @@
 - [x] Add rank-1 low-rank coupling kernel (callable R times).
 - [x] Add 65,536-mode accounting in the plan.
 - [x] Reject dense 65,536² materialization in the plan and memory budget.
-- [x] Add 256×256 tiled dense product action — 16×16 NaN16 tile kernel and exact L=2I fixture native_verified in CI run 218 with tile origins (0,0) and (16,32); page-window orchestration and atomic publication remain open.
+- [x] Add 256×256 tiled dense product action — bounded 16×16 K16 NaN16 accumulator/finalizer native_verified in CI run 242 (1,542 words, 12,336 bytes); page-window orchestration and atomic publication remain open. The full-U tile is reference-only because it exceeds 512 KiB.
 
 ## R7 — Tunneling and creativity
 
@@ -193,4 +193,5 @@ CI prior: `42386209524` — 71/71 steps; 38-fixture/79-step run pending. See `do
 | A19 | Single-active runner-ring scheduler | done — 27 tests |
 | A20 | Point-0 NaN/binary bridge/router | done — 35 tests (implemented during integration) |
 | A21 | MthSystem runtime facade | done — 11 tests |
-| A22 | 256×256 pair-space tile | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified, CI run 218 |
+| A22 | 256×256 pair-space tile reference | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified; over 512 KiB |
+| A23 | Bounded K16 pair tile | `mth_graph_pair_tile16_k16_f32.nas`, fixture, ABI, CI | done — native_verified, CI run 242; 1,542 words |
