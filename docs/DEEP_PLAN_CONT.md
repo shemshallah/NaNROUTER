@@ -15,7 +15,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-The project has crossed an important boundary: it is no longer only a plan. There are **34 native MTH kernels with fixtures**: 33 pass in the local harness and all 34 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 210 Python tests.
+The project has crossed an important boundary: it is no longer only a plan. There are **34 native MTH kernels with fixtures**: 33 pass in the local harness and all 34 pass canonical CI, plus a working BS0DB/MC0DB control/evidence plane and 235 Python tests.
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -68,7 +68,7 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_http.py` | standalone authenticated HTTP adapter; 12 tests |
 | `runner_riddle/mth_registry.py` | MTH descriptor registry/planner; 26 tests |
 | `runner_riddle/wave_ring_scheduler.py` | single-active six-slot runner ring, 7 GiB ceiling, cycle/handoff; 27 tests |
-| `runner_riddle/point0_bridge.py` | point-0 NaN16↔binary↔NaN16 bridge and active-slot router; 10 tests |
+| `runner_riddle/point0_bridge.py` | point-0 NaN16↔binary↔NaN16 bridge and active-slot router; 35 tests |
 | `runner_riddle/mth_system.py` | MthSystem runtime facade over registry/store/service/scheduler; 11 tests |
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
@@ -82,7 +82,7 @@ The 255 + 1 rule remains:
 
 ```
 33/33 locally runnable fixtures pass; K256 pair passed canonical CI
-34/34 total native fixtures; 210/210 Python tests pass
+34/34 total native fixtures; 235/235 Python tests pass
 GitHub Actions run 42386209524: 71/71 steps passed (34-fixture set)
 ```
 

@@ -136,6 +136,8 @@ def _canonical_route(route: Any) -> str:
     if not isinstance(route, str):
         raise FrameError("route must be a string")
     route = route.strip()
+    if not route:
+        return POINT_ZERO_ADDRESS
     if route in (POINT_ZERO_ADDRESS, POINT_ZERO_WIRE):
         return POINT_ZERO_ADDRESS
     if any(marker in route for marker in _FORBIDDEN_ROUTE_MARKERS):
@@ -214,9 +216,11 @@ class NanFrame:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "words", _freeze_words(self.words))
-        object.__setattr__(
-            self, "request_id", _require_uint("request_id", self.request_id)
-        )
+        try:
+            request_id = _require_uint("request_id", self.request_id)
+        except Point0BridgeError as exc:
+            raise FrameError(str(exc)) from exc
+        object.__setattr__(self, "request_id", request_id)
         object.__setattr__(self, "route", _canonical_route(self.route))
         object.__setattr__(
             self, "provenance", _freeze_provenance(self.provenance)
@@ -586,6 +590,10 @@ class Point0Result:
         return self.frame.words
 
     @property
+    def word_count(self) -> int:
+        return len(self.frame.words)
+
+    @property
     def request_id(self) -> int:
         return self.frame.request_id
 
@@ -598,8 +606,17 @@ class Point0Result:
         return self.frame.route
 
     @property
+    def slot(self) -> int:
+        """Alias for the active slot evidence (never part of the route)."""
+        return self.active_slot
+
+    @property
     def provenance(self) -> tuple[tuple[str, str], ...]:
         return self.frame.provenance
+
+    @property
+    def metadata(self) -> dict[str, str]:
+        return self.frame.metadata
 
     def to_dict(self) -> dict[str, Any]:
         """Return JSON-safe result evidence; the route never names a slot."""
@@ -649,7 +666,7 @@ class Point0Router:
         if (
             bridge is not None
             and not isinstance(bridge, Point0Bridge)
-            and isinstance(bridge, WaveRingScheduler)
+            and callable(getattr(bridge, "snapshot", None))
             and scheduler is not None
             and callable(scheduler)
             and executor is None
@@ -678,6 +695,11 @@ class Point0Router:
         """Encode, route to the one active slot, execute, and decode."""
         if not isinstance(frame, NanFrame):
             raise FrameError("frame must be a NanFrame")
+        if len(frame.words) > self.bridge.max_words:
+            raise FrameTooLargeError(
+                f"frame has {len(frame.words)} words; "
+                f"limit is {self.bridge.max_words}"
+            )
         with self._lock:
             state = self._active_state()
             envelope = self.bridge.encode(

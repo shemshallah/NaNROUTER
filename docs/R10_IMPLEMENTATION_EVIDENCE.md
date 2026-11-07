@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 33/33 locally runnable fixtures passed; 34/34 total pass including CI-only K256 pair; 210 Python tests passed.
+**Result:** 33/33 locally runnable fixtures passed; 34/34 total pass including CI-only K256 pair; 235 Python tests passed.
 **CI:** the expanded `mth-native-contract` workflow passed all 71 steps on `main` for commit `9a1ab1f`.
 
 ## Native fixtures
@@ -48,7 +48,7 @@
 
 ```
 python3 -m unittest discover -s tests -v
-Ran 210 tests
+Ran 235 tests
 OK
 ```
 
@@ -64,7 +64,7 @@ Covered:
 - MTH system registry/planner (26 tests);
 - single-active runner-ring scheduler (27 tests);
 - standalone authenticated Wave HTTP adapter (12 tests);
-- point-0 NaN/binary bridge and active-slot router (10 tests);
+- point-0 NaN/binary bridge and active-slot router (35 tests);
 - MthSystem runtime facade (11 tests);
 - capability manifest registration into MC0DB (4 tests).
 

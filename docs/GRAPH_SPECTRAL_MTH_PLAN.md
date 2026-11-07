@@ -233,7 +233,7 @@ python3 tools/run_mth_fixtures.py
 33/34 fixtures passed
 
 python3 -m unittest discover -s tests -v
-Ran 210 tests
+Ran 235 tests
 OK
 ```
 
