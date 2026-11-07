@@ -270,7 +270,7 @@ digest and invokes 256 tiles to complete Y. The L=2I fixture checks every
 cell of the first tile against Y=4U.
 
 **Evidence status: NATIVE_VERIFIED for one tile.** Canonical NaN16 CI run
-201 assembled and executed the L=2I fixture (2,301,554 guest steps); all
-256 output cells matched Y=4U. This does not yet verify full 256-tile paged
+218 assembled and executed the L=2I fixture (4,643,414 guest steps); all
+256 output cells matched Y=4U for tile origins (0,0) and (16,32). This does not yet verify full 256-tile paged
 orchestration, cancellation, cross-tile publication atomicity, or a
 generic sparse-CSR pair action.
