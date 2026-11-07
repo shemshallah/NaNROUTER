@@ -1388,6 +1388,27 @@ class NmpPacket:
                     failure=STALE,
                     reason="native lease binding belongs to another packet/candidate",
                 ))
+            receipt_data = self.evidence.get("native_preflight_receipt")
+            try:
+                receipt_obj = NativePreflightReceipt.from_dict(receipt_data)
+            except NativePreflightReceiptError as exc:
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason=f"native receipt is unavailable at lease start: {exc}",
+                )) from exc
+            if (
+                stored_binding.receipt_digest != receipt_obj.receipt_digest
+                or stored_binding.output_generation != receipt_obj.output_generation
+                or stored_binding.cancel_epoch != self.cancel_epoch
+            ):
+                raise NmpGateError(NmpGateDecision(
+                    packet_id=self.packet_id,
+                    from_state=self.state,
+                    failure=STALE,
+                    reason="native lease binding no longer matches receipt/output/cancel epoch",
+                ))
             for name, supplied, expected in (
                 ("job_id", job_id, stored_binding.job_id),
                 ("lease_epoch", lease_epoch, stored_binding.lease_epoch),
