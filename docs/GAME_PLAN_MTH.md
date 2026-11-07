@@ -886,7 +886,7 @@ ordered float32 accumulators per output cell. Its register ABI and working
 set are frozen in `docs/MTH_GRAPH_PAIR_TILE16_ABI_V1.md`. The L=2I
 fixture checks all 256 outputs in one tile. Canonical NaN16 CI run 218
 passed (4,643,414 guest steps), including a nonzero tile-origin case.
-Full page-window orchestration remains open.
+A full 16-slice guest driver is now native-verified (CI run 338, 2,224,303 steps). It consumes four pre-staged 16-slice strips, calls the K16 accumulator in order, and returns both partial sums for caller validation/finalization. Page-window retrieval/staging, 256-tile scheduling, and atomic publication remain open.
 
 
 ## 21. Bounded K16 streaming pair-space operation
