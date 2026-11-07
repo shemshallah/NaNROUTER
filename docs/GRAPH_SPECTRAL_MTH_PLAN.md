@@ -174,3 +174,10 @@ is therefore **native_verified** for this exact U16-input K256 operator.
 This does not yet establish the signed fixed-point ABI for graph waves,
 void potentials or spectral iteration. It is a narrow exact K256 baseline
 that can be executed before those wider contracts are frozen.
+
+
+## 11. Sparse graph Laplacian v1 implementation update
+
+The signed fixed-point ABI is now frozen in `docs/MTH_SPARSE_GRAPH_ABI.md`. The first sparse native slice is intentionally an exact unweighted symmetric simple-graph CSR operator with Q16.16/I32 input and output. The input state is bounded to [-64,+64], so each edge difference is bounded by 2^23 raw units and a maximum-degree-255 row sum remains below signed-I32 overflow. No rounding or saturation is used.
+
+Source: `mth/nan16/mth_sparse_graph_laplacian.nas`. Fixtures: `mth/tests/mth_sparse_graph_laplacian_test.nas` (path graph, disconnected graph, and invalid-input atomicity). The fixture has been added to the canonical NaN16 CI workflow. Its evidence status is **source_written / awaiting native execution**; it is not dispatchable. Weighted CSR is a separately versioned follow-on, not an implicit extension of this ABI.
