@@ -51,7 +51,12 @@ from runner_riddle import N16TGuestPool, N16THttpAdapter, WaveHttpServer
 guest_pool = N16TGuestPool.from_env(max_sessions=8)
 n16t = N16THttpAdapter(guest_pool.exchange)
 server = WaveHttpServer(service, n16t_adapter=n16t)
-server.start()
+try:
+    server.start()
+    # Run the service's normal wait/shutdown loop here.
+finally:
+    server.stop()
+    guest_pool.close()
 ```
 
 The guest currently implements the server-side HELLO/CAPABILITIES handshake
