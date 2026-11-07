@@ -696,7 +696,7 @@ jobs:
 
       - name: Execute composed mathematical admission fixture
         run: |
-          nan0s/aarch64/android/nan_cli --img build/mth/admission.nan --steps 2000000 --serial > build/mth/admission.out 2> build/mth/admission.err
+          nan0s/aarch64/android/nan_cli --img build/mth/admission.nan --steps 2000000 --serial --peek 40254:1 > build/mth/admission.out 2> build/mth/admission.err
           cat build/mth/admission.out
           cat build/mth/admission.err
           grep -q '^MTH COMPOSED ADMISSION PASS' build/mth/admission.out
