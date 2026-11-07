@@ -5,7 +5,7 @@
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
 **Result:** 38/38 locally runnable fixtures passed; 39/39 total including CI-only K256 pair; 235 Python tests passed.
-**CI:** prior runs 218/242 passed the tile/K16 fixtures; the combined 39-fixture/81-step run is pending.
+**CI:** the expanded `mth-native-contract` workflow passed all 81 steps on `main` for commit `777673f`.
 
 ## Native fixtures
 
@@ -46,10 +46,10 @@
 | 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | yes |
 | 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,711 | PASS (CI run 180) | yes |
 | 35 | General dense 256 pair-space tile16 | `mth/tests/mth_graph_pair_tile16_f32_test.nas` | 4,643,414 | PASS (CI run 218) | yes |
-| 36 | ENCODE 256→128 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | pending |
-| 37 | DECODE 128→256 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | pending |
-| 38 | 128×128 SVD top pair | `mth/tests/mth_svd_top128_test.nas` | 1,311,632 | PASS | pending |
-| 39 | 255 odd certificate | `mth/tests/mth_centrosymmetry255_block15_test.nas` | 653,687 | PASS | pending |
+| 36 | ENCODE 256→128 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | yes |
+| 37 | DECODE 128→256 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | yes |
+| 38 | 128×128 SVD top pair | `mth/tests/mth_svd_top128_test.nas` | 1,311,632 | PASS | yes |
+| 39 | 255 odd certificate | `mth/tests/mth_centrosymmetry255_block15_test.nas` | 653,687 | PASS | yes |
 | 40 | Bounded K16 streaming pair tile | `mth/tests/mth_graph_pair_tile16_k16_f32_test.nas` | 283,436 | PASS (CI run 242) | yes |
 
 ## Python tests

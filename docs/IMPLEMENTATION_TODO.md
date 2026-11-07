@@ -18,7 +18,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 38/38 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
 - [x] 235 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed prior run `42388797363` (79/79 steps); combined 39-fixture/81-step run pending.
+- [x] Expanded GitHub Actions native workflow passed run `42389138279` (81/81 steps).
 
 ## R0 — Contract and storage freeze
 
@@ -169,7 +169,7 @@ Ran 235 tests
 OK
 ```
 
-CI prior: `42388797363` — 79/79 steps; combined 39-fixture/81-step run pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42389138279` — 81/81 steps for the 39-fixture set. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 
