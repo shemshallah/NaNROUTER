@@ -1144,6 +1144,16 @@ class NativePreflightReceiptTests(unittest.TestCase):
         )
         self.assertFalse(stale_digest.ok)
         self.assertIn("rule digest", stale_digest.reason)
+        with self.assertRaises(nmp.NmpGateError):
+            preflighted.queue(
+                gate=decision,
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 8, "rule_digest": receipt.rule_digest},
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+            )
         queued = preflighted.queue(
             gate=decision,
             admission=admission,
@@ -1230,6 +1240,20 @@ class NativePreflightReceiptTests(unittest.TestCase):
             lease=lease,
         )
         self.assertTrue(gate.ok, gate.reason)
+        with self.assertRaises(nmp.NmpGateError):
+            bound.start_execution(
+                gate=gate,
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ruleset_snapshot={"snapshot_id": RULES, "rule_epoch": 8, "rule_digest": receipt.rule_digest},
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+                job=job,
+                lease=lease,
+                job_id="job-1",
+                lease_epoch=1,
+            )
         executing = bound.start_execution(
             gate=gate,
             admission=admission,
