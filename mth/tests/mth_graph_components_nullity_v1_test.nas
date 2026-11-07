@@ -154,7 +154,7 @@ mth_comp_fail:
   PUTC r1
   HALT
 
-.org 512
+.org 1024
 mth_comp_offsets:
 .word 0
 .word 1
@@ -413,7 +413,7 @@ mth_comp_offsets:
 .word 8
 .word 8
 .word 8
-.org 800
+.org 1312
 mth_comp_empty_offsets:
 .word 0
 .word 0
@@ -672,7 +672,7 @@ mth_comp_empty_offsets:
 .word 0
 .word 0
 .word 0
-.org 1100
+.org 1612
 mth_comp_neighbors:
 .word 1
 .word 0
@@ -682,7 +682,7 @@ mth_comp_neighbors:
 .word 2
 .word 5
 .word 4
-.org 1200
+.org 1712
 mth_comp_labels:
 .word 0
 .word 0
@@ -940,7 +940,7 @@ mth_comp_labels:
 .word 0
 .word 0
 .word 0
-.org 1500
+.org 2012
 mth_comp_tmp:
 .word 0
 .word 0
@@ -1198,7 +1198,7 @@ mth_comp_tmp:
 .word 0
 .word 0
 .word 0
-.org 3072
+.org 3584
 mth_comp_count:
 .word 0
 mth_comp_scratch:
