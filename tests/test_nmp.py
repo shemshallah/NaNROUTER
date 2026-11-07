@@ -1240,6 +1240,23 @@ class NativePreflightReceiptTests(unittest.TestCase):
             lease=lease,
         )
         self.assertTrue(gate.ok, gate.reason)
+        changed_lease = dict(lease)
+        changed_lease["lease_token"] = "d" * 64
+        with self.assertRaises(nmp.NmpGateError):
+            bound.start_execution(
+                gate=gate,
+                admission=admission,
+                preflight=preflight,
+                capability=make_capability(),
+                ruleset_snapshot=live_ruleset,
+                ring_incarnation="ring-inc-1",
+                ring_epoch=1,
+                ring_snapshot=ring,
+                job=job,
+                lease=changed_lease,
+                job_id="job-1",
+                lease_epoch=1,
+            )
         with self.assertRaises(nmp.NmpGateError):
             bound.start_execution(
                 gate=gate,
