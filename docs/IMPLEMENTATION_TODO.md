@@ -193,4 +193,5 @@ CI: `42386209524` — 71/71 steps for the 34-fixture set. See `docs/R10_IMPLEMEN
 | A19 | Single-active runner-ring scheduler | done — 27 tests |
 | A20 | Point-0 NaN/binary bridge/router | done — 35 tests (implemented during integration) |
 | A21 | MthSystem runtime facade | done — 11 tests |
-| A22 | 256×256 pair-space tile | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified, CI run 218 |
+| A22 | 256×256 pair-space tile reference | `mth_graph_pair_tile16_f32.nas`, fixture, ABI, CI | done — native_verified; over 512 KiB |
+| A23 | Bounded K16 pair tile | `mth_graph_pair_tile16_k16_f32.nas`, fixture, ABI, CI | done — native_verified, CI run 242; 1,542 words |
