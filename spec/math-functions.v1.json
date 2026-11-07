@@ -1,0 +1,1314 @@
+{
+  "schema": "nanrouter.math-functions.v1",
+  "version": 1,
+  "generated_by": "manual semantic function catalogue",
+  "notes": "Semantic contracts reference existing native kernels in spec/wave-capabilities.json. This file does not modify the frozen 61-kernel manifest. Functions without implementations are proposed vocabulary, not execution claims.",
+  "functions": [
+    {
+      "function_id": "math.scalar.add",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          },
+          {
+            "name": "b",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "a + b",
+        "exact": true
+      },
+      "preconditions": [
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == a + b under exact arithmetic"
+        }
+      ],
+      "undefined_conditions": [],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.scalar.sub",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          },
+          {
+            "name": "b",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "a - b",
+        "exact": true
+      },
+      "preconditions": [
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == a - b under exact arithmetic"
+        }
+      ],
+      "undefined_conditions": [],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.scalar.mul",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          },
+          {
+            "name": "b",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "a * b",
+        "exact": true
+      },
+      "preconditions": [
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == a * b under exact arithmetic"
+        }
+      ],
+      "undefined_conditions": [],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.scalar.div",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          },
+          {
+            "name": "b",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "exact"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "a / b",
+        "exact": true
+      },
+      "preconditions": [
+        {
+          "expr": "domain(a) compatible domain(b)"
+        },
+        {
+          "expr": "b != 0"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == a / b under exact arithmetic"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "b == 0",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.vector.add",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": [
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "elementwise a + b"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == shape(b)"
+        },
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result[i] == a + b for every i under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "shape(a) != shape(b)",
+          "result": "undefined"
+        },
+        {
+          "expr": "incompatible domains",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.vector.sub",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": [
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "elementwise a - b"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == shape(b)"
+        },
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result[i] == a - b for every i under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "shape(a) != shape(b)",
+          "result": "undefined"
+        },
+        {
+          "expr": "incompatible domains",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.vector.dot",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "sum_i a[i] * b[i]",
+        "reduction": "256 terms"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == shape(b)"
+        },
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == sum_i a[i]*b[i] under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "shape(a) != shape(b)",
+          "result": "undefined"
+        },
+        {
+          "expr": "incompatible domains",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.vector.dot256.f32",
+          "version": 1,
+          "source_digest": "7326df9a8393d4578829522c3de976e9fb4fd53b1946a64b5192f6b663b3f0bb",
+          "fixture_digest": "91917322f66c26a5e02ef3054cf1ad3df16495924defeecaba41fed0afaef491",
+          "precision": "float32",
+          "shape": [
+            256
+          ],
+          "workspace_words": 0,
+          "capability_class": "vector.dot"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.norm",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "x",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "sqrt(sum_i x[i]^2)"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(x) == [256]"
+        },
+        {
+          "expr": "domain(x) == real"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == sqrt(sum_i x[i]^2) under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "non-real domain",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.vector.norm256.f32",
+          "version": 1,
+          "source_digest": "992ac5de68edb9b7b114ce40974d79839102cc22d116a3c0e2a6b59f696c5461",
+          "fixture_digest": "50b1e937ad57db747462e970182ce28d142b53955e94f5a0df5f41a2f99a062f",
+          "precision": "float32",
+          "shape": [
+            256
+          ],
+          "workspace_words": 0,
+          "capability_class": "vector.norm"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.cosine",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "dot(a,b) / (norm(a) * norm(b))"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == shape(b)"
+        },
+        {
+          "expr": "norm(a) != 0"
+        },
+        {
+          "expr": "norm(b) != 0"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == dot(a,b) / (norm(a)*norm(b)) under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "dimension mismatch",
+          "result": "undefined"
+        },
+        {
+          "expr": "zero norm",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.vector.cosine256.f32",
+          "version": 1,
+          "source_digest": "64891b0f0b48470d1174e0c003d11d7919c64ef5230264697b3b882f83b3cadc",
+          "fixture_digest": "4a3deb5f529efbbeec5ea8f60af5bcd83ec3bc282aa92e3b7fb4e16b85daf7fc",
+          "precision": "float32",
+          "shape": [
+            256
+          ],
+          "workspace_words": 4,
+          "capability_class": "vector.cosine"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.distance",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "real",
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "distance(a,b) = norm(sub(a,b))",
+        "composition": [
+          "math.vector.sub",
+          "math.vector.norm"
+        ],
+        "implementation_note": "contract composition; math.vector.sub has no native kernel in v1"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == shape(b)"
+        },
+        {
+          "expr": "domain(a) compatible domain(b)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == norm(sub(a,b)) under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "dimension mismatch",
+          "result": "undefined"
+        },
+        {
+          "expr": "incompatible domains",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.vector.axpy",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "alpha",
+            "type": "scalar",
+            "domain": "real",
+            "precision": "float32"
+          },
+          {
+            "name": "x",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "y",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": [
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "result[i] = alpha*x[i] + y[i]"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(x) == shape(y)"
+        },
+        {
+          "expr": "domain(x) compatible domain(y)"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result[i] == alpha*x[i] + y[i] under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "shape(x) != shape(y)",
+          "result": "undefined"
+        },
+        {
+          "expr": "incompatible domains",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.vector.axpy256.f32",
+          "version": 1,
+          "source_digest": "6d12fd0da2cfc6709ec360c61a77817af8358b85bb60c65b9a47d26a29dd0bee",
+          "fixture_digest": "47c87d12178418f8a45d812e884335b8ae1c000b2ac86b3b9088230798150a48",
+          "precision": "float32",
+          "shape": [
+            256
+          ],
+          "workspace_words": 0,
+          "capability_class": "vector.axpy"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.matvec",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "matrix",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              128,
+              128
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "vector",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              128
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": [
+            128
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "result[i] = sum_j matrix[i][j] * vector[j]"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(matrix) == [128, 128]"
+        },
+        {
+          "expr": "shape(vector) == [128]"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == matrix @ vector under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "shape(matrix) != [128, 128]",
+          "result": "undefined"
+        },
+        {
+          "expr": "shape(vector) != [128]",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.matvec.128.f32",
+          "version": 1,
+          "source_digest": "23b868d877e1eda6948b34c52d5da5e89e2a167739e93754cc6e1fdaf1a86605",
+          "fixture_digest": "0d06f93ab06204825c74e6ef4e58618eef70c4616c6e07ba740ed1e80ecdf26d",
+          "precision": "float32",
+          "shape": [
+            128,
+            128
+          ],
+          "workspace_words": 0,
+          "capability_class": "vector.matvec"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.topk",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "scores",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "k",
+            "type": "scalar",
+            "domain": "integer",
+            "precision": "exact"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": "any",
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "top-k values and indices in descending score order"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(scores) == [256]"
+        },
+        {
+          "expr": "1 <= k <= 256"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "output contains exactly k ordered score/index entries"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "k < 1",
+          "result": "undefined"
+        },
+        {
+          "expr": "k > 256",
+          "result": "undefined"
+        },
+        {
+          "expr": "dimension mismatch",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.topk.256.f32",
+          "version": 1,
+          "source_digest": "427656673f9aff0ee6185c59541cef0486d45ebfe45c268f7bc7541458ea7785",
+          "fixture_digest": "08b1bb12b9d35c72eec9a80e99f598b1b6dfacf8d816c58a68b7b4a5310121df",
+          "precision": "float32",
+          "shape": [
+            256
+          ],
+          "workspace_words": 0,
+          "capability_class": "vector.topk"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.vector.projection",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "matrix",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              256,
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "vector",
+            "type": "vector",
+            "domain": "real",
+            "shape": [
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "vector",
+          "domain": "real",
+          "shape": [
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "projection of vector onto the column space of matrix",
+        "implementation_note": "contract composition; no direct projection kernel in v1"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(matrix) == [256, 256]"
+        },
+        {
+          "expr": "shape(vector) == [256]"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "output lies in the declared column space under the numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "dimension mismatch",
+          "result": "undefined"
+        },
+        {
+          "expr": "rank-deficient matrix without declared policy",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.matrix.multiply",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              256,
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "b",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              256,
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "matrix",
+          "domain": "real",
+          "shape": [
+            256,
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "standard row-major matrix product a @ b"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(a) == [256, 256]"
+        },
+        {
+          "expr": "shape(b) == [256, 256]"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result[i][j] == sum_k a[i][k]*b[k][j] under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "inner dimensions differ",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.matrix.pair_space",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "l",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              256,
+              256
+            ],
+            "precision": "float32"
+          },
+          {
+            "name": "u",
+            "type": "matrix",
+            "domain": "real",
+            "shape": [
+              256,
+              256
+            ],
+            "precision": "float32"
+          }
+        ],
+        "output": {
+          "type": "matrix",
+          "domain": "real",
+          "shape": [
+            256,
+            256
+          ],
+          "precision": "float32"
+        }
+      },
+      "semantics": {
+        "definition": "Y = L @ U + U @ L^T (pair-space action)"
+      },
+      "preconditions": [
+        {
+          "expr": "shape(l) == [256, 256]"
+        },
+        {
+          "expr": "shape(u) == [256, 256]"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result == l @ u + u @ l^T under the declared numerical policy"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "dimension mismatch",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "float32",
+        "rounding": "round-to-nearest-even",
+        "reduction_order": "increasing-index",
+        "fma": false,
+        "nan_propagation": "declared"
+      },
+      "implementations": [
+        {
+          "kernel_id": "mth.graph.pair.tile16.f32",
+          "version": 1,
+          "source_digest": "7a1566fbfd6b0ac611ef6e536f69f2cd554c453495ae77fdfaee9be734b41268",
+          "fixture_digest": "8ba11c54ba492ca9241d18414ae05124dccfeb8502061cfc5805962175c0eed9",
+          "precision": "float32",
+          "shape": [
+            256,
+            256
+          ],
+          "workspace_words": 73990,
+          "capability_class": "matrix.pair_tile.full_u"
+        },
+        {
+          "kernel_id": "mth.graph.pair.tile16.k16.f32",
+          "version": 1,
+          "source_digest": "326c3131582658c8d4d7b31b02e36893d76927b1988cde528cc7aec78704a4d6",
+          "fixture_digest": "30a94c4dfb5a0c8eade477b4c32d5e7cfebce4435aa5f6cd706130ad1f0989b6",
+          "precision": "float32",
+          "shape": [
+            256,
+            256
+          ],
+          "workspace_words": 1542,
+          "capability_class": "matrix.pair_tile.k16"
+        }
+      ],
+      "proof_status": "verified",
+      "status": "active"
+    },
+    {
+      "function_id": "math.relation.hyperedge",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "members",
+            "type": "hypergraph",
+            "domain": "relation"
+          },
+          {
+            "name": "schema",
+            "type": "relation",
+            "domain": "relation"
+          }
+        ],
+        "output": {
+          "type": "hyperedge",
+          "domain": "relation",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "construct an explicit relation hyperedge from member references and roles"
+      },
+      "preconditions": [
+        {
+          "expr": "members reference resolved leaf versions"
+        },
+        {
+          "expr": "schema is registered"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "hyperedge records relation_id, version, member versions, roles, order, and weights"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "unregistered schema",
+          "result": "undefined"
+        },
+        {
+          "expr": "duplicate member where policy forbids it",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.relation.hyperedge_equal",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "a",
+            "type": "hyperedge",
+            "domain": "relation"
+          },
+          {
+            "name": "b",
+            "type": "hyperedge",
+            "domain": "relation"
+          }
+        ],
+        "output": {
+          "type": "boolean",
+          "domain": "boolean",
+          "precision": "boolean"
+        }
+      },
+      "semantics": {
+        "definition": "typed equality of hyperedge identity and content digest"
+      },
+      "preconditions": [
+        {
+          "expr": "both inputs are resolved hyperedge leaves"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result is true iff schema, relation_id, member versions, roles, and weights match"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "unresolved member reference",
+          "result": "undefined"
+        },
+        {
+          "expr": "cross-schema comparison without permission",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "boolean",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    },
+    {
+      "function_id": "math.relation.hyperedge_hash",
+      "version": 1,
+      "signature": {
+        "inputs": [
+          {
+            "name": "hyperedge",
+            "type": "hyperedge",
+            "domain": "relation"
+          }
+        ],
+        "output": {
+          "type": "scalar",
+          "domain": "integer",
+          "precision": "exact"
+        }
+      },
+      "semantics": {
+        "definition": "canonical SHA-256 content digest of a hyperedge record"
+      },
+      "preconditions": [
+        {
+          "expr": "input is a resolved hyperedge leaf"
+        }
+      ],
+      "postconditions": [
+        {
+          "expr": "result equals the canonical digest of the hyperedge record"
+        }
+      ],
+      "undefined_conditions": [
+        {
+          "expr": "unresolved member reference",
+          "result": "undefined"
+        }
+      ],
+      "numerical_policy": {
+        "precision": "exact",
+        "rounding": "none",
+        "reduction_order": "none",
+        "fma": false,
+        "nan_propagation": "not-applicable"
+      },
+      "implementations": [],
+      "proof_status": "stated",
+      "status": "proposed"
+    }
+  ]
+}
