@@ -72,4 +72,4 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Fixture: `tests/mth_graph_components_256_test.nas`.
 - Uses a caller-owned 256-word union-find parent array, emits deterministic component representatives, and returns component count.
 - Preflight rejects malformed offsets, endpoint encoding/range, self-loops, unsorted rows and duplicates before writing labels.
-- Native execution is pending canonical NaN16 CI. Component count is a topological invariant; the nullity correspondence still requires an independently verified Laplacian/nullspace fixture.
+- Native execution passed canonical NaN16 CI run #119 (29,931 guest steps; expected HALT). Kernel SHA-256: `064d6b52cf2d0dda561de020da25575225568999635bcad6dd117f4b0355c13b`. Component count is a topological invariant; the nullity correspondence still requires an independently verified Laplacian/nullspace fixture.
