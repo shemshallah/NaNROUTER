@@ -77,12 +77,16 @@ mth_energy_v1_validate_edges:
   CMP r3,r0
   JMP[NE] @mth_energy_v1_bad_edge
   CMP r1,r2
-  JMP[GE] @mth_energy_v1_bad_edge
+  JMP[LT] @mth_energy_v1_endpoint_order_ok
+  JMP @mth_energy_v1_bad_edge
+mth_energy_v1_endpoint_order_ok:
   ; Enforce strict lexicographic ordering using key=(u<<8)|v.
   SHL r3,r1,8
   BOOL.14 r3,r3,r2
   CMP r3,r7
-  JMP[LE] @mth_energy_v1_bad_edge
+  JMP[GT] @mth_energy_v1_key_order_ok
+  JMP @mth_energy_v1_bad_edge
+mth_energy_v1_key_order_ok:
   ADD r7,r3,r0
   LD r3,r10,0
   SHR r4,r3,8
@@ -106,7 +110,9 @@ mth_energy_v1_edge_loop:
   LD r8,r11,6
   LD r9,r11,5
   CMP r8,r9
-  JMP[GE] @mth_energy_v1_finish
+  JMP[LT] @mth_energy_v1_edge_body
+  JMP @mth_energy_v1_finish
+mth_energy_v1_edge_body:
   LD r1,r11,0
   ADD r1,r1,r8
   LD r2,r1,0
