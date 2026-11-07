@@ -74,15 +74,30 @@ Do not assign the four types meanings such as "data," "instruction," "error," or
 
 MTH must preserve all 16 class nibbles as distinct encodings. It must not canonicalize a word merely because its faces can be swapped, and it must not restrict data to neutral/palindromic words.
 
-The existing byte-reversal law is:
+The existing Boolean exhibit establishes the class-nibble face-swap relation:
 
 ```
 rot2(n) = ((n & 3) << 2) | (n >> 2)
 ```
 
-A full-word double-endian reversal swaps the faces and reverses the payload bytes. It therefore changes the ordered class nibble in a defined way. Four nibbles are fixed under this rotation (0, 5, 10, 15); the other twelve form six two-element orbits. Those six pairs are useful relationships, not permission to discard either member.
+This is a two-bit-half swap on the four-bit class nibble. It is a verified relation for the Boolean class-nibble behavior demonstrated by the NaN16 exhibit. Do not generalize it into an unqualified claim that every MTH data word is transformed by the same byte permutation: the exact full-word `BSWAPM` mapping must be taken from the canonical instruction implementation and tested separately.
 
-**MTH rule:** an encoding and its reversed encoding are distinct words with a known transformation between them. A caller may explicitly request reversal, compare the two, or prove a relation between them. No storage layer or optimizer may silently identify them.
+The complete abstract class-nibble mapping is:
+
+| n | rot2(n) | n | rot2(n) |
+|---:|---:|---:|---:|
+| 0 | 0 | 8 | 2 |
+| 1 | 4 | 9 | 6 |
+| 2 | 8 | 10 | 10 |
+| 3 | 12 | 11 | 14 |
+| 4 | 1 | 12 | 3 |
+| 5 | 5 | 13 | 7 |
+| 6 | 9 | 14 | 11 |
+| 7 | 13 | 15 | 15 |
+
+The fixed points are 0, 5, 10, and 15. The remaining twelve values form six two-element pairs. All 16 remain distinct encodings; the six pairs describe a transformation relationship, not duplicate values.
+
+**MTH rule:** an encoding and its transformed encoding are distinct words with a known transformation between them. A caller may explicitly request reversal, compare the two, or prove a relation between them. No storage layer or optimizer may silently identify them.
 
 ### 2.3 What the NaN space buys us
 
