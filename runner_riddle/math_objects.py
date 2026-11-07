@@ -21,7 +21,7 @@ SNAPSHOT_SCHEMA = "nanrouter.math-snapshot.v1"
 
 LEAF_KINDS = frozenset({
     "scalar", "vector", "matrix", "tensor", "function", "relation", "rule",
-    "result", "null", "void", "undefined", "unknown", "error", "hypergraph",
+    "result", "null", "void", "undefined", "unknown", "error", "cancelled", "hypergraph",
     "basis", "operator", "mask", "index", "proof", "certificate",
 })
 LEAF_STATUSES = frozenset({"scratch", "committed", "superseded", "quarantined", "tombstoned"})
@@ -129,7 +129,7 @@ class MathLeaf:
         object.__setattr__(self, "provenance", dict(self.provenance))
         object.__setattr__(self, "aliases", _tuple_of_dicts(self.aliases, "aliases"))
         object.__setattr__(self, "metadata", dict(self.metadata))
-        if self.kind in {"null", "void", "undefined", "unknown", "error"}:
+        if self.kind in {"null", "void", "undefined", "unknown", "error", "cancelled"}:
             if self.content is not None:
                 raise MathObjectError(f"{self.kind} leaves must not carry numeric content")
             if not self.metadata.get("reason") and not self.metadata.get("failure_class"):
