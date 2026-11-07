@@ -3,7 +3,7 @@ JMP @mth_link_pf_main
 .include "../nan16/mth_preflight_gate.nas"
 .include "../nan16/mth_preflight.nas"
 .include "../nan16/mth_admission.nas"
-.include "../nan16/mth_dot256_f32.nas"
+.include "../nan16/mth_cosine256_f32.nas"
 .include "../nan16/mth_execute.nas"
 .include "../../nan0s/src/nannet/route_address.nas"
 .include "../../nan0s/src/nannet/object_key_decode.nas"
@@ -95,6 +95,27 @@ mth_link_pf_main:
   JMP[NE] @mth_link_pf_fail
   MOVI r1,@mth_link_pf_stage_contract_put
   CALL @mth_link_pf_puts
+
+  ; Register the second allowlisted operator: cosine uses program 901.
+  MOVI r1,78
+  MOVI r2,4
+  MOVI r3,4
+  MOVI r4,3
+  MOVI r5,901
+  CALL @nmr_op_put
+  CMP r3,r0
+  JMP[NE] @mth_link_pf_fail
+  MOVI r1,78
+  MOVI r2,1
+  MOVI r3,1
+  MOVI r4,0
+  MOVI r5,2
+  MOVI r6,1
+  MOVI r7,1
+  MOVI r8,0
+  CALL @nmr_contract_put
+  CMP r3,r0
+  JMP[NE] @mth_link_pf_fail
 
   ; The literal ::op: expression is parsed and resolved by the canonical
   ; NaN0S linker. Its r10 is the registered 10-word contract descriptor.
@@ -222,6 +243,72 @@ mth_link_pf_main:
   SHL r10,r10,16
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
+  ; Preserve the dot contract while resolving the second registered operator.
+  LD r10,r0,@mth_link_pf_contract
+  ST r10,r0,@mth_link_pf_dot_contract
+
+  ; Make the two operands equal, resolve ::op:78, and execute native cosine.
+  MOVI r8,@mth_link_pf_right_payload
+  MOVI r9,1065353216
+  ST r9,r8,0
+  MOVI r9,1073741824
+  ST r9,r8,1
+  MOVI r9,1077936128
+  ST r9,r8,2
+  MOVI r1,@mth_link_pf_expression_cosine
+  SHL r1,r1,2
+  CALL @nmr_expr_resolve
+  CMP r8,r0
+  JMP[NE] @mth_link_pf_resolve_fail
+  MOVI r6,78
+  CMP r3,r6
+  JMP[NE] @mth_link_pf_fail
+  MOVI r6,901
+  CMP r5,r6
+  JMP[NE] @mth_link_pf_fail
+  MOVI r6,256
+  CMP r9,r6
+  JMP[NE] @mth_link_pf_fail
+  CMP r10,r0
+  JMP[EQ] @mth_link_pf_fail
+  ST r10,r0,@mth_link_pf_contract
+  ST r5,r0,@mth_link_pf_program_id
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,78
+  ST r9,r8,1
+  MOVI r8,@mth_link_pf_rule
+  ST r9,r8,1
+  MOVI r8,@mth_link_pf_output_payload
+  ST r0,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  LD r8,r0,@mth_link_pf_program_id
+  MOVI r12,@mth_link_pf_scratch
+  CALL @mth_execute
+  CMP r1,r0
+  JMP[NE] @mth_link_pf_dispatch_status_fail
+  MOVI r8,@mth_link_pf_output_payload
+  LD r9,r8,0
+  MOVI r10,0x3F80
+  SHL r10,r10,16
+  CMP r9,r10
+  JMP[NE] @mth_link_pf_fail
+
+  ; Restore dot operator/rule/contract for the negative-path checks below.
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,77
+  ST r9,r8,1
+  MOVI r8,@mth_link_pf_rule
+  ST r9,r8,1
+  LD r10,r0,@mth_link_pf_dot_contract
+  ST r10,r0,@mth_link_pf_contract
+  MOVI r8,900
+  ST r8,r0,@mth_link_pf_program_id
 
   ; A stale epoch must stop before the numerical kernel writes its output.
   MOVI r8,@mth_link_pf_candidate
@@ -310,7 +397,7 @@ mth_link_pf_main:
   LD r5,r0,@mth_link_pf_contract
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
-  MOVI r8,901
+  MOVI r8,902
   MOVI r12,@mth_link_pf_scratch
   CALL @mth_execute
   MOVI r9,64
@@ -453,10 +540,14 @@ mth_link_pf_scratch:
 .word 0
 mth_link_pf_contract:
 .word 0
+mth_link_pf_dot_contract:
+.word 0
 mth_link_pf_program_id:
 .word 0
 mth_link_pf_expression:
 .str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:77::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
+mth_link_pf_expression_cosine:
+.str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:78::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
 mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
 mth_link_pf_admit_pass:
