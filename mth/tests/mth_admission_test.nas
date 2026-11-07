@@ -18,7 +18,7 @@ mth_admit_test_main:
   MOVI r7,@mth_admit_output
   CALL @mth_admit
   CMP r1,r0
-  JMP[NE] @mth_admit_fail
+  JMP[NE] @mth_admit_fail_1
 
   ; A stale candidate epoch is denied by the first gate (16 + 2).
   MOVI r8,@mth_admit_candidate
@@ -34,7 +34,7 @@ mth_admit_test_main:
   CALL @mth_admit
   MOVI r9,18
   CMP r1,r9
-  JMP[NE] @mth_admit_fail
+  JMP[NE] @mth_admit_fail_2
 
   ; Restore epoch, then create a typed shape mismatch. The second gate
   ; rejects it (32 + 6) and leaves output metadata untouched.
@@ -57,16 +57,44 @@ mth_admit_test_main:
   CALL @mth_admit
   MOVI r9,38
   CMP r1,r9
-  JMP[NE] @mth_admit_fail
+  JMP[NE] @mth_admit_fail_3
   LD r10,r7,0
   MOVI r9,99
   CMP r10,r9
-  JMP[NE] @mth_admit_fail
+  JMP[NE] @mth_admit_fail_4
 
   MOVI r1,@mth_admit_pass
   CALL @mth_admit_puts
   HALT
 
+mth_admit_fail_1:
+  MOVI r1,1
+  MOVI r2,@mth_admit_scratch
+  MOVI r3,47
+  ADD r2,r2,r3
+  ST r1,r2,0
+  JMP @mth_admit_fail
+mth_admit_fail_2:
+  MOVI r1,2
+  MOVI r2,@mth_admit_scratch
+  MOVI r3,47
+  ADD r2,r2,r3
+  ST r1,r2,0
+  JMP @mth_admit_fail
+mth_admit_fail_3:
+  MOVI r1,3
+  MOVI r2,@mth_admit_scratch
+  MOVI r3,47
+  ADD r2,r2,r3
+  ST r1,r2,0
+  JMP @mth_admit_fail
+mth_admit_fail_4:
+  MOVI r1,4
+  MOVI r2,@mth_admit_scratch
+  MOVI r3,47
+  ADD r2,r2,r3
+  ST r1,r2,0
+  JMP @mth_admit_fail
 mth_admit_fail:
   MOVI r1,@mth_admit_bad
   CALL @mth_admit_puts
