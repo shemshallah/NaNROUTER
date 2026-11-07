@@ -46,6 +46,9 @@ _WWW_AUTHENTICATE = 'Bearer realm="wave"'
 
 _GET_ROUTES = ("/healthz",)
 _POST_ROUTES = (
+    "/v1/nmp/packets",
+    "/v1/nmp/lease",
+    "/v1/nmp/complete",
     "/v1/wave/jobs",
     "/v1/wave/lease",
     "/v1/wave/complete",
@@ -132,7 +135,8 @@ def _int_field(body: dict[str, Any], name: str, *,
 
 
 def make_wave_handler(service: WaveService, *,
-                      max_body_bytes: int = MAX_BODY_BYTES):
+                      max_body_bytes: int = MAX_BODY_BYTES,
+                      nmp_adapter: Any = None):
     """Build a request handler bound to *service*.
 
     The handler never echoes the ``Authorization`` header, request body, or an
@@ -427,6 +431,49 @@ def make_wave_handler(service: WaveService, *,
             )
             self._send_json(200, {"capability": record})
 
+        def _post_nmp_packet(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            packet = body.get("packet")
+            if not isinstance(packet, dict):
+                raise _HttpError(400, "packet must be an object")
+            result = nmp_adapter.submit(
+                token, packet, now_tick=_int_field(body, "now_tick", default=0)
+            )
+            self._send_json(200, result)
+
+        def _post_nmp_lease(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            result = nmp_adapter.lease(
+                token,
+                _text_field(body, "owner"),
+                now_tick=_int_field(body, "now_tick"),
+                lease_ticks=_int_field(body, "lease_ticks", default=64, minimum=1),
+                expected_generation=_int_field(body, "expected_generation", default=None),
+                max_attempts=_int_field(body, "max_attempts", default=8, minimum=1),
+                job_id=_text_field(body, "job_id", default=None),
+            )
+            self._send_json(200, {"lease": result})
+
+        def _post_nmp_complete(self, token: str, body: dict[str, Any]) -> None:
+            if nmp_adapter is None:
+                raise _HttpError(503, "NMP service is not configured")
+            packet = body.get("packet")
+            if not isinstance(packet, dict):
+                raise _HttpError(400, "packet must be an object")
+            result = nmp_adapter.complete(
+                token, packet,
+                job_id=_text_field(body, "job_id"),
+                lease_token=_text_field(body, "lease_token"),
+                lease_epoch=_int_field(body, "lease_epoch", minimum=1),
+                result_digest=_text_field(body, "result_digest"),
+                now_tick=_int_field(body, "now_tick"),
+                result_generation=_int_field(body, "result_generation", default=None),
+                lease_owner=_text_field(body, "lease_owner", default=None),
+            )
+            self._send_json(200, result)
+
         # -- Routing -----------------------------------------------------------
 
         def _path(self) -> str:
@@ -479,6 +526,21 @@ def make_wave_handler(service: WaveService, *,
         def do_POST(self) -> None:
             try:
                 path = self._path()
+                if path == "/v1/nmp/packets":
+                    token = self._bearer_token()
+                    self._authorize(token, _SUBMIT_ROLE)
+                    self._post_nmp_packet(token, self._json_body())
+                    return
+                if path == "/v1/nmp/lease":
+                    token = self._bearer_token()
+                    self._authorize(token, _WORKER_ROLE)
+                    self._post_nmp_lease(token, self._json_body())
+                    return
+                if path == "/v1/nmp/complete":
+                    token = self._bearer_token()
+                    self._authorize(token, _WORKER_ROLE)
+                    self._post_nmp_complete(token, self._json_body())
+                    return
                 if path == "/v1/wave/jobs":
                     token = self._bearer_token()
                     self._authorize(token, _SUBMIT_ROLE)
@@ -533,7 +595,8 @@ class WaveHttpServer:
     def __init__(self, service: WaveService, host: str = DEFAULT_HOST,
                  port: int = DEFAULT_PORT, *,
                  store: WaveStore | None = None,
-                 max_body_bytes: int = MAX_BODY_BYTES,\n                 nmp_adapter: Any = None) -> None:
+                 max_body_bytes: int = MAX_BODY_BYTES,
+                 nmp_adapter: Any = None) -> None:
         # Accept ``WaveHttpServer(service, store)`` as a convenience while
         # keeping the usual ``(service, host, port)`` form.
         if isinstance(host, WaveStore):
@@ -551,6 +614,7 @@ class WaveHttpServer:
         self.host = host
         self._requested_port = port
         self.max_body_bytes = max_body_bytes
+        self.nmp_adapter = nmp_adapter
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self._lock = threading.RLock()
@@ -617,7 +681,8 @@ class WaveHttpServer:
             httpd = ThreadingHTTPServer(
                 (bind_host, bind_port),
                 make_wave_handler(
-                    self.service, max_body_bytes=self.max_body_bytes
+                    self.service, max_body_bytes=self.max_body_bytes,
+                    nmp_adapter=self.nmp_adapter,
                 ),
             )
             httpd.daemon_threads = True
