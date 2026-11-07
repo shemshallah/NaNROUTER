@@ -249,11 +249,14 @@ mth_link_pf_main:
 
   ; Make the two operands equal, resolve ::op:78, and execute native cosine.
   MOVI r8,@mth_link_pf_right_payload
-  MOVI r9,1065353216
+  MOVI r9,0x3F80
+  SHL r9,r9,16
   ST r9,r8,0
-  MOVI r9,1073741824
+  MOVI r9,0x4000
+  SHL r9,r9,16
   ST r9,r8,1
-  MOVI r9,1077936128
+  MOVI r9,0x4040
+  SHL r9,r9,16
   ST r9,r8,2
   MOVI r1,@mth_link_pf_expression_cosine
   SHL r1,r1,2
