@@ -1,6 +1,8 @@
 .org 0
 JMP @mth_link_pf_main
+.include "../nan16/mth_preflight_gate.nas"
 .include "../nan16/mth_preflight.nas"
+.include "../nan16/mth_admission.nas"
 .include "../../nan0s/src/nannet/route_address.nas"
 .include "../../nan0s/src/nannet/object_key_decode.nas"
 .include "../../nan0s/src/nannet/math_registry.nas"
@@ -70,7 +72,7 @@ mth_link_pf_main:
   MOVI r2,1
   MOVI r3,1
   MOVI r4,0
-  MOVI r5,1
+  MOVI r5,2
   MOVI r6,1
   MOVI r7,1
   MOVI r8,0
@@ -128,15 +130,76 @@ mth_link_pf_main:
   CMP r6,r7
   JMP[NE] @mth_link_pf_fail
   LD r6,r5,4
-  MOVI r7,1
+  MOVI r7,2
   CMP r6,r7
+  JMP[NE] @mth_link_pf_fail
+
+  ; Reuse the exact registry-owned contract pointer through composed admission.
+  ; This binds the authoritative rule snapshot first, then concrete typed leaves.
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  CALL @mth_admit
+  CMP r1,r0
+  JMP[NE] @mth_link_pf_fail
+
+  ; A stale rule epoch is rejected before typed applicability.
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,6
+  ST r9,r8,9
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  CALL @mth_admit
+  MOVI r9,18
+  CMP r1,r9
+  JMP[NE] @mth_link_pf_fail
+  MOVI r8,@mth_link_pf_candidate
+  MOVI r9,7
+  ST r9,r8,9
+
+  ; Concrete dimension mismatch is rejected by the second gate and leaves
+  ; the caller's output descriptor untouched.
+  MOVI r8,@mth_link_pf_right
+  MOVI r9,2
+  ST r9,r8,2
+  MOVI r8,@mth_link_pf_output
+  MOVI r9,55
+  ST r9,r8,0
+  MOVI r1,@mth_link_pf_candidate
+  MOVI r2,@mth_link_pf_rule
+  MOVI r3,@mth_link_pf_left
+  MOVI r4,@mth_link_pf_right
+  LD r5,r0,@mth_link_pf_contract
+  MOVI r6,1
+  MOVI r7,@mth_link_pf_output
+  CALL @mth_admit
+  MOVI r9,38
+  CMP r1,r9
+  JMP[NE] @mth_link_pf_fail
+  ; mth_admit may clobber r8; reload the output descriptor before checking it.
+  MOVI r8,@mth_link_pf_output
+  LD r10,r8,0
+  MOVI r9,55
+  CMP r10,r9
   JMP[NE] @mth_link_pf_fail
 
   MOVI r1,@mth_link_pf_pass
   CALL @mth_link_pf_puts
+  MOVI r1,@mth_link_pf_admit_pass
+  CALL @mth_link_pf_puts
   HALT
 
 mth_link_pf_fail:
+  ST r1,r12,47
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
   HALT
@@ -159,11 +222,15 @@ mth_link_pf_puts_byte:
 
 .org 30000
 mth_link_pf_left:
-.word 4,1,3,1,1,@mth_link_pf_left_payload,3,1
+.word 4,1,3,1,2,@mth_link_pf_left_payload,3,1
 mth_link_pf_right:
-.word 4,1,3,1,1,@mth_link_pf_right_payload,3,1
+.word 4,1,3,1,2,@mth_link_pf_right_payload,3,1
 mth_link_pf_output:
 .word 0,0,0,0,0,@mth_link_pf_output_payload,1,0
+mth_link_pf_candidate:
+.word 1,7,4,4,3,2,1,3,3,7,1,1,2,1,100,101,102,103,104,105,106,107
+mth_link_pf_rule:
+.word 1,7,4,4,3,2,1,1,1,100,101,102,103,104,105,106,107
 
 .org 30256
 mth_link_pf_left_payload:
@@ -212,11 +279,22 @@ mth_link_pf_scratch:
 .word 0
 .word 0
 .word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
+.word 0
 mth_link_pf_contract:
 .word 0
 mth_link_pf_expression:
 .str "nan://GM0:SC0:MC0:BS0:HW0::HW0:1::vector123::op:77::nan://GM0:SC0:MC0:BS0:HW0::HW0:2::vector234"
 mth_link_pf_pass:
 .str "MTH LINKER PREFLIGHT PASS\n"
+mth_link_pf_admit_pass:
+.str "MTH LINKER COMPOSED ADMISSION PASS\n"
 mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
