@@ -31,7 +31,7 @@ A separate bounded energy kernel is required. The initial energy ABI will constr
 
 \[
 E_{raw}\le {256\choose2}\cdot255\cdot(2^{17})^2
-=142,? 
+=142,991,487,192,268,800<2^{57}<2^{64}.
 \]
 
 The exact integer bound must be recomputed and frozen before implementation; no energy source may be marked native_verified until this bound and all intermediate widths are proved. The energy kernel must preflight all inputs and return exact nonnegative integer arithmetic without rounding.
