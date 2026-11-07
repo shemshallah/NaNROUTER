@@ -496,7 +496,7 @@
       "source": "mth/nan16/mth_graph_pair_tile16_f32.nas",
       "fixture": "mth/tests/mth_graph_pair_tile16_f32_test.nas",
       "marker": "MTH PAIR TILE16 F32 PASS",
-      "steps": 2301554,
+      "steps": 4643414,
       "precision": "float32",
       "workspace_words": 73990,
       "shape": [
