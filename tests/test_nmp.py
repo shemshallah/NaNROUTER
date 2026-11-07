@@ -738,6 +738,35 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection.state, nmp.COMPLETED)
         self.assertEqual(store.calls, ["job-1"])
 
+    def test_projection_treats_cancel_epoch_as_cooperative_request(self):
+        packet = make_packet(state=nmp.EXECUTING)
+        job = self._job(
+            "leased",
+            payload_json=json.dumps({"cancel_epoch": packet.cancel_epoch + 1}),
+        )
+        projection = nmp.project_packet(
+            packet,
+            job=job,
+            lease={"state": "active", "lease_epoch": 1, "deadline_tick": 100},
+            now_tick=1,
+        )
+        self.assertEqual(projection.state, nmp.EXECUTING)
+        self.assertTrue(projection.supported)
+        self.assertTrue(projection.evidence["cancel_requested"])
+
+    def test_done_cancellation_epoch_does_not_erase_completed_result(self):
+        packet = make_packet(state=nmp.COMPLETED)
+        projection = nmp.project_packet(
+            packet,
+            job=self._job(
+                "done",
+                payload_json=json.dumps({"cancel_epoch": packet.cancel_epoch + 1}),
+            ),
+        )
+        self.assertEqual(projection.state, nmp.COMPLETED)
+        self.assertEqual(projection.result_digest, RESULT)
+        self.assertTrue(projection.supported)
+
     def test_accepts_result_enforces_snapshot_and_generation_binding(self):
         packet = make_packet(state=nmp.COMPLETED)
         self.assertTrue(packet.accepts_result(

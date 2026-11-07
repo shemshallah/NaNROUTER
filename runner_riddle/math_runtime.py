@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 from .math_objects import MathAdmission, MathCandidate, MathFunction, MathLeaf
 from .math_registry import MathFunctionRegistry, MathRegistryError
 from .math_store import MathStore, MathStoreError
+from . import nmp
 from .math_validity import (
     VALID,
     AdmissionRejected,
@@ -232,6 +233,42 @@ class MathRuntime:
             workspace_words=descriptor.workspace_words,
         )
 
+    def prepare_packet(
+        self,
+        compiled: CompiledMathPlan,
+        *,
+        lane_id: int = 0,
+        capability_set: Any = (),
+        capability_epoch: int = 1,
+        ring_incarnation: str | None = None,
+        ring_epoch: int | None = None,
+        guest_words: int | None = None,
+        ruleset_id: str = "",
+        ruleset_version: int = 1,
+        request_id: str | None = None,
+    ) -> nmp.NmpPacket:
+        """Create an NMP packet bound to the compiled admission.
+
+        The packet is evidence/authorization, not an execution.  A caller must
+        pass it through ``nmp.execution_gate`` and then the MthSystem lease.
+        """
+        return nmp.prepare(
+            compiled.candidate,
+            compiled.admission,
+            snapshot_id=compiled.admission.snapshot_id,
+            admission=compiled.admission,
+            lane_id=lane_id,
+            capability_set=capability_set,
+            capability_epoch=capability_epoch,
+            ring_incarnation=ring_incarnation,
+            ring_epoch=ring_epoch,
+            guest_words=guest_words,
+            ruleset_id=ruleset_id,
+            ruleset_version=ruleset_version,
+            request_id=request_id,
+            plan_digest=None,
+        )
+
     def submit(
         self,
         compiled: CompiledMathPlan,
@@ -254,6 +291,9 @@ class MathRuntime:
             descriptor = self.functions.implementation_registry.require(operator_digest)
         except MthRegistryError as exc:
             raise MathRuntimePlanError("compiled kernel is unavailable") from exc
+        bound_payload = {} if payload is None else dict(payload)
+        bound_payload.setdefault("math_admission", compiled.admission.to_dict())
+        bound_payload.setdefault("math_snapshot_id", compiled.admission.snapshot_id)
         return self.system.submit_plan(
             compiled.plan,
             submit_token,
@@ -261,7 +301,7 @@ class MathRuntime:
             universe_id,
             descriptor.source_digest,
             generation,
-            payload=payload,
+            payload=bound_payload,
             now_tick=now_tick,
             operator_id=descriptor.kernel_id,
             precision=descriptor.precision,

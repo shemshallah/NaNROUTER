@@ -2542,6 +2542,11 @@ def _typed_null(reason: str, inputs: tuple[dict[str, Any], ...], snapshot_id: st
         "incomplete_reasons": list(incomplete_reasons),
     }
     suffix = digest_object(metadata)[:24]
+    parents = tuple({
+        "leaf_id": row["leaf_id"],
+        "version": row["version"],
+        "role": f"operand{index}",
+    } for index, row in enumerate(inputs))
     return _TypedNullLeaf(
         leaf_id=f"nml:U0:null:{suffix}",
         kind="null",
@@ -2553,6 +2558,7 @@ def _typed_null(reason: str, inputs: tuple[dict[str, Any], ...], snapshot_id: st
             "precision": "none",
         },
         content=None,
+        parents=parents,
         metadata=metadata,
         provenance={"producer": LINKER_ID},
     )

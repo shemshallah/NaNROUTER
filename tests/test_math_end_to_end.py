@@ -70,6 +70,11 @@ class MathEndToEndTests(unittest.TestCase):
         self.assertEqual(compiled.plan.kernel_ids, ("mth.vector.dot256.f32",))
         self.assertEqual(compiled.workspace_words, 0)
         self.assertEqual(compiled.admission.candidate_id, candidate.candidate_id)
+        packet = runtime.prepare_packet(compiled)
+        self.assertEqual(packet.state, "PREFLIGHTED")
+        self.assertEqual(packet.admission_verdict, "VALID")
+        self.assertEqual(packet.candidate_id, candidate.candidate_id)
+        self.assertEqual(packet.jahs, "JAHS")
 
     def test_non_valid_admission_cannot_compile(self):
         runtime, a, b = self.make_runtime()

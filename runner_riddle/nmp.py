@@ -33,7 +33,9 @@ JAHS_SEAL = "JAHS"
 # the meta/control position; it is not a lane and can never own a packet.
 MAX_LANE = 254
 NANNET0_LANE = 255
+NANNET0 = NANNET0_LANE
 LANE_COUNT = 255
+LANES = LANE_COUNT
 
 CREATED = "CREATED"
 RESOLVED = "RESOLVED"
@@ -128,7 +130,7 @@ _STATE_ORDER = {
     COMMITTED: 8,
 }
 
-_DIGEST_RE = re.compile(r"^(?:sha256:)?([0-9a-fA-F]{64})$")
+_DIGEST_RE = re.compile(r"^(?:(?:sha256|pf):)?([0-9a-fA-F]{64})$")
 _FUNCTION_RE = re.compile(r"^math\.[a-z0-9][a-z0-9_.-]{0,120}$")
 
 _ADMISSION_FAILURE = {
@@ -216,7 +218,7 @@ def _integer(value: Any, name: str, *, minimum: int = 0) -> int:
 def normalize_digest(value: Any, name: str, *, allow_none: bool = False) -> str | None:
     """Return a bare 64-character lowercase SHA-256 digest.
 
-    Both bare hex and the ``sha256:`` display prefix are accepted.  Comparisons
+    Both bare hex and the ``sha256:``/``pf:`` display prefixes are accepted.  Comparisons
     therefore never fail merely because one producer used the display prefix.
     """
     if value is None and allow_none:
@@ -225,7 +227,7 @@ def normalize_digest(value: Any, name: str, *, allow_none: bool = False) -> str 
         raise NmpValidationError(f"{name} must be a SHA-256 digest")
     match = _DIGEST_RE.fullmatch(value.strip())
     if match is None:
-        raise NmpValidationError(f"{name} must be 64 hex characters (optionally sha256: prefixed)")
+        raise NmpValidationError(f"{name} must be 64 hex characters (optionally sha256:/pf: prefixed)")
     return match.group(1).lower()
 
 
@@ -715,8 +717,14 @@ class NmpPacket:
 
         if self.state == COMMITTED:
             self._require_commit_evidence()
-        if self.state == CANCELLED and self.result_digest is not None:
-            raise NmpValidationError("CANCELLED is not a mathematical result and cannot carry result_digest")
+        if (
+            self.state in ALL_TERMINAL_STATES
+            and self.state != FAILED
+            and self.result_digest is not None
+        ):
+            raise NmpValidationError(
+                f"{self.state} is a typed non-result terminal and cannot carry result_digest"
+            )
 
     # -- canonical identity -------------------------------------------------
 
@@ -1269,7 +1277,8 @@ class NmpPacket:
             **kwargs,
         )
 
-    def fail(self, reason: str, *, failure_class: str = "EXECUTION_FAILED",
+    def fail(self, reason: str = "execution failed", *,
+             failure_class: str = "EXECUTION_FAILED",
              **kwargs: Any) -> "NmpPacket":
         return self.transition(FAILED, reason=reason, failure_class=failure_class, **kwargs)
 
@@ -2893,10 +2902,16 @@ def project_packet(
     ):
         return projection(STALE, False, "job ring epoch does not match the packet")
     payload_cancel = _job_value(job, payload, "cancel_epoch")
-    if payload_cancel is not None and isinstance(payload_cancel, int) and (
-        payload_cancel > packet.cancel_epoch
-    ):
-        return projection(CANCELLED, True, "a newer cancel epoch is recorded on the job")
+    if payload_cancel is not None:
+        evidence["cancel_epoch"] = payload_cancel
+        if (
+            isinstance(payload_cancel, int)
+            and not isinstance(payload_cancel, bool)
+            and payload_cancel > packet.cancel_epoch
+        ):
+            # A newer epoch is a cancellation request.  It does not by itself
+            # prove that the executor observed a plan-step boundary.
+            evidence["cancel_requested"] = True
 
     # Job/lease consistency -------------------------------------------------
     job_token = _row_get(job, "lease_token")
@@ -3127,7 +3142,9 @@ __all__ = [
     "INVALID",
     "JAHS_SEAL",
     "LANE_COUNT",
+    "LANES",
     "MAX_LANE",
+    "NANNET0",
     "NANNET0_LANE",
     "NMP_SCHEMA",
     "NULL",
