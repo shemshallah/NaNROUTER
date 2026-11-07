@@ -54,16 +54,26 @@ mth_pf_test_main:
   CMP r3,r0
   JMP[NE] @mth_pf_fail_6
 
-  ; Retrieve the immutable descriptor from the canonical operator registry.
-  ; The companion linker integration fixture separately tests nmr_resolve and
-  ; nmr_expr_resolve returning this exact descriptor pointer.
-  MOVI r1,77
-  CALL @nmr_contract_get
-  CMP r2,r0
+  ; Resolve the actual input pair through the canonical object/operator
+  ; registry. r6 is the exact immutable contract pointer; r4/r5 are the
+  ; registered payload pointers used by the leaf descriptors.
+  MOVI r1,123
+  MOVI r2,234
+  MOVI r3,77
+  CALL @nmr_resolve
+  CMP r3,r0
   JMP[NE] @mth_pf_fail_7
-  CMP r1,r0
-  JMP[EQ] @mth_pf_fail_8
-  ST r1,r0,@mth_pf_contract
+  MOVI r7,3
+  CMP r1,r7
+  JMP[NE] @mth_pf_fail_8
+  MOVI r7,900
+  CMP r2,r7
+  JMP[NE] @mth_pf_fail_9
+  CMP r6,r0
+  JMP[EQ] @mth_pf_fail
+  ST r6,r0,@mth_pf_contract
+  ST r4,r0,@mth_pf_left_data
+  ST r5,r0,@mth_pf_right_data
 
   ; VECTOR[3] dot VECTOR[3] -> SCALAR passes native preflight.
   MOVI r6,@mth_pf_left
