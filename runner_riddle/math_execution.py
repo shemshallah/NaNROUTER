@@ -53,6 +53,32 @@ DEFAULT_LEASE_TICKS = 64
 DEFAULT_WORKSPACE_WORD_BYTES = 8
 
 
+def _token_digest(token: str | None) -> str | None:
+    if token is None:
+        return None
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+_SECRET_KEYS = frozenset({
+    "lease_token", "worker_token", "submit_token", "admin_token",
+})
+
+
+def _redact_secrets(value: Any) -> Any:
+    """Recursively replace bearer secrets with one-way digests."""
+    if isinstance(value, Mapping):
+        result = {}
+        for key, item in value.items():
+            if key in _SECRET_KEYS and isinstance(item, str):
+                result[key + "_digest"] = _token_digest(item)
+            else:
+                result[key] = _redact_secrets(item)
+        return result
+    if isinstance(value, (list, tuple)):
+        return [_redact_secrets(item) for item in value]
+    return value
+
+
 class MathExecutionError(ValueError):
     """Base class for control-plane execution-bridge failures."""
 
@@ -349,7 +375,7 @@ class MathExecutionSubmission:
             "parent_packet_id": self.parent_packet_id,
             "gate": None if self.gate is None else self.gate.to_dict(),
             "packet": self.packet.to_dict(),
-            "job": dict(self.job),
+            "job": _redact_secrets(dict(self.job)),
             "plan": self.compiled.plan.to_dict(),
         }
 
@@ -395,7 +421,7 @@ class MathExecutionLease:
             "state": self.state,
             "job_id": self.job_id,
             "job_state": self.job_state,
-            "lease_token": self.lease_token,
+            "lease_token_digest": _token_digest(self.lease_token),
             "lease_epoch": self.lease_epoch,
             "owner": self.owner,
             "deadline_tick": self.deadline_tick,
@@ -405,7 +431,7 @@ class MathExecutionLease:
             "ring_registered": self.ring_registered,
             "duplicate": self.duplicate,
             "packet": self.packet.to_dict(),
-            "job": dict(self.job),
+            "job": _redact_secrets(dict(self.job)),
         }
 
 
@@ -453,7 +479,7 @@ class MathExecutionResult:
             "state": self.state,
             "job_id": self.job_id,
             "job_state": self.job_state,
-            "lease_token": self.lease_token,
+            "lease_token_digest": _token_digest(self.lease_token),
             "lease_epoch": self.lease_epoch,
             "outcome": self.outcome,
             "result_digest": self.result_digest,
@@ -463,8 +489,8 @@ class MathExecutionResult:
             "ring_released": self.ring_released,
             "duplicate": self.duplicate,
             "packet": self.packet.to_dict(),
-            "job": dict(self.job),
-            "projection": None if self.projection is None else self.projection.to_dict(),
+            "job": _redact_secrets(dict(self.job)),
+            "projection": None if self.projection is None else _redact_secrets(self.projection.to_dict()),
         }
 
 
@@ -515,7 +541,7 @@ class MathExecutionCancellation:
             "ring_released": self.ring_released,
             "packet": self.packet.to_dict(),
             "job": None if self.job is None else dict(self.job),
-            "projection": None if self.projection is None else self.projection.to_dict(),
+            "projection": None if self.projection is None else _redact_secrets(self.projection.to_dict()),
         }
 
 
@@ -799,6 +825,24 @@ class MathExecutionBridge:
         if packet.candidate_id != compiled.candidate.candidate_id:
             raise MathExecutionBindingError(
                 "packet candidate does not match the compiled candidate"
+            )
+        if compiled.admission.candidate_id != compiled.candidate.candidate_id:
+            raise MathExecutionBindingError(
+                "compiled admission is bound to a different candidate"
+            )
+        if compiled.candidate.snapshot_id and (
+            compiled.admission.snapshot_id != compiled.candidate.snapshot_id
+        ):
+            raise MathExecutionBindingError(
+                "compiled admission is bound to a different snapshot"
+            )
+        if compiled.function.function_id != compiled.candidate.function_id:
+            raise MathExecutionBindingError(
+                "compiled function does not match the candidate"
+            )
+        if compiled.function.version != compiled.candidate.function_version:
+            raise MathExecutionBindingError(
+                "compiled function version does not match the candidate"
             )
         if packet.function_id != compiled.function.function_id:
             raise MathExecutionBindingError(
@@ -1311,6 +1355,7 @@ class MathExecutionBridge:
                 generation,
                 payload=bound_payload,
                 now_tick=now_tick,
+                nmp_packet=packet,
             )
             queued = packet.queue(gate=decision, tick=now_tick)
             queued = replace(
@@ -1932,6 +1977,43 @@ class MathExecutionBridge:
             "executor must return a digest string or a result object"
         )
 
+    def _validate_dispatch(
+        self,
+        lease: MathExecutionLease,
+        *,
+        now_tick: int,
+        worker_token: str | None,
+    ) -> Mapping[str, Any]:
+        """Fail before the executor if the lease cannot dispatch right now."""
+        if not isinstance(lease, MathExecutionLease):
+            raise MathExecutionBindingError("execute requires a MathExecutionLease")
+        _require_int("now_tick", now_tick)
+        packet = lease.packet
+        job = _job_from(lease)
+        if job is None:
+            job = self._job_for(packet)
+        self._validate_job_binding(packet, job)
+        if packet.state != nmp.EXECUTING:
+            raise MathExecutionStateError(
+                f"execute requires EXECUTING, packet is {packet.state}"
+            )
+        if packet.cancel_requested:
+            raise MathExecutionStateError("packet has a pending cancellation request")
+        if str(job.get("state")) != "leased":
+            raise MathExecutionStateError(
+                f"execute requires a leased job, job is {job.get('state')!r}"
+            )
+        if lease.lease_token != str(job.get("lease_token")):
+            raise MathExecutionBindingError("lease token does not match the job")
+        if lease.lease_epoch != int(job.get("lease_epoch") or 0):
+            raise MathExecutionBindingError("lease epoch does not match the job")
+        if lease.deadline_tick is not None and now_tick > lease.deadline_tick:
+            raise MathExecutionStateError("lease deadline has expired before dispatch")
+        token = worker_token if worker_token is not None else self.worker_token
+        if token is None:
+            raise MathExecutionConfigError("execute requires a worker token")
+        return job
+
     def execute(
         self,
         lease: MathExecutionLease,
@@ -1956,8 +2038,9 @@ class MathExecutionBridge:
         ``result_digest``/``digest``.  The bridge does not inspect or compute
         numerical content.
         """
-        if not isinstance(lease, MathExecutionLease):
-            raise MathExecutionBindingError("execute requires a MathExecutionLease")
+        self._validate_dispatch(
+            lease, now_tick=now_tick, worker_token=worker_token,
+        )
         value = self._executor_value(executor, lease)
         digest, status, output = self._normalize_executor_result(value)
         return self.complete(
@@ -2078,7 +2161,7 @@ class MathExecutionBridge:
                     evidence={
                         **dict(evidence or {}),
                         "result_generation": result_generation,
-                        "lease_token": lease_token,
+                        "lease_token_digest": _token_digest(lease_token),
                         "plan_step": plan_step,
                     },
                     tick=now_tick,
@@ -2089,7 +2172,7 @@ class MathExecutionBridge:
             if commit and packet.state == nmp.COMPLETED:
                 commit_provenance = {
                     "job_id": job_id,
-                    "lease_token": lease_token,
+                    "lease_token_digest": _token_digest(lease_token),
                     "lease_epoch": lease_epoch,
                     "admission_id": packet.admission_id,
                     "snapshot_id": packet.snapshot_id,

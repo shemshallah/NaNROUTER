@@ -11,9 +11,10 @@ from runner_riddle.math_execution import (
     MathExecutionError,
     MathExecutionGateError,
     MathExecutionRingError,
+    MathExecutionStateError,
 )
 from runner_riddle.math_registry import MathFunctionRegistry
-from runner_riddle.math_runtime import MathRuntime
+from runner_riddle.math_runtime import MathRuntime, MathRuntimePlanError
 from runner_riddle.math_store import MathStore
 from runner_riddle.mth_registry import MthRegistry
 from runner_riddle.mth_system import MthSystem
@@ -93,6 +94,86 @@ class MathExecutionTests(unittest.TestCase):
             status="native_verified",
             epoch=epoch,
         )
+
+    def test_compile_rejects_admission_for_another_candidate_or_snapshot(self):
+        compiled = self.compile_dot()
+        admission = compiled.admission
+        with self.assertRaises(MathRuntimePlanError):
+            self.runtime.compile(
+                replace(compiled.candidate,
+                        candidate_id="cnd:" + "1" * 64),
+                admission,
+            )
+        with self.assertRaises(MathRuntimePlanError):
+            self.runtime.compile(
+                compiled.candidate,
+                replace(admission, snapshot_id="snp:" + "e" * 64),
+            )
+        with self.assertRaises(MathRuntimePlanError):
+            self.runtime.compile(
+                compiled.candidate,
+                replace(
+                    admission,
+                    scope={
+                        **admission.scope,
+                        "capability": {
+                            **admission.scope.get("capability", {}),
+                            "selected": {"kernel_id": "mth.vector.dot999.f32"},
+                        },
+                    },
+                ),
+            )
+
+    def test_bridge_rejects_compiled_admission_for_another_candidate(self):
+        compiled = self.compile_dot()
+        bad = replace(
+            compiled,
+            admission=replace(
+                compiled.admission,
+                candidate_id="cnd:" + "1" * 64,
+            ),
+        )
+        packet = self.bridge.prepare_packet(compiled)
+        with self.assertRaises(MathExecutionBindingError):
+            self.bridge._validate_compiled_binding(packet, bad)
+
+    def test_execute_rejects_expired_lease_before_calling_executor(self):
+        self.register_capability()
+        self.scheduler.start(0)
+        compiled = self.compile_dot()
+        packet = self.bridge.prepare_packet(compiled)
+        submission = self.bridge.submit(packet, compiled, now_tick=0)
+        lease = self.bridge.lease(submission, now_tick=0)
+        self.assertIsNotNone(lease)
+        calls = []
+        expired = replace(lease, deadline_tick=0)
+        with self.assertRaises(MathExecutionStateError):
+            self.bridge.execute(
+                expired,
+                lambda: calls.append("called") or "a" * 64,
+                now_tick=1,
+            )
+        self.assertEqual(calls, [])
+
+    def test_lease_and_result_serialization_redact_bearer_token(self):
+        self.register_capability()
+        self.scheduler.start(0)
+        compiled = self.compile_dot()
+        packet = self.bridge.prepare_packet(compiled)
+        submission = self.bridge.submit(packet, compiled, now_tick=0)
+        lease = self.bridge.lease(submission, now_tick=0)
+        self.assertIsNotNone(lease)
+        raw = lease.lease_token
+        rendered = lease.to_dict()
+        self.assertNotIn("lease_token", rendered)
+        self.assertIn("lease_token_digest", rendered)
+        result = self.bridge.execute(
+            lease, lambda: "c" * 64, now_tick=1, commit=True,
+        )
+        self.assertNotIn("lease_token", result.to_dict())
+        self.assertIn("lease_token_digest", result.to_dict()["packet"]["evidence"])
+        self.assertNotIn(raw, str(result.to_dict()["packet"]["provenance"]))
+        self.assertNotIn(raw, str(result.to_dict()))
 
     def test_ring_must_be_active_and_authenticated(self):
         compiled = self.compile_dot()

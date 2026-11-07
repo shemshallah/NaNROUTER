@@ -102,6 +102,34 @@ def vector_dot(version=1, *, semantics=None):
     )
 
 
+def matrix_spec(name="m", rows=2, cols=2):
+    return {
+        "name": name,
+        "type": "matrix",
+        "domain": "real",
+        "shape": [rows, cols],
+        "precision": "float32",
+        "layout": "row_major",
+    }
+
+
+def matrix_vector(rows=2, cols=2):
+    return MathFunction(
+        function_id="math.matrix.matvec",
+        version=1,
+        signature={
+            "inputs": [matrix_spec("m", rows, cols), vector_spec("v", shape=(cols,))],
+            "output": vector_spec("out", shape=(rows,)),
+        },
+        implementations=({
+            "kernel_id": "mth.matvec256.block16.f32",
+            "capability_class": "matrix.matvec",
+            "status": "declared",
+        },),
+        proof_status="verified",
+    )
+
+
 def scalar_div(*, preconditions=(), postconditions=(), undefined_conditions=()):
     return MathFunction(
         function_id="math.scalar.div",
@@ -278,6 +306,35 @@ class MathValidityTests(unittest.TestCase):
         self.assertEqual(admission.verdict, VALID)
         self.assertEqual(admission.scope["math_verdict"], VALID)
         self.assertEqual(admission.scope["rule_level"], 0)
+
+    def test_matrix_vector_compatible_and_incompatible(self):
+        matvec = matrix_vector(2, 2)
+        matrix = leaf_pin(
+            "nml:U0:matrix:m", (2, 2), kind="matrix", workspace_words=4,
+        )
+        vector = leaf_pin("nml:U0:vector:v", (2,), workspace_words=2)
+        base = snapshot(functions=(matvec,), pins=(matrix, vector))
+        engine = MathValidityEngine(base)
+        admission = engine.preflight(candidate_for(matvec, (matrix, vector)))
+        self.assertEqual(admission.verdict, VALID)
+        self.assertEqual(admission.scope["math_verdict"], VALID)
+
+        wrong = leaf_pin("nml:U0:vector:wrong", (3,), workspace_words=3)
+        base = snapshot(functions=(matvec,), pins=(matrix, wrong))
+        engine = MathValidityEngine(base)
+        admission = engine.preflight(candidate_for(matvec, (matrix, wrong)))
+        self.assertEqual(admission.verdict, INVALID)
+        self.assertEqual(admission.reason, "SHAPE_MISMATCH")
+
+    def test_t10_zero_vector_dot_stays_a_valid_numeric_result(self):
+        zero = leaf_pin(
+            "nml:U0:vector:zero", (256,), type_extra={"zero": True},
+        )
+        base = snapshot(functions=(self.dot,), pins=(zero, self.b))
+        engine = MathValidityEngine(base)
+        admission = engine.preflight(candidate_for(self.dot, (zero, self.b)))
+        self.assertEqual(admission.verdict, VALID)
+        self.assertNotEqual(admission.verdict, UNDEFINED)
 
     def test_t02_unequal_dimensions_invalid_and_no_execution(self):
         short = leaf_pin("nml:U0:vector:short", (128,))
@@ -622,10 +679,9 @@ class MathValidityTests(unittest.TestCase):
 
         declared_only = snapshot(functions=(certified,), pins=(pin,))
         engine = MathValidityEngine(declared_only)
-        self.assertEqual(
-            engine.preflight(candidate_for(certified, (pin,))).verdict,
-            VALID,
-        )
+        admission = engine.preflight(candidate_for(certified, (pin,)))
+        self.assertEqual(admission.verdict, UNKNOWN)
+        self.assertEqual(admission.reason, "CERTIFICATE_NOT_PINNED")
 
         unpinned = vector_norm(preconditions=(
             dict(constraint, certificate_digest="d" * 64),

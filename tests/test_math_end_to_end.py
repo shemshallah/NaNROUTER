@@ -6,7 +6,11 @@ from pathlib import Path
 
 from runner_riddle.math_objects import MathLeaf
 from runner_riddle.math_registry import MathFunctionRegistry
-from runner_riddle.math_runtime import MathRuntime, MathRuntimePlanError
+from runner_riddle.math_runtime import (
+    MathRuntime,
+    MathRuntimeConfigError,
+    MathRuntimePlanError,
+)
 from runner_riddle.math_store import MathStore
 from runner_riddle.mth_registry import MthRegistry
 from runner_riddle.mth_system import MthSystem
@@ -133,18 +137,16 @@ class MathEndToEndTests(unittest.TestCase):
             admission = runtime.preflight(candidate)
             self.assertEqual(admission.verdict, "VALID")
             compiled = runtime.compile(candidate, admission)
-            job = runtime.submit(
-                compiled,
-                "submit-token-0000000000000000",
-                "job-math-dot",
-                "U0",
-                1,
-                now_tick=0,
-            )
-            self.assertEqual(job["state"], "queued")
-            self.assertEqual(job["workspace"], 0)
-            self.assertEqual(wave_store.get_job("job-math-dot")["operator_id"],
-                             "mth.vector.dot256.f32")
+            with self.assertRaises(MathRuntimeConfigError):
+                runtime.submit(
+                    compiled,
+                    "submit-token-0000000000000000",
+                    "job-math-dot",
+                    "U0",
+                    1,
+                    now_tick=0,
+                )
+            self.assertIsNone(wave_store.get_job("job-math-dot"))
 
 
 if __name__ == "__main__":

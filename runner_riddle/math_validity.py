@@ -907,7 +907,7 @@ def _evaluate_predicate(predicate: Any, phase: str, index: int,
             return _predicate_result(phase, index, op, "UNKNOWN", "CERTIFICATE_REQUIRED")
         if certificate_text is None:
             return _predicate_result(phase, index, op, "VIOLATED", "CERTIFICATE_MALFORMED")
-        if certificate_text in context.certificates or not context.certificates:
+        if certificate_text in context.certificates:
             return _predicate_result(
                 phase, index, op, "SATISFIED", custom_reason,
                 certificate=certificate_text,
@@ -1088,7 +1088,7 @@ def _evaluate_numeric_certificate(phase: str, index: int, op: str,
             phase, index, op, "VIOLATED", "CERTIFICATE_MALFORMED",
             certificate=certificate,
         )
-    if certificate in context.certificates or not context.certificates:
+    if certificate in context.certificates:
         return _predicate_result(
             phase, index, op, "SATISFIED", custom_reason, certificate=certificate,
         )

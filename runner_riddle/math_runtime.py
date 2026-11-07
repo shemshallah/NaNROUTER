@@ -133,7 +133,9 @@ class MathRuntime:
 
     def snapshot_for(self, candidate: MathCandidate,
                      *, snapshot_id: str | None = None) -> MathSnapshot:
-        function = self.functions.require(candidate.function_id)
+        function = self.functions.require(
+            candidate.function_id, candidate.function_version,
+        )
         sid = snapshot_id or candidate.snapshot_id
         if not sid:
             sid = "snp:" + hashlib.sha256(
@@ -172,7 +174,9 @@ class MathRuntime:
 
     def preflight(self, candidate: MathCandidate,
                   *, snapshot: MathSnapshot | None = None) -> MathAdmission:
-        function = self.functions.require(candidate.function_id)
+        function = self.functions.require(
+            candidate.function_id, candidate.function_version,
+        )
         snap = snapshot or self.snapshot_for(candidate)
         admission = self.validity.preflight(candidate, snap, function)
         if not isinstance(admission, MathAdmission):
@@ -184,7 +188,17 @@ class MathRuntime:
             raise MathRuntimePlanError(
                 f"candidate admission is {admission.verdict}, not VALID"
             )
-        function = self.functions.require(candidate.function_id)
+        if admission.candidate_id != candidate.candidate_id:
+            raise MathRuntimePlanError(
+                "admission candidate does not match the compiled candidate"
+            )
+        if candidate.snapshot_id and admission.snapshot_id != candidate.snapshot_id:
+            raise MathRuntimePlanError(
+                "admission snapshot does not match the compiled candidate"
+            )
+        function = self.functions.require(
+            candidate.function_id, candidate.function_version,
+        )
         implementations = [
             item for item in function.implementations
             if item.get("kernel_id")
@@ -193,6 +207,19 @@ class MathRuntime:
             raise MathRuntimePlanError(
                 f"function {function.function_id!r} has no native implementation"
             )
+        # Bind the implementation selected by preflight.  A valid admission
+        # for a different implementation is not permission to run this one.
+        selected = (admission.scope.get("capability") or {}).get("selected") or {}
+        selected_kernel = selected.get("kernel_id")
+        if selected_kernel:
+            implementations = [
+                item for item in implementations
+                if item.get("kernel_id") == selected_kernel
+            ]
+            if not implementations:
+                raise MathRuntimePlanError(
+                    "admission-selected implementation is not available"
+                )
         implementation = implementations[0]
         kernel_id = implementation["kernel_id"]
         try:
@@ -279,9 +306,14 @@ class MathRuntime:
         *,
         payload: Any = None,
         now_tick: int = 0,
+        nmp_packet: Any = None,
     ) -> dict[str, Any]:
         if self.system is None:
             raise MathRuntimeConfigError("submit requires an MthSystem")
+        if nmp_packet is None:
+            raise MathRuntimeConfigError(
+                "direct MathRuntime.submit is disabled; use MathExecutionBridge"
+            )
         # The MthPlan v1 record is intentionally frozen and has no admission
         # field; the NMP/runtime bridge binds the admission in its job payload.
         # Validate the typed admission here and pass its digest into the job.
