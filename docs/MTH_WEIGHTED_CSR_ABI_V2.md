@@ -1,6 +1,6 @@
 # MTH weighted CSR Laplacian ABI v2
 
-Status: **specified; not source-written or native-verified**. This contract is separate from the frozen unweighted Q16.16/I32 v1 operator.
+Status: **source-written; canonical native verification pending**. This contract is separate from the frozen unweighted Q16.16/I32 v1 operator.
 
 ## 1. Mathematical operator
 
@@ -26,7 +26,7 @@ Every undirected edge appears in both directions and reciprocal entries carry ex
 | Vertices | exactly 256 |
 | Directed CSR entries | 0..65,280 |
 | Output layout | two U32 words per vertex: low word, then high word (two's-complement I64) |
-| Workspace | caller-owned; exact scratch-frame size is a source implementation gate |
+| Workspace | caller-owned 16-word U32 scratch frame |
 
 Weights are dimensionless integer multipliers, not Q0.8 values. This deliberately avoids an implicit rescaling or rounding step. A future fractional-weight operator must receive another ABI version.
 
@@ -59,7 +59,7 @@ Thus a signed 64-bit accumulator is sufficient with substantial headroom. Each p
 - `edge_count`: 0..65,280; each row degree <=255.
 - No self-loops, sorted unique neighbors, symmetric reciprocal endpoints, and exactly equal reciprocal weights.
 - Input state, offsets, neighbors, weights and output spans must obey the non-overlap contract.
-- The immutable graph descriptor is bound to a digest. The caller/runner validates sorted uniqueness, no self-loops, symmetry and reciprocal weight equality before native dispatch. The kernel independently preflights count, offsets, degree, endpoint encoding/range, weight encoding/nonzero, and all state bounds before writing output.
+- The immutable graph descriptor is bound to a digest. The caller/runner validates sorted uniqueness, no self-loops, symmetry and reciprocal weight equality before native dispatch. The kernel independently preflights count, offset[0]=0, monotone offsets, final edge count, degree, endpoint encoding/range, weight encoding/nonzero, and all state bounds before writing output.
 
 ## 4. Native entry point (planned)
 
@@ -77,7 +77,7 @@ Planned inputs:
 
 Return status must distinguish success, invalid state/count, invalid offsets, invalid endpoints, and invalid weights. All descriptor and numeric validation must finish before the first output write. Output must be deterministic and exact.
 
-The register/scratch ABI is now specified: the routine saves all long-lived pointers and row state in the 16-word caller frame, retaining its base in r11 across the wide-multiply helper. The source is written but remains **unverified** until canonical CI passes. Do not dispatch this operator or advertise it as source-written/native-verified until both exist and canonical NaN16 CI passes.
+The register/scratch ABI is specified and implemented: the routine saves all long-lived pointers and row state in the 16-word caller frame, retaining its base in r11 across the wide-multiply helper. The source is **source_written**, not native_verified. Do not dispatch this operator until canonical NaN16 CI passes.
 
 ## 5. Exact native fixtures required
 
