@@ -12,6 +12,8 @@ mth_comp_test_main:
   MOVI r6,@mth_comp_count
   MOVI r7,@mth_comp_scratch
   CALL @mth_graph_components_nullity_v1
+  MOVI r1,65
+  PUTC r1
   CMP r1,r13
   JMP[NE] @mth_comp_fail
 
@@ -22,6 +24,8 @@ mth_comp_test_main:
   MOVI r8,252
   CMP r7,r8
   JMP[NE] @mth_comp_fail
+  MOVI r1,66
+  PUTC r1
 
   ; Component minima are labels 0,0,0,0,4,4,6,7,...
   MOVI r6,@mth_comp_labels
@@ -48,6 +52,8 @@ mth_comp_test_main:
   MOVI r8,6
   CMP r7,r8
   JMP[NE] @mth_comp_fail
+  MOVI r1,67
+  PUTC r1
 
   ; Empty graph has 256 singleton components.
   MOVI r1,@mth_comp_empty_offsets
@@ -65,6 +71,8 @@ mth_comp_test_main:
   MOVI r8,256
   CMP r7,r8
   JMP[NE] @mth_comp_fail
+  MOVI r1,68
+  PUTC r1
 
   MOVI r1,@mth_comp_pass
   CALL @mth_comp_puts
