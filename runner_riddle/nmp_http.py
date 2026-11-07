@@ -47,6 +47,11 @@ def _context(provider: ContextProvider, packet: NmpPacket, stage: str,
     forbidden = {"job", "lease", "tick", "now_tick", "gate"}
     if forbidden.intersection(result):
         raise NmpHttpError("context provider returned reserved gate fields")
+    # Binary trust pins are completion-only; never leak them as kwargs into
+    # the separate queue / execution-gate contract signatures.
+    if stage != "complete":
+        result.pop("expected_guest_image_digest", None)
+        result.pop("expected_guest_source_digest", None)
     return result
 
 
