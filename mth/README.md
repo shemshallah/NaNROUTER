@@ -17,6 +17,7 @@ This directory is the first native MTH source slice. Mathematical code here is N
 - `nan16/mth_ring255_port.nas`: 255-head + NANNET-port readout assembly; local canonical execution PASS.
 - `nan16/mth_graph_fold.nas`: 256/255 fold vectors and 256 unfold; local canonical execution PASS.
 - `nan16/mth_dot256_f32.nas`, `nan16/mth_norm256_f32.nas`, `nan16/mth_axpy256_f32.nas`: float32 dot, norm, and axpy primitives; local canonical execution PASS.
+- `nan16/mth_execute.nas`: admission-gated native dispatch for canonical program/operator pairs 900/77 (float32 dot256) and 901/78 (float32 cosine256), using the exact linker-owned contract pointer; native regression PASS.
 - `nan16/mth_graph_void.nas`: regularized inverse-square float32 void potential; local canonical execution PASS.
 - `nan16/mth_graph_wave.nas`: damped velocity-Verlet float32 wave step; local canonical execution PASS.
 - `nan16/mth_graph_step_energy_256.nas`: kinetic/potential/total step energy metric; local canonical execution PASS.
