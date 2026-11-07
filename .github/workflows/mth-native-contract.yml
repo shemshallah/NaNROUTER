@@ -734,7 +734,7 @@ jobs:
       - name: "Execute canonical :: linker-to-preflight fixture"
         if: ${{ hashFiles('nan0s/src/nannet/math_registry.nas') != '' }}
         run: |
-          nan0s/aarch64/android/nan_cli --img build/mth/linker-preflight.nan --steps 3000000 --serial --peek 30310:1 > build/mth/linker-preflight.out 2> build/mth/linker-preflight.err
+          nan0s/aarch64/android/nan_cli --img build/mth/linker-preflight.nan --steps 3000000 --serial > build/mth/linker-preflight.out 2> build/mth/linker-preflight.err
           cat build/mth/linker-preflight.out
           cat build/mth/linker-preflight.err
           grep -q '^MTH LINKER PREFLIGHT PASS' build/mth/linker-preflight.out
