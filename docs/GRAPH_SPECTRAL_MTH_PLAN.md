@@ -37,7 +37,7 @@ For U indexed by ordered Head pairs:
 
 ### 2.4 Potential and wave
 
-V_i=α/(r_i+ε)² with ε>0 and a versioned radius policy. The wave operator is H=c²L+V and the equation is ü+Hu=f. The sign convention, fixed-point scales and source bounds must be frozen before implementation.
+The first geometry experiment follows `docs/game_plan_foundations.md`: a versioned annular embedding with explicit radial shells and angular positions, excluding r<r_min as the central void. A graph has no intrinsic radius; graph-distance or topology-shell radii remain alternate, separately versioned experiments. V_i=α/(r_i+ε)² with ε>0. The wave operator is H=c²L+V and the equation is ü+Hu=f. The sign convention, fixed-point scales and source bounds must be frozen before implementation.
 
 ## 3. Native MTH module inventory
 
@@ -85,7 +85,9 @@ Only native_verified kernels are dispatchable. Native verification requires the 
 
 NaNNet transfers immutable/versioned page refs. It does not transmit dense matrix copies by default. Results carry output digest, residual/error bound, saturation count, iteration count, runner/kernel identity, and completion status. Semantic updates return through NaNLMind's existing validation and ledger path.
 
-## 6. Six RSS operations
+## 6. Six RSS operations and the foundation API
+
+The runner-facing RSS verbs are:
 
 - ENCODE: preserve directed relation writes and provenance.
 - QUERY: apply graph operator or project into a validated basis.
@@ -93,6 +95,8 @@ NaNNet transfers immutable/versioned page refs. It does not transmit dense matri
 - FILTER: apply g(H) through validated eigensystem or polynomial recurrence.
 - DRIVE: bounded source injection with energy and ledger policy.
 - FOLD: symmetry reduction only after exact invariant checks.
+
+The research foundation's computational API names lower-level stages as ENCODE, DRIVE, PROPAGATE, PROJECT, FILTER/MATCH, and DECODE. These are compatible layers, not competing verb lists: PROPAGATE is the native wave-step primitive called by QUERY/DRIVE workflows; PROJECT is a basis transform used by QUERY/MATCH/FILTER; DECODE is the typed readout/consumer boundary; FOLD is a guarded optimization. Preserve this mapping in runner schemas and avoid adding duplicate top-level operations for internal primitives.
 
 ## 7. Pattern analysis
 
