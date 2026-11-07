@@ -68,14 +68,21 @@ mth_pair_driver_slice:
   ; Finalize only after all sixteen slices have returned successfully.
   MOVI r11,70
   PUTC r11
+  MOVI r11,48
+  ADD r11,r11,r13
+  PUTC r11
   LA r12,@mth_pair_driver_state
   LD r1,r12,4
   LD r2,r12,5
   LD r3,r12,7
   CALL @mth_graph_pair_tile16_finalize_f32
+  MOVI r11,71
+  PUTC r11
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_fail
+  MOVI r11,72
+  PUTC r11
   MOVI r1,1
   RET
 
