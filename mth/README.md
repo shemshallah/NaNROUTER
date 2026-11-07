@@ -171,3 +171,10 @@ The native fixtures pass local `nan_cli`; the combined GitHub Actions run last p
 - `nan16/mth_radial_energy.nas`: radial quadratic energy and localization; local canonical execution PASS (61,373 steps).
 
 All listed 1 MiB additions exceed the historical 512 KiB limit and passed canonical CI run 42396090387. GLT-enforced 1 MiB page-limit loading remains the separate pending gate.
+
+
+## Typed mathematical preflight
+
+- `nan16/mth_preflight.nas`: NaN16-only applicability gate for concrete typed leaf descriptors against a caller-supplied canonical operator contract. Checks kind, rank, domain, shape rule, payload capacity, required execution capabilities, and declared preconditions; output metadata is committed only after all checks pass.
+- `tests/mth_preflight_test.nas`: native guest regression for vector-dot success, dimension mismatch, missing capability, zero-divisor precondition, successful scalar preflight, and output-capacity rejection with atomic output metadata.
+- The gate is not a second function registry. The MC0/NaN0S registry owns operator identity and contracts; the gate checks whether a resolved contract applies to these concrete leaves. A failed preflight is not numerical zero, execution failure, or mathematical undefinedness.
