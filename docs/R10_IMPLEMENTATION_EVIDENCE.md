@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 21/21 native MTH fixtures passed locally and in GitHub Actions run `42352593144`; 111 Python tests passed.
-**CI:** the expanded `mth-native-contract` workflow passed all 43 steps on `main` for commit `bbc9d10`.
+**Result:** 21/21 native MTH fixtures passed locally and in GitHub Actions run `42382439616`; 111 Python tests passed.
+**CI:** the expanded `mth-native-contract` workflow passed all 45 steps on `main` for commit `dc05a16`.
 
 ## Native fixtures
 
@@ -29,7 +29,7 @@
 | 18 | 256-point DFT reference | `mth/tests/mth_graph_dft256_test.nas` | 8,958,287 | PASS | yes |
 | 19 | Two-region coupling | `mth/tests/mth_graph_couple_128_test.nas` | 8,637 | PASS | yes |
 | 20 | Transmission metric | `mth/tests/mth_graph_transmission_128_test.nas` | 7,147 | PASS | yes |
-| 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | pending |
+| 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | yes |
 
 ## Python tests
 

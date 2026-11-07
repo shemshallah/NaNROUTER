@@ -16,7 +16,7 @@
 - [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] 21/21 native MTH fixtures pass locally with `nan_cli`.
 - [x] 111 Python tests pass.
-- [x] Expanded GitHub Actions native workflow passed run `42352593144` (43/43 steps).
+- [x] Expanded GitHub Actions native workflow passed run `42382439616` (45/45 steps).
 
 ## R0 — Contract and storage freeze
 
@@ -132,7 +132,7 @@
 - [x] Add `mth/README.md` inventory updates.
 - [x] Add `docs/GRAPH_SPECTRAL_MTH_PLAN.md` implementation update.
 - [x] Add `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
-- [x] Run the expanded CI workflow on GitHub Actions (run `42352593144`).
+- [x] Run the expanded CI workflow on GitHub Actions (run `42382439616`).
 - [ ] Register final CI digests in the production MC0DB.
 
 ## Agent dispatch board
@@ -159,4 +159,4 @@ Ran 111 tests
 OK
 ```
 
-CI run: `42352593144` — 43/43 steps passed. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI run: `42382439616` — 45/45 steps passed. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.

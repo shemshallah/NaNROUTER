@@ -228,7 +228,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.pair.full.128.f32",
