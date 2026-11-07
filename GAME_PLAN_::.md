@@ -8,7 +8,7 @@
 **Canonical language:** NaN16.
 **Canonical math owner:** native MTH kernels in the one NaNLMind universe.
 **Canonical routing owner:** NaNROUTER through stable point 0.
-**Guest-budget update:** the owner reports GLT is now **2 MiB and adjustable for guest words**. This plan targets 2 MiB, preserves a 1 MiB/512 KiB compatibility mode, and flags the checked-in 1 MiB defaults that must be synchronized by GPT's integration.
+**Guest-budget update:** GLT is now **2 MiB and adjustable for guest words**. The checked-in `main` now defaults to **2 MiB / 262,144 words / 64 pages**, with 1 MiB and 512 KiB compatibility modes. GLT-enforced page-limit loading remains a separate gate.
 
 This document does not create a second universe, a second runner ring, a second store, or a second mathematical authority. It defines how the five proposed systems fit into the existing MTH/NaNROUTER control plane without collapsing their responsibilities.
 
@@ -111,13 +111,14 @@ At the time of writing the checked-in `main` contains:
 - **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
 - canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
 - **375 Python tests** (after the page-store/page-executor additions);
-- `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
+- **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
+- `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
 Existing MTH kernels are the **implementation layer**. They are not yet a full mathematical registry: the current `MthKernelDescriptor` has no semantic input/output signature, domain, precondition, postcondition, undefinedness policy, or proof status. That is the gap this plan fills.
 
 ### 2.2 The 2 MiB guest target
 
-The owner reports the guest limit is now **2 MiB and adjustable for guest words**. The integration target is:
+The guest limit is now **2 MiB and adjustable for guest words**. The integration target and checked-in default are:
 
 ```
 2 MiB = 2,097,152 bytes
@@ -125,13 +126,13 @@ The owner reports the guest limit is now **2 MiB and adjustable for guest words*
       = 64 pages of 32 KiB
 ```
 
-A 1 MiB compatibility mode remains:
+A 1 MiB compatibility mode remains selectable:
 
 ```
 1 MiB = 131,072 words = 32 pages of 32 KiB
 ```
 
-The checked-in tree at commit `1cc73ed` still shows 1 MiB defaults in `MthSystem`, point-0 frames, and registration defaults. GPT's 2 MiB integration must be merged and tested; this plan does **not** claim it is already active in main.
+The 2 MiB integration is checked in at `MthSystem`, point-0 framing, registration, live preflight, tile orchestration, and the page-backed pair executor. The default remains adjustable; 1 MiB and 512 KiB compatibility modes are explicit tests and must not silently admit 2 MiB-only plans.
 
 | Object | 2 MiB fit | Notes |
 |---|---:|---|
@@ -149,9 +150,9 @@ The 2 MiB target changes what is *feasible*; it does not change the rule that th
 
 ### 2.3 Memory policy
 
-- Default target: **2 MiB** once GPT's integration lands.
+- Default target: **2 MiB**, checked in and test-covered.
 - Caller override: `guest_words`/`guest_bytes`, bounded by the declared platform ceiling.
-- Compatibility: 1 MiB and 512 KiB test modes must continue to work.
+- Compatibility: 1 MiB and 512 KiB test modes continue to work.
 - Point-0 hard frame ceiling: 262,144 words at 2 MiB; a smaller per-frame limit remains allowed.
 - Health must expose `guest_budget_words`, `guest_budget_bytes`, `page_bytes`, and `guest_budget_pages`.
 - A plan that needs more than the effective budget is rejected before it reaches the store, service, or executor.
@@ -1404,13 +1405,14 @@ When the 2 MiB branch is merged, update and test at least:
 
 | Location | Current (1 MiB) | Target (2 MiB) |
 |---|---|---|
-| `MthSystem.DEFAULT_GUEST_BUDGET_BYTES` | `1024 * 1024` | `2 * 1024 * 1024` |
-| `MthSystem` health `guest_budget_words` | 131,072 | 262,144 |
-| `MthSystem` health `guest_budget_pages` | 32 | 64 |
-| `Point0Bridge.MAX_FRAME_WORDS` | 131,072 | 262,144 |
-| `register_wave_capabilities.DEFAULT_GUEST_WORKSPACE_WORDS` | 131,072 | 262,144 |
-| MTH memory docs/examples | 1 MiB | 2 MiB, with 1 MiB/512 KiB modes |
-| CI budget fixtures | 1 MiB boundary | 2 MiB boundary plus 1 MiB/512 KiB compatibility |
+| `MthSystem.DEFAULT_GUEST_BUDGET_BYTES` | `2 * 1024 * 1024` | implemented |
+| `MthSystem` health `guest_budget_words` | 262,144 | implemented |
+| `MthSystem` health `guest_budget_pages` | 64 | implemented |
+| `Point0Bridge.MAX_FRAME_WORDS` | 262,144 | implemented |
+| `register_wave_capabilities.DEFAULT_GUEST_WORKSPACE_WORDS` | 262,144 | implemented |
+| MTH memory docs/examples | 2 MiB + 1 MiB/512 KiB modes | updated |
+| CI budget fixtures | 2 MiB boundary + legacy modes | add/verify in the next CI run |
+| `guest_budget_words` primary input | words-first adjustable budget | implemented |
 
 The target is `guest_words`, not a hidden hard-coded assumption. A deployment may override it; a plan may not silently ignore it.
 
@@ -1576,7 +1578,7 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 ### P0 — Freeze the 2 MiB + authority contract
 
 **Priority:** 0 (blocking).
-**Scope:** merge GPT's 2 MiB adjustable guest budget; declare `guest_words`/`guest_bytes`; update point-0 frame ceiling, MthSystem defaults/health, registration CLI, docs; preserve 1 MiB/512 KiB modes; freeze `::` context and authority table.
+**Scope:** 2 MiB adjustable guest budget is checked in; finish capability re-registration for all six slots, peak-liveness admission, point-0/HTTP bounds, math schema isolation, and the authority/`::` context split.
 **Files:** `runner_riddle/mth_system.py`, `point0_bridge.py`, `tools/register_wave_capabilities.py`, `docs/MTH_SYSTEM_RUNTIME.md`, `docs/MTH_MEMORY_1MIB.md`/new 2 MiB doc, `tests/test_mth_system.py`, `tests/test_point0_bridge.py`.
 **Exit:** all P0 tests; no existing test regression; explicit GLT gate.
 

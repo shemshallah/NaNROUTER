@@ -17,7 +17,7 @@
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] 1 MiB baseline implemented (131,072 NaN16 words); old 512 KiB evidence is historical.
-- [ ] Integrate GPT's 2 MiB adjustable guest-word update (262,144 words / 64 pages); preserve 1 MiB and 512 KiB compatibility modes.
+- [x] 2 MiB adjustable guest-word default checked in (262,144 words / 64 pages); 1 MiB/512 KiB compatibility modes implemented.
 - [ ] Verify GLT-enforced 2 MiB page-limit loading (CI text-loader execution is green; GLT enforcement is separate).
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
@@ -31,9 +31,9 @@
 **Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `GAME_PLAN_::.md` §19–20.
 
 - [ ] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split.
-  - [ ] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack.
+  - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
   - [ ] P0.2 Re-register all six slot capabilities at 262,144 words; 1 MiB capability cannot admit a 196,608-word job.
-  - [ ] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word golden vector unchanged.
+  - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
   - [ ] P0.4 Peak-liveness plan workspace (not naive step sum); exact-limit accepted, +1 word rejected before store.
   - [ ] P0.5 Keep `wave_schema=1`; add `math_*` + separate `math_schema`; no unversioned bump.
   - [ ] P0.6 Freeze authority/`::` context rules and JAHS execution binding.

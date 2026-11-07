@@ -5,7 +5,7 @@
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 **Mathematical linker plan:** `GAME_PLAN_::.md` (NaN Mathematical Linker, validity engine, leaves, NMP, 2 MiB integration).
-**Guest-budget update:** the owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults must be synchronized by GPT's integration.
+**Guest-budget update:** GLT is now 2 MiB and adjustable; the checked-in default is 2 MiB, with 1 MiB/512 KiB compatibility modes. GLT page-limit enforcement remains separate.
 **Canonical language:** NaN16, assembled by `nasm0`, executed by `n16i` or the native NaN16 kernel.
 **Canonical math owner:** MTH inside the one NaNLMind universe.
 **Canonical routing/control owner:** NaNROUTER.
@@ -260,8 +260,7 @@ The 1 MiB implementation baseline is:
 
 **Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for
 guest words**. The target is `2 MiB = 262,144 words = 64 pages of 32 KiB`.
-The checked-in defaults are still 1 MiB pending GPT's merge; 1 MiB and 512 KiB
-remain compatibility test modes. See `GAME_PLAN_::.md` §2 and §16. At 2 MiB,
+The checked-in default is 2 MiB; 1 MiB and 512 KiB remain compatibility test modes. See `GAME_PLAN_::.md` §2 and §16. At 2 MiB,
 the full 256 `U+L+output` pair (196,608 words) becomes guest-feasible, while
 the 65,536² dense product remains forbidden (32 GiB at 8-byte NaN words).
 

@@ -1,6 +1,6 @@
 # MTH 1 MiB guest-budget migration
 
-> **Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for guest words**. This 1 MiB document is retained as the compatibility baseline and implementation history; the new target and integration order are in `GAME_PLAN_::.md`. Do not treat the 1 MiB default as final.
+> **Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for guest words**. This 1 MiB document is retained as the compatibility baseline and implementation history; the new target and integration order are in `GAME_PLAN_::.md`. The 2 MiB default is now checked in; this file remains the 1 MiB compatibility history.
 
 Status: design target; canonical toolchain verification pending.
 

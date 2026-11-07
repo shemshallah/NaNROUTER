@@ -6,7 +6,7 @@ NaNROUTER organizes the networking and learning-control layers around the existi
 
 ## Current design boundary
 
-**Guest budget:** the owner reports GLT is now **2 MiB, adjustable for guest words** (262,144 NaN16 words / 64 pages of 32 KiB). The checked-in tree still contains 1 MiB defaults pending GPT's merge; the 1 MiB and 512 KiB modes remain compatibility gates. See `GAME_PLAN_::.md`.
+**Guest budget:** GLT is now **2 MiB, adjustable for guest words** (262,144 NaN16 words / 64 pages of 32 KiB). The checked-in default is 2 MiB; 1 MiB and 512 KiB modes remain compatibility gates. See `GAME_PLAN_::.md`.
 - One 8 MiB Bootstrap universe, with 256 palindromic heads.
 - One 2 GiB overbootstrap map hosted only by the Bootstrap runner; it is not copied to Android or peer nodes.
 - Six BSR runner-ring identities, mapped to the user's point assignments in `spec/point-map.toml`.
