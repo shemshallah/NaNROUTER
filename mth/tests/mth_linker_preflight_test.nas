@@ -109,6 +109,8 @@ mth_link_pf_main:
   JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
 
+  ; The registry resolver owns scratch registers; restore the MTH ABI scratch base.
+  MOVI r12,@mth_link_pf_scratch
   ; The exact contract pointer returned by :: now gates output publication.
   MOVI r1,@mth_link_pf_left
   MOVI r2,@mth_link_pf_right
@@ -143,6 +145,7 @@ mth_link_pf_main:
   LD r5,r0,@mth_link_pf_contract
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
+  MOVI r12,@mth_link_pf_scratch
   CALL @mth_admit
   CMP r1,r0
   JMP[NE] @mth_link_pf_fail_1
@@ -158,6 +161,7 @@ mth_link_pf_main:
   LD r5,r0,@mth_link_pf_contract
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
+  MOVI r12,@mth_link_pf_scratch
   CALL @mth_admit
   MOVI r9,18
   CMP r1,r9
@@ -181,6 +185,7 @@ mth_link_pf_main:
   LD r5,r0,@mth_link_pf_contract
   MOVI r6,1
   MOVI r7,@mth_link_pf_output
+  MOVI r12,@mth_link_pf_scratch
   CALL @mth_admit
   MOVI r9,38
   CMP r1,r9
