@@ -4,6 +4,8 @@ JMP @mth_weighted_v2_test_main
 
 mth_weighted_v2_test_main:
   MOVI r13,1
+  MOVI r1,@mth_weighted_v2_before
+  CALL @mth_weighted_v2_puts
   MOVI r1,@mth_weighted_v2_offsets
   MOVI r2,@mth_weighted_v2_neighbors
   MOVI r3,@mth_weighted_v2_weights_a
@@ -12,6 +14,8 @@ mth_weighted_v2_test_main:
   MOVI r6,6
   MOVI r7,@mth_weighted_v2_scratch
   CALL @mth_sparse_weighted_graph_laplacian_q16_16_i64_v2
+  MOVI r1,@mth_weighted_v2_after
+  CALL @mth_weighted_v2_puts
   CMP r1,r13
   JMP[NE] @mth_weighted_v2_fail
 
