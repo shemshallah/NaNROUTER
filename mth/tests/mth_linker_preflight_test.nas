@@ -25,8 +25,6 @@ mth_link_pf_main:
   CALL @nmr_obj_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_obj1
-  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,4
   MOVI r3,2
@@ -39,19 +37,13 @@ mth_link_pf_main:
   CALL @nmr_obj_bind_data
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_bind1
-  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,@mth_link_pf_right_payload
   CALL @nmr_obj_bind_data
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_bind2
-  CALL @mth_link_pf_puts
 
   ; Existing shape metadata is used by the legacy route-expression parser.
-  MOVI r1,@mth_link_pf_stage_before_shape
-  CALL @mth_link_pf_puts
   MOVI r1,123
   MOVI r2,1
   MOVI r3,256
@@ -60,8 +52,6 @@ mth_link_pf_main:
   CALL @nmr_shape_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_shape_fail
-  MOVI r1,@mth_link_pf_stage_shape1
-  CALL @mth_link_pf_puts
   MOVI r1,234
   MOVI r2,1
   MOVI r3,256
@@ -80,8 +70,6 @@ mth_link_pf_main:
   CALL @nmr_op_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_op
-  CALL @mth_link_pf_puts
   MOVI r1,77
   MOVI r2,1
   MOVI r3,1
@@ -93,13 +81,9 @@ mth_link_pf_main:
   CALL @nmr_contract_put
   CMP r3,r0
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_contract_put
-  CALL @mth_link_pf_puts
 
   ; The literal ::op: expression is parsed and resolved by the canonical
   ; NaN0S linker. Its r10 is the registered 10-word contract descriptor.
-  MOVI r1,@mth_link_pf_stage_before_resolve
-  CALL @mth_link_pf_puts
   MOVI r1,@mth_link_pf_expression
   SHL r1,r1,2
   CALL @nmr_expr_resolve
@@ -130,10 +114,6 @@ mth_link_pf_main:
   CMP r10,r0
   JMP[EQ] @mth_link_pf_fail
   ST r10,r0,@mth_link_pf_contract
-  MOVI r1,@mth_link_pf_stage_contract
-  CALL @mth_link_pf_puts
-  MOVI r1,@mth_link_pf_stage_linker
-  CALL @mth_link_pf_puts
 
   ; mth_admit performs both gates; pass the exact registry contract pointer.
   MOVI r12,@mth_link_pf_scratch
@@ -162,8 +142,6 @@ mth_link_pf_admit_typed_fail:
   CALL @mth_link_pf_puts
   HALT
 mth_link_pf_admit_ok:
-  MOVI r1,@mth_link_pf_stage_admit
-  CALL @mth_link_pf_puts
 
   ; A stale rule epoch is rejected before typed applicability.
   MOVI r8,@mth_link_pf_candidate
@@ -184,8 +162,6 @@ mth_link_pf_admit_ok:
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
-  MOVI r1,@mth_link_pf_stage_stale
-  CALL @mth_link_pf_puts
 
   ; Concrete dimension mismatch is rejected by the second gate and leaves
   ; the caller's output descriptor untouched.
@@ -211,8 +187,6 @@ mth_link_pf_admit_ok:
   MOVI r8,@mth_link_pf_right
   MOVI r9,256
   ST r9,r8,2
-  MOVI r1,@mth_link_pf_stage_shape
-  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0
   ST r9,r8,0
@@ -235,8 +209,6 @@ mth_link_pf_admit_ok:
   SHL r10,r10,16
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_dot
-  CALL @mth_link_pf_puts
   ; Preserve the exact dot contract pointer for the negative-path checks.
   LD r10,r0,@mth_link_pf_contract
   ST r10,r0,@mth_link_pf_dot_contract
@@ -273,8 +245,6 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_stale_dispatch
-  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_candidate
   MOVI r9,7
   ST r9,r8,9
@@ -309,8 +279,6 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_mismatch
-  CALL @mth_link_pf_puts
   ; Unknown program IDs are rejected before preflight or output publication.
   MOVI r8,@mth_link_pf_output_payload
   MOVI r9,0x1234
@@ -343,8 +311,6 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[NE] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_unknown
-  CALL @mth_link_pf_puts
   MOVI r8,@mth_link_pf_output
   LD r9,r8,0
   MOVI r10,55
@@ -433,8 +399,6 @@ mth_link_pf_admit_ok:
   ADD r10,r10,r11
   CMP r9,r10
   JMP[GT] @mth_link_pf_fail
-  MOVI r1,@mth_link_pf_stage_cosine
-  CALL @mth_link_pf_puts
 
   ; Restore dot operator/rule/contract for the negative-path checks below.
   MOVI r9,77
@@ -591,57 +555,7 @@ mth_link_pf_bad:
 .str "MTH LINKER PREFLIGHT FAIL\n"
 mth_link_pf_dispatch_status_bad:
 .str "MTH NATIVE DISPATCH STATUS FAIL\n"
-mth_link_pf_stage_linker:
-.str "STAGE LINKER OK\n"
-mth_link_pf_stage_admit:
-.str "STAGE ADMIT OK\n"
-mth_link_pf_stage_stale:
-.str "STAGE STALE OK\n"
-mth_link_pf_stage_shape:
-.str "STAGE SHAPE OK\n"
-mth_link_pf_stage_dot:
-.str "STAGE DOT PASS\n"
-mth_link_pf_stage_stale_dispatch:
-.str "STAGE STALE DISPATCH PASS\n"
-mth_link_pf_stage_mismatch:
-.str "STAGE MISMATCH PASS\n"
-mth_link_pf_stage_unknown:
-.str "STAGE UNKNOWN PASS\n"
-mth_link_pf_stage_cosine:
-.str "STAGE COSINE PASS\n"
-mth_link_pf_stage_before_resolve:
-.str "STAGE BEFORE RESOLVE\n"
-mth_link_pf_stage_after_resolve:
-.str "STAGE AFTER RESOLVE\n"
-mth_link_pf_stage_contract:
-.str "STAGE CONTRACT OK\n"
-mth_link_pf_stage_obj1:
-.str "STAGE OBJ1\n"
-mth_link_pf_stage_bind1:
-.str "STAGE BIND1\n"
-mth_link_pf_stage_shape1:
-.str "STAGE SHAPE1\n"
-mth_link_pf_stage_op:
-.str "STAGE OP\n"
-mth_link_pf_stage_contract_put:
-.str "STAGE CONTRACT PUT\n"
-mth_link_pf_stage_bind2:
-.str "STAGE BIND2\n"
-mth_link_pf_stage_before_shape:
-.str "STAGE BEFORE SHAPE\n"
 mth_link_pf_shape_bad:
 .str "MTH SHAPE REGISTRATION FAIL\n"
-mth_link_pf_stage_resolve_status:
-.str "STAGE RESOLVE STATUS OK\n"
-mth_link_pf_stage_left_id:
-.str "STAGE LEFT ID OK\n"
-mth_link_pf_stage_right_id:
-.str "STAGE RIGHT ID OK\n"
-mth_link_pf_stage_op_id:
-.str "STAGE OP ID OK\n"
-mth_link_pf_stage_out_kind:
-.str "STAGE OUT KIND OK\n"
-mth_link_pf_stage_program_id:
-.str "STAGE PROGRAM ID OK\n"
 mth_link_pf_resolve_bad:
 .str "MTH LINK RESOLVE STATUS FAIL\n"
