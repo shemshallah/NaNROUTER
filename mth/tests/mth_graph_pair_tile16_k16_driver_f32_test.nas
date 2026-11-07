@@ -34,6 +34,8 @@ mth_pair_driver_test_main:
   LA r6,@mth_driver_acc_ult
   LA r7,@mth_driver_scratch
   CALL @mth_graph_pair_tile16_k16_driver_f32
+  MOVI r11,68
+  PUTC r11
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_test_fail
@@ -59,7 +61,11 @@ mth_pair_driver_test_main:
   LA r2,@mth_driver_acc_ult
   LA r3,@mth_driver_y
   MOVI r13,1
+  MOVI r11,65
+  PUTC r11
   CALL @mth_graph_pair_tile16_finalize_f32
+  MOVI r11,66
+  PUTC r11
   MOVI r2,1
   CMP r1,r2
   JMP[NE] @mth_pair_driver_test_fail
