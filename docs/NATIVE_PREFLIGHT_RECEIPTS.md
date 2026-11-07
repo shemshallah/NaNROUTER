@@ -33,9 +33,17 @@ queue/lease gate evaluation.
 After queueing, `NmpPacket.bind_native_lease` binds the receipt to one active
 job lease and ring snapshot. The binding includes job ID, lease epoch, owner,
 a digest of the lease token (never the token itself), ring incarnation/epoch,
-output generation, and cancellation epoch. Native-receipt packets force a fresh full gate evaluation at queue and lease start; a previously accepted decision cannot be replayed after the live ruleset, capability, or ring snapshot changes. The active slot/alias and JAHS
-handoff seal must match. `start_execution` refuses a packet with a native
-receipt unless that exact binding is present and unchanged.
+output generation, and cancellation epoch. The active slot/alias and JAHS
+handoff seal must match.
+
+The NMP execution gate also requires the live ruleset snapshot to expose the
+same rule epoch and complete 256-bit digest. Native-receipt packets force a
+fresh full gate evaluation at queue and lease start; a previously accepted
+decision cannot be replayed after the live ruleset, capability, or ring
+snapshot changes. At lease start, NMP recomputes the binding from the current
+job, lease token, and ring snapshot and compares it to the stored binding.
+`start_execution` refuses a packet with a native receipt unless that exact
+binding is present and unchanged.
 
 ## Evidence boundary
 
