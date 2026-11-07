@@ -148,11 +148,11 @@ The exact MTH data-word allocation is an implementation gate. Do not freeze a ne
 
 There are three related but distinct operations in the existing NaN16 work. MTH must not collapse them into one ambiguous "byte swap":
 
-1. **BSWAPM face swap.** The existing NaN16 primitive swaps the two NaN faces of a memory word. The established Boolean exhibit documents the class-nibble transform `rot2(n) = ((n & 3) << 2) | (n >> 2)`. Treat this as the frozen machine operation. It is not evidence that every byte of the 64-bit word is reversed.
-2. **Double-endian pair codec.** The existing `n16de` codec stores a chunk as a big-endian member and a byte-swapped little-endian member, each with its own tag. Decode validates both members and rejects disagreement. This is a paired representation with voting/validation, not the same thing as BSWAPM.
-3. **Ordinary byte-order transforms.** Reversing an eight-byte word, reversing a 32-bit payload, reversing a 16-bit lane, and changing multiword scalar order are separate operations that need their own exact contracts and tests.
+1. **BSWAPM full-word reversal.** The frozen NaN16 primitive reverses all eight bytes of a 64-bit word: it swaps the two NaN faces and reverses the byte order of the 32-bit payload. Its class-nibble transform is `rot2(n) = ((n & 3) << 2) | (n >> 2)`. Applying it twice restores the original word.
+2. **Double-endian pair codec.** The existing `n16de` codec stores a chunk as a big-endian member and a byte-swapped little-endian member, each with its own tag. Decode validates both members and rejects disagreement. This redundant paired representation with voting/validation is not the same operation as BSWAPM.
+3. **Other lane and object transforms.** Reversing a 32-bit payload independently, reversing a 16-bit lane, and changing multiword scalar/vector/tensor storage order are separate operations with their own contracts.
 
-MTH should expose explicit operation IDs for each of these. The initial implementation must wrap the existing BSWAPM and pair codec without changing their semantics. Only add a full-word byte reversal after the actual NaN16 instruction semantics and memory representation have been verified.
+MTH must expose explicit operation IDs for each. The initial implementation wraps the existing BSWAPM and pair codec without changing their semantics. Tests must verify all eight output bytes, both face classes, payload order, inverse behavior, and pair-codec corruption rejection.
 
 Every transform test must check exact input/output words, face classes, payload bytes, inverse behavior, and corruption handling where the format includes redundancy. Applying an involutive transform twice must restore the original bytes; a pair codec must also reject a mismatched pair rather than silently choose one member.
 
@@ -763,7 +763,7 @@ The first native source slice now lives under `mth/`:
 
 - `mth/nan16/mth_core.nas` contains a NaN16 implementation of the ordered class rotation and an explicit wrapper around the existing `BSWAPM` primitive.
 - `mth/nan16/mth_bool.nas` contains a generic two-input Boolean transform that dynamically selects one of the frozen `BOOL.n` instruction classes and executes it as NaN16.
-- `mth/tests/mth_stage0_test.nas` checks the 16-entry class-rotation table, rotation involution, and double-face-swap restoration.
+- `mth/tests/mth_stage0_test.nas` checks the 16-entry class-rotation table, rotation involution, exact BSWAPM payload-byte reversal, and double-reversal restoration.
 - `mth/tests/mth_bool2_test.nas` checks all 16 two-input Boolean truth-table classes against a fixed expected lane pattern.
 - `mth/README.md` records the boundary between BSWAPM and the existing double-endian pair codec.
 
@@ -779,3 +779,25 @@ This is source committed to the repository, not a claim that it has assembled or
 6. Record exact toolchain version, source digest, test digest, and result before marking Stage 0 passed.
 
 The MTH source must remain NaN16. A host test runner may assemble, launch, and collect bytes, but may not calculate the expected mathematical result on behalf of the guest.
+
+
+## 18. Use the 16 class nibbles as a data-space resource
+
+The 16 class nibbles are not merely four neutral patterns plus twelve disposable mirror patterns. They are 16 ordered values. Under `rot2`, four are fixed (`0, 5, 10, 15`) and the remaining twelve form six reversible pairs:
+
+| Pair | Reversal | Potential use (schema-defined, not hardwired) |
+|---|---|---|
+| 1 ↔ 4 | `rot2` | directed role pair |
+| 2 ↔ 8 | `rot2` | forward/reverse transform family |
+| 3 ↔ 12 | `rot2` | source/destination or input/output orientation |
+| 6 ↔ 9 | `rot2` | ordered comparison / inverse relation |
+| 7 ↔ 13 | `rot2` | paired record orientation |
+| 11 ↔ 14 | `rot2` | implication / reversed implication family |
+
+The four fixed values can be useful for orientation-invariant record tags, but they are not reserved exclusively for that purpose. Every one of the sixteen values remains available to a versioned MTH data schema. The table above suggests semantic families; it does not permanently assign meanings to class IDs.
+
+A data stream declares its record family. In that context, the class nibble can select one of sixteen data variants while the 32-bit payload carries the compact value. The same raw word in an instruction stream retains the frozen NaN16 instruction meaning. Context is mandatory; code/data reinterpretation is never implicit.
+
+For larger structures, each 64-bit word is one element or fragment in a typed multiword object. The object descriptor carries the full type, length, shape, stride/layout, version, and endianness policy. This lets MTH use the entire class/payload space without pretending that one 32-bit payload can hold every scalar or tensor value.
+
+The key property is **orientation-preserving addressability**: a word and its BSWAPM image remain distinct, inspectable representations linked by a known involution. MTH may exploit that relation for paired fields, integrity checks, and transformations, but must not collapse the two encodings or assume that only palindromic words are useful.
