@@ -20,12 +20,12 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.graph.dft256.f32", ids)
         self.assertIn("mth.graph.couple128.f32", ids)
         self.assertIn("mth.graph.pair.full.128.f32", ids)
-        self.assertEqual(len(ids), 20)
+        self.assertEqual(len(ids), 21)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 20)
+        self.assertEqual(len(rows), 21)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
@@ -36,7 +36,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 20)
+            self.assertEqual(len(rows), 21)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],

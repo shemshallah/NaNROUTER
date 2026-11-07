@@ -206,6 +206,7 @@ The deep plan (`docs/game_plan_deep.md`) and ledger (`docs/IMPLEMENTATION_TODO.m
 | Void potential | `mth/nan16/mth_graph_void.nas` | local PASS |
 | Wave velocity-Verlet step | `mth/nan16/mth_graph_wave.nas` | local PASS |
 | Step energy metric | `mth/nan16/mth_graph_step_energy_256.nas` | local PASS |
+| Harmonic wave energy | `mth/nan16/mth_harmonic_accel_256.nas` + fixture | local PASS |
 | Dense 128×128 pair action | `mth/nan16/mth_graph_pair.nas` | local PASS |
 | Rank-1 128 pair action | `mth/nan16/mth_graph_pair_rank1_128.nas` | local PASS |
 | 256-point DFT reference | `mth/nan16/mth_graph_dft256.nas` | local PASS |
@@ -219,11 +220,11 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-20/20 fixtures passed
+21/21 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests
 OK
 ```
 
-The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42352593144` (43/43 steps). Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.
+The expanded `.github/workflows/mth-native-contract.yml` passed GitHub Actions run `42352593144` (43/43 steps); the harmonic-energy fixture is a new local gate awaiting the next CI run. Aperture SVD/power iteration, Lanczos, repeated-step energy conservation, full 256×256 pair action, NANNET HTTP integration, and LM ablations remain open gates.

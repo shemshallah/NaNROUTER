@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-06
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 20/20 native MTH fixtures passed locally and in GitHub Actions run `42352593144`; 111 Python tests passed.
+**Result:** 21/21 native MTH fixtures passed locally and in GitHub Actions run `42352593144`; 111 Python tests passed.
 **CI:** the expanded `mth-native-contract` workflow passed all 43 steps on `main` for commit `bbc9d10`.
 
 ## Native fixtures
@@ -29,6 +29,7 @@
 | 18 | 256-point DFT reference | `mth/tests/mth_graph_dft256_test.nas` | 8,958,287 | PASS | yes |
 | 19 | Two-region coupling | `mth/tests/mth_graph_couple_128_test.nas` | 8,637 | PASS | yes |
 | 20 | Transmission metric | `mth/tests/mth_graph_transmission_128_test.nas` | 7,147 | PASS | yes |
+| 21 | Harmonic wave energy | `mth/tests/mth_harmonic_wave_energy_test.nas` | 53,877 | PASS | pending |
 
 ## Python tests
 
@@ -52,14 +53,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-20/20 fixtures passed
+21/21 fixtures passed
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 20 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
+`spec/wave-capabilities.json` records 21 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`.
 
 ## What is not yet proven
 

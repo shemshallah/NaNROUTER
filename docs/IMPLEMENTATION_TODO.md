@@ -14,7 +14,7 @@
 - [x] Connected-components 256 — local native_verified.
 - [x] 255 heads + 1 NANNET node convention frozen.
 - [x] Storage/execution fabric documented: NaNROUTER, six CPU runners, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
-- [x] 20/20 native MTH fixtures pass locally with `nan_cli`.
+- [x] 21/21 native MTH fixtures pass locally with `nan_cli`.
 - [x] 111 Python tests pass.
 - [x] Expanded GitHub Actions native workflow passed run `42352593144` (43/43 steps).
 
@@ -65,7 +65,8 @@
 - [x] Add float32 velocity-Verlet wave-step kernel.
 - [x] Add step-energy metric kernel.
 - [x] Add invalid dt/gamma/layout rejection atomicity.
-- [ ] Add repeated-step undamped energy-conservation fixture with actual `H` application.
+- [x] Add four-step harmonic-H energy-conservation fixture (diagonal H) — local PASS.
+- [ ] Add repeated-step energy conservation with a real graph Laplacian `H`.
 - [ ] Add repeated-step damped-energy-decrease fixture.
 - [ ] Add bounded DRIVE source fixture.
 - [ ] Add CFL / λ_max guard fixture.
@@ -125,7 +126,7 @@
 
 ## R10 — Promotion
 
-- [x] Add capability manifest with 20 kernels (`spec/wave-capabilities.json`).
+- [x] Add capability manifest with 21 kernels (`spec/wave-capabilities.json`).
 - [x] Add `tools/register_wave_capabilities.py` and MC0DB registration tests.
 - [x] Expand native CI workflow for 20 fixtures.
 - [x] Add `mth/README.md` inventory updates.
@@ -151,7 +152,7 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-20/20 fixtures passed
+21/21 fixtures passed
 
 python3 -m unittest discover -s tests -v
 Ran 111 tests

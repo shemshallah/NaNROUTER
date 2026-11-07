@@ -106,4 +106,4 @@ The sparse graph fixture emits stage markers to distinguish preflight, path-orac
 - Float32 vector ABI: `docs/MTH_VECTOR_F32_ABI.md`.
 - Graph energy/components ABI: `docs/MTH_GRAPH_INVARIANTS_ABI.md`.
 
-The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step-energy, pair, DFT, coupling, and transmission fixtures passed local `nan_cli` and GitHub Actions run `42352593144`. The CI workflow includes all 20 fixtures.
+The K255, C255, port, fold, dot, norm, axpy, energy, component, void, wave, step-energy, pair, DFT, coupling, and transmission fixtures passed local `nan_cli` and GitHub Actions run `42352593144`. The CI workflow includes all 21 fixtures.

@@ -217,6 +217,20 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.harmonic.wave_energy.f32",
+      "source": "mth/nan16/mth_harmonic_accel_256.nas",
+      "fixture": "mth/tests/mth_harmonic_wave_energy_test.nas",
+      "marker": "MTH HARMONIC WAVE ENERGY PASS",
+      "steps": 53877,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.graph.pair.full.128.f32",
       "source": "mth/nan16/mth_graph_pair.nas",
       "fixture": "mth/tests/mth_graph_pair_test.nas",

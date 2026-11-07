@@ -93,6 +93,17 @@ jobs:
           cat build/mth/weighted-sparse.err
           grep -q '^MTH WEIGHTED CSR LAPLACIAN V2 PASS' build/mth/weighted-sparse.out
 
+      - name: Assemble harmonic wave-energy fixture with NaN16 source assembler
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_harmonic_wave_energy_test.nas > build/mth/harmonic-energy.nan
+
+      - name: Execute harmonic wave-energy fixture
+        run: |
+          nan0s/aarch64/android/nan_cli --img build/mth/harmonic-energy.nan --steps 10000000 --serial > build/mth/harmonic-energy.out 2> build/mth/harmonic-energy.err
+          cat build/mth/harmonic-energy.out
+          cat build/mth/harmonic-energy.err
+          grep -q '^MTH HARMONIC WAVE ENERGY PASS' build/mth/harmonic-energy.out
+
       - name: Assemble step-energy fixture with NaN16 source assembler
         run: |
           awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_graph_step_energy_256_test.nas > build/mth/step-energy.nan
