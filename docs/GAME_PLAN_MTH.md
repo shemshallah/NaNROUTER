@@ -43,35 +43,32 @@ Do not measure MTH by the number of names in an operator catalogue. Measure it b
 
 ## 2. The NaN word is the design centre
 
-### 2.1 Existing 64-bit dual-ended word
+### 2.1 Existing 64-bit word: preserve the real NaN16 contract
 
-MTH begins with the existing NaN16 word contract. A word is eight bytes:
+MTH uses the existing 64-bit NaN16 instruction/data word. It must not invent a new IEEE-754 layout or infer a byte diagram from the phrase "double endian." The canonical encoding is the one implemented by the NaN16 assembler, interpreter, loader, and current guest libraries.
 
-```
-byte:     b0 b1 | b2 b3 b4 b5 | b6 b7
-role:     FAR     32-bit        NEAR
-          face    payload       face
-read:     BE16    LE32          LE16
-```
+The repository's existing double-ended carrier implementation (`n16de.nas`) establishes concrete conventions that MTH must preserve:
 
-The far face is read big-endian, the near face little-endian, and the 32-bit payload is read little-endian. Both faces must be legal. A malformed face is a gate failure, not a value to be guessed at.
+- the carrier uses NaN16 class `10` for its data/delimiter/resynchronization records;
+- class `11` is used for its control record;
+- the 32-bit payload is divided into a 16-bit tag in bits 31..16 and a 16-bit chunk in bits 15..0;
+- tag `0` identifies the big-endian member and tag `1` identifies the byte-swapped member;
+- a chunk is emitted as a pair, and the decoder checks the pair rather than silently trusting one half;
+- a disagreement is a decode failure that allows the caller to resynchronize.
 
-The four legal face classes are:
+These are facts about the existing carrier format, not proof that every MTH object must use this same pair-vote encoding. MTH should reuse the established format where it fits and define new, versioned record formats where it does not.
 
-| Face value | Type | Class |
-|---|---|---:|
-| `7FF1` | positive signaling NaN | 0 |
-| `FFF1` | negative signaling NaN | 1 |
-| `7FF8` | positive quiet NaN | 2 |
-| `FFF8` | negative quiet NaN | 3 |
+The four NaN types and their exact bit patterns must be imported from the canonical NaN16 specification and interpreter implementation before MTH assigns them new semantic roles. In particular, do not assume that a conventional IEEE binary16 NaN bit diagram describes the custom NaN16 word.
 
-The face class is `c = 2Q + S`, where Q is the quiet bit and S is the sign bit under the frozen NaN16 convention. The ordered class nibble is:
+**Freeze rule:** the actual word width, face/lane ordering, class decoding, payload positions, and `BSWAPM` transformation must be read from the canonical NaN16 implementation and captured in machine-readable fixtures. Until that audit is complete, this document intentionally does not publish a speculative byte-by-byte diagram or new opcode allocation.
 
-```
-n = (c_near << 2) | c_far
-```
+### 2.1.1 The four NaN types and the 16 ordered pairs
 
-This yields 16 ordered combinations. The 16 values are not 16 names for the same thing. Near and far are separate channels, and their order matters.
+MTH must expose all four existing NaN types as distinct native values. Where the machine presents two independently typed ends/faces, the ordered pair is meaningful: `(A,B)` is not automatically equivalent to `(B,A)`.
+
+The 16 ordered combinations are a complete 4-by-4 pair space. They are not limited to mirror pairs, palindromes, or the four self-paired cases. MTH must enumerate and test every combination, including non-mirror pairs, and retain both orientations.
+
+Do not assign the four types meanings such as "data," "instruction," "error," or "control" globally. A record family may define such roles locally, but the underlying NaN type remains visible and inspectable.
 
 ### 2.2 Use all 16 combinations
 
