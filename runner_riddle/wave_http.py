@@ -533,7 +533,7 @@ class WaveHttpServer:
     def __init__(self, service: WaveService, host: str = DEFAULT_HOST,
                  port: int = DEFAULT_PORT, *,
                  store: WaveStore | None = None,
-                 max_body_bytes: int = MAX_BODY_BYTES) -> None:
+                 max_body_bytes: int = MAX_BODY_BYTES,\n                 nmp_adapter: Any = None) -> None:
         # Accept ``WaveHttpServer(service, store)`` as a convenience while
         # keeping the usual ``(service, host, port)`` form.
         if isinstance(host, WaveStore):
