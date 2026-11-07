@@ -152,19 +152,19 @@ mth_dispatch_puts_byte:
   ADD r1,r1,r13
   JMP @mth_dispatch_puts_word
 
-.org 1024
+.org 40000
 mth_dispatch_x:
 .word 0
-.org 2048
+.org 41024
 mth_dispatch_y:
 .word 0
-.org 3072
+.org 42048
 mth_dispatch_out:
 .word 77
-.org 3584
+.org 43072
 mth_dispatch_scratch:
 .word 0,0,0,0,0,0,0,0,0,0,0
-.org 40000
+.org 44000
 mth_dispatch_left_desc:
 .word 4,1,256,1,1,@mth_dispatch_x,256,1
 mth_dispatch_right_desc:
