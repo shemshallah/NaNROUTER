@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 60/60 locally runnable fixtures passed; 61/61 total including the CI-only K256 pair; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 768 Python tests passed (1 skipped).
+**Result:** 66/66 locally runnable fixtures passed; 61/61 CI fixtures plus 6 local-only kernels; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 812 Python tests passed (1 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -75,12 +75,19 @@
 | 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,373 | PASS | yes |
 | 62 | Native preflight gate | `mth/tests/mth_preflight_gate_test.nas` | 336 | PASS | yes |
 | 63 | Composed admission | `mth/tests/mth_admission_test.nas` | 931 | PASS | yes |
+| 64 | Boolean functions | `mth/tests/mth_bool2_test.nas` | 458 | PASS | local only |
+| 65 | Bitwise/compare | `mth/tests/mth_bitwise_test.nas` | 312 | PASS | local only |
+| 66 | Checked integer | `mth/tests/mth_integer_test.nas` | 245 | PASS | local only |
+| 67 | Shift | `mth/tests/mth_shift_test.nas` | 338 | PASS | local only |
+| 68 | Wide multiply | `mth/tests/mth_multiply_test.nas` | 1,578 | PASS | local only |
+| 69 | Divide/mod | `mth/tests/mth_divide_test.nas` | 2,062 | PASS | local only |
+| 70 | Negate 256 (composite) | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | yes |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 768 tests in 68.528s
+Ran 812 tests in 130.651s
 OK (skipped=1)
 ```
 
@@ -141,7 +148,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 63 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **62 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 70 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **70 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 

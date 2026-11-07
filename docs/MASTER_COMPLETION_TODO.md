@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 812 Python tests, 1 skipped, OK; 63 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
+**Baseline:** 812 Python tests, 1 skipped, OK; 70 manifest kernels; 60/61 local/CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, and ring work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -12,7 +12,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
 - [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
-- [x] Native 63-kernel manifest and 61-fixture canonical CI workflow.
+- [x] Native 70-kernel manifest, 66 local fixtures, and 61-fixture canonical CI workflow.
 - [x] `math_objects`, `math_store`, `math_registry`, `math_validity`, `math_linker`, NMP, execution bridge, demo.
 - [x] Typed absence algebra, relations/hypergraphs, rule lifecycle, retention/pruning.
 - [x] Cross-store commit intent/evidence/finalize recovery.
@@ -145,7 +145,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-01` Machine-readable NaN16 word/ISA layout with class, face, payload, legal/illegal pairs.
 - [ ] `B-02` Add Stage 0 kernels/fixtures to canonical CI: `mth_stage0`, `mth_double_endian`, `mth_core`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`; currently 11 sources are unregistered, including `mth_negate256_f32`, `mth_preflight`, arithmetic primitives.
+- [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`. **PARTIAL:** 6 locally passing kernels (`bool.all`, `bitwise.u32`, `integer.checked.i32`, `shift.u32`, `multiply.wide.u32`, `divmod.u32`) and the `negate256.f32` composite are now registered. Still unregistered: `mth_core`/stage0 (local fixture fails), `mth_double_endian` (assembler rejects `r6`), `mth_vector` (assembler rejects `r9`), and typed `mth_preflight` (fixture needs external `nan0s/src/nannet/math_registry.nas`).
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
