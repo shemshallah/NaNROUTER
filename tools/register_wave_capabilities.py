@@ -17,6 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 DEFAULT_MANIFEST = REPO_ROOT / "spec" / "wave-capabilities.json"
+# MTH guest working-set ceiling: 1 MiB / 8 bytes per NaN16 word.
+DEFAULT_GUEST_WORKSPACE_WORDS = 131_072
 
 
 def sha256_file(path: Path) -> str:
@@ -55,11 +57,14 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 def register_manifest(store, manifest: dict[str, Any], *, runner_id: str,
                       epoch: int = 1, nanclock_tick: int = 0,
+                      guest_workspace_words: int = DEFAULT_GUEST_WORKSPACE_WORDS,
                       dry_run: bool = False) -> list[dict[str, Any]]:
     from runner_riddle.wave_store import WaveStore  # local import for CLI
 
     if not dry_run and not isinstance(store, WaveStore):
         raise TypeError("store must be a WaveStore")
+    if not isinstance(guest_workspace_words, int) or guest_workspace_words < 0:
+        raise ValueError("guest_workspace_words must be a non-negative integer")
     rows: list[dict[str, Any]] = []
     for kernel in manifest["kernels"]:
         source = REPO_ROOT / kernel["source"]
@@ -99,7 +104,9 @@ def register_manifest(store, manifest: dict[str, Any], *, runner_id: str,
             kernel_id=kernel["kernel_id"],
             runner_id=runner_id,
             verified_digest=source_digest,
-            workspace=kernel["workspace_words"],
+            # Capability workspace is the runner's available guest budget;
+            # operator.workspace above remains the kernel's required workspace.
+            workspace=guest_workspace_words,
             precision=kernel["precision"],
             status="native_verified",
             epoch=epoch,
@@ -114,6 +121,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bs0db", type=Path, help="BS0DB SQLite path")
     parser.add_argument("--mc0db", type=Path, help="MC0DB SQLite path")
     parser.add_argument("--runner-id", default="MC0:0/R0")
+    parser.add_argument("--guest-workspace-words", type=int,
+                        default=DEFAULT_GUEST_WORKSPACE_WORDS,
+                        help="available guest workspace in NaN16 words (default: 131072 = 1 MiB)")
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--tick", type=int, default=0)
     parser.add_argument("--dry-run", action="store_true")
@@ -138,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = register_manifest(
         store, manifest, runner_id=args.runner_id, epoch=args.epoch,
         nanclock_tick=args.tick,
+        guest_workspace_words=args.guest_workspace_words,
     )
     print(f"registered {len(rows)} kernels for {args.runner_id}")
     return 0
