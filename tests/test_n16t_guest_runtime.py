@@ -150,6 +150,7 @@ class N16TGuestRuntimeTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as caught:
                     urlopen(unauthorized, timeout=5)
                 self.assertEqual(caught.exception.code, 401)
+                caught.exception.close()
 
                 authorized = Request(
                     server.base_url + "/n16t",
