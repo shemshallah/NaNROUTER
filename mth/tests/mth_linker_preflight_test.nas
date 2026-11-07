@@ -207,131 +207,132 @@ mth_link_pf_fail_pre_10:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,10
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_11:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,11
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_12:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,12
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_13:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,13
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_14:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,14
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_15:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,15
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_16:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,16
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_17:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,17
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_18:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,18
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_19:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,19
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_20:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,20
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_21:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,21
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_22:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,22
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_23:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,23
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_24:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,24
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_25:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,25
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_26:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,26
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_27:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,27
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_28:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,28
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_29:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,29
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_pre_30:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,30
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_1:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,1
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_2:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,2
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_3:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,3
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail_4:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,4
   ST r8,r12,47
-  JMP @mth_link_pf_fail
+  JMP @mth_link_pf_fail_print
 mth_link_pf_fail:
   MOVI r12,@mth_link_pf_scratch
   MOVI r8,99
   ST r8,r12,47
+mth_link_pf_fail_print:
   MOVI r1,@mth_link_pf_bad
   CALL @mth_link_pf_puts
   HALT
