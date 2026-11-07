@@ -1,6 +1,8 @@
 name: mth-native-contract
 
 on:
+  push:
+    branches: [mth-graph-spectral-foundation]
   pull_request:
   workflow_dispatch:
 
