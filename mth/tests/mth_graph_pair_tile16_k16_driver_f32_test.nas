@@ -130,14 +130,14 @@ mth_driver_frame:
 .word 0
 .org 17680
 ; K-slice 0: L_IK[1,3]=2, U_KJ[3,2]=2.
-.org 512+19
+.org 531
 .word 0x40000000
-.org 4608+50
+.org 4658
 .word 0x40000000
 ; K-slice 15: U_IK[1,5]=2, L_JK[2,5]=2.
-.org 8704+15*256+21
+.org 12565
 .word 0x40000000
-.org 12800+15*256+37
+.org 16677
 .word 0x40000000
 .org 18000
 mth_pair_driver_pass:
