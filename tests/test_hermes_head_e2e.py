@@ -155,8 +155,6 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertEqual(
             staged["source_root_block_sha256"], source["root_block_sha256"],
         )
-        original_confirm = self.journal.confirm_local_checkpoint
-
         def crash_before_ack(*, request, lease_receipt, network_head):
             raise RuntimeError("simulated crash after full-page CAS")
 
