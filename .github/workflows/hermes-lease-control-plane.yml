@@ -1,0 +1,30 @@
+name: HERMES delegated lease control plane
+
+on:
+  push:
+    paths:
+      - "runner_riddle/hermes_leases.py"
+      - "runner_riddle/http_service.py"
+      - "tests/test_hermes_leases.py"
+      - ".github/workflows/hermes-lease-control-plane.yml"
+  pull_request:
+    paths:
+      - "runner_riddle/hermes_leases.py"
+      - "runner_riddle/http_service.py"
+      - "tests/test_hermes_leases.py"
+      - ".github/workflows/hermes-lease-control-plane.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  delegated-lease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run isolated durable lease and HTTP regression tests
+        run: python -m unittest discover -s tests -p test_hermes_leases.py -v
