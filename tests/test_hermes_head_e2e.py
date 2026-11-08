@@ -136,8 +136,10 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             export_guest_bank_bytes,
         )
         from nanlmind_hermes.universe_chart import (
-            Chart8MiB, restore_local_chart,
+            Chart8MiB, restore_local_chart, make_word,
         )
+        from nanlmind_hermes.head_bank_transport import BANK_OFFSET, BANK_END
+        from nanlmind_hermes.chart_storage import load_chart_snapshot
         raw = bytes(BANK_BYTES)
         first_fence = self.fence(self.universe_id)
         self.assertEqual(first_fence["bank_sha256"], sha(raw))
@@ -230,11 +232,25 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         self.assertEqual(second["receipt"]["head_generation_before"], 1)
         self.assertEqual(second["receipt"]["head_generation_after"], 2)
+        # Simulate a pending, unrelated HERMES temporal edit while a real
+        # authenticated NaN16 head result is staged. Its new bank must be
+        # rebased into this chart without throwing the pending rail away.
+        dirty_word = make_word(0x1234)
+        self.runner.chart.write_rail(17, 136, 0, dirty_word)
+        self.assertEqual(self.runner.chart.read_rail(17, 136, 0), dirty_word)
+        self.assertTrue(self.runner.chart._dirty)
         from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
         second_checkpoint = self.journal_checkpoint(
             second_request, expected_after_sha256=second["bank_after_sha256"],
         )
         self.assertEqual(second_checkpoint["chart_generation"], 3)
+        self.assertTrue(second_checkpoint["pending_nonbank_edits_preserved"])
+        self.assertTrue(self.runner.chart._dirty)
+        self.assertEqual(self.runner.chart.read_rail(17, 136, 0), dirty_word)
+        self.assertEqual(
+            bytes(self.runner.chart.bytes[BANK_OFFSET:BANK_END]),
+            second["raw_bank"],
+        )
         # The first completed update remains a permanent replay tombstone
         # even though two more chart slots have superseded its exact bank.
         historical = NativeHeadCheckpointCoordinator(
@@ -306,13 +322,36 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertTrue(archive["verified"])
         self.assertEqual(archive["chart_generation"], 3)
         self.assertEqual(archive["sections"][0]["name"], "chart")
-        self.assertEqual(
-            archive["sections"][0]["sha256"], sha(bytes(self.chart.bytes)),
-        )
+        # Offline export sees the durable gen3 page, not the unrelated
+        # still-dirty in-memory temporal edit. A later HERMES checkpoint
+        # publishes that edit without reverting either native head revision.
+        packed_generation, packed_page = load_chart_snapshot(self.state, self.parent)
+        self.assertEqual(packed_generation, 3)
+        self.assertEqual(archive["sections"][0]["sha256"], sha(packed_page))
         self.assertFalse(archive["import_to_live_allowed"])
         self.assertFalse(archive["cross_store_atomicity_attested"])
         self.assertFalse(archive["canonical_training_committed"])
         self.assertEqual(inspect_n16pack(packed)["sections"], archive["sections"])
+
+        # The next ordinary HERMES checkpoint must converge the pending
+        # temporal rail and the real native-generated bank in ONE live chart.
+        later = self.runner.checkpoint()
+        self.assertEqual(later["generation"], 4)
+        persisted_generation, persisted_page = load_chart_snapshot(
+            self.state, self.parent,
+        )
+        self.assertEqual(persisted_generation, 4)
+        self.assertEqual(
+            persisted_page[BANK_OFFSET:BANK_END], second["raw_bank"],
+        )
+        rail_offset = self.runner.chart.cell_offset(17, 136)
+        self.assertEqual(
+            persisted_page[rail_offset:rail_offset + 8],
+            dirty_word.to_bytes(8, "little"),
+        )
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 4)
+        self.assertIs(self.runner.register.chart, self.runner.chart)
+        self.assertIs(self.runner.heads.chart, self.runner.chart)
 
 
 if __name__ == "__main__":
