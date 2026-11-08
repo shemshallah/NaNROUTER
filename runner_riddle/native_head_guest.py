@@ -17,7 +17,7 @@ from .head_bank_handoff import (
     BANK_BYTES, BANK_WORDS, HeadBankHandoff, HeadBankHandoffError,
     check_native_observation_receipt,
 )
-from .hermes_native import _pinned_file
+from .hermes_native import _pinned_file, HermesNativeError
 from .n16t_guest import _NaN16GuestVM, _load_labels, N16TGuestRuntimeError
 
 BANK_BASE = 0x4000
@@ -39,9 +39,12 @@ class NativeHeadBankGuest:
     def __init__(self, *, library_path, library_sha256,
                  image_path, image_sha256, labels_path, labels_sha256,
                  vm_factory: Callable = _NaN16GuestVM):
-        self.library = _pinned_file(library_path, library_sha256, "raw VM library")
-        self.image = _pinned_file(image_path, image_sha256, "NaN16 head guest")
-        self.labels = _pinned_file(labels_path, labels_sha256, "head guest labels")
+        try:
+            self.library = _pinned_file(library_path, library_sha256, "raw VM library")
+            self.image = _pinned_file(image_path, image_sha256, "NaN16 head guest")
+            self.labels = _pinned_file(labels_path, labels_sha256, "head guest labels")
+        except HermesNativeError as exc:
+            raise NativeHeadBankError("native guest binary/label pin validation failed") from exc
         self.library_sha256 = library_sha256
         self.image_sha256 = image_sha256
         self.labels_sha256 = labels_sha256
