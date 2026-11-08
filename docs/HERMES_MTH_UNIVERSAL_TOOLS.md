@@ -1,7 +1,10 @@
 # HERMES MTH universal catalog and head-directed tools (v1)
 
-This implementation integrates all entries of the **source- and fixture-validated**
-`spec/wave-capabilities.json` with the HERMES portal. The single source
+This implementation indexes **all 91 entries** of the existing
+`spec/wave-capabilities.json` with the HERMES portal. Source and fixture files
+are hashed on load. As of this round **64 kernels** have CI-verification
+claims and are eligible for plan admission; **27** are inspectable but
+CI-unverified and cannot be included in an admitted plan. The single source
 of truth is `MthRegistry`; no Python mirror of the NaN16 math kernels exists.
 
 ## Available in this round
@@ -18,7 +21,8 @@ exposed by `runner_riddle.hermes_mth_tools.HermesMthTools`:
 | `mth.compose` | Validate a dependency-ordered bounded multi-kernel plan; does not execute. |
 | `mth.route` | Traverse a leased HW head to a family or kernel ID. |
 
-Every manifest kernel is available through the read/plan tools. This does **not**
+Every manifest kernel is available through the read-only catalog and inspect
+tools; plan tools reject kernels lacking CI verification. This does **not**
 assert that all kernels share a general dynamic calling ABI. At present
 `mth_execute.nas` admits program 900/operator 77 (dot) and
 program 901/operator 78 (cosine). The other kernels have native **fixtures**,
@@ -84,7 +88,8 @@ Example plan request:
 
 ## Resource and safety contracts
 
-- The tool catalog is loaded by verifying actual source and fixture file digests.
+- The tool catalog is loaded by hashing actual source and fixture files;
+  hashes are provenance identifiers, not mathematical correctness certificates.
 - The router production image carries `spec/wave-capabilities.json`,
   `mth/nan16`, and `mth/tests` so verification works after deployment.
 - Catalog results are paginated, with at most 100 kernel records per request.
