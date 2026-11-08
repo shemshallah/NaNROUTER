@@ -49,7 +49,7 @@ _ROOT_V1 = re.compile(
 
 # HW0:MP0..32639 is the mirror-pair namespace, not 32640 new heads.
 # Ranges remain symbolic; no 32K-entry selector expansion.
-_MP = re.compile(r"^HW(?P<namespace>\\d+):MP(?P<start>\\d+)(?:-(?P<end>\\d+))?$")
+_MP = re.compile(r"^HW(?P<namespace>\d+):MP(?P<start>\d+)(?:-(?P<end>\d+))?$")
 _HEAD = re.compile(r"^HW(?P<namespace>\d+):(?P<headspec>\d+(?:[-,]\d+)*)$")
 _OBJECT = re.compile(
     r"^(?P<kind>vector|hyperedge|rule|route|bin|temporal)#"
