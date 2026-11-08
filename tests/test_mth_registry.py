@@ -164,7 +164,8 @@ class RealManifestRegistryTests(unittest.TestCase):
         )
         self.assertEqual(
             self.registry.resolve(tags=["family:vector", "precision:float32"]),
-            vector,
+            tuple(descriptor for descriptor in vector
+                  if descriptor.precision == "float32"),
         )
         zero_workspace = self.registry.resolve(
             tags=["family:vector"], max_workspace=0
