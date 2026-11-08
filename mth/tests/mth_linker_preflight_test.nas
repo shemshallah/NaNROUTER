@@ -4,6 +4,8 @@ JMP @mth_link_pf_main
 .include "../nan16/mth_preflight.nas"
 .include "../nan16/mth_admission.nas"
 .include "../nan16/mth_cosine256_f32.nas"
+.include "../nan16/mth_vector_add256_f32.nas"
+.include "../nan16/mth_vector_sub256_f32.nas"
 .include "../nan16/mth_execute.nas"
 .include "../../nan0s/src/nannet/route_address.nas"
 .include "../../nan0s/src/nannet/object_key_decode.nas"
