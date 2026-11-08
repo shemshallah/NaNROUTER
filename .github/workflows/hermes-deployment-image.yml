@@ -1,0 +1,25 @@
+name: HERMES deployable NaNROUTER native image
+on:
+  pull_request:
+    paths: ["Dockerfile", "deploy/start_router.sh", "mth/nan16/hermes_*.nas", "runner_riddle/hermes_*.py", ".github/workflows/hermes-deployment-image.yml"]
+  push:
+    paths: ["Dockerfile", "deploy/start_router.sh", "mth/nan16/hermes_*.nas", "runner_riddle/hermes_*.py", ".github/workflows/hermes-deployment-image.yml"]
+permissions:
+  contents: read
+jobs:
+  build-pinned-native-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build reproducible source-pinned NaN0S native guest image
+        run: docker build --pull -t nanrouter-hermes:ci -f Dockerfile .
+      - name: Verify sealed native artifact inventory and Python imports
+        run: |
+          docker run --rm --entrypoint python nanrouter-hermes:ci -c "
+          from pathlib import Path
+          from runner_riddle.hermes_native import HermesNativeLeaseRuntime
+          from runner_riddle.hermes_dispatch import HermesDispatchJournal
+          assert all((Path('/app/native') / name).is_file() for name in ('libnan16.so','hermes.nan','hermes.labels','n16t.nan','n16t.labels','hermes.sha256','libnan16.sha256'))
+          print('NANROUTER HERMES SEALED IMAGE PASS')
+          "
