@@ -1,0 +1,47 @@
+{
+  "schema": "nanrouter.nan16-word-layout.v1",
+  "word_bits": 64,
+  "word_bytes": 8,
+  "face_count": 2,
+  "face_bits": 32,
+  "ordered_class_bits": 4,
+  "face_class_bits": 2,
+  "class_pair_encoding": "class = (near_face_class << 2) | far_face_class",
+  "face_class_encoding": "face_class = (quiet << 1) | sign",
+  "face_order": ["near", "far"],
+  "bswapm": {
+    "operation": "reverse_all_eight_bytes",
+    "swaps_faces": true,
+    "preserves_class_nibble": true,
+    "involution": true
+  },
+  "class_pairs": [
+    {"class": 0, "near": 0, "far": 0},
+    {"class": 1, "near": 0, "far": 1},
+    {"class": 2, "near": 0, "far": 2},
+    {"class": 3, "near": 0, "far": 3},
+    {"class": 4, "near": 1, "far": 0},
+    {"class": 5, "near": 1, "far": 1},
+    {"class": 6, "near": 1, "far": 2},
+    {"class": 7, "near": 1, "far": 3},
+    {"class": 8, "near": 2, "far": 0},
+    {"class": 9, "near": 2, "far": 1},
+    {"class": 10, "near": 2, "far": 2},
+    {"class": 11, "near": 2, "far": 3},
+    {"class": 12, "near": 3, "far": 0},
+    {"class": 13, "near": 3, "far": 1},
+    {"class": 14, "near": 3, "far": 2},
+    {"class": 15, "near": 3, "far": 3}
+  ],
+  "face_classes": [
+    {"class": 0, "sign": 0, "quiet": 0},
+    {"class": 1, "sign": 1, "quiet": 0},
+    {"class": 2, "sign": 0, "quiet": 1},
+    {"class": 3, "sign": 1, "quiet": 1}
+  ],
+  "non_claims": [
+    "This document freezes the logical class nibble and face-class encoding.",
+    "It does not claim a physical payload bit allocation beyond the existing NaN16 face contract.",
+    "BSWAPM is not the double-endian redundant pair codec."
+  ]
+}

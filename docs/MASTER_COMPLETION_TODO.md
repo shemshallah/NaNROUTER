@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 850 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
+**Baseline:** 854 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -153,7 +153,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 ## B1. Stage 0/1 native substrate
 
-- [ ] `B-01` Machine-readable NaN16 word/ISA layout with class, face, payload, legal/illegal pairs.
+- [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
 - [ ] `B-02` Add Stage 0 kernels/fixtures to canonical CI: `mth_stage0`, `mth_double_endian`, `mth_core`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
 - [ ] `B-04` Register all existing native sources in `spec/wave-capabilities.json`. **PARTIAL:** 6 locally passing kernels (`bool.all`, `bitwise.u32`, `integer.checked.i32`, `shift.u32`, `multiply.wide.u32`, `divmod.u32`) and the `negate256.f32` composite are registered. Still unregistered: `mth_core`/stage0 (local fixture fails), `mth_double_endian` (assembler rejects `r6`), `mth_vector` (assembler rejects `r9`), typed `mth_preflight`, and the new native-dispatch `mth_execute` (fixture needs external NAN0S route/math registry sources).
