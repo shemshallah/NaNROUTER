@@ -1,0 +1,36 @@
+name: palindrome-mirror-point-register
+on:
+  push:
+    paths:
+      - 'runner_riddle/mirror_point_register.py'
+      - 'runner_riddle/address.py'
+      - 'tests/test_mirror_point_register.py'
+      - 'tests/test_address_v2.py'
+      - '.github/workflows/mirror-point-register.yml'
+  pull_request:
+    paths:
+      - 'runner_riddle/mirror_point_register.py'
+      - 'runner_riddle/address.py'
+      - 'tests/test_mirror_point_register.py'
+      - 'tests/test_address_v2.py'
+      - '.github/workflows/mirror-point-register.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  complete-mp-address-space:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify full 65536-address MP topology and MC0DB projection
+        run: |
+          python -m unittest discover -s tests -p 'test_mirror_point_register.py' -v
+          python -m unittest discover -s tests -p 'test_address_v2.py' -v
