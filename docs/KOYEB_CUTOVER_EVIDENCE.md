@@ -15,8 +15,8 @@ retained.
 | Source repository | `github.com/shemshallah/NaNROUTER` |
 | Branch | `main` |
 | Dockerfile | `deploy/portal/Dockerfile` |
-| Active deployment | `6fe7190f-5991-4ca7-b46f-7dbec0d6221b` |
-| Service version | `906` |
+| Active deployment | `52e8dcfc-0c69-4e84-8826-7f97de3b6cc6` |
+| Service version | `915` |
 | Source commit built | `c15323d` (`fix/portal-ring-authority-copy-20261108`) |
 | Pinned portal runtime | NaNLMind `431e0775cdb79b4cd59038a4ebe0df5434a17c92` |
 | Status | `HEALTHY` |
@@ -80,6 +80,7 @@ runner_ring_node.active = true
 phase = active, slot = 0, epoch = 10
 ring_endpoint = HW5:0
 errors = 0
+restart = restored active slot 0 from the persistent authority/checkpoint
 
 GET  /v1/ring/points  -> HW0:0, HW2:0, HW5:0, HW9:0 active
 POST /v1/ring/register {"hw":9} -> registered
