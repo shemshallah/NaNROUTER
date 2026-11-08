@@ -119,6 +119,12 @@ class NanLayerGraph:
             generation = 1 if old is None else int(old["generation"]) + 1
             if expected_generation != generation - 1:
                 raise StaleGenerationError("stale L0-L9 edge generation")
+            if old is not None and (
+                    int(old["src"]) != src or int(old["dst"]) != dst
+                    or int(old["source_head"]) != source_head):
+                raise NanGraphError("edge endpoints and original proposer are immutable")
+            if old is not None and tick < int(old["tick"]):
+                raise NanGraphError("edge tick cannot move backward")
             record["generation"] = generation
             serialized = json.dumps(record,sort_keys=True,separators=(",",":"))
             db.execute(
@@ -172,3 +178,150 @@ class NanLayerGraph:
         data["page_sha256"] = hashlib.sha256(
             json.dumps(data,sort_keys=True,separators=(",",":")).encode()).hexdigest()
         return data
+
+    def retract(self, *, edge_id: str, source_head: int,
+                expected_generation: int, tick: int = 0) -> dict:
+        """CAS tombstone, retaining immutable evidence and every earlier version."""
+        if (type(edge_id) is not str or not 1 <= len(edge_id) <= 160
+                or re.fullmatch(r"[a-zA-Z0-9_.:-]+", edge_id) is None
+                or type(source_head) is not int or not 1 <= source_head <= 255
+                or type(expected_generation) is not int or expected_generation < 1
+                or type(tick) is not int or tick < 0):
+            raise NanGraphError("invalid retraction parameters")
+        self.store._authorize(WRITE, "nan_layer_edge", edge_id)
+        with self.store._write(self.store.mc0_path) as db:
+            self._ensure(db)
+            old = db.execute(
+                "SELECT * FROM nan_layer_edge WHERE edge_id=?", (edge_id,)
+            ).fetchone()
+            if old is None:
+                raise NanGraphError("cannot retract nonexistent claim")
+            if int(old["generation"]) != expected_generation:
+                raise StaleGenerationError("stale retraction generation")
+            if int(old["source_head"]) != source_head:
+                raise NanGraphError("only original proposer may retract")
+            if old["status"] != "candidate":
+                raise NanGraphError("claim already retracted")
+            if tick < int(old["tick"]):
+                raise NanGraphError("retraction tick cannot go backward")
+            record = dict(old)
+            record.update(generation=expected_generation + 1,
+                          tick=tick, status="retracted")
+            serialized = json.dumps(record, sort_keys=True, separators=(",", ":"))
+            db.execute(
+                "UPDATE nan_layer_edge SET generation=?,tick=?,status='retracted' "
+                "WHERE edge_id=? AND generation=? AND status='candidate'",
+                (record["generation"], tick, edge_id, expected_generation)
+            )
+            db.execute("INSERT INTO nan_layer_edge_history VALUES (?,?,?)",
+                       (edge_id, record["generation"], serialized))
+        return {**record, "src_route": cell_route(record["src"]),
+                "dst_route": cell_route(record["dst"]), "native_executed": False,
+                "mathematical_truth_promoted": False}
+
+    def master_graph_page(self, *, parent_root_sha256: str,
+                          chart_generation: int, offset: int = 0,
+                          limit: int = _MAX_PAGE) -> dict:
+        """Bounded read projection; digests cover full state and full history.
+
+        A SQLite snapshot transaction ensures the page and all digests refer
+        to one consistent database state. This is NOT a router signature or
+        an MTH execution receipt.
+        """
+        from .mirror_point_register import TOPOLOGY_DIGEST
+        if (type(parent_root_sha256) is not str
+                or _SHA.fullmatch(parent_root_sha256) is None
+                or type(chart_generation) is not int or chart_generation < 0
+                or type(offset) is not int or offset < 0
+                or type(limit) is not int or not 1 <= limit <= _MAX_PAGE):
+            raise NanGraphError("invalid master projection parameters")
+        self.store._authorize(READ, "nan_layer_edge", "projection")
+        state_hash = hashlib.sha256(b"nanrouter.nan-layer-state/1\0")
+        history_hash = hashlib.sha256(b"nanrouter.nan-layer-history/1\0")
+        entries, latest, last = [], {}, {}
+        total = candidate_count = retracted_count = 0
+        by_layer = [0] * 10
+        with self.store._connect(self.store.mc0_path) as db:
+            db.execute("BEGIN")
+            try:
+                names = {r["name"] for r in db.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' "
+                    "AND name IN ('nan_layer_edge','nan_layer_edge_history')")}
+                if len(names) == 1:
+                    raise NanGraphError("partial graph/history schema")
+                if len(names) == 2:
+                    for row in db.execute(
+                            "SELECT * FROM nan_layer_edge ORDER BY edge_id"):
+                        record = dict(row)
+                        raw = json.dumps(record,sort_keys=True,
+                                         separators=(",",":")).encode()
+                        state_hash.update(len(raw).to_bytes(8,"big") + raw)
+                        latest[record["edge_id"]] = (
+                            int(record["generation"]), raw.decode())
+                        if offset <= total < offset + limit:
+                            entries.append({
+                                **record,
+                                "src_route": cell_route(int(record["src"])),
+                                "dst_route": cell_route(int(record["dst"]))})
+                        total += 1
+                        by_layer[int(record["layer"])] += 1
+                        if record["status"] == "candidate":
+                            candidate_count += 1
+                        elif record["status"] == "retracted":
+                            retracted_count += 1
+                        else:
+                            raise NanGraphError("invalid persisted status")
+                    for row in db.execute(
+                            "SELECT edge_id,generation,payload FROM "
+                            "nan_layer_edge_history ORDER BY edge_id,generation"):
+                        eid, gen, payload = (
+                            row["edge_id"], int(row["generation"]), row["payload"])
+                        try:
+                            decoded = json.loads(payload)
+                            canonical = json.dumps(decoded,sort_keys=True,
+                                                   separators=(",",":"))
+                        except (ValueError, TypeError) as exc:
+                            raise NanGraphError("invalid graph history JSON") from exc
+                        if (payload != canonical
+                                or decoded.get("edge_id") != eid
+                                or type(decoded.get("generation")) is not int
+                                or decoded["generation"] != gen
+                                or gen != last.get(eid, 0) + 1):
+                            raise NanGraphError("discontinuous graph history")
+                        raw = json.dumps([eid,gen,payload],sort_keys=True,
+                                         separators=(",",":")).encode()
+                        history_hash.update(len(raw).to_bytes(8,"big") + raw)
+                        last[eid] = gen
+                        if eid not in latest:
+                            raise NanGraphError("orphan graph history")
+                        if gen == latest[eid][0] and payload != latest[eid][1]:
+                            raise NanGraphError("graph state differs from latest history")
+                    if any(last.get(k) != gen for k,(gen,_) in latest.items()):
+                        raise NanGraphError("graph history does not match current state")
+                db.execute("COMMIT")
+            except BaseException:
+                db.execute("ROLLBACK")
+                raise
+        header = {
+            "schema": "nanrouter.nan-layer-master-commitment/1",
+            "topology_sha256": TOPOLOGY_DIGEST,
+            "parent_root_sha256": parent_root_sha256,
+            "chart_generation": chart_generation,
+            "total_edges": total,
+            "candidate_edges": candidate_count,
+            "retracted_edges": retracted_count,
+            "layer_counts": by_layer,
+            "state_sha256": state_hash.hexdigest(),
+            "history_sha256": history_hash.hexdigest()}
+        raw = json.dumps(header,sort_keys=True,separators=(",",":")).encode()
+        return {**header,
+                "graph_commitment_sha256": hashlib.sha256(
+                    b"nanrouter.nan-layer-commitment/1\0"+raw).hexdigest(),
+                "offset":offset,
+                "next_offset":offset+len(entries)
+                    if offset+len(entries)<total else None,
+                "entries":entries,
+                "snapshot_consistent":True,
+                "signed_by_router":False,
+                "native_mth_receipt":False,
+                "mathematical_truth_promoted":False}
