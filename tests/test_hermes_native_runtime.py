@@ -176,6 +176,33 @@ class HermesRealNativeTests(unittest.TestCase):
         finally:
             after.close()
 
+    def test_hardware_guest_gate_and_real_math_kernels(self):
+        self.assertTrue(self.native.admit_hardware(self.identity, 2, 3)["native_hardware_admitted"])
+        other = "other-hermes-keypair-installed-00002"
+        self.assertTrue(self.native.admit_hardware(other, 5, 6)["native_hardware_admitted"])
+        with self.assertRaises(HermesNativeError):
+            self.native.admit_hardware(other, 4, 6)
+        with self.assertRaises(HermesNativeError):
+            self.native.admit_hardware(other, 0, 1)
+        self.assertEqual(self.native.execute_math(
+            self.identity, "mth.u32.add_checked", 7, 9)["value_u32"], 16)
+        self.assertTrue(self.native.execute_math(
+            self.identity, "mth.u32.add_checked", 7, 9)["exact"])
+        saturated = self.native.execute_math(
+            other, "mth.u32.add_checked", 0xffffffff, 1)
+        self.assertEqual(saturated["value_u32"], 0)
+        self.assertFalse(saturated["exact"])
+        self.assertEqual(self.native.execute_math(
+            other, "mth.u32.sub_checked", 12, 9)["value_u32"], 3)
+        underflow = self.native.execute_math(
+            other, "mth.u32.sub_checked", 9, 12)
+        self.assertEqual(underflow["value_u32"], 0)
+        self.assertFalse(underflow["exact"])
+        with self.assertRaises(HermesNativeError):
+            self.native.execute_math(other, "mth.forged.kernel", 1, 2)
+        with self.assertRaises(HermesNativeError):
+            self.native.execute_math(other, "mth.u32.add_checked", -1, 0)
+
     def test_pinning_fails_closed_if_guest_digest_is_wrong(self):
         with self.assertRaises(HermesNativeError):
             HermesNativeLeaseRuntime(
