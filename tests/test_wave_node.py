@@ -38,7 +38,12 @@ class NannetNodeTests(unittest.TestCase):
         with self.assertRaises(NannetNodeError):
             binding(point=0).validate()
         with self.assertRaises(NannetNodeError):
-            binding(point=256).validate()
+            binding(point=257).validate()
+
+    def test_hw255_translates_to_last_native_node_point(self):
+        value=binding("bs0hw255", "node256", 256)
+        value.validate()
+        self.assertEqual(value.to_dict()["node_point"], 256)
 
     def test_duplicate_node_id_rejected(self):
         registry = NannetNodeRegistry()
