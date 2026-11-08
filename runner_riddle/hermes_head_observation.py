@@ -70,6 +70,8 @@ class HermesHeadObservationJournal:
                 head_index INTEGER NOT NULL,
                 ring_epoch INTEGER NOT NULL,
                 bank_before_sha256 TEXT NOT NULL,
+                source_chart_sha256 TEXT,
+                source_root_block_sha256 TEXT,
                 bank_after BLOB,
                 bank_after_sha256 TEXT,
                 native_receipt_json TEXT,
@@ -82,7 +84,10 @@ class HermesHeadObservationJournal:
             existing_columns = {
                 r[1] for r in db.execute("PRAGMA table_info(hermes_head_observation)")
             }
-            for name in ("checkpoint_generation", "checkpointed_at"):
+            for name in (
+                "checkpoint_generation", "checkpointed_at",
+                "source_chart_sha256", "source_root_block_sha256",
+            ):
                 if name not in existing_columns:
                     db.execute(
                         "ALTER TABLE hermes_head_observation ADD COLUMN " + name +
@@ -160,6 +165,35 @@ class HermesHeadObservationJournal:
         ):
             if type(state.get(field)) is not type(expected) or state[field] != expected:
                 raise HermesHeadObservationConflict("stale chart fence: " + field)
+        return state
+
+    @staticmethod
+    def _source_identity(row):
+        # Existing staged pre-upgrade entries remain inspectable but cannot
+        # retroactively acquire a stronger identity claim. Newly reserved
+        # operations must bind both exact chart and mounted-root SHA.
+        chart_digest = row["source_chart_sha256"]
+        root_digest = row["source_root_block_sha256"]
+        if chart_digest is None and root_digest is None:
+            return {
+                "source_chart_sha256": None,
+                "source_root_block_sha256": None,
+                "source_snapshot_bound": False,
+            }
+        for label, value in (
+            ("source_chart_sha256", chart_digest),
+            ("source_root_block_sha256", root_digest),
+        ):
+            if (type(value) is not str or len(value) != 64
+                    or any(c not in "0123456789abcdef" for c in value)):
+                raise HermesHeadObservationError(
+                    "corrupt native source chart identity: " + label
+                )
+        return {
+            "source_chart_sha256": chart_digest,
+            "source_root_block_sha256": root_digest,
+            "source_snapshot_bound": True,
+        }
 
     @staticmethod
     def _scope(row, request, resolved):
@@ -193,6 +227,7 @@ class HermesHeadObservationJournal:
             raise HermesHeadObservationError("checkpoint result digest mismatch")
         return {
             "schema": "nanrouter.hermes-head-staging/1",
+            **HermesHeadObservationJournal._source_identity(row),
             "request_sha256": row["request_sha256"],
             "bank_after_sha256": row["bank_after_sha256"],
             "checkpoint_generation": row["checkpoint_generation"],
@@ -226,6 +261,7 @@ class HermesHeadObservationJournal:
             raise HermesHeadObservationError("stored receipt/bank digest mismatch")
         return {
             "schema": "nanrouter.hermes-head-staging/1",
+            **HermesHeadObservationJournal._source_identity(row),
             "raw_bank": raw,
             "receipt": receipt,
             "bank_after_sha256": _sha(raw),
@@ -267,7 +303,7 @@ class HermesHeadObservationJournal:
                 result = self._verified_output(existing, request)
                 result["replayed_from_journal"] = True
                 return result
-            self._fence(request, resolved)
+            source_fence = self._fence(request, resolved)
             count = db.execute(
                 "SELECT COUNT(*) FROM hermes_head_observation WHERE checkpointed_at IS NULL"
             ).fetchone()[0]
@@ -276,10 +312,14 @@ class HermesHeadObservationJournal:
             db.execute("""INSERT INTO hermes_head_observation
                 (installation_id, dispatch_id, request_sha256, lease_id,
                  universe_id, lease_generation, head_index, ring_epoch,
-                 bank_before_sha256) VALUES (?,?,?,?,?,?,?,?,?)""", (
+                 bank_before_sha256, source_chart_sha256,
+                 source_root_block_sha256)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""", (
                 *key, request.prepared()["request_sha256"], resolved["lease_id"],
                 resolved["universe_id"], resolved["generation"], request.head_index,
                 request.ring_epoch, request.bank_before_sha256,
+                source_fence["chart_sha256"],
+                source_fence["root_block_sha256"],
             ))
         # The pending row is DURABLE now. Never rerun after error or power loss.
         output = native_guest.observe(
@@ -308,7 +348,13 @@ class HermesHeadObservationJournal:
             request=request, lease_receipt=lease_receipt,
             network_head=network_head, for_execution=True,
         )
-        self._fence(request, resolved_after)
+        final_fence = self._fence(request, resolved_after)
+        if (source_fence["chart_sha256"] != final_fence["chart_sha256"]
+                or source_fence["root_block_sha256"] !=
+                final_fence["root_block_sha256"]):
+            raise HermesHeadObservationConflict(
+                "native guest ran while full chart/root identity changed"
+            )
         encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":"))
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -347,9 +393,12 @@ class HermesHeadObservationJournal:
             result["state"] = "checkpointed_locally"
             return result
         if row["bank_after"] is None:
-            return {"state": "pending_or_ambiguous",
-                    "request_sha256": request.prepared()["request_sha256"],
-                    "canonical_training_committed": False}
+            return {
+                "state": "pending_or_ambiguous",
+                "request_sha256": request.prepared()["request_sha256"],
+                **self._source_identity(row),
+                "canonical_training_committed": False,
+            }
         result = self._verified_output(row, request)
         result["state"] = "completed_staging_only"
         if not include_bank:
