@@ -57,6 +57,7 @@ class HermesLeaseRegistry:
                 lease_id INTEGER PRIMARY KEY,
                 universe_id INTEGER UNIQUE NOT NULL,
                 installation_id TEXT NOT NULL,
+                slot INTEGER NOT NULL,
                 node_point INTEGER NOT NULL,
                 owner_tag INTEGER NOT NULL,
                 generation INTEGER NOT NULL,
@@ -67,6 +68,12 @@ class HermesLeaseRegistry:
                 request_id TEXT UNIQUE NOT NULL
             )""")
             db.execute("CREATE INDEX IF NOT EXISTS hermes_lease_installation ON hermes_universe_leases(installation_id, expires_at)")
+            db.execute("""CREATE TABLE IF NOT EXISTS hermes_slot_epochs (
+                installation_id TEXT NOT NULL,
+                slot INTEGER NOT NULL,
+                generation INTEGER NOT NULL,
+                PRIMARY KEY(installation_id, slot)
+            )""")
 
     def _connect(self):
         db = sqlite3.connect(self.database, timeout=10, isolation_level="IMMEDIATE")
@@ -85,6 +92,7 @@ class HermesLeaseRegistry:
             "network_port": ROOT_PORT,
             "hardware_root": HARDWARE_ROOT,
             "installation_id": row["installation_id"],
+            "slot": row["slot"],
             "lease_id": row["lease_id"],
             "universe_id": row["universe_id"],
             "generation": row["generation"],
@@ -136,6 +144,7 @@ class HermesLeaseRegistry:
         if now + ttl > _MAX_WORD:
             raise HermesLeaseError("clock rollover requires a new registry era")
         with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             previous = db.execute(
                 "SELECT * FROM hermes_universe_leases WHERE request_id=?", (request_id,)
             ).fetchone()
@@ -145,11 +154,19 @@ class HermesLeaseRegistry:
                         or previous["revoked_at"] is not None or previous["expires_at"] <= now):
                     raise HermesLeaseError("request_id replay or lease no longer active")
                 return self._receipt(previous)
-            active = db.execute(
-                "SELECT COUNT(*) FROM hermes_universe_leases WHERE installation_id=? AND revoked_at IS NULL AND expires_at>?",
-                (installation_id, now)).fetchone()[0]
-            if active >= MAX_ACTIVE:
+            active_rows = db.execute(
+                "SELECT slot FROM hermes_universe_leases WHERE installation_id=? AND revoked_at IS NULL AND expires_at>?",
+                (installation_id, now)).fetchall()
+            used_slots = {row["slot"] for row in active_rows}
+            slot = next((s for s in range(MAX_ACTIVE) if s not in used_slots), None)
+            if slot is None:
                 raise HermesLeaseError("installation native lease registry is full")
+            previous_epoch = db.execute(
+                "SELECT generation FROM hermes_slot_epochs WHERE installation_id=? AND slot=?",
+                (installation_id, slot)).fetchone()
+            generation = 1 if previous_epoch is None else previous_epoch["generation"] + 1
+            if generation > _MAX_WORD:
+                raise HermesLeaseError("native slot generation rollover requires a new era")
             # Exact collision safety is enforced by UNIQUE SQL keys; random IDs
             # are 31-bit NaN16 guest words, never unbounded Python UUID strings.
             for _ in range(32):
@@ -159,11 +176,16 @@ class HermesLeaseRegistry:
                               (lease_id, universe_id)).fetchone():
                     continue
                 db.execute("""INSERT INTO hermes_universe_leases
-                    (lease_id, universe_id, installation_id, node_point, owner_tag,
+                    (lease_id, universe_id, installation_id, slot, node_point, owner_tag,
                      generation, revision, issued_at, expires_at, revoked_at, request_id)
-                    VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, NULL, ?)""",
-                    (lease_id, universe_id, installation_id, node_point,
-                     self._owner_tag(installation_id), now, now + ttl, request_id))
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, ?)""",
+                    (lease_id, universe_id, installation_id, slot, node_point,
+                     self._owner_tag(installation_id), generation, now, now + ttl, request_id))
+                db.execute("""INSERT INTO hermes_slot_epochs
+                    (installation_id, slot, generation) VALUES (?, ?, ?)
+                    ON CONFLICT(installation_id, slot)
+                    DO UPDATE SET generation=excluded.generation""",
+                    (installation_id, slot, generation))
                 row = db.execute(
                     "SELECT * FROM hermes_universe_leases WHERE lease_id=?", (lease_id,)
                 ).fetchone()
@@ -179,6 +201,7 @@ class HermesLeaseRegistry:
             "admitted": True,
             "universe_id": row["universe_id"],
             "lease_id": row["lease_id"],
+            "slot": row["slot"],
             "node_point": row["node_point"],
             "owner_tag": row["owner_tag"],
             "generation": row["generation"],
@@ -193,6 +216,7 @@ class HermesLeaseRegistry:
         now = self._now(now)
         ttl = self._ttl(ttl_seconds)
         with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             row = self._live(db, receipt, installation_id, now)
             expiry = max(now, row["expires_at"]) + ttl
             if expiry > _MAX_WORD:
@@ -208,6 +232,7 @@ class HermesLeaseRegistry:
     def release(self, *, installation_id, receipt, now=None):
         now = self._now(now)
         with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             row = self._live(db, receipt, installation_id, now)
             db.execute("UPDATE hermes_universe_leases SET revoked_at=?,revision=revision+1 WHERE lease_id=?",
                        (now, row["lease_id"]))
