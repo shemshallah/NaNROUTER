@@ -1,0 +1,34 @@
+name: graph-history-pages
+on:
+  pull_request:
+    paths:
+      - 'runner_riddle/nan_layer_graph.py'
+      - 'tests/test_nan_layer_graph.py'
+      - 'tests/test_nan_layer_graph_history_projection.py'
+      - '.github/workflows/graph-history-pages.yml'
+  push:
+    paths:
+      - 'runner_riddle/nan_layer_graph.py'
+      - 'tests/test_nan_layer_graph.py'
+      - 'tests/test_nan_layer_graph_history_projection.py'
+      - '.github/workflows/graph-history-pages.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  state-and-history-projection:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify existing graph and new revision pagination
+        run: |
+          python -m unittest discover -s tests -p 'test_nan_layer_graph.py' -v
+          python -m unittest discover -s tests -p 'test_nan_layer_graph_history_projection.py' -v
