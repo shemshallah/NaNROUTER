@@ -1,0 +1,45 @@
+name: Native MTH add-sub admission dispatch
+
+on:
+  pull_request:
+    paths:
+      - "mth/nan16/mth_execute.nas"
+      - "mth/tests/mth_native_vector_addsub_dispatch_test.nas"
+      - "mth/tests/mth_linker_preflight_test.nas"
+      - "tools/run_mth_fixtures.py"
+      - "runner_riddle/hermes_mth_tools.py"
+      - "tests/test_hermes_mth_tools.py"
+      - ".github/workflows/mth-native-addsub-dispatch.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mth/nan16/mth_execute.nas"
+      - "mth/tests/mth_native_vector_addsub_dispatch_test.nas"
+      - "mth/tests/mth_linker_preflight_test.nas"
+      - "tools/run_mth_fixtures.py"
+      - "runner_riddle/hermes_mth_tools.py"
+      - "tests/test_hermes_mth_tools.py"
+      - ".github/workflows/mth-native-addsub-dispatch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  guest-admission-and-output:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
+          path: nan0s
+      - name: Build pinned NaN0S CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Actual guest add/sub execution with invalid-op, epoch and capacity rejection tests
+        run: python tools/run_mth_fixtures.py --nan0s-root nan0s --only native_vector_addsub_dispatch
+      - name: Existing canonical :: linker and dot/cosine regression
+        run: python tools/run_mth_fixtures.py --nan0s-root nan0s --only native_dispatch
+      - name: Hermes native admission ABI metadata and planning coverage
+        run: python -m unittest discover -s tests -p 'test_hermes_mth_tools.py' -v
