@@ -568,5 +568,70 @@ class HeadObservationJournalTests(unittest.TestCase):
         self.assertEqual(stored, ("0" * 64, "1" * 64))
 
 
+    def test_concurrent_router_startup_retypes_legacy_sha_columns_once(self):
+        """Overlapping router constructors cannot lose records during DDL."""
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+
+        previous = self.path.parent / "parallel-wrong-affinity.sqlite"
+        with sqlite3.connect(previous) as db:
+            db.execute("""CREATE TABLE hermes_head_observation (
+                installation_id TEXT NOT NULL, dispatch_id TEXT NOT NULL,
+                request_sha256 TEXT NOT NULL, lease_id INTEGER NOT NULL,
+                universe_id INTEGER NOT NULL, lease_generation INTEGER NOT NULL,
+                head_index INTEGER NOT NULL, ring_epoch INTEGER NOT NULL,
+                bank_before_sha256 TEXT NOT NULL,
+                source_chart_sha256 INTEGER, source_root_block_sha256 INTEGER,
+                bank_after BLOB, bank_after_sha256 TEXT, native_receipt_json TEXT,
+                checkpoint_generation INTEGER, checkpointed_at INTEGER,
+                PRIMARY KEY(installation_id,dispatch_id))""")
+            expected = (
+                self.installation, "legacy-concurrent-tombstone-001",
+                digest(b"legacy concurrent request"), self.lease["lease_id"],
+                self.lease["universe_id"], self.lease["generation"],
+                1, self.epoch, digest(self.raw),
+                digest(b"source chart"), digest(b"root block"),
+                None, digest(self.changed), '{"native_status":0}', 6, 123456,
+            )
+            db.execute(
+                "INSERT INTO hermes_head_observation VALUES (?,?,?,?,?,?,?,?,"
+                "?,?,?,?,?,?,?,?)", expected,
+            )
+        barrier = threading.Barrier(8, timeout=20)
+
+        def start_router(_):
+            barrier.wait()
+            HermesHeadObservationJournal(
+                previous, lease_registry=self.registry,
+                ring_epoch_reader=lambda: self.epoch,
+                chart_fence_reader=self.journal.chart_fence_reader,
+            )
+
+        # All eight router processes independently encounter a migration
+        # candidate. They must serialize the schema upgrade and retain the
+        # permanent replay tombstone, never drop/recreate the journal.
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(start_router, range(8)))
+        with sqlite3.connect(previous) as db:
+            self.assertEqual(
+                db.execute("SELECT * FROM hermes_head_observation").fetchone(),
+                expected,
+            )
+            types = {row[1]: row[2].upper() for row in db.execute(
+                "PRAGMA table_info(hermes_head_observation)"
+            )}
+            self.assertEqual(types["source_chart_sha256"], "TEXT")
+            self.assertEqual(types["source_root_block_sha256"], "TEXT")
+            db.execute(
+                "UPDATE hermes_head_observation "
+                "SET source_chart_sha256=?,source_root_block_sha256=?",
+                ("0" * 64, "1" * 64),
+            )
+            self.assertEqual(db.execute(
+                "SELECT source_chart_sha256,source_root_block_sha256 "
+                "FROM hermes_head_observation"
+            ).fetchone(), ("0" * 64, "1" * 64))
+
+
 if __name__ == "__main__":
     unittest.main()
