@@ -1222,6 +1222,21 @@
       ],
       "status": "native_verified",
       "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.matrix.transpose256.f32",
+      "source": "mth/nan16/mth_matrix_transpose256_f32.nas",
+      "fixture": "mth/tests/mth_matrix_transpose256_f32_test.nas",
+      "marker": "MTH MATRIX TRANSPOSE256 F32 PASS",
+      "steps": 3290464,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
