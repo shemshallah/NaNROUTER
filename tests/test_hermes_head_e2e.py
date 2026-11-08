@@ -197,6 +197,41 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertTrue(repeat["replayed_from_journal"])
         self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
 
+    def test_two_distinct_valid_pages_at_one_generation_never_reach_native_vm(self):
+        """Ambiguous durable chart history must not create a router reservation."""
+        from nanlmind_hermes.chart_storage import HEADER, MAGIC, SLOT_NAMES
+        from nanlmind_hermes.native_head_fence import NativeHeadFenceError
+        before = self.fence(self.universe_id)
+        raw = bytes(BANK_BYTES)
+        request = self.request(
+            dispatch_id="native-head-ambiguous-chart-001", raw=raw,
+            generation=before["chart_generation"], feature=17, increment=1,
+        )
+        alternate = bytearray(self.chart.bytes)
+        alternate[0x7000] ^= 0x01  # unrelated valid chart region
+        root = self.state / "language" / "chart-checkpoints"
+        (root / SLOT_NAMES[1]).write_bytes(
+            HEADER.pack(MAGIC, before["chart_generation"],
+                        bytes.fromhex(self.parent),
+                        hashlib.sha256(alternate).digest()) + alternate
+        )
+        with self.assertRaises(NativeHeadFenceError):
+            self.journal.execute(
+                request=request, lease_receipt=self.receipt, network_head=0,
+                raw_bank=raw, native_guest=self.guest, allow_genesis_format=True,
+            )
+        with sqlite3.connect(self.base / "dispatch.sqlite") as db:
+            count = db.execute(
+                "SELECT COUNT(*) FROM hermes_head_observation"
+            ).fetchone()[0]
+        self.assertEqual(count, 0)
+        # Both valid pages survive for explicit/manual resolution; neither
+        # may silently become a new local generation or a false NANNET claim.
+        self.assertEqual((root / SLOT_NAMES[0]).stat().st_size,
+                         HEADER.size + len(alternate))
+        self.assertEqual((root / SLOT_NAMES[1]).stat().st_size,
+                         HEADER.size + len(alternate))
+
     def test_two_authenticated_guest_results_from_same_page_only_one_commits(self):
         """Competing genuine native revisions cannot double-publish a chart."""
         from nanlmind_hermes.native_head_checkpoint import (
