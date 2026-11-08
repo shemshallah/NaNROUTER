@@ -749,6 +749,7 @@ class MathCandidate:
     rank: int = 0
     preflight_hint: str = "candidate"
     rejected: tuple[dict[str, Any], ...] = ()
+    contract_digest: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.candidate_id, str) or not self.candidate_id.startswith("cnd:"):
@@ -757,6 +758,8 @@ class MathCandidate:
             raise MathObjectError("invalid function_id")
         _require_int(self.function_version, "function_version", minimum=1)
         _require_int(self.rank, "rank")
+        if self.contract_digest is not None:
+            _require_digest(self.contract_digest, "contract_digest")
         object.__setattr__(self, "inputs", _tuple_of_dicts(self.inputs, "inputs"))
         object.__setattr__(self, "outputs", _tuple_of_dicts(self.outputs, "outputs"))
         object.__setattr__(self, "rejected", _tuple_of_dicts(self.rejected, "rejected"))
@@ -764,7 +767,7 @@ class MathCandidate:
             raise MathObjectError("candidate requires at least one input")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        document = {
             "schema": CANDIDATE_SCHEMA,
             "candidate_id": self.candidate_id,
             "snapshot_id": self.snapshot_id,
@@ -776,6 +779,9 @@ class MathCandidate:
             "preflight_hint": self.preflight_hint,
             "rejected": [dict(x) for x in self.rejected],
         }
+        if self.contract_digest is not None:
+            document["contract_digest"] = self.contract_digest
+        return document
 
 
 @dataclass(frozen=True)
@@ -815,14 +821,26 @@ class MathAdmission:
 
 
 def candidate_id_for(snapshot_id: str, inputs: Iterable[Mapping[str, Any]],
-                     function_id: str, function_version: int) -> str:
-    """Content identity for a candidate; excludes rank/time/producer."""
+                     function_id: str, function_version: int,
+                     contract_digest: str | None = None) -> str:
+    """Content identity for a candidate; excludes rank/time/producer.
+
+    ``contract_digest`` is optional.  When supplied it binds the candidate to
+    the canonical function contract and changes the identity.  When omitted the
+    payload is byte-for-byte the legacy candidate identity, so previously issued
+    ``cnd:`` identifiers remain valid.
+    """
     payload = {
         "snapshot_id": snapshot_id,
         "inputs": [dict(item) for item in inputs],
         "function_id": function_id,
         "function_version": function_version,
     }
+    digest = _require_digest(
+        contract_digest, "contract_digest", allow_none=True,
+    )
+    if digest is not None:
+        payload["contract_digest"] = digest
     return "cnd:" + digest_object(payload)
 
 

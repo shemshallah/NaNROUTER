@@ -526,7 +526,7 @@ def coerce_snapshot(value: Any) -> MathSnapshot:
 def _candidate_from_mapping(value: Mapping[str, Any]) -> MathCandidate:
     names = (
         "candidate_id", "inputs", "function_id", "function_version", "outputs",
-        "snapshot_id", "rank", "preflight_hint", "rejected",
+        "snapshot_id", "rank", "preflight_hint", "rejected", "contract_digest",
     )
     return MathCandidate(**{name: value[name] for name in names if name in value})
 

@@ -565,6 +565,7 @@ def dedupe_key_for(
     numerical_policy: Mapping[str, Any] | None = None,
     capability_set: Any = (),
     commutative: bool = False,
+    function_contract_digest: str | None = None,
 ) -> str:
     """Return the content-based operation key.
 
@@ -572,6 +573,11 @@ def dedupe_key_for(
     position, timestamps and state.  ``request_id`` is evidence, never an
     idempotency key.  A changed snapshot, function contract, ruleset snapshot,
     numerical policy or capability requirement produces a different key.
+
+    ``function_contract_digest`` is optional.  When supplied it binds the
+    operation to one canonical function contract and changes the key.  When
+    omitted the payload is exactly the legacy key, so old packets still
+    deduplicate with old keys.
     """
     snapshot = _snapshot_ref(snapshot_id, "snapshot_id")
     function = _text(function_id, "function_id", maximum=256)
@@ -581,6 +587,11 @@ def dedupe_key_for(
     if commutative:
         identities.sort(key=canonical_json)
     capabilities = _normalise_capability_set(capability_set)
+    contract_digest = normalize_digest(
+        function_contract_digest,
+        "function_contract_digest",
+        allow_none=True,
+    )
     payload = {
         "snapshot_id": snapshot,
         "base_generation": base_generation,
@@ -596,6 +607,8 @@ def dedupe_key_for(
         "capability_set": list(capabilities),
         "commutative": bool(commutative),
     }
+    if contract_digest is not None:
+        payload["function_contract_digest"] = contract_digest
     return digest_object(payload)
 
 
@@ -714,6 +727,7 @@ class NmpPacket:
     updated_tick: int = 0
     history: tuple[dict[str, Any], ...] = ()
     admission_receipt: dict[str, Any] | None = None
+    function_contract_digest: str | None = None
 
     def __post_init__(self) -> None:
         # Lane validation comes first so NANNET0/out-of-range cannot be hidden
@@ -763,6 +777,11 @@ class NmpPacket:
         ))
         object.__setattr__(self, "result_digest", normalize_digest(
             self.result_digest, "result_digest", allow_none=True,
+        ))
+        object.__setattr__(self, "function_contract_digest", normalize_digest(
+            self.function_contract_digest,
+            "function_contract_digest",
+            allow_none=True,
         ))
         if self.result_status is not None:
             object.__setattr__(self, "result_status", _text(self.result_status, "result_status", maximum=128))
@@ -953,6 +972,7 @@ class NmpPacket:
             numerical_policy=self.numerical_policy,
             capability_set=self.capability_set,
             commutative=self.commutative,
+            function_contract_digest=self.function_contract_digest,
         )
 
     @property
@@ -984,7 +1004,7 @@ class NmpPacket:
             raise NmpValidationError("COMMITTED requires the JAHS handoff seal")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        document = {
             "schema": NMP_SCHEMA,
             "packet_id": self.packet_id,
             "state": self.state,
@@ -1064,6 +1084,9 @@ class NmpPacket:
             "history": [dict(item) for item in self.history],
             "metadata": dict(self.metadata),
         }
+        if self.function_contract_digest is not None:
+            document["function_contract_digest"] = self.function_contract_digest
+        return document
 
     def digest(self) -> str:
         return digest_object(self.to_dict())
@@ -1112,6 +1135,7 @@ class NmpPacket:
             "universe_id": data.get("universe_id", "U0"),
             "function_id": data.get("function_id", ""),
             "function_version": data.get("function_version", 1),
+            "function_contract_digest": data.get("function_contract_digest"),
             "candidate_id": data.get("candidate_id", ""),
             "inputs": data.get("inputs", ()),
             "admission_id": data.get("admission_id"),
@@ -2409,6 +2433,7 @@ def prepare(
     ring_incarnation: str | None = None,
     ring_epoch: int | None = None,
     plan_digest: str | None = None,
+    function_contract_digest: str | None = None,
     numerical_policy: Mapping[str, Any] | None = None,
     commutative: bool = False,
     request_id: str | None = None,
@@ -2476,6 +2501,8 @@ def prepare(
         guest_words = resources.get("guest_words", 0)
     if plan_digest is None:
         plan_digest = preflight_data.get("plan_digest") or resources.get("plan_digest")
+    if function_contract_digest is None:
+        function_contract_digest = candidate_data.get("contract_digest")
 
     packet = NmpPacket(
         snapshot_id=packet_snapshot,
@@ -2484,6 +2511,7 @@ def prepare(
         universe_id=universe_id,
         function_id=function_id,
         function_version=function_version,
+        function_contract_digest=function_contract_digest,
         candidate_id=candidate_id,
         inputs=candidate_data.get("inputs") or (),
         admission_id=admission_data.get("admission_id"),
@@ -2656,6 +2684,7 @@ def dedupe_key(
     numerical_policy: Mapping[str, Any] | None = None,
     capability_set: Any = (),
     commutative: bool = False,
+    function_contract_digest: str | None = None,
 ) -> str:
     """Module-level alias for :func:`dedupe_key_for`."""
     return dedupe_key_for(
@@ -2669,6 +2698,7 @@ def dedupe_key(
         numerical_policy=numerical_policy,
         capability_set=capability_set,
         commutative=commutative,
+        function_contract_digest=function_contract_digest,
     )
 
 

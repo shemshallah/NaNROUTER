@@ -117,6 +117,96 @@ class MathObjectTests(unittest.TestCase):
             MathFunction(function_id="mth.vector.dot256.f32", signature={"x": 1})
 
 
+class ContractDigestIdentityTests(unittest.TestCase):
+    SNAPSHOT = "snp:" + "d" * 64
+    INPUTS = ({"leaf_id": "nml:U0:vector:123", "version": 1},)
+
+    def test_legacy_candidate_identity_and_serialization_are_unchanged(self):
+        expected_payload = {
+            "snapshot_id": self.SNAPSHOT,
+            "inputs": [dict(item) for item in self.INPUTS],
+            "function_id": "math.vector.dot",
+            "function_version": 1,
+        }
+        legacy_id = "cnd:" + digest_object(expected_payload)
+        self.assertEqual(
+            candidate_id_for(
+                self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+            ),
+            legacy_id,
+        )
+        candidate = MathCandidate(
+            legacy_id,
+            self.INPUTS,
+            "math.vector.dot",
+            1,
+            snapshot_id=self.SNAPSHOT,
+        )
+        self.assertIsNone(candidate.contract_digest)
+        self.assertNotIn("contract_digest", candidate.to_dict())
+        self.assertEqual(candidate.candidate_id, legacy_id)
+
+    def test_contract_digest_binds_candidate_identity_and_roundtrips(self):
+        contract_digest = "a" * 64
+        legacy_id = candidate_id_for(
+            self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+        )
+        bound_id = candidate_id_for(
+            self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+            contract_digest=contract_digest,
+        )
+        self.assertNotEqual(legacy_id, bound_id)
+        self.assertEqual(
+            bound_id,
+            candidate_id_for(
+                self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+                contract_digest=contract_digest,
+            ),
+        )
+        self.assertNotEqual(
+            bound_id,
+            candidate_id_for(
+                self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+                contract_digest="b" * 64,
+            ),
+        )
+
+        candidate = MathCandidate(
+            bound_id,
+            self.INPUTS,
+            "math.vector.dot",
+            1,
+            snapshot_id=self.SNAPSHOT,
+            contract_digest=contract_digest,
+        )
+        document = candidate.to_dict()
+        self.assertEqual(document["contract_digest"], contract_digest)
+        rebuilt = MathCandidate(**{
+            key: value for key, value in document.items() if key != "schema"
+        })
+        self.assertEqual(rebuilt, candidate)
+        self.assertEqual(rebuilt.to_dict(), document)
+        self.assertEqual(rebuilt.contract_digest, contract_digest)
+
+    def test_malformed_contract_digest_is_rejected(self):
+        invalid = ("", "A" * 64, "a" * 63, "a" * 65, 1, True)
+        for contract_digest in invalid:
+            with self.subTest(contract_digest=contract_digest):
+                with self.assertRaises(MathObjectError):
+                    MathCandidate(
+                        "cnd:" + "e" * 64,
+                        self.INPUTS,
+                        "math.vector.dot",
+                        1,
+                        contract_digest=contract_digest,
+                    )
+                with self.assertRaises(MathObjectError):
+                    candidate_id_for(
+                        self.SNAPSHOT, self.INPUTS, "math.vector.dot", 1,
+                        contract_digest=contract_digest,
+                    )
+
+
 class SemanticTypeDescriptorTests(unittest.TestCase):
     def test_absent_descriptor_keeps_legacy_serialization_and_digest(self):
         leaf = MathLeaf(

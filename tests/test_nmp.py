@@ -485,6 +485,138 @@ class DedupeTests(unittest.TestCase):
         self.assertTrue(table.lookup(make_packet()).packet_id)
 
 
+class ContractDigestDedupeTests(unittest.TestCase):
+    def test_legacy_dedupe_key_payload_is_unchanged(self):
+        packet = make_packet()
+        expected = digest_object({
+            "snapshot_id": SNAP,
+            "base_generation": 7,
+            "function_id": FUNCTION,
+            "function_version": 1,
+            "candidate_id": "",
+            "inputs": [nmp._input_identity(item) for item in INPUTS],
+            "ruleset_snapshot_id": RULES,
+            "numerical_policy": {},
+            "capability_set": [dict(item) for item in packet.capability_set],
+            "commutative": False,
+        })
+        self.assertEqual(packet.dedupe_key, expected)
+        self.assertIsNone(packet.function_contract_digest)
+        self.assertNotIn("function_contract_digest", packet.to_dict())
+        self.assertEqual(
+            nmp.dedupe_key_for(
+                snapshot_id=SNAP,
+                function_id=FUNCTION,
+                function_version=1,
+                inputs=INPUTS,
+                base_generation=7,
+                ruleset_snapshot_id=RULES,
+                capability_set=packet.capability_set,
+                function_contract_digest=None,
+            ),
+            nmp.dedupe_key_for(
+                snapshot_id=SNAP,
+                function_id=FUNCTION,
+                function_version=1,
+                inputs=INPUTS,
+                base_generation=7,
+                ruleset_snapshot_id=RULES,
+                capability_set=packet.capability_set,
+            ),
+        )
+
+    def test_function_contract_digest_changes_dedupe_and_packet_ids(self):
+        legacy = make_packet()
+        bound = make_packet(function_contract_digest="a" * 64)
+        other = make_packet(function_contract_digest="b" * 64)
+        self.assertNotEqual(legacy.dedupe_key, bound.dedupe_key)
+        self.assertNotEqual(bound.dedupe_key, other.dedupe_key)
+        self.assertNotEqual(legacy.packet_id, bound.packet_id)
+        self.assertEqual(
+            bound.dedupe_key,
+            nmp.dedupe_key_for(
+                snapshot_id=bound.snapshot_id,
+                function_id=bound.function_id,
+                function_version=bound.function_version,
+                candidate_id=bound.candidate_id,
+                inputs=bound.inputs,
+                base_generation=bound.base_generation,
+                ruleset_snapshot_id=bound.ruleset_snapshot_id,
+                numerical_policy=bound.numerical_policy,
+                capability_set=bound.capability_set,
+                commutative=bound.commutative,
+                function_contract_digest="a" * 64,
+            ),
+        )
+
+    def test_packet_contract_digest_serialization_roundtrips(self):
+        bound = make_packet(function_contract_digest="a" * 64)
+        document = bound.to_dict()
+        self.assertEqual(document["function_contract_digest"], "a" * 64)
+        rebuilt = nmp.NmpPacket.from_dict(document)
+        self.assertEqual(rebuilt, bound)
+        self.assertEqual(rebuilt.to_dict(), document)
+        self.assertEqual(rebuilt.dedupe_key, bound.dedupe_key)
+
+        legacy = make_packet()
+        legacy_document = legacy.to_dict()
+        self.assertNotIn("function_contract_digest", legacy_document)
+        rebuilt_legacy = nmp.NmpPacket.from_dict(legacy_document)
+        self.assertIsNone(rebuilt_legacy.function_contract_digest)
+        self.assertEqual(rebuilt_legacy.to_dict(), legacy_document)
+        self.assertEqual(rebuilt_legacy.dedupe_key, legacy.dedupe_key)
+
+    def test_packet_rejects_malformed_function_contract_digest(self):
+        for invalid in ("", "g" * 64, "a" * 63, "a" * 65, 1, True):
+            with self.subTest(function_contract_digest=invalid):
+                with self.assertRaises(nmp.NmpValidationError):
+                    make_packet(function_contract_digest=invalid)
+
+    def test_prepare_carries_candidate_digest_and_legacy_candidate_stays_legacy(self):
+        contract_digest = "a" * 64
+        bound_candidate = MathCandidate(
+            candidate_id=candidate_id_for(
+                SNAP, INPUTS, FUNCTION, 1,
+                contract_digest=contract_digest,
+            ),
+            inputs=INPUTS,
+            function_id=FUNCTION,
+            function_version=1,
+            snapshot_id=SNAP,
+            contract_digest=contract_digest,
+        )
+        preflight = {
+            "result": "VALID",
+            "digest": PREFLIGHT,
+            "rule_snapshot_id": RULES,
+        }
+        bound_packet = nmp.prepare(
+            bound_candidate,
+            preflight,
+            snapshot_id=SNAP,
+            admission=make_admission(
+                candidate_id=bound_candidate.candidate_id,
+            ),
+            resources={"guest_words": 256},
+        )
+        self.assertEqual(bound_packet.function_contract_digest, contract_digest)
+        self.assertEqual(
+            bound_packet.to_dict()["function_contract_digest"],
+            contract_digest,
+        )
+
+        legacy_packet = nmp.prepare(
+            make_candidate(),
+            preflight,
+            snapshot_id=SNAP,
+            admission=make_admission(),
+            resources={"guest_words": 256},
+        )
+        self.assertIsNone(legacy_packet.function_contract_digest)
+        self.assertNotIn("function_contract_digest", legacy_packet.to_dict())
+        self.assertNotEqual(bound_packet.dedupe_key, legacy_packet.dedupe_key)
+
+
 class BatchTests(unittest.TestCase):
     def _batch(self, size=3):
         parent = make_packet(is_batch_parent=True)

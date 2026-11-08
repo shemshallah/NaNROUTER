@@ -78,7 +78,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-51` Scratch/quarantined/tombstoned/superseded leaf isolation.
 - [x] `A-52` Typed null metadata includes failure class, linker ID, rule snapshot, candidate count.
 - [x] `A-53` Linker 27 tests; runtime rule/capability providers.
-- [ ] `A-54` Add `contract_digest` to candidates/NMP dedupe keys; recompute/compare rather than trust caller.
+- [x] `A-54` Optional contract digest on candidates/packets/dedupe keys; linker recomputes canonical contract digests and rejects mismatches; validity mapping preserves the field.
 - [ ] `A-55` Add rule catalog/schema (`spec/math-rule.schema.json`) with pre/postconditions, invariants, undefined conditions, numerical policy, test/certificate refs.
 - [ ] `A-56` Implement a real compatibility index keyed by types/domains/shape class with versioned invalidation.
 - [ ] `A-57` Make composition create a function leaf and preserve composition provenance.

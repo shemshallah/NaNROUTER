@@ -150,6 +150,7 @@ class MathLinkerCandidateTests(unittest.TestCase):
         self.assertEqual([candidate.rank for candidate in result.candidates], [1, 2, 3, 4])
         for candidate in result.candidates:
             self.assertTrue(candidate.candidate_id.startswith("cnd:"))
+            self.assertRegex(candidate.contract_digest, r"^[0-9a-f]{64}$")
             self.assertEqual(
                 candidate.candidate_id,
                 candidate_id_for(
@@ -157,6 +158,7 @@ class MathLinkerCandidateTests(unittest.TestCase):
                     candidate.inputs,
                     candidate.function_id,
                     candidate.function_version,
+                    contract_digest=candidate.contract_digest,
                 ),
             )
             self.assertEqual(candidate.snapshot_id, SNAPSHOT_ID)
@@ -426,6 +428,124 @@ class MathLinkerDeterminismTests(unittest.TestCase):
         subtract = next(c for c in reverse.candidates if c.function_id == "math.vector.subtract")
         self.assertEqual(subtract.inputs[0]["leaf_id"], right.leaf_id)
         self.assertEqual(subtract.inputs[1]["leaf_id"], left.leaf_id)
+
+
+class MathLinkerContractDigestTests(unittest.TestCase):
+    def _dot_function(self) -> MathFunction:
+        return MathFunction(
+            function_id="math.vector.dot",
+            version=1,
+            signature={
+                "inputs": [
+                    {"type": "vector", "domain": "real", "shape": [128]},
+                    {"type": "vector", "domain": "real", "shape": [128]},
+                ],
+                "output": {"type": "scalar", "domain": "real"},
+            },
+            semantics={"commutative": True, "definition": "dot"},
+            proof_status="verified",
+            implementations=({"kernel_id": "mth.vector.dot256.f32"},),
+        )
+
+    def test_computed_contract_digest_binds_candidate_and_snapshot(self):
+        dot = self._dot_function()
+        result = propose(
+            [vector_leaf(1), vector_leaf(2)],
+            registry={"math.vector.dot": dot},
+            snapshot_id=SNAPSHOT_ID,
+        )
+        self.assertEqual(result.candidate_count, 1)
+        candidate = result.candidates[0]
+        self.assertEqual(candidate.contract_digest, dot.digest())
+        self.assertEqual(
+            result.snapshot.function_digests[0]["contract_digest"],
+            dot.digest(),
+        )
+        self.assertEqual(
+            candidate.candidate_id,
+            candidate_id_for(
+                SNAPSHOT_ID,
+                candidate.inputs,
+                candidate.function_id,
+                candidate.function_version,
+                contract_digest=dot.digest(),
+            ),
+        )
+
+        document = dot.to_dict()
+        document["contract_digest"] = dot.digest()
+        mapped = propose(
+            [vector_leaf(1), vector_leaf(2)],
+            registry={"math.vector.dot": document},
+            snapshot_id=SNAPSHOT_ID,
+        )
+        self.assertEqual(mapped.candidate_count, 1)
+        self.assertEqual(mapped.candidates[0].contract_digest, dot.digest())
+        self.assertEqual(
+            mapped.candidates[0].candidate_id, candidate.candidate_id,
+        )
+
+    def test_tampered_contract_digest_is_rejected(self):
+        contract = function_contract("math.vector.dot", commutative=True)
+        contract["contract_digest"] = "f" * 64
+        with self.assertRaises(LinkError) as caught:
+            propose(
+                [vector_leaf(1), vector_leaf(2)],
+                registry={"math.vector.dot": contract},
+                snapshot_id=SNAPSHOT_ID,
+            )
+        self.assertEqual(caught.exception.code, "contract_digest_mismatch")
+
+        tampered = replace(self._dot_function(), contract_digest="f" * 64)
+        with self.assertRaises(LinkError) as caught:
+            propose(
+                [vector_leaf(1), vector_leaf(2)],
+                registry={"math.vector.dot": tampered},
+                snapshot_id=SNAPSHOT_ID,
+            )
+        self.assertEqual(caught.exception.code, "contract_digest_mismatch")
+
+    def test_changed_contract_changes_candidate_identity(self):
+        first_contract = function_contract(
+            "math.vector.dot", commutative=True,
+        )
+        second_contract = dict(first_contract)
+        second_contract["semantics"] = {
+            "commutative": True, "definition": "changed contract",
+        }
+        first = propose(
+            [vector_leaf(1), vector_leaf(2)],
+            registry={"first": first_contract},
+            snapshot_id=SNAPSHOT_ID,
+        )
+        second = propose(
+            [vector_leaf(1), vector_leaf(2)],
+            registry={"second": second_contract},
+            snapshot_id=SNAPSHOT_ID,
+        )
+        self.assertEqual(first.candidate_count, 1)
+        self.assertEqual(second.candidate_count, 1)
+        self.assertNotEqual(
+            first.candidates[0].contract_digest,
+            second.candidates[0].contract_digest,
+        )
+        self.assertNotEqual(
+            first.candidates[0].candidate_id,
+            second.candidates[0].candidate_id,
+        )
+        legacy_first = candidate_id_for(
+            SNAPSHOT_ID,
+            first.candidates[0].inputs,
+            first.candidates[0].function_id,
+            first.candidates[0].function_version,
+        )
+        legacy_second = candidate_id_for(
+            SNAPSHOT_ID,
+            second.candidates[0].inputs,
+            second.candidates[0].function_id,
+            second.candidates[0].function_version,
+        )
+        self.assertEqual(legacy_first, legacy_second)
 
 
 class MathLinkerAddressTests(unittest.TestCase):

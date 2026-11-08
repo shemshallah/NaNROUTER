@@ -24,6 +24,7 @@ import re
 from typing import Any, ClassVar, Iterable, Mapping, Sequence
 
 from .math_objects import (
+    FUNCTION_SCHEMA,
     LEAF_KINDS,
     LEAF_SCHEMA,
     PROOF_STATUSES,
@@ -1084,6 +1085,11 @@ def _normalize_function(value: Any, fallback_id: str | None = None) -> _Function
 
     contract_digest = _function_contract_digest(
         raw, preset_digest, function_id=function_id, version=version,
+        signature=signature,
+        semantics=semantics,
+        implementations=implementations,
+        proof_status=proof_status,
+        status=status,
     )
     return _FunctionSpec(
         function_id=function_id,
@@ -1338,31 +1344,77 @@ def _precondition_text(raw: Mapping[str, Any]) -> str:
     return " ".join(pieces)
 
 
-def _function_contract_digest(raw: Mapping[str, Any], preset_digest: str | None,
-                              *, function_id: str, version: int) -> str:
+def _function_contract_digest(
+    raw: Mapping[str, Any],
+    preset_digest: str | None,
+    *,
+    function_id: str,
+    version: int,
+    signature: Mapping[str, Any] | None = None,
+    semantics: Mapping[str, Any] | None = None,
+    implementations: tuple[dict[str, Any], ...] | None = None,
+    proof_status: str | None = None,
+    status: str | None = None,
+) -> str:
+    """Return the canonical function-contract digest.
+
+    The digest is recomputed from the contract fields.  A caller-supplied
+    ``contract_digest`` is treated as a claim and must equal the computed value;
+    it is never trusted directly.  ``MathFunction`` objects already recompute
+    their own digest, so that value is used and cross-checked against any
+    declared field.
+    """
     if preset_digest is not None:
-        return _optional_digest(preset_digest, "contract_digest") or ""
+        computed = _optional_digest(preset_digest, "contract_digest")
+        if computed is None:
+            raise LinkError(
+                "invalid_contract", "function contract digest is missing",
+            )
+    else:
+        document = {
+            "schema": FUNCTION_SCHEMA,
+            "function_id": function_id,
+            "version": version,
+            "signature": (
+                signature if signature is not None
+                else raw.get("signature", {})
+            ),
+            "semantics": (
+                semantics if semantics is not None
+                else raw.get("semantics", {})
+            ),
+            "preconditions": raw.get("preconditions", ()),
+            "postconditions": raw.get("postconditions", ()),
+            "undefined_conditions": raw.get("undefined_conditions", ()),
+            "numerical_policy": raw.get("numerical_policy", {}),
+            "implementations": (
+                implementations if implementations is not None
+                else raw.get("implementations", ())
+            ),
+            "proof_status": (
+                proof_status if proof_status is not None
+                else str(raw.get("proof_status", raw.get("proof", "none"))).lower()
+            ),
+            "status": (
+                status if status is not None
+                else str(raw.get("status", "active")).lower()
+            ),
+        }
+        try:
+            computed = digest_object(document)
+        except MathObjectError as exc:
+            raise LinkError("invalid_contract", str(exc)) from exc
+
     supplied = raw.get("contract_digest")
     if supplied is not None:
-        normalized = _optional_digest(supplied, "contract_digest")
-        if normalized is not None:
-            return normalized
-    document = {
-        "function_id": function_id,
-        "version": version,
-        "signature": raw.get("signature", {}),
-        "semantics": raw.get("semantics", {}),
-        "preconditions": raw.get("preconditions", ()),
-        "postconditions": raw.get("postconditions", ()),
-        "undefined_conditions": raw.get("undefined_conditions", ()),
-        "numerical_policy": raw.get("numerical_policy", {}),
-        "implementations": raw.get("implementations", ()),
-        "proof_status": str(raw.get("proof_status", raw.get("proof", "none"))).lower(),
-    }
-    try:
-        return digest_object(document)
-    except MathObjectError as exc:
-        raise LinkError("invalid_contract", str(exc)) from exc
+        claimed = _optional_digest(supplied, "contract_digest")
+        if claimed != computed:
+            raise LinkError(
+                "contract_digest_mismatch",
+                f"{function_id}: contract_digest does not match the "
+                "canonical function contract",
+            )
+    return computed
 
 
 def _rank_int(raw: Mapping[str, Any], names: tuple[str, ...], default: int) -> int:
@@ -1944,6 +1996,11 @@ def _normalize_with_fallback(key: Any, value: Any, specs: list[_FunctionSpec],
     try:
         specs.append(_normalize_function(value, fallback_id=fallback))
     except LinkError as exc:
+        if exc.code == "contract_digest_mismatch":
+            # A supplied digest that does not match the recomputed contract is
+            # an integrity failure, not a merely unsupported registry entry.
+            # Fail the whole proposal instead of silently trusting/skipping it.
+            raise
         rejected.append(_rejection(
             fallback or (str(key) if key is not None else "<registry>"),
             0,
@@ -2287,6 +2344,7 @@ def propose(
                 candidate_inputs,
                 spec.function_id,
                 spec.version,
+                contract_digest=spec.contract_digest,
             )
             if candidate_id in seen_candidates:
                 rejected.append(_rejection(
@@ -2305,6 +2363,7 @@ def propose(
                 snapshot_id=snapshot.snapshot_id,
                 rank=0,
                 preflight_hint=hint,
+                contract_digest=spec.contract_digest,
             )
             score = _rank_score(spec, match, goal_match, effective.objective, output)
             valid_records.append(_CandidateRecord(
