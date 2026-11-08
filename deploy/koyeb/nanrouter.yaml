@@ -34,6 +34,8 @@ env:
     secret: true
   - key: RIDDLE_FEEDBACK_HMAC_KEY
     secret: true
+  - key: RIDDLE_VOLUME_HMAC_KEY
+    secret: true
   - key: RIDDLE_HERMES_DELEGATION_TOKEN
     secret: true
   - key: RIDDLE_HERMES_RECEIPT_HMAC_KEY
