@@ -114,6 +114,20 @@ class HermesRealNativeTests(unittest.TestCase):
         response = bytes.fromhex(result["response_frame_hex"])
         self.assertEqual(hashlib.sha256(response).hexdigest(), result["response_sha256"])
         self.assertFalse(result["model_training_committed"])
+        # Same opaque N16T session cannot be consumed by a second universe
+        # even on the *same* physical HW2 point, nor another local head.
+        second_receipt = self.open("native-lease-request-isolation-002")
+        self.assertTrue(self.admit(second_receipt, 9)["native_guest_route_admitted"])
+        with self.registry._connect() as db:
+            second_row = self.registry._live(db, second_receipt, self.identity, int(time.time()))
+        with self.assertRaises(HermesDispatchConflict):
+            journal.dispatch(**{
+                **parameters, "row": second_row,
+                "dispatch_id": "native-opaque-dispatch-00008"})
+        with self.assertRaises(HermesDispatchConflict):
+            journal.dispatch(**{
+                **parameters, "head_index": 10,
+                "dispatch_id": "native-opaque-dispatch-00009"})
         replay = journal.dispatch(**parameters)
         self.assertTrue(replay["replayed_from_journal"])
         self.assertEqual(replay["response_sha256"], result["response_sha256"])
@@ -133,6 +147,34 @@ class HermesRealNativeTests(unittest.TestCase):
             journal.dispatch(**{**parameters, "dispatch_id": "native-opaque-dispatch-00002"})
         with self.assertRaises(HermesDispatchConflict):
             journal.dispatch(**{**parameters, "dispatch_id": "native-opaque-dispatch-00002"})
+
+    def test_real_native_guest_session_journal_survives_process_restart(self):
+        store = Path(self.temp.name) / "n16t-cursor.sqlite"
+        client = _NaN16GuestVM(
+            os.environ["NAN16_LIBRARY"], os.environ["N16T_GUEST_IMAGE"],
+            os.environ["N16T_GUEST_LABELS"])
+        try:
+            client.write_bytes(SESSION_BASE, bytes(range(1, 17)))
+            client.write_bytes(RESPONSE_PAYLOAD_BASE, b"\x01\x00")
+            client.call("n16_android_build", {
+                1: REQUEST_BASE, 2: 1, 4: RESPONSE_PAYLOAD_BASE,
+                5: 2, 6: SESSION_BASE})
+            self.assertEqual(client.reg(3), 0)
+            frame = client.read_bytes(REQUEST_BASE, client.reg(1))
+            client.call("n16_android_advance")
+        finally:
+            client.close()
+        before = N16TGuestPool.from_env(max_sessions=4, store=str(store))
+        try:
+            self.assertGreaterEqual(len(before.exchange(frame)), 36)
+        finally:
+            before.close()
+        after = N16TGuestPool.from_env(max_sessions=4, store=str(store))
+        try:
+            with self.assertRaises(N16TGuestRuntimeError):
+                after.exchange(frame)  # native replay cursor did not reset
+        finally:
+            after.close()
 
     def test_pinning_fails_closed_if_guest_digest_is_wrong(self):
         with self.assertRaises(HermesNativeError):

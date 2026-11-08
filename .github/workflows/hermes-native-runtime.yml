@@ -8,6 +8,7 @@ on:
       - "runner_riddle/hermes_dispatch.py"
       - "runner_riddle/http_service.py"
       - "tests/test_hermes_native_runtime.py"
+      - "tests/test_hermes_dispatch_recovery.py"
       - ".github/workflows/hermes-native-runtime.yml"
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - "runner_riddle/hermes_dispatch.py"
       - "runner_riddle/http_service.py"
       - "tests/test_hermes_native_runtime.py"
+      - "tests/test_hermes_dispatch_recovery.py"
       - ".github/workflows/hermes-native-runtime.yml"
 
 permissions:
@@ -66,3 +68,5 @@ jobs:
           echo "RIDDLE_HERMES_NATIVE_LIBRARY_SHA256=$(sha256sum build/libnan16.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
       - name: Execute native VM head isolation, replay, dispatch/ACK, restart, and digest-pin checks
         run: python -m unittest discover -s tests -p "test_hermes_native_runtime.py" -v
+      - name: Verify session affinity isolation, durable ACK and crash inspection
+        run: python -m unittest discover -s tests -p "test_hermes_dispatch_recovery.py" -v

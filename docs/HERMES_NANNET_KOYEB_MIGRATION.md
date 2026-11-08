@@ -216,3 +216,36 @@ checks that the deployable container actually includes native artifacts.
 
 No change to NANNET's original public pairing issuer, DNS, external Koyeb
 service or private storage has been made as part of this branch.
+
+## HERMES N16T tenant isolation and dispatch recovery
+
+The generic `/n16t` service and authenticated HERMES delegation **must not**
+share the same native VM session pool. Their byte-for-byte N16T protocol frames
+have only an opaque 16-byte session affinity key. NaNROUTER therefore operates
+a **separate persistent native N16T guest pool for HERMES** at
+`RIDDLE_HERMES_N16T_SESSION_STORE` (default
+`/data/hermes-n16t-sessions.sqlite`). The regular `/n16t` pool retains
+its own `RIDDLE_N16T_SESSION_STORE`. Startup refuses identical store paths.
+
+The HERMES dispatch ledger atomically binds each opaque session ID to its
+authenticated installation, lease ID, universe ID, native generation and
+head 0..254. Two independent leased universes sharing physical HW2 point 3
+cannot share a N16T guest session. The router checks this binding before
+calling NaN16, leaving all CRC/sequence/packet semantics in the guest.
+
+A router restart restores the accepted N16T guest session cursor from the
+durable journal, rather than silently resetting it. The
+`POST /v1/hermes/leases/inspect` delegated operation provides **read-only**
+reconciliation by dispatch ID, installation, live receipt and head:
+`not_recorded`, `pending_or_ambiguous`, `completed` or
+`acknowledged`. A pending/ambiguous reservation is deliberately not retried;
+operator intervention is required to distinguish crashes before/after guest
+processing. Completed frames can be recovered by the original scoped caller;
+a corrupt stored response is rejected even if its digest label was not changed.
+This journal is not a canonical model-training history.
+
+Keep all HERMES router SQLite files on a **persistent mounted volume**,
+including the native N16T replay cursor and dispatch/session ownership journal.
+Inspect is not callable with a revoked/expired lease; the NANNET portal verifies
+the existing paired guest identity and scoped Ed25519 signature before
+delegating. Avoid logging raw session IDs, guest frames or bearer tokens.
