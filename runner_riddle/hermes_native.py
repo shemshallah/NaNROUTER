@@ -63,7 +63,7 @@ class HermesNativeLeaseRuntime:
             raise HermesNativeError("HERMES NaN16 label map missing")
         labels = Path(self.labels).read_text(encoding="utf-8")
         for name in ("n16_server_exchange", "nhl_open", "nhl_renew",
-                     "nhl_release", "nhl_nannet_route"):
+                     "nhl_release", "nhl_nannet_route", "nhr_hw_admit"):
             if not re.search(r"(?m)^" + name + r"\s+\d+\s*$", labels):
                 raise HermesNativeError("HERMES guest missing required native entry " + name)
         self._vm_factory = vm_factory
@@ -110,7 +110,25 @@ class HermesNativeLeaseRuntime:
             4: record.owner_tag,
         })
 
-    def _refresh(self, installation_id, rows, now):
+    def admit_hardware(self, installation_id, hw, node_point):
+        """Check authoritative bound HW identity INSIDE pinned native NaN16.
+
+        The SQL authority has already bound the Ed25519 key to this installation;
+        node_point is always the server-computed HW index + 1.
+        """
+        if type(hw) is not int or not 1 <= hw <= 255 or node_point != hw + 1:
+            raise HermesNativeError("incorrect authenticated hardware point")
+        with self._lock:
+            vm, _installed = self._guest(installation_id)
+            binding = 1 if hw < 5 else 2
+            self._invoke(vm, "nhr_hw_admit", {1: hw, 2: binding})
+            if vm.reg(1) != node_point or vm.reg(2) != (0 if hw < 5 else 1):
+                raise HermesNativeError("native hardware classification differs from signed key binding")
+            return {"native_hardware_admitted": True,
+                    "native_hardware_entry": "nhr_hw_admit",
+                    "node_point": node_point, "hw": hw}
+
+    def _guest(self, installation_id):
         if self._closed:
             raise HermesNativeError("HERMES native runtime closed")
         if installation_id not in self._instances:
@@ -121,7 +139,10 @@ class HermesNativeLeaseRuntime:
             except Exception as exc:
                 raise HermesNativeError("could not load pinned NaN16 HERMES guest") from exc
             self._instances[installation_id] = (vm, {})
-        vm, installed = self._instances[installation_id]
+        return self._instances[installation_id]
+
+    def _refresh(self, installation_id, rows, now):
+        vm, installed = self._guest(installation_id)
         live = {}
         for row in rows:
             slot = row["slot"]
