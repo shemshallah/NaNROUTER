@@ -1,0 +1,50 @@
+name: HERMES uploaded native NaN16DE SHA bridge certification
+on:
+  pull_request:
+    paths:
+      - "mth/nan16/hermes_n16bridge.nas"
+      - "mth/tests/hermes_n16bridge_test.nas"
+      - ".github/workflows/hermes-native-bridge.yml"
+  push:
+    paths:
+      - "mth/nan16/hermes_n16bridge.nas"
+      - "mth/tests/hermes_n16bridge_test.nas"
+      - ".github/workflows/hermes-native-bridge.yml"
+permissions:
+  contents: read
+jobs:
+  n16b-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: bb4598f9d816b125b2e1f6e702f2718466f9d1c5
+          path: nan0s
+      - name: Compile canonical NaN0S VM
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble native NaN16 bridge and execute SHA-256 and N16B tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/hermes_n16bridge_test.nas > /tmp/hermes-n16bridge.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/hermes-n16bridge.nan --steps 30000000 --serial | tee /tmp/hermes-n16bridge.out
+          grep -q '^HERMES N16BRIDGE PASS' /tmp/hermes-n16bridge.out
+      - name: Compare guest SHA-256 bytes to independent standard-library oracle
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, re
+          output = open('/tmp/hermes-n16bridge.out', encoding='utf-8', errors='replace').read()
+          lengths = (0, 3, 55, 56, 63, 64, 65, 200)
+          for length in lengths:
+              actual = re.search(r'(?m)^SHA '+str(length)+r' ([0-9a-f]{64})$', output)
+              assert actual, ('missing guest SHA-256 vector', length, output[-1000:])
+              data = bytes(((index*7+3)&255 for index in range(length)))
+              expected = hashlib.sha256(data).hexdigest()
+              assert actual.group(1) == expected, ('guest SHA mismatch', length, actual.group(1), expected)
+          assert re.search(r'(?m)^ENV ([0-9a-f]+)$', output), 'guest envelope was not generated'
+          print('HERMES NATIVE SHA256 + N16B ORACLE PASS')
+          PY
