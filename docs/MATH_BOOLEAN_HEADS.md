@@ -124,7 +124,8 @@ python3 -m unittest tests.test_math_boolean -q
   the control heads were not modified before submission.
 - The shuffled baseline is one supplied evaluation, not a distributional
   significance test.
-- The result is report-local and is not persisted or wired into
-  `MathLearningService` by this module.
+- The gate can be recorded as utility-only evidence through
+  `MathLearningService.record_boolean_head_experiment`; this module still does
+  not persist or promote a rule itself.
 - Passing the gate does not authorize execution, activation, or mathematical
   truth.

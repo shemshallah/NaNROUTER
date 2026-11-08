@@ -46,6 +46,8 @@ from runner_riddle.math_learning import (
 )
 from runner_riddle.math_objects import MathRule, canonical_json, sha256_text
 from runner_riddle.math_store import MathReferenceError, MathStore
+from runner_riddle.math_boolean import evaluate_boolean_head
+from tests.test_math_boolean import constant_report, controls, make_report
 
 
 PROPOSER = "learning:boolean-head-7"
@@ -834,6 +836,34 @@ class MathLearningLifecycleTests(unittest.TestCase):
         self.assertEqual(tested.axes.validity["earned"], "V2")
         self.assertEqual(tested.axes.proof["status"], "candidate")
         self.assertEqual(tested.axes.truth["status"], "unknown")
+
+    def test_boolean_head_gate_is_recorded_as_utility_evidence_only(self):
+        self.to_tested()
+        gate = evaluate_boolean_head(
+            make_report("head:test"),
+            control_heads=controls(),
+            shuffled_baseline=constant_report("shuffled", decision=False),
+        )
+        record = self.service.record_boolean_head_experiment(
+            self.rule_id, gate, actor=TESTER,
+        )
+        utility = record.axes.utility
+        latest = utility["outcomes"][-1]
+        self.assertEqual(latest["source"], "boolean_head")
+        self.assertEqual(latest["outcome"], "supported")
+        self.assertEqual(latest["sample_size"], 1024)
+        self.assertFalse(latest["synthetic"])
+        self.assertIn("authority", latest["scope"])
+        self.assertFalse(latest["scope"]["authority"]["can_set_validity"])
+        with self.assertRaises(ExperimentPromotionDenied):
+            self.service.record_experiment(
+                self.rule_id,
+                {
+                    "source": "boolean_head", "outcome": "supported",
+                    "sample_size": 1024, "data_digest": "a" * 64,
+                },
+                actor=TESTER, request_promotion=True,
+            )
 
     def test_client_set_authority_axes_are_rejected(self):
         for contract in (

@@ -2233,6 +2233,53 @@ class MathLearningService:
 
     # -- experiments: utility only -----------------------------------------
 
+    def record_boolean_head_experiment(
+        self,
+        rule_id: str,
+        gate_result: Any,
+        *,
+        actor: str,
+        tick: int = 0,
+    ) -> LifecycleRecord:
+        """Persist an eligible Boolean-head result as utility evidence only.
+
+        The gate result's authority surface is checked explicitly; this method
+        never sets validity, truth, proof, lifecycle, or execution state.
+        """
+        from .math_boolean import BooleanHeadGateResult
+
+        if not isinstance(gate_result, BooleanHeadGateResult):
+            raise MathLearningError("gate_result must be a BooleanHeadGateResult")
+        authority = gate_result.authority()
+        for key in (
+            "can_set_truth", "can_set_validity", "can_set_proof",
+            "can_set_lifecycle", "can_promote_rule", "can_execute_candidate",
+        ):
+            if authority.get(key) is not False:
+                raise MathLearningError(
+                    "Boolean-head gate claims a forbidden authority axis"
+                )
+        head = gate_result.head
+        outcome = ExperimentOutcome(
+            source="boolean_head",
+            outcome="supported" if gate_result.eligible else "inconclusive",
+            scope={
+                "head_id": head.head_id,
+                "gate_status": gate_result.status,
+                "eligible_for_experiment": gate_result.eligible,
+                "authority": authority,
+            },
+            sample_size=head.total,
+            data_digest=head.digest(),
+            evidence_digest=head.digest(),
+            synthetic=head.synthetic,
+            underpowered=not gate_result.eligible,
+        )
+        return self.record_experiment(
+            rule_id, outcome, actor=actor, tick=tick,
+            request_promotion=False,
+        )
+
     def record_experiment(self, rule_id: str,
                           outcome: ExperimentOutcome | Mapping[str, Any], *,
                           actor: str,
