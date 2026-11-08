@@ -41,12 +41,16 @@ class HermesMthToolsTests(unittest.TestCase):
                 desc = self.tools.invoke("mth.inspect", {"kernel_id": kernel.kernel_id})
                 self.assertEqual(desc["kernel"]["source_digest"], kernel.source_digest)
                 self.assertEqual(desc["kernel"]["fixture_digest"], kernel.fixture_digest)
-                result = self.tools.invoke("mth.prepare", {
-                    "kernel_id": kernel.kernel_id,
-                    "inputs": [], "outputs": [],
-                })
-                self.assertEqual(result["plan"]["steps"][0]["kernel_id"], kernel.kernel_id)
-                self.assertFalse(result["execution_available_here"])
+                args = {"kernel_id": kernel.kernel_id,
+                        "inputs": [], "outputs": []}
+                if kernel.ci_verified and kernel.status == "native_verified":
+                    result = self.tools.invoke("mth.prepare", args)
+                    self.assertEqual(result["plan"]["steps"][0]["kernel_id"],
+                                     kernel.kernel_id)
+                    self.assertFalse(result["execution_available_here"])
+                else:
+                    with self.assertRaises(HermesMthToolError):
+                        self.tools.invoke("mth.prepare", args)
 
     def test_all_families_accounted_for(self):
         result = self.tools.invoke("mth.categories")
