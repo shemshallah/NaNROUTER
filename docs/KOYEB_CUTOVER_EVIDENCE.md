@@ -54,7 +54,40 @@ Authentication uses the Koyeb secret `nanrouter-runner-ring-token`
 Git. The first live `GET /v1/runner-ring/clock` returned
 `nanclock_tick=1794169866474`.
 
-### Live handoff evidence (2026-11-08)
+### Single-service embedded ring (2026-11-08)
+
+The extra `nanrouter-runner` Koyeb app/service created during testing was
+deleted. The only Koyeb app is `nannet` and the only service is
+`nannet-portal`. The portal now embeds one ring slot (`RUNNER_RING_EMBEDDED=1`,
+slot `0`) and exposes the public ingress:
+
+```text
+https://nannet.apps.mistral.run/v1/ring/status
+https://nannet.apps.mistral.run/v1/ring/points
+https://nannet.apps.mistral.run/v1/ring/submit
+https://nannet.apps.mistral.run/v1/ring/drain
+https://nannet.apps.mistral.run/v1/ring/register
+https://nannet.apps.mistral.run/v1/ring/checkpoint
+https://nannet.apps.mistral.run/v1/ring/handoff
+```
+
+`NANROUTER_RUNNER_URL=https://nannet.apps.mistral.run` is the active embedded
+endpoint. The embedded slot owns `HW5:0` while its lease is active and proxies
+to an external active runner otherwise. Verified live:
+
+```text
+runner_ring_node.active = true
+phase = active, slot = 0, epoch = 10
+ring_endpoint = HW5:0
+errors = 0
+
+GET  /v1/ring/points  -> HW0:0, HW2:0, HW5:0, HW9:0 active
+POST /v1/ring/register {"hw":9} -> registered
+POST /v1/ring/submit  HW0 -> HW9 -> delivered
+POST /v1/ring/drain   {"hw":9} -> count 1, word 7ff112345678f8ff
+```
+
+### External standby handoff evidence (2026-11-08)
 
 The six identical non-Koyeb runner repositories were started against this
 authority:
