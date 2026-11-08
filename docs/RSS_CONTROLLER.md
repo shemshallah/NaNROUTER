@@ -4,7 +4,7 @@ Status: host-only control-plane implementation for `D-04`
 (`docs/MASTER_COMPLETION_TODO.md`) and the §6 verb mapping in
 `docs/GRAPH_SPECTRAL_MTH_PLAN.md`.
 
-Source: `runner_riddle/rss_controller.py`  
+Source: `runner_riddle/rss_controller.py`
 Tests: `tests/test_rss_controller.py`
 
 ## 1. Purpose and boundary
