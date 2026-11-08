@@ -142,6 +142,11 @@ The active runner also exposes a bounded central monitor/registration API:
 register additional zero points such as `HW9:0` and route NaN16DE frames to
 them without giving the runner process its own HW identity.
 
+The single Koyeb `nannet-portal` service embeds one ring slot and publishes the
+same routes at `https://nannet.apps.mistral.run/v1/ring/*`. Its
+`NANROUTER_RUNNER_URL` is the portal itself. The extra runner Koyeb service is
+not used and was deleted.
+
 ## HERMES in/out
 
 HERMES is the zero point `HW2:0`:
