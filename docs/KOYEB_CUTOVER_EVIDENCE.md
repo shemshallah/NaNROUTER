@@ -15,9 +15,10 @@ retained.
 | Source repository | `github.com/shemshallah/NaNROUTER` |
 | Branch | `main` |
 | Dockerfile | `deploy/portal/Dockerfile` |
-| Active deployment | `9a12a2f0-51ad-4ce5-a4d7-6e7f222c8021` |
-| Service version | `891` |
-| Source commit built | `b2ef68c499ecc13d7964a6837a03922ff3f6028a` |
+| Active deployment | `6fe7190f-5991-4ca7-b46f-7dbec0d6221b` |
+| Service version | `906` |
+| Source commit built | `c15323d` (`fix/portal-ring-authority-copy-20261108`) |
+| Pinned portal runtime | NaNLMind `431e0775cdb79b4cd59038a4ebe0df5434a17c92` |
 | Status | `HEALTHY` |
 | Auto-release group | `github.com/shemshallah/NaNROUTER` `refs/heads/main` |
 
@@ -36,6 +37,49 @@ The deployment definition after cutover:
 
 `no_deploy_on_push` is intentional: a source change must be deployed through a
 reviewed rollout, never silently from a push.
+
+## Atomic runner-ring authority
+
+The same portal image now exposes the six-slot runner-ring authority:
+
+```text
+GET  /v1/runner-ring/clock
+GET  /v1/runner-ring/status
+GET  /v1/runner-ring/checkpoint
+POST /v1/runner-ring/lease|renew|release|checkpoint
+```
+
+Authentication uses the Koyeb secret `nanrouter-runner-ring-token`
+(`RUNNER_RING_TOKEN`, 32+ characters). The secret value is never stored in
+Git. The first live `GET /v1/runner-ring/clock` returned
+`nanclock_tick=1794169866474`.
+
+### Live handoff evidence (2026-11-08)
+
+The six identical non-Koyeb runner repositories were started against this
+authority:
+
+```text
+slot 0  active   epoch 1  HW5:0   checkpoint d2fa6d5d...
+slot 1  standby  epoch 1
+slot 2  standby  epoch 1
+slot 3  standby  epoch 1
+slot 4  standby  epoch 1
+slot 5  standby  epoch 1
+```
+
+Slot 0 was terminated. After the 30 s lease expired, slot 1 acquired:
+
+```text
+slot 1  active   epoch 2  HW5:0
+checkpoint state_digest = d2fa6d5d306f15fce962096979d70ab9d6d7dc3cbd5d83e4e52ce4f71c02fc1d
+portal active_slot = 1
+portal handoffs = 2
+```
+
+The checkpoint digest is the same before and after handoff, so the bounded
+HW5:0 fabric inbox was restored, not silently discarded. The runners do not
+receive individual HW addresses; the ring as a whole is `HW5:0`.
 
 ## Preserved production state
 
@@ -83,6 +127,7 @@ The previous NaNLMind-sourced deployment remains available:
 | Field | Value |
 |---|---|
 | Rollback deployment | `f51a7c59-cc45-4117-93c6-f23ec27f5104` |
+| Previous router-owned deployment | `9a12a2f0-51ad-4ce5-a4d7-6e7f222c8021` |
 | Previous source | `github.com/shemshallah/NaNLMind` |
 | Previous Dockerfile | `deploy/training_merge/Dockerfile` |
 
@@ -105,3 +150,5 @@ Koyeb service. The live service is controlled by the binding above.
   production volume.
 - Verify DNS/TLS and the pinned issuer key before any hostname change.
 - Record a new deployment ID here for every subsequent production rollout.
+- Keep the runner-ring portal secret in Koyeb only; all six runners read the
+  same `NANROUTER_RING_TOKEN` from their private environment.
