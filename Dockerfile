@@ -41,6 +41,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080
 WORKDIR /app
 COPY runner_riddle /app/runner_riddle
+# Runtime MTH catalog is hash-validated against the complete native source and fixture tree.
+COPY spec/wave-capabilities.json /app/spec/wave-capabilities.json
+COPY mth/nan16 /app/mth/nan16
+COPY mth/tests /app/mth/tests
 COPY deploy/start_router.sh /app/start_router.sh
 COPY --from=nan16-builder /out/ /app/native/
 RUN useradd --system --uid 10001 --create-home riddle \
