@@ -28,9 +28,19 @@ from .n16t_guest import (
     N16TGuestPool,
     N16TGuestRuntimeError,
 )
+from .point_fabric import (
+    CentralPointFabric,
+    FabricCapacityError,
+    FabricError,
+    FabricFrameError,
+    FabricRoutingError,
+    PointFrame,
+    frame_from_json,
+    frames_to_json,
+)
 from urllib.parse import parse_qs, urlsplit
 
-ROOT_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+ROOT_ADDRESS = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
 MAX_REQUEST_BYTES = 2_097_152
 
 
@@ -114,7 +124,26 @@ class RiddleService:
             except Exception as exc:
                 raise ServiceConfigError("N16T guest runtime configuration is incomplete or invalid") from exc
 
+        # The zero-point fabric is always available as an in-process central
+        # intake/monitor.  A durable journal is used in deployments with a
+        # persistent data directory.  It never evaluates NaN words.
+        self.fabric_token = os.environ.get("RIDDLE_FABRIC_TOKEN", "")
+        self.point_fabric = None
+        if os.environ.get("RIDDLE_FABRIC_ENABLED", "1").strip().lower() not in (
+            "0", "false", "no", "off"
+        ):
+            fabric_database = os.environ.get(
+                "RIDDLE_FABRIC_DB", str(data_dir / "point-fabric.sqlite")
+            )
+            self.point_fabric = CentralPointFabric(database=fabric_database)
+            if self.hermes_leases is not None:
+                # A delegated HERMES universe has an active HW2 endpoint.
+                self.point_fabric.register(2, status="active")
+
     def close(self) -> None:
+        if self.point_fabric is not None:
+            self.point_fabric.close()
+            self.point_fabric = None
         if self.hermes_n16t_pool is not None:
             self.hermes_n16t_pool.close()
             self.hermes_n16t_pool = None
@@ -174,10 +203,53 @@ def make_handler(service: RiddleService):
                 raise ValueError("request JSON must be an object")
             return value
 
+        def _optional_body(self) -> dict[str, Any]:
+            """Read a bounded JSON body, treating an absent body as ``{}``."""
+            try:
+                length = int(self.headers.get("Content-Length", "0") or 0)
+            except ValueError as exc:
+                raise ValueError("invalid content length") from exc
+            if length == 0:
+                return {}
+            return self._body()
+
         def _authorized(self, token: str) -> bool:
             supplied = self.headers.get("Authorization", "")
             expected = "Bearer " + token
             return hmac.compare_digest(supplied, expected)
+
+        def _fabric_authorized(self, hw: int | None = None) -> bool:
+            if service.point_fabric is None:
+                return False
+            if self._authorized(service.worker_token):
+                return True
+            if service.fabric_token and self._authorized(service.fabric_token):
+                return True
+            # The paired HERMES endpoint may use the existing portal
+            # delegation bearer for its own HW2 in/out traffic.
+            if (
+                hw == 2
+                and service.hermes_leases is not None
+                and service.hermes_delegate_token
+                and self._authorized(service.hermes_delegate_token)
+            ):
+                return True
+            return False
+
+        def _fabric_error(self, exc: FabricError) -> None:
+            if isinstance(exc, FabricCapacityError):
+                self._json(429, {"error": str(exc)[:200]})
+            elif isinstance(exc, FabricRoutingError):
+                self._json(409, {"error": str(exc)[:200]})
+            else:
+                self._json(400, {"error": str(exc)[:200]})
+
+        def _fabric_point_path(self) -> tuple[int, str] | None:
+            path = urlsplit(self.path).path
+            match = re.fullmatch(r"/v1/fabric/points/(\d{1,3})(?:/(monitor|drain|register|heartbeat))?", path)
+            if match is None:
+                return None
+            return int(match.group(1)), match.group(2) or "monitor"
 
         def _n16t_body(self) -> bytes:
             if self.headers.get("Transfer-Encoding"):
@@ -255,6 +327,17 @@ def make_handler(service: RiddleService):
 
         def do_GET(self):
             if self.path == "/healthz":
+                fabric_summary = None
+                if service.point_fabric is not None:
+                    fabric_monitor = service.point_fabric.monitor()
+                    fabric_summary = {
+                        "enabled": True,
+                        "schema": fabric_monitor["fabric"],
+                        "registered": fabric_monitor["registered"],
+                        "active": fabric_monitor["active"],
+                        "queued": fabric_monitor["queued"],
+                        "pending": fabric_monitor["pending"],
+                    }
                 self._json(200, {
                     "service": "Runner Riddle BS0:0",
                     "address": ROOT_ADDRESS,
@@ -269,6 +352,7 @@ def make_handler(service: RiddleService):
                     "hermes_native_guest_configured": service.hermes_native is not None,
                     "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.hermes_n16t_pool is not None),
                     "hermes_n16t_separate_guest_pool": service.hermes_n16t_pool is not None,
+                    "point_fabric": fabric_summary,
                 })
                 return
             if self.path == "/v1/riddle/feedback":
@@ -317,9 +401,96 @@ def make_handler(service: RiddleService):
                     return
                 self._json(200, {"queue": service.inbox.stats()})
                 return
+            if urlsplit(self.path).path == "/v1/fabric/points":
+                if service.point_fabric is None:
+                    self._json(503, {"error": "zero-point fabric is disabled"})
+                    return
+                if not self._fabric_authorized():
+                    self._json(401, {"error": "fabric authorization required"})
+                    return
+                self._json(200, service.point_fabric.monitor())
+                return
+            point_path = self._fabric_point_path()
+            if point_path is not None and point_path[1] == "monitor":
+                if service.point_fabric is None:
+                    self._json(503, {"error": "zero-point fabric is disabled"})
+                    return
+                hw, _ = point_path
+                if not self._fabric_authorized(hw):
+                    self._json(401, {"error": "fabric authorization required"})
+                    return
+                try:
+                    self._json(200, service.point_fabric.point_monitor(hw))
+                except FabricRoutingError as exc:
+                    self._json(404, {"error": str(exc)[:200]})
+                return
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            path = urlsplit(self.path).path
+            if path in ("/v1/fabric/intake", "/v1/fabric/route"):
+                if service.point_fabric is None:
+                    self._json(503, {"error": "zero-point fabric is disabled"})
+                    return
+                if not self._fabric_authorized():
+                    self._json(401, {"error": "fabric authorization required"})
+                    return
+                try:
+                    body = self._body()
+                    if "frame_hex" in body:
+                        raw = body["frame_hex"]
+                        if not isinstance(raw, str) or len(raw) > 512 or len(raw) % 2:
+                            raise FabricFrameError("frame_hex must be bounded even-length hexadecimal")
+                        frame = PointFrame.decode(bytes.fromhex(raw))
+                    elif "frame" in body:
+                        frame = frame_from_json(body["frame"])
+                    else:
+                        frame = frame_from_json(body)
+                    receipt = service.point_fabric.intake(frame)
+                    self._json(200, receipt)
+                except FabricError as exc:
+                    self._fabric_error(exc)
+                except (ValueError, TypeError) as exc:
+                    self._json(400, {"error": str(exc)[:200]})
+                return
+            point_path = self._fabric_point_path()
+            if point_path is not None:
+                if service.point_fabric is None:
+                    self._json(503, {"error": "zero-point fabric is disabled"})
+                    return
+                hw, action = point_path
+                if not self._fabric_authorized(hw):
+                    self._json(401, {"error": "fabric authorization required"})
+                    return
+                try:
+                    body = self._optional_body()
+                    if action == "drain":
+                        frames = service.point_fabric.drain(hw, body.get("limit", 64))
+                        self._json(200, {
+                            "schema": "nanrouter.zero-point-drain.v1",
+                            "endpoint": f"HW{hw}:0",
+                            "count": len(frames),
+                            "frames": frames_to_json(frames),
+                        })
+                    elif action == "register":
+                        result = service.point_fabric.register(
+                            hw,
+                            role=body.get("role"),
+                            status=body.get("status", "active"),
+                        )
+                        self._json(200, result)
+                    elif action == "heartbeat":
+                        result = service.point_fabric.heartbeat(
+                            hw, status=body.get("status", "active")
+                        )
+                        self._json(200, result)
+                    else:
+                        self._json(405, {"error": "monitor is read-only; use GET"})
+                except FabricError as exc:
+                    self._fabric_error(exc)
+                except (ValueError, TypeError) as exc:
+                    self._json(400, {"error": str(exc)[:200]})
+                return
             if self.path == "/n16t":
                 self._n16t()
                 return

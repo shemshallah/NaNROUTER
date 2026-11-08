@@ -100,7 +100,7 @@ class RecordingExecutor:
 
 class PointZeroIdentityTests(unittest.TestCase):
     def test_point_zero_constants_are_stable_and_parseable(self):
-        self.assertEqual(POINT_ZERO_ADDRESS, "nan://GM0:SC0:MC0:BS0:0:HW0:0")
+        self.assertEqual(POINT_ZERO_ADDRESS, "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0")
         self.assertEqual(POINT_ZERO_WIRE, "BSR0")
         self.assertEqual(POINT_ZERO_LABEL, "point-0")
         self.assertEqual(parse_address(POINT_ZERO_ADDRESS).root, POINT_ZERO_ADDRESS)

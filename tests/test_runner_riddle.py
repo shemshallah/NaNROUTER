@@ -8,12 +8,12 @@ from runner_riddle import (
 
 
 KEY = b"runner-riddle-test-key-32-bytes!!"
-ROOT = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+ROOT = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
 
 
 class AddressTests(unittest.TestCase):
     def test_bootstrap_runner_ring_and_object_selectors(self):
-        parsed = parse_address(ROOT + "::HW0:1,2,3::vector1337::hyperedge1337")
+        parsed = parse_address(ROOT + "::HW0:1-3:vector#1337::hyperedge#1337")
         self.assertEqual(parsed.root, ROOT)
         self.assertEqual(parsed.selectors[0].heads, (1, 2, 3))
         self.assertEqual(parsed.selectors[1].kind, "vector")
@@ -30,7 +30,7 @@ class AddressTests(unittest.TestCase):
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::HW256:1")
         with self.assertRaises(AddressError):
-            parse_address("nan://GM0:SC0:MC0:BS0:0:HW0:256")
+            parse_address("nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:256")
         with self.assertRaises(AddressError):
             parse_address(ROOT + "::memory1337")
         with self.assertRaises(AddressError):

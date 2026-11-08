@@ -50,9 +50,9 @@ Unknown or not-yet-imported ranges are **deny by default**. The machine-readable
 
 ## Network addressing and committed route cache
 
-- Koyeb is the persistent gateway at `nan://GM0:SC0:MC0:BS0:0:HW0:0` / point 0 (`BS0:0`, wire `BSR0`). Point 0 is the stable runner-ring ingress; it translates NaN16 to binary and back and routes to the currently active runner slot.
+- Koyeb is the persistent gateway at `nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0` / point 0 (`BS0:0`, wire `BSR0`). Point 0 is the stable runner-ring ingress; it translates NaN16 to binary and back and routes to the currently active runner slot. The Koyeb service now builds from this repository via `deploy/portal/Dockerfile`; see `docs/KOYEB_CUTOVER_EVIDENCE.md`.
 - `MC0:0` is the six-unit runner-controlled macrocluster; the six BSR wire identities remain BSR0–BSR5.
-- The `::` selector boundary addresses individual heads and typed objects such as `vector1337` and `hyperedge1337`.
+- The apex layers are `GM0:0::SC0:0::MC0:0::BS0:0::HW0:0`. A following `::HW0:1-255` selects runner-ring heads; leaves use `:vector#1337` and `:subrelation(...)`.
 - Every resolved path is compiled into a signed micro-routing packet and committed into a generation-chained master network cache.
 - The master cache is the authoritative set of committed routes; candidate learning never edits it directly.
 
@@ -126,6 +126,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/LIVE_PREFLIGHT.md` — offline live-deployment and signed-volume-registry gate.
 - `docs/LM_ABLATION_HARNESS.md` — frozen-base adapter ablation harness contract.
 - `docs/POINT0_HTTP.md` — authenticated point-0 HTTP ingress and JAHS seal.
+- `docs/POINT_FABRIC.md` — zero-point translation fabric, NaN16DE intake/monitor and NaN routing.
 - `docs/MTH_JAHS_GATE_ABI.md` — native "Just A Handoff Seal" gate.
 - `docs/MTH_MEMORY_1MIB.md` — 1 MiB guest-budget migration.
 - `docs/R7_EXPERIMENT_RUNNER.md` — held-out association protocol and evidence gate.
@@ -143,6 +144,8 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/live_preflight.py` — offline Koyeb/NANNET0 and signed-volume-registry gate.
 - `runner_riddle/lm_ablation.py` — frozen-base LM adapter ablation harness (no fabricated model result).
 - `runner_riddle/point0_http.py` — authenticated bounded point-0 HTTP ingress carrying the JAHS seal.
+- `runner_riddle/point_fabric.py` — per-zero-point NaN16DE translation modules and central NaN router.
+- `runner_riddle/address.py` — apex-layered v2 address parser with legacy normalization.
 - `runner_riddle/r7_experiment.py` — held-out avoided-crossing/association protocol harness with explicit gates.
 - `runner_riddle/mth_system.py` — one runtime facade over registry, store, service, and ring scheduler.
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.

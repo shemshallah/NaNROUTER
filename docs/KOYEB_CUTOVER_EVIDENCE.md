@@ -1,0 +1,107 @@
+# Koyeb cutover evidence — NaNLMind portal → NaNROUTER
+
+Date: 2026-11-08 (UTC)
+Operator action: live service source switched in place; volumes and secrets
+retained.
+
+## Final live binding
+
+| Field | Value |
+|---|---|
+| Koyeb app | `nannet` — `899d7db4-3273-4a8c-bc0c-eadb21833983` |
+| Koyeb service | `nannet-portal` — `00962492-a5ed-4788-bdc7-8d10257bfe1a` |
+| Region | `was` |
+| Public host | `https://nannet.apps.mistral.run` |
+| Source repository | `github.com/shemshallah/NaNROUTER` |
+| Branch | `main` |
+| Dockerfile | `deploy/portal/Dockerfile` |
+| Active deployment | `9a12a2f0-51ad-4ce5-a4d7-6e7f222c8021` |
+| Service version | `891` |
+| Source commit built | `b2ef68c499ecc13d7964a6837a03922ff3f6028a` |
+| Status | `HEALTHY` |
+| Auto-release group | `github.com/shemshallah/NaNROUTER` `refs/heads/main` |
+
+The deployment definition after cutover:
+
+```json
+{
+  "git": {
+    "repository": "github.com/shemshallah/NaNROUTER",
+    "branch": "main",
+    "no_deploy_on_push": true,
+    "docker": {"dockerfile": "deploy/portal/Dockerfile"}
+  }
+}
+```
+
+`no_deploy_on_push` is intentional: a source change must be deployed through a
+reviewed rollout, never silently from a push.
+
+## Preserved production state
+
+The cutover changed the **same Koyeb service**, not a second service. This
+keeps one writer on the production `/data` volume and one issuer authority.
+
+| Resource | ID | Role |
+|---|---|---|
+| `/data` volume | `cc744aa3-a7b0-4c49-bdc8-1aa48fb5187f` | authority DB, training merge, rawroute, registry |
+| `bs0db` volume | `169156ec-cf76-418d-a143-df904d5c7361` | BS0 tier |
+| `mc0db` volume | `179ddf99-79d8-4780-a21b-11f98bf495b2` | MC0 tier |
+| `sc0db` volume | `d8cd42fe-2c54-4f71-91d7-56ab84e3b684` | exists; SC0 root currently resolves under `/data` |
+| `gm0db` volume | `14bc8408-1ab1-4a55-81af-dbffba18116c` | exists; GM0 root currently resolves under `/data` |
+
+The `sc0db` and `gm0db` provider volumes are detached; their configured
+mount roots (`/data/0x7FF14E13…`, `/data/0x7FF14E14…`) are directories on the
+`/data` volume. This is reported honestly rather than promoted to green.
+
+Koyeb secrets were not copied to Git and were not re-created. The portal reads
+the same `NANNET_AUTHORITY_MASTER_KEY`, `NANLM_MERGE_TOKEN`, CLOCKED secrets,
+and router HMAC/token secrets as before.
+
+## Post-cutover verification
+
+```text
+GET https://nannet.apps.mistral.run/healthz  → 200
+  nannet_authority = ready
+  bsr_registered = 6
+  nannet_bridge queued = 2
+  rawroute namespaces = BS0, MC0, SC0, GM0
+GET https://nannet.apps.mistral.run/v1/issuer → 200
+  issuer_public_key = PrcSMYmuUIrXzqlpqdtnYPptSB2Yv6PuwF0WqWgICwA
+GET https://nannet.apps.mistral.run/portal → 200
+GET https://nannet.apps.mistral.run/v1/head-cortex/healthz → 200
+GET https://nannet.apps.mistral.run/v1/rawroute/health → 401 (auth required)
+```
+
+The issuer public key is continuous with the pre-cutover authority database.
+No second issuer was minted.
+
+## Rollback
+
+The previous NaNLMind-sourced deployment remains available:
+
+| Field | Value |
+|---|---|
+| Rollback deployment | `f51a7c59-cc45-4117-93c6-f23ec27f5104` |
+| Previous source | `github.com/shemshallah/NaNLMind` |
+| Previous Dockerfile | `deploy/training_merge/Dockerfile` |
+
+Rollback is a Koyeb deployment-image rollback (or a git-source PATCH back to
+the previous definition). It must not replay stale leases or run two writers.
+The persistent `/data` schema is forward-compatible; do not delete it.
+
+## Repository retirement
+
+NaNLMind PR #34 removed the old `deploy/training_merge/koyeb.yaml` source
+manifest and documented the ownership transfer. It did **not** touch the live
+Koyeb service. The live service is controlled by the binding above.
+
+## Remaining operational gates
+
+- Keep `NANNET_HERMES_ROUTER_URL` and `NANNET_HERMES_DELEGATION_TOKEN` unset
+  until a verified private NaNROUTER HTTPS origin exists. The portal then
+  delegates only scoped, signed `hermes:lease` requests.
+- Keep one writable `/data` writer. Do not attach a staging service to the
+  production volume.
+- Verify DNS/TLS and the pinned issuer key before any hostname change.
+- Record a new deployment ID here for every subsequent production rollout.
