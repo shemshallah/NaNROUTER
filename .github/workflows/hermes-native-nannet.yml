@@ -1,0 +1,46 @@
+name: HERMES NaN16DE NANNET lease and route gate
+
+on:
+  push:
+    paths:
+      - "mth/nan16/hermes_*.nas"
+      - "mth/tests/hermes_*_test.nas"
+      - ".github/workflows/hermes-native-nannet.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/hermes_*.nas"
+      - "mth/tests/hermes_*_test.nas"
+      - ".github/workflows/hermes-native-nannet.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native-hermes-router:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+      - name: Checkout canonical NaN0S toolchain (source-locked)
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: bb4598f9d816b125b2e1f6e702f2718466f9d1c5
+          path: nan0s
+      - name: Build NaN16 VM runtime
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble and execute HERMES per-lease identity isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/hermes_lease_router_test.nas > /tmp/hermes-lease.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/hermes-lease.nan --steps 1000000 --serial | tee /tmp/hermes-lease.out
+          grep -q '^HERMES LEASE PASS' /tmp/hermes-lease.out
+      - name: Assemble and execute HERMES NANNET authenticated point consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/hermes_nannet_route_test.nas > /tmp/hermes-route.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/hermes-route.nan --steps 1000000 --serial | tee /tmp/hermes-route.out
+          grep -q '^HERMES NANNET ROUTE PASS' /tmp/hermes-route.out
