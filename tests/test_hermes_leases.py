@@ -120,6 +120,9 @@ class HttpTests(unittest.TestCase):
             "RIDDLE_FEEDBACK_HMAC_KEY": "f" * 40,
             "RIDDLE_HERMES_DELEGATION_TOKEN": TOKEN,
             "RIDDLE_HERMES_RECEIPT_HMAC_KEY": KEY,
+            # Explicit isolated test-only compatibility path; never enabled by
+            # the native Koyeb runtime or a real paired HERMES installation.
+            "RIDDLE_HERMES_UNPAIRED_TEST_ONLY": "1",
         })
         self.env.start()
         self.addCleanup(self.env.stop)
