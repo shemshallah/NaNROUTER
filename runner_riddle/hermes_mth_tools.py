@@ -155,8 +155,11 @@ class HermesMthTools:
         for key in ("input_specs", "output_specs"):
             if key in args:
                 step[key] = args[key]
-        return self.compose({"plan_id": args.get("plan_id", "hermes.mth"),
-                             "steps": [step], "fuel": args.get("fuel", 1_000_000)})
+        plan_spec = {"plan_id": args.get("plan_id", "hermes.mth"),
+                     "steps": [step]}
+        if "fuel" in args:
+            plan_spec["fuel"] = args["fuel"]
+        return self.compose(plan_spec)
 
     def compose(self, plan_spec: Any) -> dict[str, Any]:
         if not isinstance(plan_spec, Mapping):
