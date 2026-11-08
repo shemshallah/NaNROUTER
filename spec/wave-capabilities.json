@@ -1237,6 +1237,34 @@
       ],
       "status": "native_verified",
       "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.argmax256.f32",
+      "source": "mth/nan16/mth_vector_argmax256_f32.nas",
+      "fixture": "mth/tests/mth_vector_argmax256_f32_test.nas",
+      "marker": "MTH VECTOR ARGMAX256 F32 PASS",
+      "steps": 62218,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.argmin256.f32",
+      "source": "mth/nan16/mth_vector_argmin256_f32.nas",
+      "fixture": "mth/tests/mth_vector_argmin256_f32_test.nas",
+      "marker": "MTH VECTOR ARGMIN256 F32 PASS",
+      "steps": 61708,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
