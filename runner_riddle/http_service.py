@@ -18,6 +18,7 @@ from .cache import MasterRouteCache, RouteError
 from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
 from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
+from .hierarchy_registry import HierarchyRegistry, HierarchyError
 from .hermes_native import HermesNativeLeaseRuntime, HermesNativeError
 from .hermes_dispatch import HermesDispatchJournal, HermesDispatchError, HermesDispatchConflict
 from .n16t_guest import (
@@ -62,6 +63,12 @@ class RiddleService:
             if len(self.hermes_delegate_token) < 32 or len(hermes_signing_key) < 32:
                 raise ServiceConfigError("both HERMES portal delegation token and receipt key must be 32+ bytes")
             self.hermes_leases = HermesLeaseRegistry(data_dir / "hermes-universe-leases.sqlite", hermes_signing_key)
+        # Hardware keypair bindings and dormant hierarchy routes belong to
+        # the router, with separate database-only SC0/GM0 tables. No external
+        # SC0/GM0 service, replica or runner is created.
+        self.hierarchy = HierarchyRegistry(
+            data_dir / "hardware-hierarchy.sqlite",
+            data_dir / "sc0db.sqlite3", data_dir / "gm0db.sqlite3")
         self.hermes_lock = threading.RLock()
         self.hermes_native = None
         self.hermes_dispatches = (HermesDispatchJournal(data_dir / "hermes-dispatch.sqlite")
@@ -262,10 +269,15 @@ def make_handler(service: RiddleService):
                     "runner_ring": self._ring_health(service),
                     "live_route_commit": False,
                     "hermes_delegated_lease_authority": service.hermes_leases is not None,
+                    "hierarchy": service.hierarchy.summary(),
                     "hermes_native_guest_configured": service.hermes_native is not None,
                     "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.hermes_n16t_pool is not None),
                     "hermes_n16t_separate_guest_pool": service.hermes_n16t_pool is not None,
                 })
+                return
+            if self.path == "/v1/hierarchy":
+                self._json(200, {"hierarchy": service.hierarchy.summary(),
+                                 "root": "nan://GM0:SC0:MC0:BS0:0"})
                 return
             if self.path == "/v1/riddle/feedback":
                 if not self._authorized(service.worker_token):
@@ -319,6 +331,29 @@ def make_handler(service: RiddleService):
             if self.path == "/n16t":
                 self._n16t()
                 return
+            if self.path in ("/v1/hierarchy/resolve", "/v1/hierarchy/future"):
+                # Future-route creation requires an *independent* privileged
+                # key; the guest delegation bearer can only resolve metadata.
+                if self.path == "/v1/hierarchy/future":
+                    key = os.environ.get("RIDDLE_HIERARCHY_ADMIN_TOKEN", "")
+                else:
+                    key = service.hermes_delegate_token
+                if len(key) < 32:
+                    self._json(503, {"error": "hierarchy authority not configured"})
+                    return
+                if not self._authorized(key):
+                    self._json(401, {"error": "hierarchy authority required"})
+                    return
+                try:
+                    body = self._body()
+                    if self.path == "/v1/hierarchy/future":
+                        self._json(200, {"reservation": service.hierarchy.reserve_future_bootstrap(
+                            body["bs"], body.get("mc", 0))})
+                    else:
+                        self._json(200, {"route": service.hierarchy.resolve(body["address"])})
+                except (KeyError, TypeError, ValueError) as exc:
+                    self._json(400, {"error": str(exc)[:200]})
+                return
             if self.path.startswith("/v1/hermes/leases/"):
                 # This is a portal-to-router route, NOT a public guest API.
                 # The portal must first validate its NANNET installation/HW
@@ -338,17 +373,38 @@ def make_handler(service: RiddleService):
                     with service.hermes_lock:
                         identity = body["installation_id"]
                         if action == "open":
+                            if "installation_public_key" in body:
+                                # The NANNET portal obtained this public key
+                                # from its paired installation table after
+                                # verifying the caller's Ed25519 signature.
+                                # The router binds the same key immutably to
+                                # one HW, not a caller-supplied node_point.
+                                binding = service.hierarchy.bind_hermes(
+                                    identity, body["installation_public_key"])
+                                if service.hermes_native is not None:
+                                    service.hermes_native.admit_hardware(
+                                        identity, binding["hw"], binding["node_point"])
+                                node_point = binding["node_point"]
+                            elif (os.environ.get("RIDDLE_HERMES_UNPAIRED_TEST_ONLY") == "1"
+                                  and service.hermes_native is None):
+                                # Legacy direct-router *test fixture* only.
+                                # Never permit this path for a native VM.
+                                node_point = body["node_point"]
+                                binding = {"node_point": node_point,
+                                           "native_hardware_admitted": False}
+                            else:
+                                raise HierarchyError(
+                                    "paired Ed25519 installation public key required")
                             receipt = service.hermes_leases.open(
-                                installation_id=identity,
-                                node_point=body["node_point"], request_id=body["request_id"],
+                                installation_id=identity, node_point=node_point,
+                                request_id=body["request_id"],
                                 ttl_seconds=body.get("ttl_seconds", 900))
                             if service.hermes_native is not None:
-                                # Ensure the guest actually accepts an initial
-                                # head before publishing an activated receipt.
                                 service.hermes_native.admit(
                                     service.hermes_leases, installation_id=identity,
                                     receipt=receipt, head_index=0)
-                            self._json(200, {"receipt": receipt})
+                            self._json(200, {"receipt": receipt,
+                                             "hardware": binding})
                         elif action == "renew":
                             receipt = service.hermes_leases.renew(
                                 installation_id=identity, receipt=body["receipt"],
