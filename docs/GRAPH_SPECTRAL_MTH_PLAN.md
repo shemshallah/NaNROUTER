@@ -37,7 +37,7 @@ For U indexed by ordered Head pairs:
 
 ### 2.4 Potential and wave
 
-The first geometry experiment follows `docs/game_plan_foundations.md`: a versioned annular embedding with explicit radial shells and angular positions, excluding r<r_min as the central void. A graph has no intrinsic radius; graph-distance or topology-shell radii remain alternate, separately versioned experiments. V_i=α/(r_i+ε)² with ε>0. The wave operator is H=c²L+V and the equation is ü+Hu=f. The sign convention, fixed-point scales and source bounds must be frozen before implementation.
+The first geometry experiment follows `docs/game_plan_foundations.md`: a versioned annular embedding with explicit radial shells and angular positions, excluding r<r_min as the central void. A graph has no intrinsic radius; graph-distance or topology-shell radii remain alternate, separately versioned experiments. V_i=α/(r_i²+ε²) with ε>0. This is the canonical formula implemented by `mth_graph_void.nas`; it is not the `(r+ε)²` variant. The wave operator is H=c²L+V and the equation is ü+Hu=f. The sign convention, fixed-point scales and source bounds must be frozen before implementation.
 
 ## 3. Native MTH module inventory
 

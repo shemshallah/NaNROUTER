@@ -47,8 +47,11 @@ Candidate embeddings:
 - **Learned embedding:** defer until fixed geometries have been tested.
 
 For the first prototype, assign each state polar coordinates `(r_i, theta_i)` with `r_min <= r_i <= r_max`. The void is the excluded region `r < r_min`. A computational radial penalty may be:
-`V_ii = alpha / (r_i + epsilon)^2`,
-with alpha >= 0 and epsilon > 0. This is a design analogue, not a claim that a physical singularity has been recreated.
+`V_ii = alpha / (r_i^2 + epsilon^2)`,
+with alpha >= 0 and epsilon > 0. This is the canonical formula implemented by
+`mth_graph_void.nas`; the earlier `(r_i + epsilon)^2` prose was a plan-side
+error. This is a design analogue, not a claim that a physical singularity has
+been recreated.
 
 ## 4. Graph Laplacian and wave dynamics
 

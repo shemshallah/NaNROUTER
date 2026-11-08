@@ -35,7 +35,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `A-03` Enumerate A01–A20 formally in the plan/TODO (currently proposed from phase exits; tests exist for A01–A16/A20, A17–A19 remain partial).
 - [ ] `A-04` Enumerate T01–T20 oracle expectations in one table and mark each test ID done/partial/missing.
 - [ ] `A-05` Resolve T12 vocabulary: unknown function currently yields `UNSUPPORTED` before NMP maps it to `REJECTED`; freeze whether the preflight verdict is `UNSUPPORTED` and gate failure is `REJECTED`.
-- [ ] `A-06` Freeze the void/potential formula: plan says `α/(r+ε)²`; kernel implements `α/(r²+ε²)`.
+- [x] `A-06` Freeze the void/potential formula: canonical `α/(r²+ε²)` implemented by `mth_graph_void.nas`; plan prose corrected.
 - [ ] `A-07` Decide/defer the MOA 65,536-cell bit layout and XFSC365 function-reference resolver.
 - [ ] `A-08` Unify evidence ladders or explicitly map MTH §10 8 levels, wave_adapter 7, wave_store 5, and math V0–V3.
 
@@ -174,7 +174,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
 - [ ] `B-26` General sparse-CSR pair action and full-grid 256-tile native execution.
-- [ ] `B-27` Add typed shape/precision/layout handoff checks in plan validator.
+- [x] `B-27` Add typed shape/precision/layout/domain/alias handoff checks and optional fuel/cancel bounds in `MthPlan`; legacy v1 plans remain serializable.
 
 ## B3. Tier 4–5 stable numerics/ML
 
@@ -205,7 +205,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `C-01` Directed relation matrix `W`, symmetric/antisymmetric split.
 - [ ] `C-02` K256 spectrum/multiplicity/eigenpair oracles and random PSD tests.
 - [ ] `C-03` Annular embedding: `(r,θ)`, shells, `r_min/r_max`, boundary-band metric.
-- [ ] `C-04` Freeze void formula and add alpha/shell sweep.
+- [x] `C-04` Freeze void formula and add alpha/shell sweep. **PARTIAL:** canonical `α/(r²+ε²)` is frozen in the plan; alpha/shell sweep remains open.
 - [ ] `C-05` Dense/symmetric 256 eigensolver with residual/orthogonality certificates.
 - [ ] `C-06` Modal reconstruction and long-run/multi-dt/scale stability tests.
 - [ ] `C-07` Centrosymmetry folded eigensolve and 128+128 basis.
@@ -246,7 +246,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `E-01` Page-record table with owner/pin/digest/version/generation/atomic publication.
 - [ ] `E-02` Executor paging + native dispatch + evidence capture.
 - [ ] `E-03` Result/evidence contract beyond digest.
-- [ ] `E-04` Plan validator shape/precision/layout/alias/domain/fuel/cancel checks.
+- [x] `E-04` Plan validator shape/precision/layout/alias/domain/fuel/cancel checks (executor enforcement of fuel/cancel remains open).
 - [ ] `E-05` NANNET0 point-0 envelope fields (`point_zero`, `nan_word_count`, `result_status`) and expected-output verification.
 - [ ] `E-06` Page-map digest and page-map digest in descriptor.
 - [ ] `E-07` NANNET0 MC0DB persistence and signature exchange.
