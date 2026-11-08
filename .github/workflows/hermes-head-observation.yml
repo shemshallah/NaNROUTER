@@ -1,0 +1,32 @@
+name: hermes-authenticated-native-head-staging
+on:
+  push:
+    paths:
+      - 'runner_riddle/hermes_head_observation.py'
+      - 'tests/test_hermes_head_observation.py'
+      - '.github/workflows/hermes-head-observation.yml'
+  pull_request:
+    paths:
+      - 'runner_riddle/hermes_head_observation.py'
+      - 'tests/test_hermes_head_observation.py'
+      - '.github/workflows/hermes-head-observation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lease-and-crash-journal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Authenticated head journal negative and restart regression
+        run: python -m unittest discover -s tests -p 'test_hermes_head_observation.py' -v
+      - name: Existing N16T dispatch and lease regression
+        run: python -m unittest discover -s tests -p 'test_hermes_dispatch_recovery.py' -v
