@@ -118,14 +118,14 @@ nhr_down:
   MOVI r4,4
   CMP r1,r4
   JMP[GE] @nhr_down_db
-  SUBI r1,r1,1
+  SUB r1,r1,r13
   MOVI r4,1
   CMP r3,r4
   JMP[EQ] @nhr_down_active
   MOVI r3,3
   RET
 nhr_down_db:
-  SUBI r1,r1,1
+  SUB r1,r1,r13
   MOVI r3,3
   RET
 nhr_down_active:
