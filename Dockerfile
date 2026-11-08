@@ -46,17 +46,50 @@ RUN set -eu; \
     sha256sum /out/libnan16.so | cut -d' ' -f1 > /out/libnan16.sha256; \
     sha256sum /out/hermes.nan | cut -d' ' -f1 > /out/hermes.sha256
 
-FROM python:3.11-slim
+# The NaNLMind *software* remains its own repository, but Koyeb builds,
+# exposes and deploys it only from NaNROUTER. Exact source pin; no ephemeral
+# HEAD/branch build. The paired issuer database stays on the existing volume.
+FROM debian:bookworm-slim AS nanlmind-portal-builder
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git build-essential ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+ARG NANLMIND_COMMIT=37f025818ef615edc2383040d861ddea9411880f
+RUN mkdir -p /src /out \
+    && git -C /src init \
+    && git -C /src remote add origin https://github.com/shemshallah/NaNLMind.git \
+    && git -C /src fetch --depth 1 origin "$NANLMIND_COMMIT" \
+    && git -C /src checkout --detach FETCH_HEAD \
+    && test "$(git -C /src rev-parse HEAD)" = "$NANLMIND_COMMIT"
+RUN make -C /src -j2 \
+    && /src/build/nanlm-universal logic-train 8 16 /out/hermes-universe.nmg
+
+FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     RIDDLE_DATA_DIR=/data \
     PORT=8080
 WORKDIR /app
+RUN pip install --no-cache-dir 'cryptography>=42,<47' 'clocked-sdk==0.7.0'
 COPY runner_riddle /app/runner_riddle
 COPY deploy/start_router.sh /app/start_router.sh
+# The private NANNET portal and CLOCKED/head-cortex workers are bundled into
+# the router image; they do not have their own public Koyeb service.
+COPY --from=nanlmind-portal-builder /src/nanlmind_nannet /app/nanlmind_nannet
+COPY --from=nanlmind-portal-builder /src/runner/training_merge.py /app/portal/training_merge.py
+COPY --from=nanlmind-portal-builder /src/runner/hermes_router_delegate.py /app/runner/hermes_router_delegate.py
+COPY --from=nanlmind-portal-builder /src/runner/head_cortex_service.py /app/portal/head_cortex_service.py
+COPY --from=nanlmind-portal-builder /src/runner/nannet_router /app/nannet_router
+COPY --from=nanlmind-portal-builder /src/runner/nannet_clocked /app/nannet_clocked
+COPY --from=nanlmind-portal-builder /src/build/nanlm-universal /app/portal/nanlm-universal
+COPY --from=nanlmind-portal-builder /out/hermes-universe.nmg /app/portal/state/hermes-universe.nmg
+ENV NANLM_NATIVE_BINARY=/app/portal/nanlm-universal \
+    NANLM_HEAD_STATE=/app/portal/state/hermes-universe.nmg \
+    NANLM_HEAD_CORTEX_HOST=127.0.0.1 \
+    NANLM_HEAD_CORTEX_PORT=18083 \
+    NANLM_HEAD_CANDIDATE_DIR=/data/head-candidates
 COPY --from=nan16-builder /out/ /app/native/
 RUN useradd --system --uid 10001 --create-home riddle \
-    && chmod 0755 /app/start_router.sh \
+    && chmod 0755 /app/start_router.sh /app/portal/nanlm-universal \
     && chmod -R 0555 /app/native \
     && mkdir -p /data /bs0db /mc0db /sc0db /gm0db \
     && chown -R riddle:riddle /app/runner_riddle /data /bs0db /mc0db /sc0db /gm0db
