@@ -52,11 +52,20 @@ class HermesMthToolsTests(unittest.TestCase):
                     with self.assertRaises(HermesMthToolError):
                         self.tools.invoke("mth.prepare", args)
 
-    def test_all_catalogue_kernels_ci_verified_after_native_gate(self):
-        self.assertEqual(len(self.tools.registry.kernels), 91)
-        self.assertTrue(all(
-            kernel.ci_verified and kernel.status == "native_verified"
-            for kernel in self.tools.registry.kernels))
+    def test_catalogue_ci_claims_match_local_promotion_state(self):
+        kernels = self.tools.registry.kernels
+        self.assertEqual(len(kernels), 94)
+        self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
+        self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 91)
+        local_only = {
+            "mth.vector.normalize256.f32",
+            "mth.vector.prefix_sum256.u32",
+            "mth.prng.xorshift64.u64",
+        }
+        self.assertEqual(
+            {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},
+            local_only,
+        )
 
     def test_all_families_accounted_for(self):
         result = self.tools.invoke("mth.categories")

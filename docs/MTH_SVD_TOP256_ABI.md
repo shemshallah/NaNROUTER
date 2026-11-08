@@ -4,8 +4,8 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 `nan_cli` as a `nan-text` image (67,597 NaN16 words; 11,002,235 guest
 steps). The image is larger than the historical 65,536-word / 512 KiB
 declared guest budget, so it is a 1 MiB-target fixture: scheduling it
-under the old declared budget requires the GLT limit increase (CI execution passed in run 42395520794)
-(131,072 NaN16 words). The local text loader accepted the full image;
+under the old declared budget requires the guest-budget increase (CI execution passed in run 42395520794)
+to 131,072 NaN16 words. The local text loader accepted the full image;
 see §6.
 
 ## 1. Scope
@@ -166,10 +166,11 @@ edited here.
 The local `nan_cli` accepts this image through its `nan-text` loader,
 which uses the 4M-word VM and is not capped at the historical 65,536
 words. This local run verifies the source and fixture under the current
-local VM; it does not by itself verify the GLT page-limit increase. The
-declared MthSystem guest budget is still 512 KiB until GLT raises it, so
-this fixture must not be scheduled under a 512 KiB plan; it is a 1 MiB
-target fixture; canonical CI run 42395520794 executed it. GLT/page-limit promotion is pending. No additional CI workflow entry was
+local VM; no page-size limit exists. The declared MthSystem guest budget is
+still 512 KiB until the guest-budget profile raises it, so this fixture must not
+be scheduled under a 512 KiB plan; it is a 1 MiB target fixture; canonical CI
+run 42395520794 executed it. Guest-budget promotion is no longer a page-limit
+gate. No additional CI workflow entry was
 added in this change because the workflow is outside the owned file set.
 
 ## 7. Limitations
@@ -186,5 +187,6 @@ added in this change because the workflow is outside the owned file set.
 - `u` and `v` are outputs of the iterative estimate, not a certificate
   of singular-vector accuracy; use a residual check at the caller if
   needed.
-- The image exceeds the old 512 KiB guest budget; canonical CI execution passed in run 42395520794 and GLT enforcement is pending the
-  1 MiB GLT limit at the scheduling/policy layer.
+- The image exceeds the old 512 KiB guest budget; canonical CI execution passed
+  in run 42395520794. No page-size limit is enforced; 1 MiB is a compatibility
+  budget at the scheduling/policy layer.

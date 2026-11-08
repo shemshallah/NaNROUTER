@@ -209,8 +209,8 @@ e39520edf853744233202f16477079da905f9d4cb136dd68f67b56b06e7d996e  mth_matrix_add
   transactional and has no rollback or partial-output status.
 - It is not a matrix multiply or a cache-blocked operation; it is one leaf
   elementwise addition primitive.
-- The 2 MiB figure is the current guest budget policy. Acceptance by this local
-  text-loader run is not proof that a GLT page-limit harness enforces 2 MiB;
-  that remains a separate deployment gate.
+- The 2 MiB figure is the current adjustable guest budget. There is no page-size
+  limit or page-size enforcement gate; the fixed 32 KiB page is only a logical
+  universe layout unit.
 - No CI run is claimed or referenced. The fixture is executed directly with
   `nan_cli` and is not registered in `tools/run_mth_fixtures.py` by this change.

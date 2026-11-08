@@ -18,19 +18,19 @@
 - [x] Storage/execution fabric documented: NaNROUTER, single-active six-slot runner ring with 7 GiB active ceiling, Koyeb BS0DB/MC0DB, 8 MiB universe, 2 GiB overbootstrap.
 - [x] 1 MiB baseline implemented (131,072 NaN16 words); old 512 KiB evidence is historical.
 - [x] 2 MiB adjustable guest-word default checked in (262,144 words / 64 pages); 1 MiB/512 KiB compatibility modes implemented.
-- [ ] Verify GLT-enforced 2 MiB page-limit loading (CI text-loader execution is green; GLT enforcement is separate).
+- [x] No page-size limit: the 2 MiB guest budget is adjustable and reports `page_limit_enforced=false`; 32 KiB is only the logical 8 MiB-universe page unit. No external page-size gate exists.
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 60/60 local native fixtures pass with `nan_cli`; K256 pair is CI-only locally due guest image size.
-- [x] 1074 Python tests pass (8 skipped).
-- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission.
+- [x] 92 runner fixture paths are registered; the new normalize/prefix-sum/PRNG set and K256 pair-space passed locally with `nan_cli`. A full 92-fixture sweep was not rerun in this pass.
+- [x] 1189 Python tests pass (16 skipped).
+- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Newer native-promotion and Koyeb smoke workflows are present; the three 2026-11-08 kernels remain local-only pending CI.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
 **Full architecture, schemas, authority rules, and the complete verification matrix:** `docs/GAME_PLAN_::.md`.
 **Ordering rule:** do not start a later phase by bypassing a failed earlier gate. The ordered tests are in `docs/GAME_PLAN_::.md` §19–20.
 
-- [x] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split. GLT 2 MiB page-limit loading remains the separate pending gate above.
+- [x] **P0 — Freeze 2 MiB + authority contract.** Merge GPT's adjustable 2 MiB `guest_words`/`guest_bytes`, point-0 frame ceiling, health pages, and registration defaults; preserve 1 MiB/512 KiB modes; freeze the authority table and `::`/address context split. No page-size limit is enforced; the budget remains adjustable.
   - [x] P0.1 Words-primary budget object: 2 MiB/262,144 words/64 pages; 1 MiB legacy; ceil pages/slack (`runner_riddle/budget.py`).
   - [x] P0.2 Re-register all six slot capabilities at 262,144 words via `--all-slots`; 1 MiB capability rejects a 196,608-word job; MiB conversion fixed to 131,072 words/MiB and all-six-slot tests added.
   - [x] P0.3 Point-0/HTTP 2 MiB frame + envelope/body limits; 131,072-word legacy frames still accepted.
@@ -205,14 +205,16 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-60/60 local fixtures passed; 61/61 total (K256 pair CI-only)
+92 runner fixture paths registered; 91 unique manifest fixtures
+K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
+(full 92-fixture sweep not rerun in this pass)
 
 python3 -m unittest discover -s tests -q
-Ran 1074 tests
-OK (skipped=1)
+Ran 1189 tests
+OK (skipped=16)
 ```
 
-CI: `42405649076` — 132/132 steps for the 61-fixture set. GLT 2 MiB page-limit enforcement remains pending. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42405649076` — 132/132 steps for the 61-fixture set. No page-size limit is enforced; the 2 MiB guest budget is adjustable. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

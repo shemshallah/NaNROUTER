@@ -14,7 +14,7 @@ class P13GateLedgerTests(unittest.TestCase):
         document = json.loads(GATES.read_text())
         self.assertEqual(document["schema"], "nanrouter.p13-gates.v1")
         gates = document["gates"]
-        self.assertEqual(len(gates), 8)
+        self.assertEqual(len(gates), 7)
         ids = {gate["id"] for gate in gates}
         self.assertEqual(
             ids,
@@ -25,10 +25,10 @@ class P13GateLedgerTests(unittest.TestCase):
                 "frozen-model-lm-ablation",
                 "r7-heldout",
                 "capacity-vs-snr",
-                "glt-2mib-enforcement",
                 "native-numeric-executor",
             },
         )
+        self.assertNotIn("glt-2mib-enforcement", ids)
         for gate in gates:
             self.assertEqual(gate["status"], "blocked", gate["id"])
             self.assertTrue(gate["reason"].strip(), gate["id"])

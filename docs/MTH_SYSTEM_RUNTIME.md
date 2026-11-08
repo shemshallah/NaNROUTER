@@ -57,7 +57,7 @@ scheduler.start(now_tick=0)
 The constructor does not start the scheduler. The caller still owns ring
 startup, heartbeat, cycle, failover, and checkpoint policy.
 
-> **Owner update (2026-11-07):** GLT is now reported at 2 MiB and adjustable. The checked-in default is now 2 MiB; the documented 1 MiB path remains a compatibility mode. See `docs/GAME_PLAN_::.md`.
+> **Owner update:** there is no page-size limit. The guest budget is 2 MiB and adjustable; the checked-in default is 2 MiB, and the documented 1 MiB path remains a compatibility profile. The 32 KiB page is only a logical universe layout unit. See `docs/GAME_PLAN_::.md`.
 
 `guest_budget_bytes` is separate from the plan bound and from the runner
 ceiling. If it is omitted, the 2 MiB target

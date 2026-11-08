@@ -522,8 +522,9 @@ class MthSystem:
             "budgets": {
                 "workspace_word_bytes": self.workspace_word_bytes,
                 "page_bytes": DEFAULT_PAGE_BYTES,
+                "page_limit_enforced": self.guest_budget.page_limit_enforced,
+                "page_size_limit_bytes": None,
                 "budget_profile": self.guest_budget.name,
-                "glt_enforced": self.guest_budget.glt_enforced,
                 "guest_budget_bytes": self.guest_budget_bytes,
                 "guest_budget_words": self.guest_budget_words,
                 "guest_budget_pages": self.guest_budget_pages,

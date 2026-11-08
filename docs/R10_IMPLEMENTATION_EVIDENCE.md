@@ -1,12 +1,12 @@
 # R10 implementation evidence ledger
 
-**Date:** 2026-11-07
-**Guest update:** owner reports GLT is now 2 MiB and adjustable; the 1 MiB evidence below is the compatibility baseline. The 2 MiB integration gate is tracked in `docs/GAME_PLAN_::.md` and `docs/IMPLEMENTATION_TODO.md`.
+**Date:** 2026-11-08
+**Guest update:** there is no page-size limit. The guest budget is 2 MiB and adjustable; the 1 MiB evidence below is the compatibility baseline. The 32 KiB page is only the logical unit of the 8 MiB universe layout. See `docs/GAME_PLAN_::.md` and `docs/IMPLEMENTATION_TODO.md`.
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The newly registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, and arg reductions); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 1074 Python tests passed (8 skipped).
-**CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, and xorshift64); 1189 Python tests passed (16 skipped). The three new 2026-11-08 kernels have `ci_verified=false`; the 91 earlier manifest kernels retain their recorded CI flags. Last canonical CI run 42405649076 predates the new registrations.
+**CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Current workflows also include the remaining-fixture promotion set and the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
 
@@ -45,7 +45,7 @@
 | 31 | 128 adapter residual | `mth/tests/mth_adapter_residual_128_test.nas` | 420,587 | PASS | yes |
 | 32 | 256 block matvec | `mth/tests/mth_matvec256_block16_test.nas` | 148,561 | PASS | yes |
 | 33 | 256 streaming certificate | `mth/tests/mth_centrosymmetry_block16_test.nas` | 337,623 | PASS | yes |
-| 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,711 | PASS (CI run 180) | yes |
+| 34 | K256 pair-space | `mth/tests/mth_k256_pair_space_v1_test.nas` | 2,300,455 | PASS (CI run 180; local recount) | yes |
 | 35 | General dense 256 pair-space tile16 | `mth/tests/mth_graph_pair_tile16_f32_test.nas` | 4,643,414 | PASS (CI run 218) | yes |
 | 36 | ENCODE 256→128 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | yes |
 | 37 | DECODE 128→256 | `mth/tests/mth_encode_decode_test.nas` | 996,358 | PASS | yes |
@@ -103,13 +103,16 @@
 | 89 | Matrix add 256 | `mth/tests/mth_matrix_add256_f32_test.nas` | 2,500,024 | PASS | local only |
 | 90 | Vector argmax 256 | `mth/tests/mth_vector_argmax256_f32_test.nas` | 62,218 | PASS | local only |
 | 91 | Vector argmin 256 | `mth/tests/mth_vector_argmin256_f32_test.nas` | 61,708 | PASS | local only |
+| 92 | Vector normalize 256 f32 | `mth/tests/mth_vector_normalize256_f32_test.nas` | 118,131 | PASS | local only |
+| 93 | Vector inclusive prefix sum 256 u32 | `mth/tests/mth_vector_prefix_sum256_u32_test.nas` | 49,559 | PASS | local only |
+| 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | local only |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1074 tests in 142.986s
-OK (skipped=1)
+Ran 1189 tests in 200.096s
+OK (skipped=16)
 ```
 
 Covered:
@@ -176,24 +179,26 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-87 local fixtures registered; newly registered local-only fixtures passed locally
+92 runner fixture paths registered; 91 unique manifest fixtures
+K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 91 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **91 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 94 kernels (91 `ci_verified`, 3 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **94 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
-- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; GLT page-limit enforcement remains open.
+- Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; no page-size limit is enforced.
 - K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.
 - R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
 - P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, capacity-vs-SNR measurement, or native numeric executor delivery has been produced.
 - The P12 demo proves control-plane integration only; it does not compute a numeric dot product. Native numeric execution remains the external executor's responsibility.
+- Normalize, inclusive prefix sum, and xorshift64 are local native evidence only (`ci_verified=false`); Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

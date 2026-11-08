@@ -1220,9 +1220,10 @@ def preflight_report(
         page_size = _as_int(raw.get("page_bytes"))
         page_bytes_ok = page_size == PAGE_BYTES
         message = (
-            "page size matches the 32 KiB NaN16 page"
+            "page_bytes matches the logical 32 KiB universe page unit "
+            "(not a guest page-size limit)"
             if page_bytes_ok
-            else f"page_bytes must be {PAGE_BYTES}"
+            else f"page_bytes must be the logical universe unit {PAGE_BYTES}"
         )
         checks.append(_check(
             "universe.page_bytes", "pass" if page_bytes_ok else "fail", message,

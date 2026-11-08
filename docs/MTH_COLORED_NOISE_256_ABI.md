@@ -1,6 +1,6 @@
 # MTH 256-element deterministic colored noise
 
-Status: locally executed; canonical CI run 42395520794 executed the fixture. GLT 1 MiB page-limit enforcement is pending.
+Status: locally executed; canonical CI run 42395520794 executed the fixture. No page-size limit is enforced; 1 MiB is a compatibility budget.
 
 ## 1. Scope
 

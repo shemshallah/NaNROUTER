@@ -1,18 +1,18 @@
 # MTH 1 MiB guest-budget migration
 
-> **Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for guest words**. This 1 MiB document is retained as the compatibility baseline and implementation history; the new target and integration order are in `docs/GAME_PLAN_::.md`. The 2 MiB default is now checked in; this file remains the 1 MiB compatibility history.
+> **Owner update:** there is no page-size limit. The guest budget is **2 MiB, adjustable for guest words**. This 1 MiB document is retained as the compatibility baseline and implementation history; the new target and integration order are in `docs/GAME_PLAN_::.md`. The 2 MiB default is now checked in; this file remains the 1 MiB compatibility history.
 
 Status: design target; canonical toolchain verification pending.
 
 ## 1. New budget
 
-The owner reports that GLT is increasing the guest page limit to **1 MiB**:
+The historical guest-budget target was raised to **1 MiB** (this is not a page-size limit):
 
 ```
 1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
 ```
 
-The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical CI run 42396090387 executed all 59 fixtures, including images above 65,536 words, through the text loader; GLT-enforced 1 MiB page-limit loading remains a separate pending gate.
+The old 512 KiB / 65,536-word ceiling is historical for this design. Canonical CI run 42396090387 executed all 59 fixtures, including images above 65,536 words, through the text loader. No page-size limit is enforced; 1 MiB is a compatibility budget.
 
 ## 2. What changes
 
@@ -61,8 +61,8 @@ Guest accounting uses 8-byte NaN16 words, not raw packed float32 bytes. The 8 Mi
 
 The runner facade now defaults to an adjustable 1 MiB guest budget, exposes
 `guest_budget_words`/`guest_budget_pages`, and still allows a caller to set a
-larger or smaller budget. The 1 MiB default is policy, not a claim that the GLT
-page-limit harness has already enforced it.
+larger or smaller budget. The 1 MiB value is an adjustable policy bound, not a
+page-size limit or a hardware measurement.
 
 ## 6. Required gates
 

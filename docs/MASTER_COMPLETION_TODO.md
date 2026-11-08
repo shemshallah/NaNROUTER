@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
-**Date:** 2026-11-07
-**Baseline:** 1074 Python tests, 8 skipped, OK; 91 manifest kernels; 87 registered local fixtures (verified locally where applicable); 64 manifest CI flags; last canonical CI covered 61 fixtures. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, and capacity-harness work.
+**Date:** 2026-11-08
+**Baseline:** 1189 Python tests, 16 skipped, OK; 94 manifest kernels (91 `ci_verified`, 3 local-only); 92 canonical runner fixture paths and 91 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -12,7 +12,8 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
 - [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
-- [x] Native 91-kernel manifest, 87 local fixtures, and 61-fixture canonical CI workflow.
+- [x] Native 94-kernel manifest (91 CI-verified, 3 local-only), 92 registered runner fixtures, and credential-free canonical native CI workflows.
+- [x] Static NaN-native boundary audit (`spec/nan-native-boundary.json`, `tools/audit_nan_native.py`) covering every registered MTH source, fixture, runner entry, CI workflow, and host numeric import boundary.
 - [x] `math_objects`, `math_store`, `math_registry`, `math_validity`, `math_linker`, NMP, execution bridge, demo.
 - [x] Typed absence algebra, relations/hypergraphs, rule lifecycle, retention/pruning.
 - [x] Cross-store commit intent/evidence/finalize recovery.
@@ -156,9 +157,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B1. Stage 0/1 native substrate
 
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
-- [ ] `B-02` **PARTIAL:** Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are in the canonical workflow and pass locally; the workflow has not executed this revision, so the new kernels remain `ci_verified=false`.
+- [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 91-entry canonical set; the three 2026-11-08 additions remain local-only pending CI.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All 73 existing `mth/nan16/*.nas` sources are registered in the 75-entry manifest; Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures pass locally. The five new registrations remain `ci_verified=false` until canonical CI runs.
+- [x] `B-04` All MTH sources are registered in the 94-entry manifest (91 `ci_verified`, 3 local-only); 92 runner fixture paths are wired to canonical native workflows. The normalize/prefix-sum/PRNG fixtures pass locally, but are not described as CI-verified until canonical CI runs.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
@@ -171,7 +172,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
 - [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/scale/abs/relu are implemented and locally verified; broadcast, distance, and normalization remain open.
-- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; masks/permutation/prefix sums remain open.
+- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; native inclusive prefix sum is also local-only. Masks, permutation, and CI promotion remain open.
 - [ ] `B-23` **PARTIAL:** native 256×256 transpose, diagonal extraction, and elementwise add are locally verified; reshape/multiply/axis reductions/identity/zero/normalization remain open.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
@@ -183,10 +184,10 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-30` Stable softmax/log-softmax/log-sum-exp.
 - [ ] `B-31` exp/log/sqrt/rsqrt/sigmoid/tanh/ReLU.
 - [ ] `B-32` Entropy/cross-entropy/KL/CDF/inverse-CDF.
-- [ ] `B-33` Seeded PRNG and categorical sampling.
+- [ ] `B-33` **PARTIAL:** native xorshift64 forward step with known-answer, reference, aliasing, class, and zero-state rejection fixtures passes locally (`ci_verified=false`); seeded sampling, entropy conversion, and categorical sampling remain open.
 - [ ] `B-34` **PARTIAL:** host-only attention plan controller composes qk_dot/scale/mask/softmax/weighted_sum/head_concat/projection and returns typed UNAVAILABLE until native mask/softmax/weighted-sum/concat kernels exist. No host math or execution.
 - [ ] `B-35` **PARTIAL:** host-only loss/gradient/optimizer plan controller composes loss→gradient_accumulate→clip→moving_average→update and returns typed UNAVAILABLE until native kernels exist. Hyperparameter records and finite-difference fixtures remain open.
-- [ ] `B-36` Token/sequence operations: embedding gather, positions, slicing, masks, n-grams.
+- [ ] `B-36` **PARTIAL:** host-only `SequenceController` composes embedding_gather→position_add→slice_window→mask_apply→ngram_build with optional head_concat as a validated `MthPlan`, returning typed `UNAVAILABLE` for all missing declared kernels. 13 controller tests pass; native token/sequence kernels remain open.
 - [ ] `B-37` **PARTIAL:** host-only sampling/output controller composes logit scale/temperature/penalties/top-k/top-p/normalize/sample or greedy tie-break; missing native kernels return typed UNAVAILABLE.
 
 ## B4. Semantics/evidence/layers
@@ -195,7 +196,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-41` Transformation record with evidence list, measured cost, hardware, lineage.
 - [ ] `B-42` Shared-subexpression/incremental-recompute dependency graph.
 - [ ] `B-43` Unified evidence ladder per operation (Defined→…→Promoted).
-- [ ] `B-44` L0–L7 layer manifest proving every math op is NaN16 and host is boundary-only.
+- [ ] `B-44` **PARTIAL:** `spec/nan-native-boundary.json` and `tools/audit_nan_native.py` statically cover L0–L7 kernel assignment, every registered MTH source/fixture/runner/CI path, explicit HERMES-guest exclusions, and forbidden host numeric imports. The audit is green but is static coverage, not a formal numerical-equivalence proof.
 - [ ] `B-45` Stage 2–6 gates and typed descriptors.
 - [ ] `B-46` Tier 6 expression algebra/SAT/polynomial/proof checker.
 - [ ] `B-47` Data-word allocation gate and unknown-pattern behavior.
@@ -266,10 +267,10 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `F-04` Implement capacity-at-SNR, paired delta CI, false-match rate, steps/memory metrics.
 - [x] `F-05` Enforce all six `supported` gate conditions; report remains synthetic-only and non-promotable.
 - [ ] `F-06` Real frozen-model/data measurement — **BLOCKED** until model/data available.
-- [ ] `F-07` Live Koyeb/NANNET0 — **BLOCKED**.
-- [ ] `F-08` Signed volume registry — **BLOCKED**.
+- [ ] `F-07` Live Koyeb/NANNET0 — **BLOCKED** on real deployment credentials. The root image now has a SIGTERM handler, Docker `HEALTHCHECK`, credential-free `/healthz` runtime declaration, and a container smoke workflow; none of that is a live deployment claim.
+- [ ] `F-08` Signed volume registry — **BLOCKED** on real provider IDs and mounted volumes. `runner_riddle/koyeb_bootstrap.py` initializes tier databases, chains registry generations, refuses partial configuration, and supports strict fail-closed mode; a missing registry reports `unknown`, never green.
 - [ ] `F-09` Production MC0DB — **BLOCKED**.
-- [ ] `F-10` GLT-enforced 2 MiB loading — **BLOCKED**; text-loader is not enforcement.
+- [x] `F-10` No page-size limit — the guest budget is adjustable and reports `page_limit_enforced=false`; 32 KiB is only the logical 8 MiB-universe page unit. No runtime page-size gate exists.
 
 ---
 

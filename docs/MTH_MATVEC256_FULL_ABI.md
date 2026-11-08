@@ -3,8 +3,8 @@
 Status: source-written and locally executed with the canonical NaN0S `nmk.awk` / `nan_cli`
 toolchain on 2026-11-07 through the `.nan` text loader. The fixture image is 66,574
 NaN16 words (532,592 bytes), which exceeds the historical 512 KiB (65,536-word)
-guest. It targets the new 1 MiB (131,072-word) guest budget; canonical GLT 1 MiB
-page-limit execution is still pending, but canonical CI run 42395520794 executed the fixture successfully.
+guest. It targets the 1 MiB (131,072-word) compatibility budget; there is no
+page-size limit, and canonical CI run 42395520794 executed the fixture successfully.
 
 ## 1. Scope
 
@@ -128,10 +128,9 @@ In the current local NaN0S checkout, the floppy-image loader
 65,536 words and would truncate this image. The run above therefore used the
 `.nan` text loader (`nan_load_text`); the core's source default is
 `NAN_WORDS = 0x400000` (4M words), and it loaded all 66,574 words. That local
-run is not evidence of a GLT-enforced 1 MiB page limit. The source and fixture
-are written for the announced 1 MiB (131,072-word) budget, and the 1 MiB GLT
-harness execution is the outstanding deployment check. Do not use this fixture
-on a 512 KiB guest.
+run is not evidence of a page-size limit (none is enforced). The source and
+fixture are written for the 1 MiB (131,072-word) compatibility budget. Do not use
+this fixture on a 512 KiB guest.
 
 ## 7. Limitations
 

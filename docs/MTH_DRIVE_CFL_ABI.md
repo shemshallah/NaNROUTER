@@ -2,8 +2,8 @@
 
 Status: source-written and locally executed with the canonical NaN0S `nmk.awk` /
 `nan_cli` toolchain on 2026-11-07. Both fixtures print their PASS marker through
-the `.nan` text loader. Canonical CI run 42395520794 executed it; GLT 1 MiB page-limit enforcement is not
-claimed here.
+the `.nan` text loader. Canonical CI run 42395520794 executed it; no page-size limit is claimed or
+enforced; 1 MiB is a compatibility budget.
 
 This change owns only:
 
@@ -294,7 +294,7 @@ These are fixture self-checks, not additional canonical kernels.
   policy. It is a forward source update, not an inverse DRIVE/pseudoinverse.
 - Local `nan_cli` execution is through the `.nan` text loader. The current
   floppy-image loader still caps at 65,536 words, so the 66,062-word CFL image
-  is not evidence of a GLT-enforced 1 MiB page-limit execution.
+  is not evidence of a page-size limit (none is enforced).
 - No CI registration or workflow edit is part of this change.
 
 ## 7. R4 integration contract

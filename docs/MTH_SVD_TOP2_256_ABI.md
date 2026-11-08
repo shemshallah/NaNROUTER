@@ -5,7 +5,7 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 steps; marker `MTH SVD TOP2 256 PASS`). The image exceeds the historical
 65,536-word / 512 KiB declared guest budget but is well inside the 1 MiB
 target (131,072 NaN16 words). It is a 1 MiB-target fixture; canonical CI run 42395520794 executed it;
-GLT/plan promotion; the shared fixture harness and workflow were not
+guest-budget promotion; the shared fixture harness and workflow were not
 edited by this change.
 
 ## 1. Scope
@@ -221,8 +221,8 @@ MTH SVD TOP2 256 PASS
 The local `nan_cli` accepts this image through its `nan-text` loader,
 which uses the 4M-word VM and is not capped at the historical 65,536
 words. This local run verifies the source and fixture under the current
-local VM; it does not by itself verify a GLT page-limit increase. The
-shared fixture harness and CI workflow were not edited by this change
+local VM; no page-size limit exists. The shared fixture harness and CI workflow
+were not edited by this change
 because they are outside this change's owned file set, so this fixture
 is not yet scheduled by the combined harness.
 
@@ -246,5 +246,5 @@ is not yet scheduled by the combined harness.
 - The static save frame and link word make the kernel non-reentrant and
   non-concurrent.
 - The fixture and kernel are a 1 MiB-target artifact. Scheduling them
-  under the historical 512 KiB declared budget requires the GLT
-  limit increase.
+  under the historical 512 KiB declared budget requires the guest-budget
+  increase to 1 MiB.

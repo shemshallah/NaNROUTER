@@ -9,7 +9,7 @@
 **Related plans:** `docs/GAME_PLAN_MTH.md`, `docs/game_plan_foundations.md`, `docs/GAME_PLAN_::.md` (math linker/validity/leaf architecture).
 
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
-**Guest-budget update:** owner reports GLT is now 2 MiB and adjustable; the checked-in 1 MiB defaults are a compatibility baseline pending GPT's merge. See `docs/GAME_PLAN_::.md` §2 and §16.
+**Guest-budget update:** there is no page-size limit; the guest budget is 2 MiB and adjustable, and the checked-in 1 MiB defaults are a compatibility baseline. See `docs/GAME_PLAN_::.md` §2 and §16.
 
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 

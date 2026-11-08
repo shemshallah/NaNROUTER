@@ -21,10 +21,10 @@ runner ring and authorized universe clients.
 
 | Tier | Logical identity | Mount root | Database file |
 |---|---|---|---|
-| BS0 | `0x7FF14E1100E8F17F` | `/0x7FF14E1100E8F17F` | `bs0db.sqlite3` |
-| MC0 | `0x7FF14E1200D7F17F` | `/0x7FF14E1200D7F17F` | `mc0db.sqlite3` |
-| SC0 | `0x7FF14E1300C2F17F` | `/0x7FF14E1300C2F17F` | `sc0db.sqlite3` |
-| GM0 | `0x7FF14E1400A9F17F` | `/0x7FF14E1400A9F17F` | `gm0db.sqlite3` |
+| BS0 | `0x7FF14E1100E8F17F` | `/bs0db` | `bs0db.sqlite3` |
+| MC0 | `0x7FF14E1200D7F17F` | `/mc0db` | `mc0db.sqlite3` |
+| SC0 | `0x7FF14E1300C2F17F` | `/sc0db` | `sc0db.sqlite3` |
+| GM0 | `0x7FF14E1400A9F17F` | `/gm0db` | `gm0db.sqlite3` |
 
 These are stable logical addresses, not Koyeb filesystem paths. The current
 physical mount destinations remain `/bs0db`, `/mc0db`, `/sc0db`, and `/gm0db`

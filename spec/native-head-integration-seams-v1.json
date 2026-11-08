@@ -94,10 +94,10 @@
     },
     {
       "id": "S11",
-      "name": "live GLT page ceiling+Koyeb NANNET0",
+      "name": "live guest-budget + Koyeb NANNET0",
       "repo": "NaNROUTER",
       "status": "OPEN_P13",
-      "gate": "actual guest GLT enforced; 2 MiB default and 512KiB/1MiB modes, live smoke with receipts"
+      "gate": "actual guest budget policy (no page-size limit; 2 MiB default and 512KiB/1MiB modes), live smoke with receipts"
     },
     {
       "id": "S12",

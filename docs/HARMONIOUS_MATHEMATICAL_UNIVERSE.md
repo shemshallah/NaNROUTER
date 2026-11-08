@@ -34,7 +34,7 @@ A **scoreboard observation** can record native `nhr_observe` evidence without cl
 - Native `nh_open`, `nh_choose`, `nh_put`, `nh_get` implement slot validity, generation and NaN class checks. HERMES moves bytes without recomputing those decisions.
 - Persistent chart snapshots use their own SHA256 + canonical parent root. Native `nh_hash` is not cryptographic. Both protections are needed.
 - Physical head 0 represents NANNET0. The HERMES 256-head routing prior and the native 255 writable head slots must not be silently conflated.
-- The NaNROUTER MTH guest default is **2 MiB**. The native bank fits the limit in isolation, but this is NOT proof the same guest can map the full HERMES 8 MiB chart; implement a bounded bank window into the VM explicitly. Do not allocate a full 8 MiB contiguous guest when the active GLT policy is 2 MiB.
+- The NaNROUTER MTH guest default is **2 MiB** with no page-size limit. The native bank fits the budget in isolation, but this is NOT proof the same guest can map the full HERMES 8 MiB chart; implement a bounded bank window into the VM explicitly. Do not allocate a full 8 MiB contiguous guest when the active guest budget is 2 MiB.
 
 ## Missing bridge inventory (in priority order)
 

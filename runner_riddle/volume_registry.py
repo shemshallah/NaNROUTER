@@ -203,11 +203,13 @@ class VolumeRegistry:
         return [dict(item) for item in self.document["volumes"]]
 
 
+# Physical Koyeb mount destinations are deployment bindings, not logical NaN
+# identities. The logical shard-zero addresses live in ``CANONICAL`` above.
 DEFAULT_MOUNT_ROOTS = {
-    "BS0": "/0x7FF14E1100E8F17F",
-    "MC0": "/0x7FF14E1200D7F17F",
-    "SC0": "/0x7FF14E1300C2F17F",
-    "GM0": "/0x7FF14E1400A9F17F",
+    "BS0": "/bs0db",
+    "MC0": "/mc0db",
+    "SC0": "/sc0db",
+    "GM0": "/gm0db",
 }
 
 

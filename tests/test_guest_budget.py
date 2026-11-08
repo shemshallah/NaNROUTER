@@ -32,7 +32,10 @@ class GuestBudgetTests(unittest.TestCase):
         self.assertEqual(DEFAULT_BUDGET.pages, 64)
         self.assertEqual(DEFAULT_BUDGET.slack_words, 0)
         self.assertTrue(DEFAULT_BUDGET.adjustable)
-        self.assertFalse(DEFAULT_BUDGET.glt_enforced)
+        self.assertFalse(DEFAULT_BUDGET.page_limit_enforced)
+        self.assertFalse(DEFAULT_BUDGET.glt_enforced)  # deprecated alias
+        self.assertFalse(DEFAULT_BUDGET.to_dict()["page_limit_enforced"])
+        self.assertNotIn("glt_enforced", DEFAULT_BUDGET.to_dict())
 
     def test_legacy_profile_is_one_mib(self):
         self.assertEqual(LEGACY_GUEST_BUDGET_BYTES, 1024 * 1024)

@@ -1,6 +1,6 @@
 # MTH pair-space K16 full-tile driver ABI
 
-Status: native verified locally and executed by canonical CI run 42395520794. GLT 1 MiB page-limit enforcement is pending. This is the repaired form
+Status: native verified locally and executed by canonical CI run 42395520794. No page-size limit is enforced; 1 MiB is a compatibility budget. This is the repaired form
 of the WIP driver on `origin/mth-pair-tile16-driver-v1` (commits
 `0cee006..788b036`). The fixture assembles with the NaN0S NaN16 source assembler
 and terminates after 4,449,894 guest steps under a 50,000,000-step budget

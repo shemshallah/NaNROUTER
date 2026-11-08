@@ -201,7 +201,7 @@ The plan contains **107 explicitly enumerated ordered test IDs** in §20.1–20.
 | P0-04 | C | `test_point0_bridge.py::test_boundary_lengths_and_oversized_frames_are_rejected`; `test_point0_http.py::test_oversized_body_and_word_count_are_rejected` |
 | P0-05 | C | `test_mth_system.py::test_2_mib_default_admits_full_pair_and_legacy_1_mib_rejects` |
 | P0-06 | P | 512 KiB override rejection exists; no old 512 KiB fixture still runnable test. |
-| P0-07 | M | No `glt_1mib`/`glt_2mib` evidence test; only asserts `glt_enforced == False`. |
+| P0-07 | C | No page-size limit: `page_limit_enforced == False`; 32 KiB is only the logical universe page unit. |
 | P0-08 | C | JAHS tests in MthSystem, point-0, NMP. |
 | P0-09 | P | No 196,608-word capability / epoch-2 six-slot test. |
 | P0-10 | C | Point-0 frame/body bounds. |
@@ -327,7 +327,7 @@ L-01–L-04 C; F-01–F-04 C. See audit table.
 | §16.0 guest words vs bytes | P | Docs stale 1 MiB. |
 | §16.1 budget model/adjustable | P | live_preflight accepts only exactly 1/2 MiB. |
 | §16.2 changes at 2 MiB | P | Some defaults updated; pair-budget aggregate only; old docs stale. |
-| §16.3 required tests | P/M | Exact ±1, 4 MiB platform, 512 KiB fixtures, source, migration, explicit GLT missing. |
+| §16.3 required tests | P/M | Exact ±1, 4 MiB platform, 512 KiB fixtures, and source tests; no page-size gate is required. |
 | §16.4 code points | P | `register_wave_capabilities.py:142` MiB conversion bug; comment stale. |
 | §17.1 canonical fixture L0:123/L0:234 | P | Demo uses `nml:U0:vector:demo-1/2`. |
 | §17.2 sequence 1–10 | P/M | Output leaf lacks parents/function/rule/JAHS/evidence; no hypergraph feedback; no combined negative suite; no path-wide audit. |
@@ -354,16 +354,16 @@ L-01–L-04 C; F-01–F-04 C. See audit table.
 
 ## 4. P13: blocked vs local
 
-**Genuinely blocked:** live Koyeb/NANNET0, signed volume registry, production MC0DB, real frozen-model/data ablation, real R7 held-out, capacity-vs-SNR, GLT-enforced loading.
+**Genuinely blocked:** live Koyeb/NANNET0, signed volume registry, production MC0DB, real frozen-model/data ablation, real R7 held-out, and capacity-vs-SNR. Page-size enforcement is not a gate.
 
 **Blocked by toolchain but implementable later:** native numeric executor / real 256-tile run; native admission receipt production.
 
-**Implementable locally now:** all P0–P12 test gaps, exact 2 MiB/GLT evidence record, 4 MiB declaration, 196,608-word capability test, six-slot registration, math health/HTTP, pre-dispatch validation/token redaction, learning snapshot binding, scratch filtering, cross-store crash injection, full negative suite, B-17 worker declarations, candidate-batch gate, synthetic Boolean-head control gate, machine-readable P13 blocked record.
+**Implementable locally now:** all P0–P12 test gaps, exact 2 MiB budget record, 4 MiB declaration, 196,608-word capability test, six-slot registration, math health/HTTP, pre-dispatch validation/token redaction, learning snapshot binding, scratch filtering, cross-store crash injection, full negative suite, B-17 worker declarations, candidate-batch gate, synthetic Boolean-head control gate, machine-readable P13 blocked record.
 
 ## 5. Smallest high-value changes, in order
 
 1. Fix budget tool/docs; add 1/2/4 MiB tests.
-2. Add P0 boundary tests, GLT evidence gate, 196,608-word capability test, six-slot test.
+2. Add P0 boundary tests, no-page-size-limit evidence, 196,608-word capability test, six-slot test.
 3. Wire math health into `MthSystem.health()`.
 4. Harden execution pre-dispatch and redact tokens.
 5. Bind learned rules to runtime.
@@ -474,7 +474,7 @@ Run 3–4 agents at a time. The integrator owns the shared branch.
 7. **Redact tokens.** Replace raw lease tokens in dicts/evidence/provenance/rows with digests.
 8. **Deep-freeze objects.** Freeze nested JSON; require content digest equality; add provenance/null metadata validation.
 9. **Isolate scratch.** Filter scratch/quarantined/tombstoned in linker and runtime pins.
-10. **Fix 2 MiB.** Correct MiB conversion; add exact 262,144/+1 tests; all six slots; GLT blocked/pass evidence record.
+10. **Fix 2 MiB.** Correct MiB conversion; add exact 262,144/+1 tests; all six slots; no-page-size-limit evidence record.
 
 ## 5. Decisions to freeze
 
@@ -488,7 +488,7 @@ Run 3–4 agents at a time. The integrator owns the shared branch.
 | Batch NMP | One parent, independent children, no parent lease. |
 | Secrets | Tokens are bearer secrets; only digests enter evidence. |
 | P13 | Explicit blocked evidence, no fabrication. |
-| GLT | Separate gate; text-loader is not enforcement. |
+| Page size | No page-size limit; 32 KiB is only the logical universe layout unit. |
 | Native numeric result | External executor or NaN0S only. |
 
 ## 6. Definition of done

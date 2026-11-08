@@ -33,6 +33,7 @@ class Fixture:
 
 FIXTURES: tuple[Fixture, ...] = (
     Fixture("k256", "mth/tests/mth_k256_laplacian_test.nas", 2_000_000, "MTH K256 LAPLACIAN PASS", "native_verified"),
+    Fixture("k256_pair_space", "mth/tests/mth_k256_pair_space_v1_test.nas", 2_500_000, "MTH K256 PAIR SPACE V1 PASS", "native_verified"),
     Fixture("k255", "mth/tests/mth_k255_laplacian_test.nas", 4_000_000, "MTH K255 LAPLACIAN PASS", "native_verified"),
     Fixture("ring255", "mth/tests/mth_ring255_laplacian_test.nas", 4_000_000, "MTH RING255 LAPLACIAN PASS", "native_verified"),
     Fixture("ring255_port", "mth/tests/mth_ring255_port_test.nas", 4_000_000, "MTH RING255 PORT ASSEMBLE PASS", "native_verified"),
@@ -117,6 +118,9 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("vector_mean256_f32", "mth/tests/mth_vector_mean256_f32_test.nas", 100_000, "MTH VECTOR MEAN256 F32 PASS", "native_verified"),
     Fixture("vector_abs256_f32", "mth/tests/mth_vector_abs256_f32_test.nas", 100_000, "MTH VECTOR ABS256 PASS", "native_verified"),
     Fixture("vector_relu256_f32", "mth/tests/mth_vector_relu256_f32_test.nas", 100_000, "MTH VECTOR RELU256 PASS", "native_verified"),
+    Fixture("vector_normalize256_f32", "mth/tests/mth_vector_normalize256_f32_test.nas", 200_000, "MTH VECTOR NORMALIZE256 F32 PASS", "native_verified"),
+    Fixture("vector_prefix_sum256_u32", "mth/tests/mth_vector_prefix_sum256_u32_test.nas", 100_000, "MTH VECTOR PREFIX SUM256 U32 PASS", "native_verified"),
+    Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical
     # pinned commit (7f250a1) so the registry exposes nmr_contract_put and the
     # route linker sources.

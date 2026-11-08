@@ -163,8 +163,8 @@ exit=0
   transactional and has no rollback or partial-output status.
 - This is not a matrix multiply, factorization, or cache-blocked transpose; it
   is one leaf data-movement primitive.
-- The 2 MiB figure is the current guest budget policy. This local text-loader
-  run is not proof that a GLT page-limit harness enforces 2 MiB; that remains a
-  separate deployment gate.
+- The 2 MiB figure is the current adjustable guest budget. There is no page-size
+  limit or page-size enforcement gate; the fixed 32 KiB page is only a logical
+  universe layout unit.
 - No CI run is claimed or referenced. The fixture is executed directly with
   `nan_cli` and is not registered in `tools/run_mth_fixtures.py` by this change.

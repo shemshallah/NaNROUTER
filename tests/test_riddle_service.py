@@ -54,6 +54,13 @@ class ServiceTests(unittest.TestCase):
         status, body = self.request("/healthz")
         self.assertEqual(status, 200)
         self.assertEqual(body["address"], "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0")
+        self.assertEqual(body["build_revision"], "unknown")
+        self.assertEqual(body["runtime"], {
+            "nan16_word_bits": 16,
+            "ring_slots": 6,
+            "active_slots": 1,
+            "n16t_guest_configured": False,
+        })
         self.assertFalse(body["live_route_commit"])
 
     def test_health_reports_unconfigured_volume_registry_as_unknown(self):

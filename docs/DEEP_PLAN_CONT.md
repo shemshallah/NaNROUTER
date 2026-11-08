@@ -5,7 +5,7 @@
 **Implementation ledger:** `docs/IMPLEMENTATION_TODO.md`.
 **Evidence ledger:** `docs/R10_IMPLEMENTATION_EVIDENCE.md`.
 **Mathematical linker plan:** `docs/GAME_PLAN_::.md` (NaN Mathematical Linker, validity engine, leaves, NMP, 2 MiB integration).
-**Guest-budget update:** GLT is now 2 MiB and adjustable; the checked-in default is 2 MiB, with 1 MiB/512 KiB compatibility modes. GLT page-limit enforcement remains separate.
+**Guest-budget update:** there is no page-size limit. The guest budget is 2 MiB and adjustable; the checked-in default is 2 MiB, with 1 MiB/512 KiB compatibility profiles. The 32 KiB page is only the logical unit of the fixed 8 MiB universe layout.
 **Canonical language:** NaN16, assembled by `nasm0`, executed by `n16i` or the native NaN16 kernel.
 **Canonical math owner:** MTH inside the one NaNLMind universe.
 **Canonical routing/control owner:** NaNROUTER.
@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-There are **91 manifest kernels with fixtures**: 87 local fixtures are registered, with the newly added fixtures verified locally and the prior 66-fixture baseline unchanged; the last canonical CI run covered 61 fixtures. The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 1074 Python tests (8 skipped).
+There are **94 manifest kernels with fixtures**: 91 carry `ci_verified=true` and three 2026-11-08 additions are local-only; 92 runner fixture paths are registered. The 2 MiB text-loader execution is CI-verified; no page-size limit is enforced, and the guest budget remains adjustable. There is also a working BS0DB/MC0DB control/evidence plane, a green static NaN-native boundary audit, and 1189 Python tests (16 skipped).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -75,17 +75,17 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 91 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 91-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 94 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 94-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
-| `.github/workflows/mth-native-contract.yml` | 132 steps, 61 fixtures; canonical CI PASS (2 MiB page-limit enforcement pending) |
+| `.github/workflows/mth-native-contract.yml` | 132 steps, 61 fixtures; canonical CI PASS (no page-size limit) |
 
 ### 1.3 Evidence baseline
 
 ```
-60/60 locally runnable fixtures pass
-87 local fixtures registered (new local-only fixtures passed individually; full 87-fixture sweep not rerun); last canonical CI passed 61 fixtures; 1074/1074 runnable Python tests pass (8 skipped)
-GLT-enforced 2 MiB page-limit verification remains pending
+92 runner fixture paths registered; targeted new set 4/4 PASS (full sweep not rerun)
+92 runner fixture paths registered (new local-only fixtures passed individually; full 92-fixture sweep not rerun); 1189/1189 runnable Python tests pass (16 skipped)
+No page-size limit is enforced; the 2 MiB guest budget is adjustable
 ```
 
 ### 1.4 Open gates, verbatim from the ledger
@@ -258,8 +258,9 @@ The 1 MiB implementation baseline is:
 1 MiB = 131,072 NaN16 words = 32 pages of 32 KiB
 ```
 
-**Owner update (2026-11-07):** GLT is now reported at **2 MiB, adjustable for
-guest words**. The target is `2 MiB = 262,144 words = 64 pages of 32 KiB`.
+**Owner update:** there is no page-size limit. The guest budget is **2 MiB,
+adjustable for guest words**. The target is `2 MiB = 262,144 words`; the
+`64 pages of 32 KiB` figure is logical universe layout, not an allocation cap.
 The checked-in default is 2 MiB; 1 MiB and 512 KiB remain compatibility test modes. See `docs/GAME_PLAN_::.md` §2 and §16. At 2 MiB,
 the full 256 `U+L+output` pair (196,608 words) becomes guest-feasible, while
 the 65,536² dense product remains forbidden (32 GiB at 8-byte NaN words).
@@ -973,7 +974,7 @@ The shortest correct sentence is:
 
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 91 kernels; canonical CI run 42405649076 passed 132 steps. GLT 2 MiB page-limit enforcement remains a separate pending gate.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 94 kernels (91 CI-verified, 3 local-only); canonical CI run 42405649076 predates the three local-only additions and passed 132 steps. No page-size limit is enforced; the 2 MiB guest budget is adjustable.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|

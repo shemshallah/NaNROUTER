@@ -4,8 +4,8 @@ Status: source-written and locally executed PASS with the canonical NaN0S
 `nmk.awk` / `nan_cli` toolchain on 2026-11-07 through the `.nan` text loader.
 The fixture image is **65,555 NaN16 words** (524,440 bytes), 19 words above the
 historical 65,536-word / 512 KiB guest. It targets the new **1 MiB
-(131,072 NaN16 words)** guest budget; GLT-enforced 1 MiB page-limit execution
-and GLT page-limit enforcement are still pending. Canonical CI run 42395520794 executed the fixture; the local loader accepted the complete
+(131,072 NaN16 words)** guest budget; there is no page-size limit. Canonical CI
+run 42395520794 executed the fixture; the local loader accepted the complete
 image, as recorded in §7 and §8.
 
 ## 1. Scope
@@ -248,8 +248,8 @@ and the kernel read matrix words through index 65,536.
 The local core source default is `NAN_WORDS = 0x400000` (4M words), and this
 image uses the `nan-text` loader. The run therefore proves that the canonical
 assembler plus local loader executes an image larger than 65,536 words. It does
-**not** prove a GLT-enforced 1 MiB page limit; that deployment check remains
-pending. A build that caps guest images at 65,536 words must reject this
+**not** prove a page-size limit, because no such limit exists; the 1 MiB value
+is a compatibility budget. A build that caps guest images at 65,536 words must reject this
 fixture at load time rather than being treated as a pass.
 
 ## 9. Limitations
@@ -270,8 +270,8 @@ fixture at load time rather than being treated as a pass.
   still cross a reserved BSR control head (the documented set is
   `0,4,5,6,7,8`) or map a learning head onto a reserved write target. The
   signed head atlas, reserved-head policy, and write ACL remain separate.
-- The local run is a 1 MiB-target text-loader run, not a GLT 1 MiB
-  page-limit run; canonical CI execution passed in run 42395520794 and GLT enforcement is pending that harness.
+- The local run is a 1 MiB-target text-loader run; canonical CI execution passed
+  in run 42395520794. No page-size limit is enforced.
 - No throughput claim is made. The reported step count includes fixture
   construction and direct checks, not only the certificate scans.
 

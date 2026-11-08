@@ -6,7 +6,7 @@ working-tree fixture in this document with the canonical NaN0S `nmk.awk` /
 steps. Canonical CI run `42395520794` (head `4b823e5`) executed the previous
 fixture revision (61,355 steps, fixture SHA-256 `b089d0...`) successfully; the
 ABI-preservation revision documented here is local-only and awaits the next CI
-run. GLT page-limit enforcement remains separate.
+run. No page-size limit is enforced.
 
 ## 1. Scope
 
@@ -254,8 +254,7 @@ executed the previous committed fixture revision at 61,355 steps; its fixture
 SHA-256 was
 `b089d0044762e3b3616b848d52d8431819ea2d1fcfbbf6298fb0a18cd1e008ba`. The current
 revision adds the `r2`-`r5`/`r13` preservation checks and is local-only at
-61,373 steps, pending the next CI run. GLT page-limit enforcement remains
-separate. This task did not modify shared files; the evidence above is local
+61,373 steps, pending the next CI run. No page-size limit is enforced. This task did not modify shared files; the evidence above is local
 `nmk.awk` / `nan_cli` execution plus the cited CI run for the prior revision.
 
 ## 8. Limitations
@@ -281,5 +280,5 @@ separate. This task did not modify shared files; the evidence above is local
   records why. A zero-energy constant mode requires a periodic ring
   representation that is outside this ABI.
 - Local evidence for the current revision; canonical CI run 42395520794
-  covered the prior fixture revision (`b089d0...`). GLT 1 MiB page-limit
-  enforcement remains pending.
+  covered the prior fixture revision (`b089d0...`). No page-size limit is
+  enforced; 1 MiB is a compatibility budget.

@@ -8,7 +8,7 @@
 **Canonical language:** NaN16.
 **Canonical math owner:** native MTH kernels in the one NaNLMind universe.
 **Canonical routing owner:** NaNROUTER through stable point 0.
-**Guest-budget update:** GLT is now **2 MiB and adjustable for guest words**. The checked-in `main` now defaults to **2 MiB / 262,144 words / 64 pages**, with 1 MiB and 512 KiB compatibility modes. GLT-enforced page-limit loading remains a separate gate.
+**Guest-budget update:** there is **no page-size limit**. The guest budget is **2 MiB and adjustable for guest words**. The checked-in `main` defaults to **2 MiB / 262,144 words**, with 1 MiB and 512 KiB compatibility profiles. The fixed 32 KiB page is a logical unit of the 8 MiB universe layout, not a guest allocation cap; no runtime page-size gate exists.
 
 This document does not create a second universe, a second runner ring, a second store, or a second mathematical authority. It defines how the five proposed systems fit into the existing MTH/NaNROUTER control plane without collapsing their responsibilities.
 
@@ -107,10 +107,10 @@ The second strongest rule is:
 
 At the time of writing the checked-in `main` contains:
 
-- **91 manifest kernels** with fixtures; 87 local fixtures and 61 last-canonical-CI fixtures;
-- **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
-- canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
-- **1074 Python tests** (8 skipped) after the P7–P12 math integration and authority-hardening additions;
+- **94 manifest kernels** with fixtures: 91 `ci_verified` and 3 local-only (`ci_verified=false`); 92 canonical runner fixture paths and 91 unique manifest fixtures;
+- **92 locally runnable runner fixtures**, including the K256 pair fixture and the new normalize/prefix-sum/PRNG fixtures;
+- static NaN-native boundary audit green over 92 registered MTH sources plus three explicitly excluded HERMES guests;
+- **1189 Python tests** (16 skipped) after the P7–P12 math integration, Koyeb bootstrap, sequence controller, and audit additions;
 - **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
@@ -156,7 +156,7 @@ The 2 MiB target changes what is *feasible*; it does not change the rule that th
 - Point-0 hard frame ceiling: 262,144 words at 2 MiB; a smaller per-frame limit remains allowed.
 - Health must expose `guest_budget_words`, `guest_budget_bytes`, `page_bytes`, and `guest_budget_pages`.
 - A plan that needs more than the effective budget is rejected before it reaches the store, service, or executor.
-- The 2 MiB target is a policy/configuration fact, not proof that GLT enforces it. The GLT gate remains explicit.
+- The 2 MiB target is an adjustable policy/configuration bound, not a page-size limit. No page-size enforcement gate exists; the host never allocates or restricts guest memory by a fixed page size.
 
 ### 2.4 What 2 MiB does *not* authorize
 
@@ -552,7 +552,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 1074-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 1189-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1397,7 +1397,7 @@ Reject before store/service submission if the plan's conservative workspace exce
 7. 512 KiB compatibility mode rejects 2 MiB-only fixtures.
 8. Health/evidence records the budget source and page count.
 9. No default silently changes from 1 MiB to 2 MiB without a versioned migration test.
-10. GLT-enforcement remains a separate gate.
+10. No page-size limit is enforced. The 32 KiB page is a logical layout unit, and the guest budget remains adjustable.
 
 ### 16.4 Exact code points GPT must synchronize
 
@@ -1580,8 +1580,8 @@ The order below is deliberate. Do not start a later phase by bypassing a failed 
 **Priority:** 0 (blocking).
 **Scope:** 2 MiB adjustable guest budget is checked in; finish capability re-registration for all six slots, peak-liveness admission, point-0/HTTP bounds, math schema isolation, and the authority/`::` context split.
 **Files:** `runner_riddle/mth_system.py`, `point0_bridge.py`, `tools/register_wave_capabilities.py`, `docs/MTH_SYSTEM_RUNTIME.md`, `docs/MTH_MEMORY_1MIB.md`/new 2 MiB doc, `tests/test_mth_system.py`, `tests/test_point0_bridge.py`.
-**Exit:** all P0 tests; no existing test regression; explicit GLT gate.
-**Implemented:** P0.1–P0.6 are checked in. Dependent plans are admitted by peak live workspace; undeclared-liveness plans keep the v1 sum. Authority/JAHS execution binding is enforced by `MathExecutionBridge`. GLT-enforced 2 MiB page-limit loading remains unproven.
+**Exit:** all P0 tests; no existing test regression; explicit no-page-size-limit evidence.
+**Implemented:** P0.1–P0.6 are checked in. Dependent plans are admitted by peak live workspace; undeclared-liveness plans keep the v1 sum. Authority/JAHS execution binding is enforced by `MathExecutionBridge`. The budget reports `page_limit_enforced=false`; 32 KiB is a logical universe page unit, not a guest cap.
 
 ### P1 — Leaf/identity/storage schema
 
@@ -1683,7 +1683,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 1074-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 1189-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 
@@ -1695,7 +1695,7 @@ New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.p
 | 4 | P0-04 | Point-0 frame boundary | 262,144 accepted; 262,145 rejected |
 | 5 | P0-05 | Full U+L+out budget | admitted at 2 MiB, rejected at 1 MiB |
 | 6 | P0-06 | 512 KiB compatibility | old fixtures still runnable/reject correctly |
-| 7 | P0-07 | GLT gate | explicit `glt_1mib`/`glt_2mib` evidence, not inferred |
+| 7 | P0-07 | no page-size limit | `page_limit_enforced=false`; 2 MiB is an adjustable budget, 32 KiB is only the logical universe page unit |
 | 8 | P0-08 | JAHS preservation | lease/point-0/commit still require seal |
 | 9 | P0-09 | capability workspace re-registration | 1 MiB capability cannot admit 196,608-word job; epoch-2 2 MiB capability does |
 | 10 | P0-10 | point-0/HTTP 2 MiB payload | 262,144 words accepted; 262,145 rejected; HTTP body/envelope limit agrees |
@@ -1934,7 +1934,7 @@ A design or implementation branch must be rejected if:
 - it changes a mathematical rule while an in-flight calculation uses the old snapshot;
 - it deletes provenance or makes an old version unrecoverable;
 - it claims a capacity/creativity/consciousness result without a real held-out experiment;
-- it makes a 2 MiB-only claim without the GLT/guest-budget test.
+- it invents a page-size limit or treats the 32 KiB logical universe page as a guest allocation cap.
 
 ---
 

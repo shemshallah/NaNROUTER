@@ -2,8 +2,8 @@
 
 Status: source-written and locally executed with the canonical NaN0S `nmk.awk` /
 `nan_cli` toolchain on 2026-11-07. The fixture prints its PASS marker through
-the `.nan` text loader. Canonical CI run 42395520794 executed it; the GLT 1 MiB page-limit run and any
-shared registry/workflow change are not claimed here.
+the `.nan` text loader. Canonical CI run 42395520794 executed it; no page-size
+limit is claimed or enforced, and no shared registry/workflow change is claimed here.
 
 This change owns only:
 
@@ -246,6 +246,6 @@ confirm that the fixture detects real defects:
 - A leading `-0.0` is treated as no edge. NaN and Inf payloads are treated as
   present edges because they are numerically nonzero bit patterns.
 - Local execution uses the `.nan` text loader. The 66,574-word fixture is not
-  evidence of a GLT-enforced 1 MiB page-limit run.
+  evidence of a page-size limit (none is enforced).
 - No CI registration, workflow edit, shared registry update, or commit is part
   of this change.

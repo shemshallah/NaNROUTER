@@ -66,16 +66,6 @@
       ]
     },
     {
-      "id": "glt-2mib-enforcement",
-      "status": "blocked",
-      "reason": "Text-loader 2 MiB execution is verified, but GLT-enforced page-limit loading requires the GLT runtime and hardware evidence.",
-      "required_evidence": [
-        "GLT enforcement mode and version",
-        "262,144-word load rejection/acceptance transcript",
-        "overflow and boundary evidence"
-      ]
-    },
-    {
       "id": "native-numeric-executor",
       "status": "blocked",
       "reason": "The NaN0S toolchain/native executor is not present in this checkout; the P12 demo deliberately uses an evidence digest, not a numeric dot product.",

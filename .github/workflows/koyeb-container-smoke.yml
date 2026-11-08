@@ -1,0 +1,69 @@
+name: koyeb-container-smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+
+      - name: Build BS0:0 container
+        run: docker build -t nanrouter-bs0:smoke .
+
+      - name: Start container without Koyeb credentials
+        run: |
+          docker run -d --name nanrouter-bs0-smoke \
+            -p 18080:8080 \
+            -e PORT=8080 \
+            -e RIDDLE_DATA_DIR=/data \
+            -e RIDDLE_BUILD_REVISION="$GITHUB_SHA" \
+            -e RIDDLE_INTAKE_TOKEN="intake-token-for-container-smoke-0001" \
+            -e RIDDLE_WORKER_TOKEN="worker-token-for-container-smoke-0001" \
+            -e RIDDLE_FEEDBACK_HMAC_KEY="feedback-key-for-container-smoke-0001" \
+            nanrouter-bs0:smoke
+
+      - name: Wait for health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/healthz > /tmp/nanrouter-health.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs nanrouter-bs0-smoke
+          exit 1
+
+      - name: Validate deployment contract
+        run: |
+          python3 - <<'PY'
+          import json, os
+          health = json.load(open("/tmp/nanrouter-health.json", encoding="utf-8"))
+          assert health["address"] == "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+          assert health["build_revision"] == os.environ["GITHUB_SHA"]
+          assert health["runtime"] == {
+              "nan16_word_bits": 16,
+              "ring_slots": 6,
+              "active_slots": 1,
+              "n16t_guest_configured": False,
+          }
+          assert health["volume_registry"] == {"health": "unknown", "configured": False}
+          assert health["live_route_commit"] is False
+          assert health["status"] == "ready"
+          print("koyeb-container-smoke: PASS")
+          PY
+
+      - name: Stop container gracefully
+        if: always()
+        run: |
+          docker stop --time 10 nanrouter-bs0-smoke || true
+          docker logs nanrouter-bs0-smoke || true
+          docker rm -f nanrouter-bs0-smoke || true

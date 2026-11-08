@@ -8,7 +8,7 @@ It is a control-plane companion to the existing NaNNet N16T/N16B bridge. It does
 
 ## Container
 
-Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT` (default 8080) and stores its SQLite inbox under `/data/runner-riddle.sqlite`.
+Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT` (default 8080) and stores its SQLite inbox under `/data/runner-riddle.sqlite`. The image declares `STOPSIGNAL SIGTERM` and a local `/healthz` `HEALTHCHECK`; the service handles `SIGTERM`/`SIGINT` with a graceful shutdown.
 
 ## Required Koyeb configuration
 
@@ -21,9 +21,33 @@ Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT
 - Set `RIDDLE_ROUTE_HMAC_KEY` to the independent key used to verify the signed master route cache
 - Set `RIDDLE_FEEDBACK_HMAC_KEY` to an independent 32+ byte secret shared with Bootstrap for feedback verification
 - Set `PORT=8080` and `RIDDLE_DATA_DIR=/data`
+- Optional `RIDDLE_BUILD_REVISION` is echoed by `/healthz`; default `unknown`
 - Optional `RIDDLE_MAX_PENDING_EVENTS` defaults to 4096 and is capped at 65536
 
 Do not commit any secret, token, HMAC key, allocator manifest, or live route cache to Git.
+
+## Optional four-tier volume registry
+
+The router can own the four physical Koyeb tier mounts:
+
+| Tier | Physical mount | Logical shard-0 identity |
+|---|---|---|
+| BS0 | `/bs0db` | `nan://BS0:0` |
+| MC0 | `/mc0db` | `nan://MC0:0` |
+| SC0 | `/sc0db` | `nan://SC0:0` |
+| GM0 | `/gm0db` | `nan://GM0:0` |
+
+Physical mount paths are deployment bindings; they are never used as logical NaN addresses. The entrypoint creates each tier's bootstrap database when the mount is writable. A signed registry is written only when every binding is present:
+
+- `RIDDLE_VOLUME_HMAC_KEY` (32+ random bytes)
+- `KOYEB_REGION`
+- `KOYEB_VOLUME_ID_BS0`, `KOYEB_VOLUME_ID_MC0`, `KOYEB_VOLUME_ID_SC0`, `KOYEB_VOLUME_ID_GM0` (real provider IDs)
+- Optional `KOYEB_MOUNT_ROOT_<tier>` overrides the physical defaults
+- Optional `RIDDLE_VOLUME_REGISTRY_PATH` defaults to `$RIDDLE_DATA_DIR/volume-registry.json`
+
+Without volume bindings the service still starts as a control-plane listener, but `/healthz` reports `volume_registry.health=unknown` and `configured=false`. It never invents green health. Set `RIDDLE_REQUIRE_VOLUME_REGISTRY=1` for strict fail-closed startup: missing or non-green registry configuration exits non-zero.
+
+Run `python -m runner_riddle.koyeb_bootstrap --write` to exercise the same bootstrap path outside the container. The credential-free `.github/workflows/koyeb-container-smoke.yml` workflow builds the image, starts it without Koyeb credentials, and asserts the BS0:0 address, revision, 16-bit runtime declaration, six ring slots, one active slot, unknown volume registry, and `live_route_commit=false`. It is a readiness check, not a live Koyeb deployment.
 
 ## API
 

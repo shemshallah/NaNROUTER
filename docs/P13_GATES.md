@@ -15,8 +15,11 @@ ledger records the blocked result for each remaining external gate:
 | Frozen-model LM ablation | blocked | No frozen model/tokenizer/held-out data |
 | R7 held-out experiment | blocked | No real held-out task set |
 | Capacity vs SNR | blocked | No frozen model/data sweep |
-| GLT-enforced 2 MiB loading | blocked | Text-loader success is not GLT enforcement |
 | Native numeric executor | blocked | NaN0S toolchain/native executor unavailable |
+
+There is no page-size-limit gate. The owner clarified that guest memory has no
+page-size limit; the 2 MiB value is an adjustable budget, and the fixed 32 KiB
+page is only the logical unit of the 8 MiB universe layout.
 
 A gate is only moved to `passed` when its required evidence is attached to
 `docs/R10_IMPLEMENTATION_EVIDENCE.md` and the test ledger. A blocked gate is not

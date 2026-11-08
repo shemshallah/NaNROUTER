@@ -8,7 +8,7 @@ NaNROUTER organizes the networking and learning-control layers around the existi
 
 ## Current design boundary
 
-**Guest budget:** GLT is now **2 MiB, adjustable for guest words** (262,144 NaN16 words / 64 pages of 32 KiB). The checked-in default is 2 MiB; 1 MiB and 512 KiB modes remain compatibility gates. See `docs/GAME_PLAN_::.md`.
+**Guest budget:** there is **no page-size limit**. The default is **2 MiB, adjustable for guest words** (262,144 NaN16 words). The fixed 32 KiB page is only the logical unit of the 8 MiB universe layout, not a guest allocation cap. The checked-in default is 2 MiB; 1 MiB and 512 KiB modes remain compatibility profiles. See `docs/GAME_PLAN_::.md`.
 - One 8 MiB Bootstrap universe, with 256 palindromic heads.
 - One 2 GiB overbootstrap map hosted only by the Bootstrap runner; it is not copied to Android or peer nodes.
 - Six BSR runner-ring identities, mapped to the user's point assignments in `spec/point-map.toml`.
@@ -151,7 +151,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflow is `.github/workflows/mth-native-contract.yml`. 87 local fixtures are registered, including the newly verified local-only kernels; 1074 Python tests (8 skipped) pass. The last canonical CI run `42405649076` predates those new registrations and passed 132 steps. GLT-enforced 2 MiB page-limit verification remains a separate gate.
+The expanded native workflows are `.github/workflows/mth-native-contract.yml` and `.github/workflows/mth-remaining-fixtures.yml`. The manifest has 94 native kernels (91 `ci_verified`, 3 local-only) and the runner registers 92 fixture paths. The static NaN-native boundary audit is green over 92 MTH sources plus three explicitly excluded HERMES guests. Local evidence is 1189 Python tests (16 skipped) and the new normalize/prefix-sum/PRNG fixtures pass against the canonical NaN0S toolchain. The last canonical CI run recorded in this document (`42405649076`) predates the three new registrations. No page-size enforcement gate exists: the 2 MiB value is an adjustable budget, not a page-size limit.
 
 ## Runner Riddle
 

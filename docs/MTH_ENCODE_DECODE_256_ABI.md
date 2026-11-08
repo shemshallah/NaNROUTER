@@ -1,8 +1,7 @@
 # MTH full 256×256 ENCODE / DECODE linear kernels
 
 Status: source-written and locally executed with the canonical NaN0S assembler
-and `nan_cli` text loader. Canonical CI run 42395520794 executed the fixture; GLT/MthSystem 1 MiB dispatch enforcement is pending;
-the old 512 KiB evidence remains historical.
+and `nan_cli` text loader. Canonical CI run 42395520794 executed the fixture; the old 512 KiB evidence remains historical; no page-size limit is enforced.
 
 ## 1. Scope
 
@@ -158,13 +157,13 @@ the 30,000,000-step budget.
 
 Toolchain note: the local `nan_cli` text loader on this checkout accepts text
 images up to `NAN_WORDS` (4,194,304 words), so it executed this 66,830-word
-image even though the fixture exceeds 65,536 words. That local text path is
-not itself proof that the 1 MiB page limit is enforced. The legacy floppy-image
-path in `core/nan_load.c` still clamps to 65,536 words, and
+image even though the fixture exceeds 65,536 words. No page-size limit exists;
+1 MiB is a compatibility budget. The legacy floppy-image path in
+`core/nan_load.c` still clamps to 65,536 words, and
 `docs/MTH_SYSTEM_RUNTIME.md` still shows an explicit
 `guest_budget_bytes=512 * 1024`. Registering or dispatching this fixture
 through a 512 KiB MthSystem plan will therefore reject it; canonical 1 MiB
-canonical CI run 42395520794 passed; GLT enforcement remains pending.
+canonical CI run 42395520794 passed; no page-size limit is enforced.
 
 ## 6. Limitations
 
@@ -185,4 +184,4 @@ canonical CI run 42395520794 passed; GLT enforcement remains pending.
   `r1`-`r12` and `r14` and preserve `r15`. They contain no `CALL`.
 - **Budget status.** The source and fixture target 1 MiB and exceed the old
   512 KiB ceiling. Local text-mode execution passed; canonical 1 MiB
-  MthSystem/GLT page-limit dispatch is not yet claimed; canonical CI execution passed in run 42395520794.
+  MthSystem dispatch under the 1 MiB compatibility profile passed in canonical run 42395520794; no page-size limit exists.

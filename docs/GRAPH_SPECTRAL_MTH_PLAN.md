@@ -230,14 +230,15 @@ Local gate:
 
 ```
 python3 tools/run_mth_fixtures.py
-60/60 local fixtures passed; 61/61 total
+92 runner fixture paths registered; 91 unique manifest fixtures
+K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 
 python3 -m unittest discover -s tests -q
-Ran 1074 tests
-OK (skipped=1)
+Ran 1189 tests
+OK (skipped=16)
 ```
 
-The expanded workflow passed canonical run `42405649076` (132 steps, 61 fixtures); GLT 2 MiB page-limit enforcement remains open. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
+The expanded workflow passed canonical run `42405649076` (132 steps, 61 fixtures); there is no page-size limit, and the 2 MiB guest budget is adjustable. The 256-tile page-window/atomic-publication orchestrator, stable top-k, and point-0 HTTP ingress are implemented; a native full 256-tile grid loop, live NANNET deployment, and real LM ablations remain open gates (Lanczos and the one-tile K16 driver are now local PASS).
 
 
 ## K256 closed-form pair-space v1 — native verified

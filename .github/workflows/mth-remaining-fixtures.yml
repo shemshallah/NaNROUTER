@@ -34,7 +34,7 @@ jobs:
           path: nan0s
       - name: Build pinned NaN0S native CLI
         run: make -s -C nan0s/aarch64/android nan_cli
-      - name: Execute all 27 previously non-CI-verified MTH native fixtures
+      - name: Execute the MTH native fixture promotion set
         run: |
           set -euo pipefail
           python tools/run_mth_fixtures.py --nan0s-root nan0s \
@@ -64,4 +64,7 @@ jobs:
           --only vector_argmin256_f32 \
           --only vector_scale256_f32 \
           --only matrix_diagonal256 \
-          --only matrix_add256
+          --only matrix_add256 \
+          --only vector_normalize256_f32 \
+          --only vector_prefix_sum256_u32 \
+          --only prng_xorshift64
