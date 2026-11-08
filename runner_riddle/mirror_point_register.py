@@ -190,11 +190,21 @@ class MirrorRegister:
 
     @staticmethod
     def status() -> dict:
+        # Only append presentation metadata. The topology lookup, native chart
+        # and writer ACL remain fixed; curriculum reservation is not an ACL.
+        from .head_role_contract import role_summary
+        roles = role_summary()
         return {"schema": SCHEMA, "heads": FIXED_POINTS,
                 "mirror_points": PAIR_COUNT, "canonical_cells": CANONICAL_CELLS,
                 "raw_addresses": RAW_ADDRESSES, "map_bytes": LOOKUP_BYTES,
                 "inverse_bytes": INVERSE_BYTES, "topology_sha256": TOPOLOGY_DIGEST,
-                "resident": True, "mutable": False, "nannet0_writable": False}
+                "resident": True, "mutable": False, "nannet0_writable": False,
+                "head_role_schema": roles["schema"],
+                "head_role_sha256": roles["role_contract_sha256"],
+                "bsr_control_heads": roles["bsr_control_head_indices"],
+                "mp_microtable_writer_eligible": roles["mp_microtable_writer_eligible"],
+                "boolean_curriculum_eligible": roles["boolean_curriculum_eligible"],
+                "role_metadata_grants_permission": False}
 
 
 class MirrorLeafDirectory:
