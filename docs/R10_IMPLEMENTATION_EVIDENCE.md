@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 8 newly registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 1002 Python tests passed (8 skipped).
+**Result:** The newly registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, and arg reductions); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 1074 Python tests passed (8 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -90,12 +90,25 @@
 | 76 | Graph degree 256 | `mth/tests/mth_graph_degree_test.nas` | 48,117 | PASS | local only |
 | 77 | Graph pattern 256 | `mth/tests/mth_graph_pattern_test.nas` | 56,063 | PASS | local only |
 | 78 | Graph filter poly2 | `mth/tests/mth_graph_filter_test.nas` | 621,536 | PASS | local only |
+| 79 | CSR Laplacian | `mth/tests/mth_graph_laplacian_csr_test.nas` | 197,118 | PASS | local only |
+| 80 | RSS contract | `mth/tests/mth_rss_contract_test.nas` | 6,504 | PASS | local only |
+| 81 | Vector add 256 f32 | `mth/tests/mth_vector_add256_f32_test.nas` | 10,436 | PASS | local only |
+| 82 | Vector sub 256 f32 | `mth/tests/mth_vector_sub256_f32_test.nas` | 10,484 | PASS | local only |
+| 83 | Vector mean 256 f32 | `mth/tests/mth_vector_mean256_f32_test.nas` | 15,969 | PASS | local only |
+| 84 | Vector abs 256 f32 | `mth/tests/mth_vector_abs256_f32_test.nas` | 5,328 | PASS | local only |
+| 85 | Vector relu 256 f32 | `mth/tests/mth_vector_relu256_f32_test.nas` | 6,615 | PASS | local only |
+| 86 | Vector scale 256 f32 | `mth/tests/mth_vector_scale256_f32_test.nas` | 82,168 | PASS | local only |
+| 87 | Matrix transpose 256 | `mth/tests/mth_matrix_transpose256_f32_test.nas` | 3,290,464 | PASS | local only |
+| 88 | Matrix diagonal 256 | `mth/tests/mth_matrix_diagonal256_f32_test.nas` | 9,865 | PASS | local only |
+| 89 | Matrix add 256 | `mth/tests/mth_matrix_add256_f32_test.nas` | 2,500,024 | PASS | local only |
+| 90 | Vector argmax 256 | `mth/tests/mth_vector_argmax256_f32_test.nas` | 62,218 | PASS | local only |
+| 91 | Vector argmin 256 | `mth/tests/mth_vector_argmin256_f32_test.nas` | 61,708 | PASS | local only |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1002 tests in 130.651s
+Ran 1074 tests in 142.986s
 OK (skipped=1)
 ```
 
@@ -163,14 +176,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-74 local fixtures registered; 5 newly registered fixtures passed locally
+87 local fixtures registered; newly registered local-only fixtures passed locally
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 78 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **78 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 91 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **91 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 

@@ -233,7 +233,7 @@ python3 tools/run_mth_fixtures.py
 60/60 local fixtures passed; 61/61 total
 
 python3 -m unittest discover -s tests -q
-Ran 1002 tests
+Ran 1074 tests
 OK (skipped=1)
 ```
 

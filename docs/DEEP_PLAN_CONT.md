@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-There are **78 manifest kernels with fixtures**: 74 local fixtures are registered, with the 5 newly added fixtures verified locally and the prior 66-fixture baseline unchanged; the last canonical CI run covered 61 fixtures. The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 1002 Python tests (8 skipped).
+There are **91 manifest kernels with fixtures**: 87 local fixtures are registered, with the newly added fixtures verified locally and the prior 66-fixture baseline unchanged; the last canonical CI run covered 61 fixtures. The 2 MiB text-loader execution is CI-verified; GLT page-limit enforcement remains a separate pending gate. There is also a working BS0DB/MC0DB control/evidence plane and 1074 Python tests (8 skipped).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -75,8 +75,8 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_node.py` | one NANNET node per universe; 8 tests |
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
-| `tools/register_wave_capabilities.py` | registers 78 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 78-kernel capability manifest |
+| `tools/register_wave_capabilities.py` | registers 91 kernels into MC0DB |
+| `spec/wave-capabilities.json` | 91-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 132 steps, 61 fixtures; canonical CI PASS (2 MiB page-limit enforcement pending) |
 
@@ -84,7 +84,7 @@ The 255 + 1 rule remains:
 
 ```
 60/60 locally runnable fixtures pass
-74 local fixtures registered (8 new fixtures passed locally; full 71-fixture sweep not rerun); last canonical CI passed 61 fixtures; 1002/1002 runnable Python tests pass (8 skipped)
+87 local fixtures registered (new local-only fixtures passed individually; full 87-fixture sweep not rerun); last canonical CI passed 61 fixtures; 1074/1074 runnable Python tests pass (8 skipped)
 GLT-enforced 2 MiB page-limit verification remains pending
 ```
 
@@ -973,7 +973,7 @@ The shortest correct sentence is:
 
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 78 kernels; canonical CI run 42405649076 passed 132 steps. GLT 2 MiB page-limit enforcement remains a separate pending gate.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 91 kernels; canonical CI run 42405649076 passed 132 steps. GLT 2 MiB page-limit enforcement remains a separate pending gate.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|
