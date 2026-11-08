@@ -14,7 +14,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-from .n16t_guest import MIN_FRAME_BYTES, MAX_FRAME_BYTES
+from .n16t_guest import MIN_FRAME_BYTES, MAX_FRAME_BYTES, _frame_session_id
 
 
 class HermesDispatchError(ValueError):
@@ -47,6 +47,18 @@ class HermesDispatchJournal:
                 PRIMARY KEY(installation_id, dispatch_id)
             )""")
             db.execute("CREATE INDEX IF NOT EXISTS hermes_dispatch_lease ON hermes_dispatch(installation_id, lease_id, head_index)")
+            # A N16T guest pool is keyed by the *opaque session ID*, not by
+            # universe. Without a durable scope binding a caller could reuse
+            # another universe's session and advance its guest cursor.
+            db.execute("""CREATE TABLE IF NOT EXISTS hermes_n16t_session_owner (
+                session_id BLOB PRIMARY KEY,
+                installation_id TEXT NOT NULL,
+                lease_id INTEGER NOT NULL,
+                universe_id INTEGER NOT NULL,
+                generation INTEGER NOT NULL,
+                head_index INTEGER NOT NULL,
+                first_seen_at INTEGER NOT NULL
+            )""")
 
     def _db(self):
         db = sqlite3.connect(self.database, timeout=15, isolation_level=None)
@@ -71,13 +83,46 @@ class HermesDispatchJournal:
         dispatch_id = self._id(dispatch_id)
         frame = self._frame(frame)
         frame_sha = hashlib.sha256(frame).hexdigest()
+        # Only the fixed opaque 16-byte N16T affinity key is inspected here.
+        # Guest NaN16 still owns framing, CRC, route, and sequence validation.
+        session_id = _frame_session_id(frame)
         key = (installation_id, dispatch_id)
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 "SELECT * FROM hermes_dispatch WHERE installation_id=? AND dispatch_id=?",
                 key).fetchone()
+            # The session-to-universe/head binding is inserted in the same
+            # durable transaction as the dispatch reservation, *before* the
+            # shared guest pool can execute. Never let an arbitrary installation
+            # or head reuse a currently registered NaN16 session.
+            current_owner = db.execute(
+                "SELECT * FROM hermes_n16t_session_owner WHERE session_id=?",
+                (session_id,)).fetchone()
+            ownership = (
+                ("installation_id", installation_id),
+                ("lease_id", row["lease_id"]),
+                ("universe_id", row["universe_id"]),
+                ("generation", row["generation"]),
+                ("head_index", head_index),
+            )
+            if current_owner is not None:
+                if any(current_owner[name] != expected for name, expected in ownership):
+                    raise HermesDispatchConflict(
+                        "opaque N16T session is already bound to another universe, lease or head")
             if existing is None:
+                if current_owner is None:
+                    count_sessions = db.execute(
+                        "SELECT COUNT(*) FROM hermes_n16t_session_owner"
+                    ).fetchone()[0]
+                    if count_sessions >= 4096:
+                        raise HermesDispatchError("HERMES N16T session scope journal is full")
+                    db.execute("""INSERT INTO hermes_n16t_session_owner
+                        (session_id, installation_id, lease_id, universe_id,
+                         generation, head_index, first_seen_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)""", (
+                        session_id, installation_id, row["lease_id"], row["universe_id"],
+                        row["generation"], head_index, int(time.time())))
                 count = db.execute(
                     "SELECT COUNT(*) FROM hermes_dispatch WHERE acknowledged_at IS NULL"
                 ).fetchone()[0]
@@ -90,7 +135,6 @@ class HermesDispatchJournal:
                     installation_id, dispatch_id, row["lease_id"],
                     row["universe_id"], row["generation"], head_index,
                     frame_sha, int(time.time())))
-                fresh = True
             else:
                 for key_name, expected in (
                     ("lease_id", row["lease_id"]),
@@ -102,7 +146,6 @@ class HermesDispatchJournal:
                     if existing[key_name] != expected:
                         raise HermesDispatchConflict(
                             "dispatch_id is already bound to another lease/head/frame")
-                fresh = False
                 if existing["response"] is None:
                     raise HermesDispatchConflict(
                         "dispatch outcome is pending or ambiguous; never blindly replay")
@@ -167,3 +210,39 @@ class HermesDispatchJournal:
         return {"acknowledged": True, "dispatch_id": dispatch_id,
                 "response_sha256": response_sha256,
                 "model_training_committed": False}
+
+    def inspect(self, *, row, installation_id, head_index, dispatch_id):
+        """Inspect a durable native exchange without re-running its frame.
+
+        Every result is scoped by the *current, authenticated* lease and head.
+        Unknown/pending outcomes are explicitly distinct from completed work.
+        """
+        dispatch_id = self._id(dispatch_id)
+        with self._db() as db:
+            item = db.execute(
+                "SELECT * FROM hermes_dispatch WHERE installation_id=? AND dispatch_id=?",
+                (installation_id, dispatch_id)).fetchone()
+        if item is None:
+            return {"dispatch_id": dispatch_id, "state": "not_recorded",
+                    "model_training_committed": False}
+        for name, expected in (
+            ("lease_id", row["lease_id"]),
+            ("universe_id", row["universe_id"]),
+            ("generation", row["generation"]),
+            ("head_index", head_index),
+        ):
+            if item[name] != expected:
+                raise HermesDispatchConflict(
+                    "dispatch inspection does not belong to this lease and head")
+        if item["response"] is None:
+            return {"dispatch_id": dispatch_id, "state": "pending_or_ambiguous",
+                    "frame_sha256": item["frame_sha256"],
+                    "model_training_committed": False}
+        response = bytes(item["response"])
+        if hashlib.sha256(response).hexdigest() != item["response_sha256"]:
+            raise HermesDispatchError("durable N16T response digest mismatch")
+        result = self._result(
+            dispatch_id, item["frame_sha256"], response,
+            item["acknowledged_at"] is not None, replayed=True)
+        result["state"] = "acknowledged" if result["acknowledged"] else "completed"
+        return result
