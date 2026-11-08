@@ -228,7 +228,16 @@ class PortalRingNode:
 
     def points(self) -> dict[str, Any]:
         if self.active:
-            return self.fabric.monitor()
+            monitor = self.fabric.monitor()
+            return {
+                "schema": RING_SCHEMA,
+                "active": True,
+                "ring_endpoint": RING_ENDPOINT,
+                "fabric": monitor,
+                "registered": monitor["registered"],
+                "queued": monitor["queued"],
+                "pending": monitor["pending"],
+            }
         return self._proxy("GET", "/v1/ring/points")
 
     def submit(self, body: dict[str, Any]) -> dict[str, Any]:
