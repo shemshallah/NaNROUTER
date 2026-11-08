@@ -5,6 +5,8 @@ from dataclasses import asdict
 import hmac
 import json
 import os
+import threading
+import re
 import time
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +18,8 @@ from .cache import MasterRouteCache, RouteError
 from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
 from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
+from .hermes_native import HermesNativeLeaseRuntime, HermesNativeError
+from .hermes_dispatch import HermesDispatchJournal, HermesDispatchError, HermesDispatchConflict
 from .n16t_guest import (
     MAX_FRAME_BYTES as N16T_MAX_FRAME_BYTES,
     MIN_FRAME_BYTES as N16T_MIN_FRAME_BYTES,
@@ -58,6 +62,19 @@ class RiddleService:
             if len(self.hermes_delegate_token) < 32 or len(hermes_signing_key) < 32:
                 raise ServiceConfigError("both HERMES portal delegation token and receipt key must be 32+ bytes")
             self.hermes_leases = HermesLeaseRegistry(data_dir / "hermes-universe-leases.sqlite", hermes_signing_key)
+        self.hermes_lock = threading.RLock()
+        self.hermes_native = None
+        self.hermes_dispatches = (HermesDispatchJournal(data_dir / "hermes-dispatch.sqlite")
+                                  if self.hermes_leases is not None else None)
+        native_keys = ("NAN16_LIBRARY", "HERMES_GUEST_IMAGE", "HERMES_GUEST_LABELS",
+                       "RIDDLE_HERMES_NATIVE_LIBRARY_SHA256", "RIDDLE_HERMES_NATIVE_IMAGE_SHA256")
+        if any(os.environ.get(k) for k in native_keys if k != "NAN16_LIBRARY"):
+            if self.hermes_leases is None:
+                raise ServiceConfigError("native HERMES guest requires delegated lease authority")
+            try:
+                self.hermes_native = HermesNativeLeaseRuntime.from_env()
+            except HermesNativeError as exc:
+                raise ServiceConfigError("HERMES pinned native guest is not ready") from exc
         self.n16t_token = os.environ.get("RIDDLE_N16T_SUBMIT_TOKEN", "")
         self.n16t_guest_pool = None
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
@@ -73,6 +90,9 @@ class RiddleService:
                 raise ServiceConfigError("N16T guest runtime configuration is incomplete or invalid") from exc
 
     def close(self) -> None:
+        if self.hermes_native is not None:
+            self.hermes_native.close()
+            self.hermes_native = None
         if self.n16t_guest_pool is not None:
             self.n16t_guest_pool.close()
             self.n16t_guest_pool = None
@@ -218,6 +238,8 @@ def make_handler(service: RiddleService):
                     "runner_ring": self._ring_health(service),
                     "live_route_commit": False,
                     "hermes_delegated_lease_authority": service.hermes_leases is not None,
+                    "hermes_native_guest_configured": service.hermes_native is not None,
+                    "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.n16t_guest_pool is not None),
                 })
                 return
             if self.path == "/v1/riddle/feedback":
@@ -285,30 +307,91 @@ def make_handler(service: RiddleService):
                 try:
                     body = self._body()
                     action = self.path.removeprefix("/v1/hermes/leases/")
-                    if action == "open":
-                        receipt = service.hermes_leases.open(
-                            installation_id=body["installation_id"],
-                            node_point=body["node_point"], request_id=body["request_id"],
-                            ttl_seconds=body.get("ttl_seconds", 900))
-                        self._json(200, {"receipt": receipt})
-                    elif action == "renew":
-                        receipt = service.hermes_leases.renew(
-                            installation_id=body["installation_id"], receipt=body["receipt"],
-                            ttl_seconds=body.get("ttl_seconds", 900))
-                        self._json(200, {"receipt": receipt})
-                    elif action == "resolve":
-                        resolved = service.hermes_leases.resolve(
-                            installation_id=body["installation_id"], receipt=body["receipt"],
-                            head_index=body["head_index"])
-                        self._json(200, {"route": resolved})
-                    elif action == "release":
-                        result = service.hermes_leases.release(
-                            installation_id=body["installation_id"], receipt=body["receipt"])
-                        self._json(200, result)
-                    else:
+                    if action not in ("open", "renew", "resolve", "release", "dispatch", "ack"):
                         self._json(404, {"error": "not found"})
+                        return
+                    with service.hermes_lock:
+                        identity = body["installation_id"]
+                        if action == "open":
+                            receipt = service.hermes_leases.open(
+                                installation_id=identity,
+                                node_point=body["node_point"], request_id=body["request_id"],
+                                ttl_seconds=body.get("ttl_seconds", 900))
+                            if service.hermes_native is not None:
+                                # Ensure the guest actually accepts an initial
+                                # head before publishing an activated receipt.
+                                service.hermes_native.admit(
+                                    service.hermes_leases, installation_id=identity,
+                                    receipt=receipt, head_index=0)
+                            self._json(200, {"receipt": receipt})
+                        elif action == "renew":
+                            receipt = service.hermes_leases.renew(
+                                installation_id=identity, receipt=body["receipt"],
+                                ttl_seconds=body.get("ttl_seconds", 900))
+                            if service.hermes_native is not None:
+                                service.hermes_native.admit(
+                                    service.hermes_leases, installation_id=identity,
+                                    receipt=receipt, head_index=0)
+                            self._json(200, {"receipt": receipt})
+                        elif action == "resolve":
+                            resolved = service.hermes_leases.resolve(
+                                installation_id=identity, receipt=body["receipt"],
+                                head_index=body["head_index"])
+                            if service.hermes_native is not None:
+                                native = service.hermes_native.admit(
+                                    service.hermes_leases, installation_id=identity,
+                                    receipt=body["receipt"], head_index=body["head_index"])
+                                resolved.update(native)
+                                resolved["native_execution_committed"] = True
+                            self._json(200, {"route": resolved})
+                        elif action == "release":
+                            result = service.hermes_leases.release(
+                                installation_id=identity, receipt=body["receipt"])
+                            self._json(200, result)
+                        elif action in ("dispatch", "ack"):
+                            if service.hermes_native is None or service.n16t_guest_pool is None:
+                                self._json(503, {"error": "pinned native HERMES and N16T guest runtimes are required"})
+                                return
+                            resolved = service.hermes_leases.resolve(
+                                installation_id=identity, receipt=body["receipt"],
+                                head_index=body["head_index"])
+                            native = service.hermes_native.admit(
+                                service.hermes_leases, installation_id=identity,
+                                receipt=body["receipt"], head_index=body["head_index"])
+                            with service.hermes_leases._connect() as db:
+                                row = service.hermes_leases._live(
+                                    db, body["receipt"], identity, int(time.time()))
+                            if action == "dispatch":
+                                frame_hex = body.get("frame_hex")
+                                if (not isinstance(frame_hex, str)
+                                        or len(frame_hex) % 2 != 0
+                                        or len(frame_hex) > N16T_MAX_FRAME_BYTES * 2
+                                        or re.fullmatch("[0-9a-fA-F]+", frame_hex) is None):
+                                    raise HermesDispatchError("invalid bounded N16T hexadecimal frame")
+                                result = service.hermes_dispatches.dispatch(
+                                    row=row, installation_id=identity,
+                                    head_index=body["head_index"],
+                                    dispatch_id=body["dispatch_id"],
+                                    frame=bytes.fromhex(frame_hex),
+                                    native_exchange=service.n16t_guest_pool.exchange)
+                                result.update(native)
+                                result.update({"lease_id": resolved["lease_id"],
+                                               "universe_id": resolved["universe_id"],
+                                               "head_index": resolved["head_index"]})
+                                self._json(200, result)
+                            else:
+                                result = service.hermes_dispatches.acknowledge(
+                                    row=row, installation_id=identity,
+                                    head_index=body["head_index"],
+                                    dispatch_id=body["dispatch_id"],
+                                    response_sha256=body["response_sha256"])
+                                self._json(200, result)
+                except HermesDispatchConflict as exc:
+                    self._json(409, {"error": str(exc)})
+                except (HermesNativeError, N16TGuestRuntimeError) as exc:
+                    self._json(503, {"error": "native HERMES/N16T execution failed closed"})
                 except (KeyError, TypeError, ValueError) as exc:
-                    self._json(400, {"error": str(exc)})
+                    self._json(400, {"error": str(exc)[:200]})
                 except Exception:
                     self._json(500, {"error": "internal HERMES lease service error"})
                 return
