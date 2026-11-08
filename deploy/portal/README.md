@@ -40,5 +40,11 @@ The short version:
 fresh/staging deployment. Do not point a second service at the production
 `/data` volume while the live portal is writing.
 
+## Router-owned Koyeb configuration examples
+
+- `deploy/portal/koyeb.yaml` — parameterized staging service spec
+- `deploy/portal/rawroute.koyeb.env.example` — non-secret mount/quota hints
+- `deploy/portal/rawroute.mounts.koyeb.example.json` — example tier mount map
+
 No secret, token, HMAC key, allocator manifest or live route cache belongs in
 Git.

@@ -122,6 +122,7 @@ FIXTURES: tuple[Fixture, ...] = (
     # route linker sources.
     Fixture("preflight_typed", "mth/tests/mth_preflight_test.nas", 2_000_000, "MTH TYPED PREFLIGHT PASS", "native_verified", requires_nan0s_sources=True),
     Fixture("native_dispatch", "mth/tests/mth_linker_preflight_test.nas", 3_000_000, "MTH NATIVE DISPATCH PASS", "native_verified", requires_nan0s_sources=True),
+    Fixture("native_vector_addsub_dispatch", "mth/tests/mth_native_vector_addsub_dispatch_test.nas", 4_000_000, "MTH NATIVE VECTOR ADDSUB DISPATCH PASS", "native_verified"),
 )
 
 

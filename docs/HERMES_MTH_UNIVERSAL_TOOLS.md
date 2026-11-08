@@ -2,9 +2,10 @@
 
 This implementation indexes **all 91 entries** of the existing
 `spec/wave-capabilities.json` with the HERMES portal. Source and fixture files
-are hashed on load. As of this round **64 kernels** have CI-verification
-claims and are eligible for plan admission; **27** are inspectable but
-CI-unverified and cannot be included in an admitted plan. The single source
+are hashed on load. All **91 kernels** now have CI-verification
+claims backed by the pinned NaN0S fixture workflow; they are eligible for
+bounded plan composition. Fixture PASS evidence is not a universal dynamic
+execution ABI or a mathematical proof certificate. The single source
 of truth is `MthRegistry`; no Python mirror of the NaN16 math kernels exists.
 
 ## Available in this round
@@ -25,7 +26,8 @@ Every manifest kernel is available through the read-only catalog and inspect
 tools; plan tools reject kernels lacking CI verification. This does **not**
 assert that all kernels share a general dynamic calling ABI. At present
 `mth_execute.nas` admits program 900/operator 77 (dot) and
-program 901/operator 78 (cosine). The other kernels have native **fixtures**,
+program 901/operator 78 (cosine), program 902/operator 79 (vector add),
+and program 903/operator 80 (vector subtract). The other kernels have native **fixtures**,
 but no generic arbitrary-operand invocation through that dispatcher. Calling
 `mth.compose` or `mth.prepare` never fabricates a numerical result,
 native execution receipt or mathematics certification.

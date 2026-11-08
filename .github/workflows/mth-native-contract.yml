@@ -26,6 +26,9 @@ jobs:
       - name: Build NaN0S execution harness
         run: make -s -C nan0s/aarch64/android nan_cli
 
+      - name: Run native MTH vector add/sub dispatcher and canonical linker regression
+        run: python tools/run_mth_fixtures.py --nan0s-root nan0s --only native_vector_addsub_dispatch --only native_dispatch
+
       - name: Verify page-backed K16 and full-U guest bridge
         run: python -m unittest discover -s tests -p 'test_mth_pair_nan0s_guest_native.py' -v
 

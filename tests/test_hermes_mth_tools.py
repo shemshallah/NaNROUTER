@@ -52,11 +52,17 @@ class HermesMthToolsTests(unittest.TestCase):
                     with self.assertRaises(HermesMthToolError):
                         self.tools.invoke("mth.prepare", args)
 
+    def test_all_catalogue_kernels_ci_verified_after_native_gate(self):
+        self.assertEqual(len(self.tools.registry.kernels), 91)
+        self.assertTrue(all(
+            kernel.ci_verified and kernel.status == "native_verified"
+            for kernel in self.tools.registry.kernels))
+
     def test_all_families_accounted_for(self):
         result = self.tools.invoke("mth.categories")
         self.assertEqual(sum(result["families"].values()), len(self.tools.registry))
         self.assertEqual(sum(result["execution_modes"].values()), len(self.tools.registry))
-        self.assertEqual(result["execution_modes"].get("admission_gated_native_abi"), 2)
+        self.assertEqual(result["execution_modes"].get("admission_gated_native_abi"), 4)
 
     def test_head_directed_kernel_and_family_resolution(self):
         family = self.tools.invoke("mth.route", {
