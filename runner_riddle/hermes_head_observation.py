@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -72,8 +73,21 @@ class HermesHeadObservationJournal:
                 bank_after BLOB,
                 bank_after_sha256 TEXT,
                 native_receipt_json TEXT,
+                checkpoint_generation INTEGER,
+                checkpointed_at INTEGER,
                 PRIMARY KEY(installation_id,dispatch_id)
             )""")
+            # An older PR-79 journal must migrate in place, never discard
+            # pending rows or dispatch-ID tombstones.
+            existing_columns = {
+                r[1] for r in db.execute("PRAGMA table_info(hermes_head_observation)")
+            }
+            for name in ("checkpoint_generation", "checkpointed_at"):
+                if name not in existing_columns:
+                    db.execute(
+                        "ALTER TABLE hermes_head_observation ADD COLUMN " + name +
+                        " INTEGER"
+                    )
 
     def _db(self):
         db = sqlite3.connect(self.database, timeout=15, isolation_level=None)
@@ -143,7 +157,37 @@ class HermesHeadObservationJournal:
                 )
 
     @staticmethod
+    def _checkpointed_result(row, request):
+        """Immutable tombstone: dispatch must NEVER be reused after reclaim."""
+        if (row["checkpointed_at"] is None
+                or row["checkpoint_generation"] != request.chart_generation + 1
+                or row["bank_after"] is not None):
+            raise HermesHeadObservationError("invalid checkpoint tombstone")
+        try:
+            receipt = json.loads(row["native_receipt_json"])
+            check_native_observation_receipt(request, receipt)
+        except (TypeError, ValueError) as exc:
+            raise HermesHeadObservationError("checkpoint receipt invalid") from exc
+        if receipt["bank_after_sha256"] != row["bank_after_sha256"]:
+            raise HermesHeadObservationError("checkpoint result digest mismatch")
+        return {
+            "schema": "nanrouter.hermes-head-staging/1",
+            "request_sha256": row["request_sha256"],
+            "bank_after_sha256": row["bank_after_sha256"],
+            "checkpoint_generation": row["checkpoint_generation"],
+            "local_checkpoint_verified": True,
+            "native_guest_invoked_locally": True,
+            "authenticated_lease_admitted": True,
+            "chart_commit_verified": False,
+            "canonical_training_committed": False,
+            "nannet_merge_issued": False,
+            "replayed_from_journal": True,
+        }
+
+    @staticmethod
     def _verified_output(row, request):
+        if row["checkpointed_at"] is not None:
+            return HermesHeadObservationJournal._checkpointed_result(row, request)
         raw = row["bank_after"]
         if raw is None:
             raise HermesHeadObservationConflict(
@@ -204,7 +248,7 @@ class HermesHeadObservationJournal:
                 return result
             self._fence(request, resolved)
             count = db.execute(
-                "SELECT COUNT(*) FROM hermes_head_observation"
+                "SELECT COUNT(*) FROM hermes_head_observation WHERE checkpointed_at IS NULL"
             ).fetchone()[0]
             if count >= self.MAX_OUTSTANDING:
                 raise HermesHeadObservationError("native head journal capacity exhausted")
@@ -266,6 +310,10 @@ class HermesHeadObservationJournal:
         if row is None:
             return {"state": "not_recorded", "canonical_training_committed": False}
         self._scope(row, request, resolved)
+        if row["checkpointed_at"] is not None:
+            result = self._checkpointed_result(row, request)
+            result["state"] = "checkpointed_locally"
+            return result
         if row["bank_after"] is None:
             return {"state": "pending_or_ambiguous",
                     "request_sha256": request.prepared()["request_sha256"],
@@ -275,3 +323,52 @@ class HermesHeadObservationJournal:
         if not include_bank:
             result.pop("raw_bank")
         return result
+
+    def confirm_local_checkpoint(self, *, request: HeadBankHandoff,
+                                 lease_receipt: dict, network_head: int):
+        """Reclaim staged BLOB after a *real* N16SNAP1 next-generation read.
+
+        The reader must be the trusted HERMES SnapshotHeadBankFence, not a
+        client-provided acknowledgement. Durable SHA equality to the staged
+        native bytes, exact next generation and mounted root are required.
+        Permanent dispatch-ID tombstones prevent at-most-once regression.
+        This is LOCAL checkpoint verification, not a NANNET model merge.
+        """
+        resolved = self._authorize(
+            request=request, lease_receipt=lease_receipt,
+            network_head=network_head, for_execution=False,
+        )
+        with self._db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            key = (request.installation_id, request.dispatch_id)
+            row = db.execute("""SELECT * FROM hermes_head_observation
+                WHERE installation_id=? AND dispatch_id=?""", key).fetchone()
+            if row is None:
+                raise HermesHeadObservationConflict("unknown native head dispatch")
+            self._scope(row, request, resolved)
+            if row["checkpointed_at"] is not None:
+                return self._checkpointed_result(row, request)
+            staged = self._verified_output(row, request)
+            snapshot = self.chart_fence_reader(resolved["universe_id"])
+            if not isinstance(snapshot, Mapping) or snapshot.get("snapshot_verified") is not True:
+                raise HermesHeadObservationError("trusted durable chart read required")
+            for field, expected in (
+                ("parent_root_sha256", request.parent_root_sha256),
+                ("chart_generation", request.chart_generation + 1),
+                ("bank_sha256", staged["bank_after_sha256"]),
+            ):
+                if type(snapshot.get(field)) is not type(expected) or snapshot[field] != expected:
+                    raise HermesHeadObservationConflict(
+                        "local native checkpoint fence mismatch: " + field
+                    )
+            # No UPDATE can remove this dispatch's primary-key tombstone.
+            changed = db.execute("""UPDATE hermes_head_observation
+                SET checkpoint_generation=?, checkpointed_at=?, bank_after=NULL
+                WHERE installation_id=? AND dispatch_id=? AND
+                      checkpointed_at IS NULL AND bank_after IS NOT NULL""",
+                (request.chart_generation + 1, int(time.time()), *key))
+            if changed.rowcount != 1:
+                raise HermesHeadObservationConflict("checkpoint evidence changed")
+            final = db.execute("""SELECT * FROM hermes_head_observation
+                WHERE installation_id=? AND dispatch_id=?""", key).fetchone()
+            return self._checkpointed_result(final, request)
