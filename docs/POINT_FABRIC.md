@@ -12,7 +12,8 @@ HW1:0   Android endpoint (paired-device only)
 HW2:0   HERMES endpoint (paired-device only)
 HW3:0   CLOCKED endpoint (paired-device only)
 HW4:0   WordNet universe (reserved, never publicly allocated)
-HW5:0..HW255:0   registered general hardware nodes
+HW5:0   the six-slot runner ring (one active owner at a time)
+HW6:0..HW255:0   registered general hardware nodes
 ```
 
 Each zero point runs one `PointTranslationModule`. The module has a bounded
@@ -128,6 +129,19 @@ Drain response:
 }
 ```
 
+## Runner ring at HW5:0
+
+The six `nanrouter-runner-0..5` repositories are identical hot standbys and do
+not receive individual HW addresses. The ring as a whole is `HW5:0`. The active
+slot runs this fabric; the Koyeb runner-ring authority selects it with an
+atomic nanclock lease and epoch. On handoff the next slot restores the bounded
+`HW5:0` checkpoint. See `NaNLMind/docs/RUNNER_RING_AUTHORITY.md`.
+
+The active runner also exposes a bounded central monitor/registration API:
+`GET /v1/ring/points` and `POST /v1/ring/register` (authenticated). It can
+register additional zero points such as `HW9:0` and route NaN16DE frames to
+them without giving the runner process its own HW identity.
+
 ## HERMES in/out
 
 HERMES is the zero point `HW2:0`:
@@ -139,6 +153,10 @@ HERMES is the zero point `HW2:0`:
 3. HERMES still obtains its per-installation lease/receipt from the existing
    `/v1/hermes/leases/*` authority. The fabric is a transport path, not a
    second lease issuer.
+4. The active `HW5:0` runner accepts HERMES frames at
+   `POST /v1/ring/submit` and returns queued HW2 frames at
+   `POST /v1/ring/drain` with `{"hw":2}`. The ring token is a private runner
+   credential; it is never written to scratch or Git.
 
 ## Persistence
 
