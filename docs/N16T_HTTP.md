@@ -34,12 +34,133 @@ state transitions; different sessions can execute in parallel. At capacity, the 
 protocol state and erasing its replay cursor. A guest-validated CLOSE response
 signals the pool to destroy that session VM and reclaim its slot.
 
-Session VM state is persistent only for the lifetime of the service process.
-It is not yet checkpointed to durable storage, so a service restart loses
-in-memory replay cursors and active session state. Clients must establish a
-fresh session ID after reconnect; durable cross-restart replay protection is
-a remaining hardening task. The HTTP adapter passes the exact request bytes to this guest pool
-and returns the exact guest-built response bytes.
+Session VM state is persistent for the lifetime of the service process by
+default. An optional durable SQLite store can checkpoint guest-validated
+exchanges so a service restart restores the guest-owned session transitions and
+replay cursors. Without a store, no database file is created and behavior is
+exactly the original process-local model: clients must establish a fresh
+session ID after reconnect.
+
+The HTTP adapter passes the exact request bytes to this guest pool and returns
+the exact guest-built response bytes.
+
+## Durable session and replay checkpoints
+
+`runner_riddle.n16t_guest.N16TSessionStore` is an optional SQLite-backed store.
+Supply it directly, or pass a filesystem path and the pool opens and owns the
+store:
+
+```python
+from runner_riddle import N16TGuestPool, N16THttpAdapter, WaveHttpServer
+from runner_riddle.n16t_guest import N16TSessionStore
+
+guest_pool = N16TGuestPool.from_env(max_sessions=8, store="n16t-sessions.sqlite3")
+n16t = N16THttpAdapter(guest_pool.exchange)
+server = WaveHttpServer(service, n16t_adapter=n16t)
+try:
+    server.start()
+finally:
+    server.stop()
+    guest_pool.close()
+
+# A caller-owned store is not closed by the pool and can be reopened after a
+# process restart.
+store = N16TSessionStore("n16t-sessions.sqlite3", max_sessions=8)
+guest_pool = N16TGuestPool.from_env(max_sessions=8, store=store)
+try:
+    # Serve...
+    pass
+finally:
+    guest_pool.close()
+    store.close()
+```
+
+`from_env` also reads `RIDDLE_N16T_SESSION_STORE` (or the
+`N16T_SESSION_STORE` alias) when no explicit store is supplied, so the primary
+`python -m runner_riddle.http_service` entrypoint enables durable sessions
+without code changes. The value is a filesystem path; `:memory:` is available
+for tests but does not survive process exit.
+
+The store is intentionally protocol-opaque. It persists only the 16-byte
+session id, wire sequence indexes, and accepted request-frame bytes. The guest
+remains the sole validator of CRC, message type, transition state, session
+ownership, and replay sequencing. Schema version 1:
+
+```sql
+CREATE TABLE n16t_sessions (
+    session_id BLOB PRIMARY KEY CHECK (length(session_id) = 16),
+    cursor     INTEGER NOT NULL CHECK (cursor >= 0),
+    state      BLOB NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE TABLE n16t_replay (
+    session_id BLOB NOT NULL,
+    sequence   INTEGER NOT NULL CHECK (sequence >= 0),
+    frame      BLOB NOT NULL,
+    PRIMARY KEY (session_id, sequence),
+    FOREIGN KEY (session_id) REFERENCES n16t_sessions(session_id)
+        ON DELETE CASCADE
+);
+```
+
+`state` is a versioned `N16S` checkpoint descriptor containing the replay
+cursor and journal length. `n16t_replay` stores the actual accepted-frame
+journal keyed by `(session_id, sequence)`. After every guest-validated,
+successful exchange the pool commits a new journal row, cursor, descriptor, and
+timestamp in one SQLite transaction before returning the response. The
+primary key rejects a duplicate sequence with `N16TReplayError`; the pool never
+advances a cursor for a frame the guest rejected.
+
+A store adapter is any object exposing
+`load_session(session_id) -> N16TSessionCheckpoint | None`,
+`record_exchange(session_id, sequence, frame)`, and
+`delete_session(session_id)`. A checkpoint carries the 16-byte session id, the
+last guest-validated sequence (`cursor`), and the ordered opaque request frames.
+The pool validates the checkpoint's session ownership and cursor consistency
+before replaying it. A caller-supplied adapter is caller-owned and is not closed
+by the pool; a store opened from a path is owned and closed by the pool.
+
+On restart, the first frame for a session id makes the pool load that session's
+journal, create a fresh VM, and replay the journal through the same
+`n16_server_exchange` entry point. The guest reconstructs its own state and
+replay cursor, so a replayed sequence and a session-ownership mismatch are
+rejected by the same guest checks used by the in-memory path. The pool also
+rejects a checkpoint whose session id does not match the frame's 16-byte key,
+and a journal whose frame sequence is not strictly ordered, before serving any
+new traffic. Passing a different session id selects a different stored session;
+it cannot consume another session's cursor.
+
+A guest-validated CLOSE removes the session and its complete journal instead of
+journaling the terminal exchange. This preserves the in-memory rule that a
+closed session releases its slot. `N16TSessionStore` supports bounded durable
+capacity:
+
+- `max_sessions`: maximum distinct durable sessions. A new session is refused
+  when full; abandoned sessions are never silently evicted to admit another.
+- `max_replay_frames`: maximum journal length for one session. Exceeding it
+  fails closed rather than dropping replay history.
+- `ttl_seconds` plus `cleanup_expired()`: whole-session expiry for abandoned
+  sessions. The pool calls cleanup when it opens the store and before loading
+  a session; active loaded sessions refresh `updated_at`. Administrative
+  cleanup must not race a live runtime whose idle sessions are still wanted.
+
+A pool path default uses the pool's `max_sessions` as the store bound. Pass a
+configured `N16TSessionStore` when different store limits are required.
+
+Durable checkpoints have deliberate limitations. Restore cost is proportional
+to the replayed journal; the current guest has no raw VM state export/snapshot
+ABI, so the accepted-frame journal is the checkpoint. Size the journal bound
+and retention policy accordingly. A crash after the guest accepts an exchange
+but before the SQLite transaction commits can lose that last cursor advance;
+the response was not returned, so a client retry is at-least-once across that
+window. Store I/O errors fail the exchange closed. The store assumes one
+runtime writer at a time; it is not a multi-process coordination layer. Frames
+are stored verbatim and the SQLite file is not encrypted, so do not place
+bearer tokens or other credentials in N16T payloads, and protect the database
+file with normal filesystem permissions. If no store is configured, none of
+these files or behaviors are introduced.
+
+## Runtime artifacts
 
 Configure the runtime artifacts with:
 
@@ -80,6 +201,8 @@ separate `WaveHttpServer` test/embedded server. Enable the endpoint with:
 
 - `RIDDLE_N16T_SUBMIT_TOKEN`: dedicated bearer credential, at least 32
   characters. This is separate from the intake and worker credentials.
+- `RIDDLE_N16T_SESSION_STORE` (optional): SQLite path for durable N16T session
+  and replay checkpoints. When absent, sessions remain process-local.
 - `NAN16_LIBRARY`: shared library built from the canonical NaN0S C core.
 - `N16T_GUEST_IMAGE`: compiled NaN16 guest image.
 - `N16T_GUEST_LABELS`: label map emitted from the same image build.
@@ -98,6 +221,8 @@ media types and out-of-range frames, disables request logging, and fails with
 returns a bounded 502. The callback receives no bearer token.
 
 No host-side N16T parser, Python state machine, NMP JSON reinterpretation, or
-point-0 N16B bridge is used. The N16T guest runtime is now executable and
+point-0 N16B bridge is used for protocol decisions. The optional durable store
+copies only the fixed session/sequence indexes and opaque frame bytes; the
+guest still validates everything. The N16T guest runtime is now executable and
 covered by a native-runtime CI job; the remote training worker and N16T-to-NMP
 corpus/job handoff remain unfinished.
