@@ -1,0 +1,120 @@
+{
+  "schema": "nanrouter.native-head-integration-seams.v1",
+  "owner": "NaNROUTER / NANNET0 / one canonical NaNLMind universe",
+  "reference_documents": [
+    "docs/GAME_PLAN_::.md",
+    "docs/GAME_PLAN_MTH.md",
+    "docs/game_plan_deep.md",
+    "docs/game_plan_foundations.md",
+    "docs/DEEP_PLAN_CONT.md"
+  ],
+  "memory": {
+    "head_count": 255,
+    "nannet0_positions": 1,
+    "chart_bytes": 8388608,
+    "native_head_words": 67838,
+    "bank_offset_bytes": 6553600,
+    "bank_end_exclusive_bytes": 7096304,
+    "head_feature_words": 128,
+    "native_guest_budget_default_bytes": 2097152
+  },
+  "seams": [
+    {
+      "id": "S01",
+      "name": "NaN16 guest bank attach",
+      "repo": "NaN0S",
+      "implementation": "src/nannet/n16_head_runtime.nas",
+      "status": "PR_native_fixture",
+      "gate": "head 0 denied, native direct put/get, corrupt latest recover"
+    },
+    {
+      "id": "S02",
+      "name": "HERMES opaque chart byte transport",
+      "repo": "NaNLMind_HERMES",
+      "implementation": "nanlmind_hermes/head_bank_transport.py",
+      "status": "PR_host_transport",
+      "gate": "byte-exact snapshot SHA256 and parent/root/generation lease"
+    },
+    {
+      "id": "S03",
+      "name": "native VM chart memory mount",
+      "repo": "NaNROUTER",
+      "status": "OPEN",
+      "gate": "same 67838 guest words mapped in VM, nh_open before attach; no host head mutation"
+    },
+    {
+      "id": "S04",
+      "name": "authenticated native update receipt",
+      "repo": "NaNROUTER",
+      "implementation": "runner_riddle/head_bank_handoff.py",
+      "status": "STRUCTURAL_CONTRACT_ONLY",
+      "gate": "pinned guest image, active lease, bank-before/after digest, journal once, native generation"
+    },
+    {
+      "id": "S05",
+      "name": "NMP/math authority",
+      "repo": "NaNROUTER",
+      "status": "PARTIAL",
+      "gate": "all MTH transformations admitted via typed validity snapshot and capability; observation never a rule"
+    },
+    {
+      "id": "S06",
+      "name": "direct MTH native executor coverage",
+      "repo": "NaNROUTER",
+      "status": "OPEN",
+      "gate": "more registered kernels gain callable ABI + native receipts, not only fixture availability"
+    },
+    {
+      "id": "S07",
+      "name": "HERMES teacher->candidate->test",
+      "repo": "NaNLMind_HERMES",
+      "status": "PARTIAL",
+      "gate": "mandatory logic foundation once, provenance-bound prompt/answers, no train/test leakage"
+    },
+    {
+      "id": "S08",
+      "name": "clocked conversation->shared state",
+      "repo": "NaNLMind_HERMES",
+      "status": "PARTIAL",
+      "gate": "chat feedback route typed L0-L9 and native same universe; do not confuse score count with LM weights"
+    },
+    {
+      "id": "S09",
+      "name": "sparse specialization + active 255 heads",
+      "repo": "NaNLMind_HERMES",
+      "status": "EXPERIMENT",
+      "gate": "held-out vs global prior and rank-1 collapse, ablated router seeds"
+    },
+    {
+      "id": "S10",
+      "name": "pinned reproducible held-out evaluation",
+      "repo": "NaNROUTER",
+      "status": "OPEN_P13",
+      "gate": "frozen control model/dataset, before-after CE, evidence metrics, ablations and negatives"
+    },
+    {
+      "id": "S11",
+      "name": "live GLT page ceiling+Koyeb NANNET0",
+      "repo": "NaNROUTER",
+      "status": "OPEN_P13",
+      "gate": "actual guest GLT enforced; 2 MiB default and 512KiB/1MiB modes, live smoke with receipts"
+    },
+    {
+      "id": "S12",
+      "name": "merge after independent math promotion",
+      "repo": "NaNROUTER",
+      "status": "PARTIAL",
+      "gate": "event-union/negative memory, independent validity V0-3; utility never truth"
+    }
+  ],
+  "authority_invariants": [
+    "255 learnable logical head points, head0 NANNET0 never learnable",
+    "six ring slots run exactly one active slot at a time, not six parallel state shards",
+    "the store, validity engine, scheduler and native kernel remain distinct authorities",
+    "Math :: linker proposes, does not authorize or execute",
+    "Native head counters are empirical scratch utility, not a mathematical theorem or semantic LM",
+    "HERMES is byte transport, guest-native NH data checks and updates are not reimplemented in Python",
+    "head bank digest matching is not native guest attestation or permission to merge",
+    "no mathematical transformation executes without current digest-bound preflight/lease/capability"
+  ]
+}
