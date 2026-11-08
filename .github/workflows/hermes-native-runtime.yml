@@ -1,0 +1,68 @@
+name: HERMES real NaN16 lease and N16T dispatch gate
+
+on:
+  push:
+    paths:
+      - "mth/nan16/hermes_*.nas"
+      - "runner_riddle/hermes_native.py"
+      - "runner_riddle/hermes_dispatch.py"
+      - "runner_riddle/http_service.py"
+      - "tests/test_hermes_native_runtime.py"
+      - ".github/workflows/hermes-native-runtime.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/hermes_*.nas"
+      - "runner_riddle/hermes_native.py"
+      - "runner_riddle/hermes_dispatch.py"
+      - "runner_riddle/http_service.py"
+      - "tests/test_hermes_native_runtime.py"
+      - ".github/workflows/hermes-native-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native-lease-and-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
+          path: nan0s
+      - name: Compile canonical NaN16 VM C execution core (not a Python emulator)
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          cc -std=gnu99 -O2 -Wall -Wno-misleading-indentation \
+            -ffp-contract=off -fno-fast-math -fPIC -shared \
+            -DNAN_WORDS=0x100000 \
+            nan0s/aarch64/android/core/nan16.c \
+            nan0s/aarch64/android/core/nan_dev.c \
+            nan0s/aarch64/android/core/nan_load.c \
+            nan0s/aarch64/android/core/nan_render.c \
+            nan0s/aarch64/android/core/nan_state.c \
+            nan0s/aarch64/android/core/nan_net_driver.c \
+            -o build/libnan16.so -lm
+      - name: Assemble native HERMES and N16T guests with canonical NaN0S assembler
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit -v LABELS=build/hermes.labels \
+            mth/nan16/hermes_native_runtime.nas > build/hermes.nan
+          awk -f nan0s/tools/nmk.awk -v CMD=emit -v LABELS=build/n16t.labels \
+            nan0s/src/nannet/n16t_android_guest.nas > build/n16t.nan
+          for label in nhl_open nhl_renew nhl_release nhl_nannet_route n16_server_exchange; do
+            grep -q "^$label " build/hermes.labels
+          done
+          grep -q "^n16_server_exchange " build/n16t.labels
+          echo "NAN16_LIBRARY=$PWD/build/libnan16.so" >> "$GITHUB_ENV"
+          echo "HERMES_GUEST_IMAGE=$PWD/build/hermes.nan" >> "$GITHUB_ENV"
+          echo "HERMES_GUEST_LABELS=$PWD/build/hermes.labels" >> "$GITHUB_ENV"
+          echo "N16T_GUEST_IMAGE=$PWD/build/n16t.nan" >> "$GITHUB_ENV"
+          echo "N16T_GUEST_LABELS=$PWD/build/n16t.labels" >> "$GITHUB_ENV"
+          echo "RIDDLE_HERMES_NATIVE_IMAGE_SHA256=$(sha256sum build/hermes.nan | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "RIDDLE_HERMES_NATIVE_LIBRARY_SHA256=$(sha256sum build/libnan16.so | cut -d' ' -f1)" >> "$GITHUB_ENV"
+      - name: Execute native VM head isolation, replay, dispatch/ACK, restart, and digest-pin checks
+        run: python -m unittest discover -s tests -p "test_hermes_native_runtime.py" -v

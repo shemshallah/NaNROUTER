@@ -1,0 +1,31 @@
+# Staging-only private NaNROUTER HERMES deployment sketch.
+# The operator must verify Koyeb private ingress/ACLs before applying.
+# No live domain, production issuer secret, or routing cutover is specified.
+name: nanrouter-hermes-staging
+type: web
+ports:
+  - port: 8080
+    protocol: http
+build:
+  docker:
+    dockerfile: Dockerfile
+env:
+  - key: RIDDLE_DATA_DIR
+    value: /data
+  - key: RIDDLE_HERMES_NATIVE_ENABLED
+    value: "1"
+  - key: RIDDLE_INTAKE_TOKEN
+    secret: true
+  - key: RIDDLE_WORKER_TOKEN
+    secret: true
+  - key: RIDDLE_FEEDBACK_HMAC_KEY
+    secret: true
+  - key: RIDDLE_HERMES_DELEGATION_TOKEN
+    secret: true
+  - key: RIDDLE_HERMES_RECEIPT_HMAC_KEY
+    secret: true
+  - key: RIDDLE_N16T_SUBMIT_TOKEN
+    secret: true
+volumes:
+  - mount_path: /data
+    size_gb: 2

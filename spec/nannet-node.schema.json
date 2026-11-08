@@ -15,7 +15,7 @@
   "properties": {
     "universe_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "node_id": {"type": "string", "minLength": 1, "maxLength": 128},
-    "node_point": {"type": "integer", "minimum": 1, "maximum": 255},
+    "node_point": {"type": "integer", "minimum": 1, "maximum": 256},
     "public_key_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "generation": {"type": "integer", "minimum": 0},
     "status": {"type": "string", "enum": ["declared", "active", "degraded", "revoked"]},

@@ -4,7 +4,7 @@ Status: binding contract and registry implemented; transport/HTTP integration is
 
 ## 1. Rule
 
-Each universe has exactly **one** logical NANNET node:
+Each universe has exactly **one** logical NANNET node. BS0:0 is the shared bootstrap runner-ring ingress; HW0:0 is the separate attached hardware-node coordinate. BS0's HW4 is reserved for WordNet, and its HW5–HW255 are available for registered hardware allocation:
 
 ```
 255 local heads + 1 NANNET node = 256 ring positions
@@ -24,7 +24,7 @@ The NANNET node is not a head. It is the universe’s single network endpoint/po
 |---|---|
 | `universe_id` | The one universe owning this node. |
 | `node_id` | Stable node identity. |
-| `node_point` | 1..255 NANNET point; never a local head index. |
+| `node_point` | 1..256 local NANNET point (HWn → point n+1); never a local head index. |
 | `public_key_fingerprint` | 64 lowercase hex characters. |
 | `generation` | Monotonic binding generation. |
 | `status` | `declared`, `active`, `degraded`, or `revoked`. |
