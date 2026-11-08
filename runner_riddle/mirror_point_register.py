@@ -14,11 +14,13 @@ from dataclasses import dataclass
 import hashlib
 import json
 import re
+import sqlite3
 import struct
 from typing import Any
 
 from .address import HeadSelector, MirrorPairSelector, ObjectSelector, parse_address
-from .math_store import MathReferenceError, MathStore
+from .math_auth import READ, WRITE
+from .math_store import MathReferenceError, MathStore, StaleGenerationError
 
 HEADS = 256
 NANNET_HEAD = 0
@@ -196,10 +198,37 @@ class MirrorRegister:
 
 
 class MirrorLeafDirectory:
-    """MC0DB is the *sole* mutable pair->typed-leaf authority.
+    """One MC0DB many-to-one MP -> immutable leaf-version index.
 
-    A bound leaf must already be an immutable MathStore leaf version.
-    Mirror orientation and ACLs are not collapsed into leaf identity.
+    Existing MathStore.math_mapping enforces UNIQUE(object_type, object_id):
+    using it for individual MPs would forbid multiple MPs sharing a leaf.
+    This additive MC0DB table instead keys *the link* by MP, not the leaf,
+    and retains immutable binding history. No second SQLite file is created.
+    """
+
+    _SCHEMA = """
+        CREATE TABLE IF NOT EXISTS nan_mp_binding (
+            mp INTEGER PRIMARY KEY CHECK(mp BETWEEN 0 AND 32639),
+            leaf_id TEXT NOT NULL,
+            leaf_version INTEGER NOT NULL CHECK(leaf_version >= 1),
+            leaf_digest TEXT NOT NULL,
+            generation INTEGER NOT NULL CHECK(generation >= 1),
+            source_head INTEGER NOT NULL CHECK(source_head BETWEEN 1 AND 255),
+            tick INTEGER NOT NULL CHECK(tick >= 0),
+            status TEXT NOT NULL DEFAULT 'active'
+        );
+        CREATE INDEX IF NOT EXISTS nan_mp_binding_leaf
+            ON nan_mp_binding(leaf_id, leaf_version);
+        CREATE TABLE IF NOT EXISTS nan_mp_binding_history (
+            mp INTEGER NOT NULL CHECK(mp BETWEEN 0 AND 32639),
+            generation INTEGER NOT NULL CHECK(generation >= 1),
+            leaf_id TEXT NOT NULL,
+            leaf_version INTEGER NOT NULL CHECK(leaf_version >= 1),
+            leaf_digest TEXT NOT NULL,
+            source_head INTEGER NOT NULL CHECK(source_head BETWEEN 1 AND 255),
+            tick INTEGER NOT NULL CHECK(tick >= 0),
+            PRIMARY KEY(mp, generation)
+        );
     """
 
     def __init__(self, store: MathStore):
@@ -207,21 +236,31 @@ class MirrorLeafDirectory:
             raise MirrorPointError("MathStore required: no parallel JSON store")
         self.store = store
 
+    def _rows(self, sql: str, params=()):
+        with self.store._connect(self.store.mc0_path) as db:
+            if db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='nan_mp_binding'"
+            ).fetchone() is None:
+                return None
+            return db.execute(sql, params).fetchall()
+
     def resolve_mp(self, n: int) -> dict:
+        n = _ordinal(n)
+        self.store._authorize(READ, "mirror_pair", mapping_key(n))
         record = MirrorRegister.mp(n).as_dict()
-        try:
-            pointer = self.store.get_mapping(mapping_key(n))
-        except MathReferenceError:
+        rows = self._rows("SELECT * FROM nan_mp_binding WHERE mp=?", (n,))
+        if not rows:
             record.update({"bound": False, "leaf": None, "status": "unbound"})
             return record
+        pointer = rows[0]
         record.update({"bound": True, "status": pointer["status"],
                        "leaf": {
-                           "id": pointer["object_id"],
-                           "version": int(pointer["current_version"]),
-                           "digest": pointer["target_digest"],
+                           "id": pointer["leaf_id"],
+                           "version": int(pointer["leaf_version"]),
+                           "digest": pointer["leaf_digest"],
                            "generation": int(pointer["generation"]),
-                           "storage_tier": pointer["storage_tier"],
-                       }})
+                           "storage_tier": "BS0DB",
+                       }, "mathematical_validity": None})
         return record
 
     def resolve_address(self, text: str) -> dict:
@@ -237,15 +276,14 @@ class MirrorLeafDirectory:
                     "bound": False, "topology_sha256": TOPOLOGY_DIGEST}
         record = self.resolve_mp(mp.start)
         head_selectors = parsed.head_selectors
-        # If a head is used before an MP, it is a directional ACL, not a new
-        # cell. It must be one of the two real (1..255) heads of this MP.
+        # Head-prefix is a directional ACL, not a second pair cell.
         if len(head_selectors) > 1 or (head_selectors and
             (head_selectors[0].namespace != 0 or
              len(head_selectors[0].heads) != 1 or
              head_selectors[0].heads[0] not in record["writable_heads"])):
             raise MirrorPointError("head selector is not an endpoint of this mirror pair")
         if parsed.object_selectors:
-            raise MirrorPointError("MP leaf is resolved through MC0DB, not route text")
+            raise MirrorPointError("MP leaf resolves through MC0DB, not route text")
         record["route_address"] = parsed.canonical_with_selectors()
         record["selected_head"] = head_selectors[0].heads[0] if head_selectors else None
         return record
@@ -260,64 +298,104 @@ class MirrorLeafDirectory:
         if (type(expected_version) is not int or expected_version < 0
                 or type(expected_generation) is not int or expected_generation < 0):
             raise MirrorPointError("mapping CAS version and generation must be explicit")
+        if type(tick) is not int or tick < 0:
+            raise MirrorPointError("tick must be nonnegative")
+        if type(leaf_version) is not int or leaf_version < 1:
+            raise MirrorPointError("leaf version must be positive")
         if type(leaf_id) is not str or not leaf_id or leaf_id.startswith("nan://"):
             raise MirrorPointError("a typed MathStore leaf ID is required")
-        # MathStore independently checks existence, typed leaf digest, ACL,
-        # CAS and adds a durable event. This is *not* a native head mutation.
-        pointer = self.store.set_mapping(
-            mapping_key(mp), object_type="leaf", object_id=leaf_id,
-            version=leaf_version, digest=_digest(leaf_digest),
-            storage_tier="BS0DB", route=f"HW0:MP{mp}",
-            expected_version=expected_version,
-            expected_generation=expected_generation, tick=tick)
-        return {"microtable": table.as_dict(), "mapping": pointer,
-                "native_head_mutated": False, "math_preflight_authorized": False}
+        _digest(leaf_digest)
+        self.store._authorize(WRITE, "mirror_pair", mapping_key(mp))
+        # Leaf versions are immutable, so this check binds an existing,
+        # structurally sound leaf but does NOT grant mathematical validity.
+        leaf = self.store.get_leaf(leaf_id, leaf_version)
+        if leaf.digest() != leaf_digest:
+            raise MirrorPointError("leaf identity/version digest mismatch")
+        with self.store._write(self.store.mc0_path) as db:
+            # DDL is scoped to MC0DB; existing MathStore tables stay intact.
+            for statement in self._SCHEMA.split(";"):
+                if statement.strip():
+                    db.execute(statement)
+            existing = db.execute(
+                "SELECT * FROM nan_mp_binding WHERE mp=?", (mp,)
+            ).fetchone()
+            if existing is None:
+                if expected_version != 0 or expected_generation != 0:
+                    raise StaleGenerationError("MP binding creation requires CAS (0,0)")
+                gen = 1
+                db.execute(
+                    "INSERT INTO nan_mp_binding "
+                    "(mp,leaf_id,leaf_version,leaf_digest,generation,source_head,tick) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (mp,leaf_id,leaf_version,leaf_digest,gen,head,tick))
+            else:
+                if (expected_version != existing["leaf_version"]
+                        or expected_generation != existing["generation"]):
+                    raise StaleGenerationError("stale MP binding version/generation")
+                if existing["leaf_id"] == leaf_id and (
+                        existing["leaf_version"] == leaf_version
+                        and existing["leaf_digest"] == leaf_digest):
+                    gen = int(existing["generation"])
+                else:
+                    gen = int(existing["generation"]) + 1
+                    db.execute(
+                        "UPDATE nan_mp_binding SET leaf_id=?,leaf_version=?,"
+                        "leaf_digest=?,generation=?,source_head=?,tick=? WHERE mp=?",
+                        (leaf_id,leaf_version,leaf_digest,gen,head,tick,mp))
+            # Each distinct generation is immutable, and revisions are
+            # recoverable without rewriting a physical NaN chart cell.
+            db.execute(
+                "INSERT OR IGNORE INTO nan_mp_binding_history "
+                "(mp,generation,leaf_id,leaf_version,leaf_digest,source_head,tick) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (mp,gen,leaf_id,leaf_version,leaf_digest,head,tick))
+        return {"microtable": table.as_dict(),
+                "mapping": {"mp":mp, "object_type":"leaf", "object_id":leaf_id,
+                            "current_version":leaf_version,"target_digest":leaf_digest,
+                            "generation":gen,"storage_tier":"BS0DB","status":"active"},
+                "native_head_mutated":False,
+                "math_preflight_authorized":False,
+                "mathematical_truth_promoted":False}
 
     def master_page(self, *, parent_root_sha256: str,
                     chart_generation: int, offset: int = 0, limit: int = MAX_PAGE) -> dict:
-        """Bounded master-register projection; pagination is mandatory.
-
-        A digest is integrity evidence only, not authentication or a signed
-        router dispatch. The caller still needs an active external lease.
-        """
+        """Bounded master-register projection, never a signed execution receipt."""
         _digest(parent_root_sha256)
         if (type(chart_generation) is not int or chart_generation < 0
                 or type(offset) is not int or offset < 0
                 or type(limit) is not int or not 1 <= limit <= MAX_PAGE):
             raise MirrorPointError("invalid snapshot generation or page bounds")
-        rows = [r for r in self.store.list_mappings(object_type="leaf", limit=65536)
-                if r["mapping_id"].startswith(PREFIX) and r["status"] == "active"]
-        rows.sort(key=lambda r: r["mapping_id"])
-        # Head counters are a projection; no counts are stored in a second DB.
+        self.store._authorize(READ, "mirror_pair", "projection")
+        rows = self._rows("SELECT * FROM nan_mp_binding ORDER BY mp")
+        if rows is None:
+            rows = []
         counts = [0] * HEADS
         for row in rows:
-            n = int(row["mapping_id"][len(PREFIX):])
-            table = MirrorRegister.mp(n)
-            for head in (table.a, table.b):
-                if head:
-                    counts[head] += 1
-        selected = rows[offset:offset + limit]
+            a,b = pair_heads(int(row["mp"]))
+            if a:
+                counts[a] += 1
+            if b:
+                counts[b] += 1
         items = []
-        for row in selected:
-            n = int(row["mapping_id"][len(PREFIX):])
+        for row in rows[offset:offset+limit]:
+            n = int(row["mp"])
             table = MirrorRegister.mp(n)
             items.append({
-                "mp": n, "cell": table.canonical_cell,
-                "addresses": [table.forward_address, table.mirror_address],
-                "heads": [table.a, table.b],
-                "leaf_id": row["object_id"],
-                "leaf_version": int(row["current_version"]),
-                "leaf_digest": row["target_digest"],
-                "mapping_generation": int(row["generation"]),
+                "mp":n,"cell":table.canonical_cell,
+                "addresses":[table.forward_address,table.mirror_address],
+                "heads":[table.a,table.b],
+                "leaf_id":row["leaf_id"], "leaf_version":int(row["leaf_version"]),
+                "leaf_digest":row["leaf_digest"],
+                "mapping_generation":int(row["generation"]),
             })
-        page = {"schema": MASTER_SCHEMA, "topology_sha256": TOPOLOGY_DIGEST,
-                "parent_root_sha256": parent_root_sha256,
-                "chart_generation": chart_generation,
-                "total_bound": len(rows), "offset": offset,
-                "next_offset": offset + len(items) if offset + len(items) < len(rows) else None,
-                "head_counts": counts, "entries": items}
-        raw = json.dumps(page, sort_keys=True, separators=(",", ":")).encode()
-        page["page_sha256"] = hashlib.sha256(raw).hexdigest()
-        page["native_execution_verified"] = False
-        page["master_register_projection_only"] = True
+        page = {"schema":MASTER_SCHEMA,"topology_sha256":TOPOLOGY_DIGEST,
+                "parent_root_sha256":parent_root_sha256,
+                "chart_generation":chart_generation,
+                "total_bound":len(rows),"offset":offset,
+                "next_offset":offset+len(items) if offset+len(items)<len(rows) else None,
+                "head_counts":counts,"entries":items}
+        raw=json.dumps(page,sort_keys=True,separators=(",",":")).encode()
+        page["page_sha256"]=hashlib.sha256(raw).hexdigest()
+        page["native_execution_verified"]=False
+        page["master_register_projection_only"]=True
         return page
