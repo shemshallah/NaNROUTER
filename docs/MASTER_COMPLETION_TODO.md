@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 937 Python tests, 8 skipped, OK; 75 manifest kernels; 71 registered local fixtures (5 newly verified locally); 64 manifest CI flags; last canonical CI covered 61 fixtures. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
+**Baseline:** 976 Python tests, 8 skipped, OK; 77 manifest kernels; 73 registered local fixtures (7 newly verified locally); 64 manifest CI flags; last canonical CI covered 61 fixtures. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -12,7 +12,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
 - [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
-- [x] Native 75-kernel manifest, 66 local fixtures, and 61-fixture canonical CI workflow.
+- [x] Native 77-kernel manifest, 66 local fixtures, and 61-fixture canonical CI workflow.
 - [x] `math_objects`, `math_store`, `math_registry`, `math_validity`, `math_linker`, NMP, execution bridge, demo.
 - [x] Typed absence algebra, relations/hypergraphs, rule lifecycle, retention/pruning.
 - [x] Cross-store commit intent/evidence/finalize recovery.

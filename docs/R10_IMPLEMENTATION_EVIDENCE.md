@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 5 newly registered native fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 937 Python tests passed (8 skipped).
+**Result:** 7 newly registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 976 Python tests passed (8 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -87,12 +87,14 @@
 | 73 | Vector span add | `mth/tests/mth_vector_test.nas` | 381 | PASS | local only |
 | 74 | Typed preflight | `mth/tests/mth_preflight_test.nas` | 2,780 | PASS | local only |
 | 75 | Native dispatch | `mth/tests/mth_linker_preflight_test.nas` | 16,047 | PASS | local only |
+| 76 | Graph degree 256 | `mth/tests/mth_graph_degree_test.nas` | 48,117 | PASS | local only |
+| 77 | Graph pattern 256 | `mth/tests/mth_graph_pattern_test.nas` | 56,063 | PASS | local only |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 937 tests in 130.651s
+Ran 976 tests in 130.651s
 OK (skipped=1)
 ```
 
@@ -134,6 +136,11 @@ Covered:
 - optional principal ACL enforcement on all math-store reads/writes;
 - worker token-digest binding and Class C policy-transition guard;
 - oracle-strength T/A verification extra (10 tests);
+- native graph degree and pattern kernels, locally verified;
+- synthetic capacity-vs-SNR harness with six R5 gates and explicit non-promotable synthetic-only status (14 tests);
+- point-0 v2 envelope binding and NANNET0 MC0DB persistence;
+- durable universe page records with generation CAS and page-map digest (12 tests);
+- typed execution evidence beyond a result digest (5 tests);
 - end-to-end control-plane demo with complete output-leaf provenance (P12, 2 tests).
 
 ## Math integration evidence (P0–P12)
@@ -152,14 +159,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-71 local fixtures registered; 5 newly registered fixtures passed locally
+73 local fixtures registered; 5 newly registered fixtures passed locally
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 75 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **75 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 77 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **77 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 
