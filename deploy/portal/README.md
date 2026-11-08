@@ -7,7 +7,7 @@ NaNLMind-owned deployment definition has been retired. The same persistent
 `/data` volume, issuer database and Koyeb secrets were retained, so there is
 one authority writer and no issuer fork.
 
-The image pins NaNLMind commit `5667750539445b4c2ed7c26df702bfc7ae6ec1ec`,
+The image pins NaNLMind commit `431e0775cdb79b4cd59038a4ebe0df5434a17c92`,
 builds the native logic checkpoint, and packages the existing portal,
 CLOCKED gateway, head cortex and NANNET authority. It keeps **one public
 port (8080)** with the workers on loopback. The root NaNROUTER `Dockerfile`
