@@ -51,6 +51,7 @@ jobs:
       - name: Assemble native HERMES and N16T guests with canonical NaN0S assembler
         run: |
           set -euo pipefail
+          cp nan0s/src/nannet/runner_task.nas mth/nan16/runner_task.nas
           awk -f nan0s/tools/nmk.awk -v CMD=emit -v LABELS=build/hermes.labels \
             mth/nan16/hermes_native_runtime.nas > build/hermes.nan
           awk -f nan0s/tools/nmk.awk -v CMD=emit -v LABELS=build/n16t.labels \
