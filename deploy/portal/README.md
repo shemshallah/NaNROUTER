@@ -11,3 +11,17 @@ Deployment stages:
 6. In a follow-up NaNLMind PR **after live cutover confirmation**, remove the old `deploy/training_merge/` deployment files and `config/rawroute.*koyeb*` examples. Do not delete the live deployment in advance.
 
 No live deployment, secret update, data migration, or removal has been performed by adding this image.
+
+## Router-owned Koyeb configuration examples
+
+The staging rawroute mount configuration examples now live in NaNROUTER,
+alongside the actual router-owned deployment artifact:
+
+- `deploy/portal/koyeb.yaml` — staging service spec, not a production cutover
+- `deploy/portal/rawroute.koyeb.env.example` — non-secret mount/quota hints
+- `deploy/portal/rawroute.mounts.koyeb.example.json` — example tier mount map
+
+**Ownership is not live deployment**: verify the exact Koyeb data mount and
+issuer key before enabling or replacing the production service. Do not
+delete NaNLMind's legacy live-runtime source while Koyeb may still build it;
+NaNROUTER's portal Docker image is source pinned to a NaNLMind commit.
