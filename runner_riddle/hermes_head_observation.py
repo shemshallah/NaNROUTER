@@ -60,39 +60,101 @@ class HermesHeadObservationJournal:
         with self._db() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("PRAGMA synchronous=FULL")
-            db.execute("""CREATE TABLE IF NOT EXISTS hermes_head_observation (
-                installation_id TEXT NOT NULL,
-                dispatch_id TEXT NOT NULL,
-                request_sha256 TEXT NOT NULL,
-                lease_id INTEGER NOT NULL,
-                universe_id INTEGER NOT NULL,
-                lease_generation INTEGER NOT NULL,
-                head_index INTEGER NOT NULL,
-                ring_epoch INTEGER NOT NULL,
-                bank_before_sha256 TEXT NOT NULL,
-                source_chart_sha256 TEXT,
-                source_root_block_sha256 TEXT,
-                bank_after BLOB,
-                bank_after_sha256 TEXT,
-                native_receipt_json TEXT,
-                checkpoint_generation INTEGER,
-                checkpointed_at INTEGER,
-                PRIMARY KEY(installation_id,dispatch_id)
-            )""")
-            # An older PR-79 journal must migrate in place, never discard
-            # pending rows or dispatch-ID tombstones.
-            existing_columns = {
-                r[1] for r in db.execute("PRAGMA table_info(hermes_head_observation)")
-            }
-            for name in (
-                "checkpoint_generation", "checkpointed_at",
-                "source_chart_sha256", "source_root_block_sha256",
-            ):
-                if name not in existing_columns:
-                    db.execute(
-                        "ALTER TABLE hermes_head_observation ADD COLUMN " + name +
-                        " INTEGER"
+            # Serialize schema upgrades with dispatch writes and with another
+            # router starting against the same durable WAL database.
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                db.execute("""CREATE TABLE IF NOT EXISTS hermes_head_observation (
+                    installation_id TEXT NOT NULL,
+                    dispatch_id TEXT NOT NULL,
+                    request_sha256 TEXT NOT NULL,
+                    lease_id INTEGER NOT NULL,
+                    universe_id INTEGER NOT NULL,
+                    lease_generation INTEGER NOT NULL,
+                    head_index INTEGER NOT NULL,
+                    ring_epoch INTEGER NOT NULL,
+                    bank_before_sha256 TEXT NOT NULL,
+                    source_chart_sha256 TEXT,
+                    source_root_block_sha256 TEXT,
+                    bank_after BLOB,
+                    bank_after_sha256 TEXT,
+                    native_receipt_json TEXT,
+                    checkpoint_generation INTEGER,
+                    checkpointed_at INTEGER,
+                    PRIMARY KEY(installation_id,dispatch_id)
+                )""")
+                existing = {
+                    row[1]: str(row[2]).upper()
+                    for row in db.execute(
+                        "PRAGMA table_info(hermes_head_observation)"
                     )
+                }
+                # Legacy deployments have no checkpoint/source columns.
+                # SHA-256 values are TEXT, never SQLite INTEGER affinity:
+                # all-decimal-looking hashes otherwise undergo numeric
+                # coercion, losing leading zeroes or integer precision.
+                for name, sql_type in (
+                    ("checkpoint_generation", "INTEGER"),
+                    ("checkpointed_at", "INTEGER"),
+                    ("source_chart_sha256", "TEXT"),
+                    ("source_root_block_sha256", "TEXT"),
+                ):
+                    if name not in existing:
+                        db.execute(
+                            "ALTER TABLE hermes_head_observation ADD COLUMN " +
+                            name + " " + sql_type
+                        )
+                        existing[name] = sql_type
+                if any(
+                    existing[name] != "TEXT"
+                    for name in (
+                        "source_chart_sha256", "source_root_block_sha256",
+                    )
+                ):
+                    # Repair databases upgraded by the earlier migration,
+                    # which used INTEGER for these two SHA fields. Rebuild
+                    # transactionally without deleting a pending reservation,
+                    # staged native bank, or permanent checkpoint tombstone.
+                    db.execute("""CREATE TABLE hermes_head_observation_retyped (
+                        installation_id TEXT NOT NULL,
+                        dispatch_id TEXT NOT NULL,
+                        request_sha256 TEXT NOT NULL,
+                        lease_id INTEGER NOT NULL,
+                        universe_id INTEGER NOT NULL,
+                        lease_generation INTEGER NOT NULL,
+                        head_index INTEGER NOT NULL,
+                        ring_epoch INTEGER NOT NULL,
+                        bank_before_sha256 TEXT NOT NULL,
+                        source_chart_sha256 TEXT,
+                        source_root_block_sha256 TEXT,
+                        bank_after BLOB,
+                        bank_after_sha256 TEXT,
+                        native_receipt_json TEXT,
+                        checkpoint_generation INTEGER,
+                        checkpointed_at INTEGER,
+                        PRIMARY KEY(installation_id,dispatch_id)
+                    )""")
+                    columns = (
+                        "installation_id,dispatch_id,request_sha256,lease_id,"
+                        "universe_id,lease_generation,head_index,ring_epoch,"
+                        "bank_before_sha256,source_chart_sha256,"
+                        "source_root_block_sha256,bank_after,bank_after_sha256,"
+                        "native_receipt_json,checkpoint_generation,checkpointed_at"
+                    )
+                    db.execute(
+                        "INSERT INTO hermes_head_observation_retyped (" +
+                        columns + ") SELECT " + columns +
+                        " FROM hermes_head_observation"
+                    )
+                    db.execute("DROP TABLE hermes_head_observation")
+                    db.execute(
+                        "ALTER TABLE hermes_head_observation_retyped "
+                        "RENAME TO hermes_head_observation"
+                    )
+                db.execute("COMMIT")
+            except Exception:
+                db.execute("ROLLBACK")
+                raise
 
     def _db(self):
         db = sqlite3.connect(self.database, timeout=15, isolation_level=None)
