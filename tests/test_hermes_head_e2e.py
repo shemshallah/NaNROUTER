@@ -131,6 +131,77 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         return published
 
+    def test_two_authenticated_guest_results_from_same_page_only_one_commits(self):
+        """Competing genuine native revisions cannot double-publish a chart."""
+        from nanlmind_hermes.native_head_checkpoint import (
+            NativeHeadCheckpointCoordinator, NativeHeadCheckpointConflict,
+        )
+        raw = bytes(BANK_BYTES)
+        before = self.fence(self.universe_id)
+        first_request = self.request(
+            dispatch_id="native-head-concurrent-001", raw=raw,
+            generation=before["chart_generation"], feature=127, increment=3,
+        )
+        second_request = self.request(
+            dispatch_id="native-head-concurrent-002", raw=raw,
+            generation=before["chart_generation"], feature=0, increment=2,
+        )
+        first = self.journal.execute(
+            request=first_request, lease_receipt=self.receipt,
+            network_head=0, raw_bank=raw, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        second = self.journal.execute(
+            request=second_request, lease_receipt=self.receipt,
+            network_head=0, raw_bank=raw, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        self.assertTrue(first["native_guest_invoked_locally"])
+        self.assertTrue(second["native_guest_invoked_locally"])
+        self.assertTrue(first["source_snapshot_bound"])
+        self.assertTrue(second["source_snapshot_bound"])
+        self.assertEqual(first["source_chart_sha256"], before["chart_sha256"])
+        self.assertEqual(second["source_chart_sha256"], before["chart_sha256"])
+        self.assertNotEqual(
+            first["bank_after_sha256"], second["bank_after_sha256"],
+        )
+        winner = self.journal_checkpoint(
+            first_request, expected_after_sha256=first["bank_after_sha256"],
+        )
+        self.assertEqual(winner["chart_generation"], 2)
+        loser_writer = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal,
+        )
+        with self.assertRaises(NativeHeadCheckpointConflict):
+            loser_writer.commit(
+                request=second_request, lease_receipt=self.receipt,
+                network_head=0,
+            )
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
+        self.assertEqual(
+            self.fence(self.universe_id)["bank_sha256"],
+            first["bank_after_sha256"],
+        )
+        # Losing result remains a nonpromoted journal stage. Retry returns
+        # the original native receipt without rerunning the guest.
+        loser = self.journal.inspect(
+            request=second_request, lease_receipt=self.receipt,
+            network_head=0,
+        )
+        self.assertEqual(loser["state"], "completed_staging_only")
+        self.assertFalse(loser["canonical_training_committed"])
+        repeat = self.journal.execute(
+            request=second_request, lease_receipt=self.receipt,
+            network_head=0, raw_bank=raw, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        self.assertTrue(repeat["replayed_from_journal"])
+        self.assertEqual(
+            repeat["bank_after_sha256"], second["bank_after_sha256"],
+        )
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
+        self.assertFalse(repeat["canonical_training_committed"])
+
     def test_real_native_cas_recovers_after_crash_before_router_ack(self):
         """Real guest runs once; a failed post-CAS ACK cannot double-write."""
         from nanlmind_hermes.native_head_checkpoint import (
