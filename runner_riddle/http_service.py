@@ -5,6 +5,8 @@ from dataclasses import asdict
 import hmac
 import json
 import os
+import signal
+import threading
 import time
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -51,6 +53,7 @@ class RiddleService:
         self.route_key = os.environ.get("RIDDLE_ROUTE_HMAC_KEY", "").encode()
         self.feedback_key = os.environ.get("RIDDLE_FEEDBACK_HMAC_KEY", "").encode()
         self.n16t_token = os.environ.get("RIDDLE_N16T_SUBMIT_TOKEN", "")
+        self.build_revision = os.environ.get("RIDDLE_BUILD_REVISION", "unknown")
         self.n16t_guest_pool = None
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
@@ -203,6 +206,13 @@ def make_handler(service: RiddleService):
                     "service": "Runner Riddle BS0:0",
                     "address": ROOT_ADDRESS,
                     "status": "ready",
+                    "build_revision": service.build_revision,
+                    "runtime": {
+                        "nan16_word_bits": 16,
+                        "ring_slots": 6,
+                        "active_slots": 1,
+                        "n16t_guest_configured": service.n16t_guest_pool is not None,
+                    },
                     "queue": service.inbox.stats(),
                     "range_manifest_present": service.range_manifest_path.exists(),
                     "route_cache_present": service.route_cache_path.exists(),
@@ -411,13 +421,26 @@ def make_handler(service: RiddleService):
     return Handler
 
 
+def install_stop_handlers(server: ThreadingHTTPServer) -> None:
+    """Turn Koyeb's SIGTERM into a graceful serve_forever shutdown."""
+    def stop(signum, frame) -> None:
+        del signum, frame
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    for name in ("SIGTERM", "SIGINT"):
+        candidate = getattr(signal, name, None)
+        if candidate is not None:
+            signal.signal(candidate, stop)
+
+
 def main() -> None:
     service = RiddleService()
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer(("0.0.0.0", port), make_handler(service))
     server.daemon_threads = True
+    install_stop_handlers(server)
     try:
-        server.serve_forever()
+        server.serve_forever(poll_interval=0.5)
     finally:
         server.server_close()
         service.close()

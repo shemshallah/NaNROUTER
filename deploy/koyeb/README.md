@@ -14,16 +14,45 @@ Build this repository's root `Dockerfile`. The process listens on `0.0.0.0:$PORT
 
 - Web service port: `8080`
 - Health check: `GET /healthz`
-- Persistent volume: mount at `/data`
-- Ensure the mounted directory is writable by container UID/GID `10001:10001`
+- Router data volume: mount at `/data` for `runner-riddle.sqlite` and the optional signed registry
+- Four tier volumes: mount at `/bs0db`, `/mc0db`, `/sc0db`, `/gm0db`
+- Ensure every mounted directory is writable by container UID/GID `10001:10001`
 - Set `RIDDLE_INTAKE_TOKEN` and `RIDDLE_WORKER_TOKEN` as separate random secrets, each at least 32 characters
-- Set `RIDDLE_RANGE_HMAC_KEY` only after the canonical allocator issues a signed range manifest
-- Set `RIDDLE_ROUTE_HMAC_KEY` to the independent key used to verify the signed master route cache
 - Set `RIDDLE_FEEDBACK_HMAC_KEY` to an independent 32+ byte secret shared with Bootstrap for feedback verification
 - Set `PORT=8080` and `RIDDLE_DATA_DIR=/data`
+- Set `RIDDLE_BUILD_REVISION` to the deployed commit for health provenance (optional but recommended)
+- Set `RIDDLE_RANGE_HMAC_KEY` only after the canonical allocator issues a signed range manifest
+- Set `RIDDLE_ROUTE_HMAC_KEY` to the independent key used to verify the signed master route cache
 - Optional `RIDDLE_MAX_PENDING_EVENTS` defaults to 4096 and is capped at 65536
 
+The service starts without Koyeb volume bindings and reports
+`volume_registry.health=unknown`. To configure the signed registry, also set
+`RIDDLE_VOLUME_HMAC_KEY` (32+ bytes), `KOYEB_REGION`, and the four real
+provider IDs `KOYEB_VOLUME_ID_BS0`, `KOYEB_VOLUME_ID_MC0`,
+`KOYEB_VOLUME_ID_SC0`, `KOYEB_VOLUME_ID_GM0`. Do not invent provider IDs.
+Set `RIDDLE_REQUIRE_VOLUME_REGISTRY=1` only after the four mounts are attached
+and verified; startup then fails closed unless the signed registry is green.
+
+The container entrypoint creates the four tier bootstrap tables, writes a
+signed registry only when the complete provider binding is present, and then
+starts the listener. A degraded registry is reported honestly rather than
+promoted to green.
+
 Do not commit any secret, token, HMAC key, allocator manifest, or live route cache to Git.
+
+## Container smoke contract
+
+`.github/workflows/koyeb-container-smoke.yml` builds the root `Dockerfile`,
+starts it without Koyeb credentials, and asserts:
+
+- `GET /healthz` returns 200;
+- the BS0:0 address and deployed revision are present;
+- the runtime declares 16-bit NaN words, six ring slots, and one active slot;
+- an unconfigured volume registry is `unknown`, never green;
+- `live_route_commit` remains false.
+
+This is container readiness evidence, not a claim that a live Koyeb service is
+attached.
 
 ## API
 

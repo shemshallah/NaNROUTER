@@ -1,0 +1,217 @@
+{
+  "schema": "nanrouter.nan-native-boundary.v1",
+  "status": "static-audited",
+  "native_word_bits": 16,
+  "native_source_dir": "mth/nan16",
+  "fixture_dir": "mth/tests",
+  "manifest": "spec/wave-capabilities.json",
+  "fixture_runner": "tools/run_mth_fixtures.py",
+  "ci_workflow": ".github/workflows/mth-native-contract.yml",
+  "layers": [
+    {
+      "id": "L0",
+      "name": "NaN16 execution and legal-word gate",
+      "native": true,
+      "prefixes": [
+        "mth.jahs."
+      ],
+      "host_roles": [
+        "launch",
+        "hash",
+        "route",
+        "validate metadata"
+      ]
+    },
+    {
+      "id": "L1",
+      "name": "MTH word/object descriptors and memory access",
+      "native": true,
+      "prefixes": [
+        "mth.stage0.",
+        "mth.double_endian."
+      ],
+      "host_roles": [
+        "allocate descriptor records",
+        "address binding"
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "Scalar exact arithmetic and status handling",
+      "native": true,
+      "prefixes": [
+        "mth.bool.",
+        "mth.bitwise.",
+        "mth.integer.",
+        "mth.shift.",
+        "mth.multiply.",
+        "mth.divmod."
+      ],
+      "host_roles": [
+        "type/status records only"
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "Vector and matrix primitives",
+      "native": true,
+      "prefixes": [
+        "mth.vector.",
+        "mth.matrix.",
+        "mth.matvec.",
+        "mth.matvec256.",
+        "mth.encode.",
+        "mth.decode.",
+        "mth.topk.",
+        "mth.negate256."
+      ],
+      "host_roles": [
+        "shape/budget validation",
+        "dispatch"
+      ]
+    },
+    {
+      "id": "L4",
+      "name": "Numerical, probability, graph, and spectral functions",
+      "native": true,
+      "prefixes": [
+        "mth."
+      ],
+      "host_roles": [
+        "plan composition only"
+      ]
+    },
+    {
+      "id": "L5",
+      "name": "Composition, cost, and optimization selection",
+      "native": true,
+      "prefixes": [
+        "mth.adapter.",
+        "mth.lowrank.",
+        "mth.graph.pair."
+      ],
+      "host_roles": [
+        "cost/workspace accounting only"
+      ]
+    },
+    {
+      "id": "L6",
+      "name": "Evidence, equivalence fixtures, and candidate validation",
+      "native": true,
+      "prefixes": [
+        "mth.preflight.",
+        "mth.admission.",
+        "mth.execute.",
+        "mth.rss."
+      ],
+      "host_roles": [
+        "compare hashes/statuses",
+        "persist evidence"
+      ]
+    },
+    {
+      "id": "L7",
+      "name": "Discovery and extension proposals",
+      "native": true,
+      "prefixes": [],
+      "host_roles": [
+        "proposal records only",
+        "no trusted promotion"
+      ]
+    }
+  ],
+  "host_boundary": {
+    "control_modules": [
+      "runner_riddle/math_execution.py",
+      "runner_riddle/math_runtime.py",
+      "runner_riddle/math_store.py",
+      "runner_riddle/mth_registry.py",
+      "runner_riddle/mth_system.py",
+      "runner_riddle/nmp.py",
+      "runner_riddle/wave_store.py",
+      "runner_riddle/wave_service.py",
+      "runner_riddle/wave_adapter.py",
+      "runner_riddle/http_service.py",
+      "runner_riddle/koyeb_bootstrap.py"
+    ],
+    "metadata_math_modules": [
+      {
+        "module": "runner_riddle/math_linker.py",
+        "allowed": [
+          "math.isfinite for descriptor validation"
+        ]
+      },
+      {
+        "module": "runner_riddle/math_http.py",
+        "allowed": [
+          "float parsing and math.isfinite for transport bounds"
+        ]
+      },
+      {
+        "module": "runner_riddle/wave_http.py",
+        "allowed": [
+          "float parsing and math.isfinite for transport bounds"
+        ]
+      },
+      {
+        "module": "runner_riddle/point0_http.py",
+        "allowed": [
+          "float parsing and math.isfinite for transport bounds"
+        ]
+      }
+    ],
+    "experiment_analysis_modules": [
+      {
+        "module": "runner_riddle/capacity_snr.py",
+        "reason": "synthetic capacity-vs-SNR harness; never a production MTH result"
+      },
+      {
+        "module": "runner_riddle/lm_ablation.py",
+        "reason": "offline experiment analysis; never a production MTH result"
+      },
+      {
+        "module": "runner_riddle/r7_experiment.py",
+        "reason": "offline held-out experiment analysis; never a production MTH result"
+      }
+    ],
+    "forbidden_numeric_imports_global": [
+      "numpy",
+      "scipy",
+      "torch",
+      "jax",
+      "sympy",
+      "statistics"
+    ],
+    "forbidden_in_control_modules": [
+      "math",
+      "cmath",
+      "numpy",
+      "scipy",
+      "torch",
+      "jax",
+      "sympy",
+      "statistics"
+    ],
+    "forbidden_in_metadata_modules": [
+      "numpy",
+      "scipy",
+      "torch",
+      "jax",
+      "sympy",
+      "statistics"
+    ]
+  },
+  "guarantees": [
+    "Every registered kernel has a NaN16 source and a NaN16 fixture.",
+    "Every mth/nan16 source is registered in the manifest.",
+    "Every unique manifest fixture is present in the canonical local runner.",
+    "Every runner fixture is referenced by the canonical CI workflow.",
+    "Production control modules do not import host numerical libraries.",
+    "Host experiment analysis modules are explicitly excluded from the production path."
+  ],
+  "non_guarantees": [
+    "Static import coverage is not a formal proof of numerical equivalence.",
+    "Missing native operations must return typed UNAVAILABLE rather than compute in Python.",
+    "CI verification is distinct from local native fixture evidence."
+  ]
+}

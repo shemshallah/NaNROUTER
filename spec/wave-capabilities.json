@@ -1309,6 +1309,20 @@
       ],
       "status": "native_verified",
       "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.prefix_sum256.u32",
+      "source": "mth/nan16/mth_vector_prefix_sum256_u32.nas",
+      "fixture": "mth/tests/mth_vector_prefix_sum256_u32_test.nas",
+      "marker": "MTH VECTOR PREFIX SUM256 U32 PASS",
+      "steps": 49559,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

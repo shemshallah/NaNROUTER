@@ -33,6 +33,7 @@ class Fixture:
 
 FIXTURES: tuple[Fixture, ...] = (
     Fixture("k256", "mth/tests/mth_k256_laplacian_test.nas", 2_000_000, "MTH K256 LAPLACIAN PASS", "native_verified"),
+    Fixture("k256_pair_space", "mth/tests/mth_k256_pair_space_v1_test.nas", 8_000_000, "MTH K256 PAIR SPACE V1 PASS", "native_verified"),
     Fixture("k255", "mth/tests/mth_k255_laplacian_test.nas", 4_000_000, "MTH K255 LAPLACIAN PASS", "native_verified"),
     Fixture("ring255", "mth/tests/mth_ring255_laplacian_test.nas", 4_000_000, "MTH RING255 LAPLACIAN PASS", "native_verified"),
     Fixture("ring255_port", "mth/tests/mth_ring255_port_test.nas", 4_000_000, "MTH RING255 PORT ASSEMBLE PASS", "native_verified"),
@@ -111,6 +112,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("vector_scale256_f32", "mth/tests/mth_vector_scale256_f32_test.nas", 200_000, "MTH VECTOR SCALE256 F32 PASS", "native_verified"),
     Fixture("matrix_diagonal256", "mth/tests/mth_matrix_diagonal256_f32_test.nas", 200_000, "MTH MATRIX DIAGONAL256 F32 PASS", "native_verified"),
     Fixture("matrix_add256", "mth/tests/mth_matrix_add256_f32_test.nas", 4_000_000, "MTH MATRIX ADD256 F32 PASS", "native_verified"),
+    Fixture("vector_prefix_sum256_u32", "mth/tests/mth_vector_prefix_sum256_u32_test.nas", 2_000_000, "MTH VECTOR PREFIX SUM256 U32 PASS", "native_verified"),
     Fixture("vector_add", "mth/tests/mth_vector_test.nas", 200_000, "MTH U32 VECTOR ADD PASS", "native_verified"),
     Fixture("vector_add256_f32", "mth/tests/mth_vector_add256_f32_test.nas", 100_000, "MTH VECTOR ADD256 F32 PASS", "native_verified"),
     Fixture("vector_sub256_f32", "mth/tests/mth_vector_sub256_f32_test.nas", 100_000, "MTH VECTOR SUB256 F32 PASS", "native_verified"),

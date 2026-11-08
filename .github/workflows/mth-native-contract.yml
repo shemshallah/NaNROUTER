@@ -761,3 +761,24 @@ jobs:
           mth_double_endian_test|double-endian|200000|MTH DOUBLE-ENDIAN REENTRANT PASS
           mth_vector_test|vector|200000|MTH U32 VECTOR ADD PASS
           EOF
+
+      - name: Run newly registered native fixtures through the canonical runner
+        run: |
+          python3 tools/run_mth_fixtures.py --nan0s-root nan0s \
+            --only graph_degree \
+            --only graph_pattern \
+            --only graph_filter \
+            --only graph_laplacian_csr \
+            --only rss_contract \
+            --only matrix_transpose256 \
+            --only vector_add256_f32 \
+            --only vector_sub256_f32 \
+            --only vector_mean256_f32 \
+            --only vector_abs256_f32 \
+            --only vector_relu256_f32 \
+            --only vector_scale256_f32 \
+            --only matrix_diagonal256 \
+            --only matrix_add256 \
+            --only vector_argmax256_f32 \
+            --only vector_argmin256_f32 \
+            --only vector_prefix_sum256_u32
