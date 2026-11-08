@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import hashlib
+import hmac
 import json
 from typing import Any, Iterable, Mapping
 
@@ -281,6 +282,57 @@ class ClassCPolicyTransition:
         }
 
 
+class WorkerIdentityBinder:
+    """Bind opaque bearer tokens to capability owners using token digests.
+
+    Raw tokens are never stored. This is an authentication helper, not a
+    mathematical or capability authority; a successful binding means only that
+    the presented token matches the owner recorded at registration time.
+    """
+
+    def __init__(self) -> None:
+        self._bindings: dict[str, str] = {}
+
+    @staticmethod
+    def _fingerprint(token: str) -> str:
+        if not isinstance(token, str) or not token:
+            raise MathAuthorizationError("worker token must be a non-empty string")
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def bind(self, token: str, owner: str) -> str:
+        owner = _text(owner, "owner")
+        digest = self._fingerprint(token)
+        existing = self._bindings.get(digest)
+        if existing is not None and existing != owner:
+            raise MathAuthorizationError(
+                "worker token is already bound to another owner"
+            )
+        self._bindings[digest] = owner
+        return digest
+
+    def unbind(self, token: str) -> bool:
+        return self._bindings.pop(self._fingerprint(token), None) is not None
+
+    def verify(self, token: str, owner: str) -> bool:
+        owner = _text(owner, "owner")
+        digest = self._fingerprint(token)
+        expected = self._bindings.get(digest)
+        if expected is None:
+            return False
+        return hmac.compare_digest(expected, owner)
+
+    def __call__(self, token: str, owner: str) -> bool:
+        return self.verify(token, owner)
+
+    def stats(self) -> dict[str, Any]:
+        return {
+            "schema": "nanrouter.worker-identity-binder-health.v1",
+            "status": "green",
+            "bindings": len(self._bindings),
+            "raw_tokens_stored": False,
+        }
+
+
 class MathAuthorizer:
     """Pure, deterministic authorization policy."""
 
@@ -440,5 +492,6 @@ __all__ = [
     "CAPABILITY_ACTIONS", "ClassCPolicyTransition", "EXECUTE", "GRANT",
     "LINK", "MathAuthorizationError", "MathAuthorizer", "POLICY_CHANGE",
     "PROPOSE", "PROMOTE", "PRUNE", "Principal", "READ", "ROLE_ACTIONS",
-    "SCHEMA", "SEPARATION_ACTIONS", "TEST", "VALIDATE", "WRITE",
+    "SCHEMA", "SEPARATION_ACTIONS", "TEST", "VALIDATE", "WorkerIdentityBinder",
+    "WRITE",
 ]

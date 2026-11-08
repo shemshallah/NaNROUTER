@@ -14,6 +14,7 @@ from runner_riddle.math_auth import (
     MathAuthorizationError,
     MathAuthorizer,
     Principal,
+    WorkerIdentityBinder,
 )
 
 
@@ -183,6 +184,28 @@ class MathAuthorizationTests(unittest.TestCase):
         )
         with self.assertRaises(AuthorizationDenied):
             self.policy.require_class_c(wrong, proposer, approver)
+
+    def test_worker_identity_binder_stores_only_digests(self):
+        binder = WorkerIdentityBinder()
+        token = "worker-token-secret-000000"
+        digest = binder.bind(token, "MC0:0/R0")
+        self.assertEqual(len(digest), 64)
+        self.assertTrue(binder.verify(token, "MC0:0/R0"))
+        self.assertFalse(binder.verify(token, "MC0:0/R1"))
+        self.assertFalse(binder.verify("wrong-token", "MC0:0/R0"))
+        self.assertNotIn(token, str(binder.stats()))
+        self.assertFalse(binder.stats()["raw_tokens_stored"])
+        self.assertTrue(binder.unbind(token))
+        self.assertFalse(binder.verify(token, "MC0:0/R0"))
+
+    def test_worker_identity_binder_rejects_rebinding_another_owner(self):
+        binder = WorkerIdentityBinder()
+        binder.bind("token-a", "owner-a")
+        with self.assertRaises(MathAuthorizationError):
+            binder.bind("token-a", "owner-b")
+        self.assertTrue(binder("token-a", "owner-a"))
+        with self.assertRaises(MathAuthorizationError):
+            binder.bind("", "owner-a")
 
     def test_decision_digest_is_stable_and_token_free(self):
         first = self.policy.authorize(self.proposer, READ)

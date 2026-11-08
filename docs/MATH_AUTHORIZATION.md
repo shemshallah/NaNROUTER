@@ -35,6 +35,14 @@ signature digest, and explicitly reports `signature_verified=False`; this module
 does not perform cryptographic verification. The transition is not yet wired
 into every policy mutation.
 
+## Worker identity binding
+
+`WorkerIdentityBinder` maps SHA-256 token fingerprints to a capability owner.
+It never stores raw tokens, rejects rebinding the same token to another owner,
+and exposes a `verify(token, owner)` callback compatible with the NMP HTTP
+`verify_worker_identity` seam. It does not authenticate a credential by itself;
+the deployment must obtain the token from its trusted transport.
+
 ## Non-claims
 
 - This module does not validate bearer tokens, issue sessions, or store
