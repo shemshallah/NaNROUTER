@@ -153,29 +153,27 @@ class RealManifestRegistryTests(unittest.TestCase):
 
     def test_resolve_filters_all_requested_tags(self):
         vector = self.registry.resolve(tags="family:vector")
+        expected_vector = [
+            descriptor.kernel_id for descriptor in self.registry.kernels
+            if descriptor.kernel_id.startswith("mth.vector.")
+            and descriptor.ci_verified
+        ]
         self.assertEqual(
             [descriptor.kernel_id for descriptor in vector],
-            [
-                "mth.vector.dot256.f32",
-                "mth.vector.norm256.f32",
-                "mth.vector.axpy256.f32",
-                "mth.vector.cosine256.f32",
-            ],
+            expected_vector,
         )
         self.assertEqual(
             self.registry.resolve(tags=["family:vector", "precision:float32"]),
-            vector,
+            tuple(descriptor for descriptor in vector
+                  if descriptor.precision == "float32"),
         )
         zero_workspace = self.registry.resolve(
             tags=["family:vector"], max_workspace=0
         )
         self.assertEqual(
             [descriptor.kernel_id for descriptor in zero_workspace],
-            [
-                "mth.vector.dot256.f32",
-                "mth.vector.norm256.f32",
-                "mth.vector.axpy256.f32",
-            ],
+            [descriptor.kernel_id for descriptor in vector
+             if descriptor.workspace_words == 0],
         )
         self.assertEqual(self.registry.resolve(tags="family:missing"), ())
 

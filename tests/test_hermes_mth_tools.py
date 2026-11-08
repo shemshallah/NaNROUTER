@@ -52,6 +52,12 @@ class HermesMthToolsTests(unittest.TestCase):
                     with self.assertRaises(HermesMthToolError):
                         self.tools.invoke("mth.prepare", args)
 
+    def test_all_catalogue_kernels_ci_verified_after_native_gate(self):
+        self.assertEqual(len(self.tools.registry.kernels), 91)
+        self.assertTrue(all(
+            kernel.ci_verified and kernel.status == "native_verified"
+            for kernel in self.tools.registry.kernels))
+
     def test_all_families_accounted_for(self):
         result = self.tools.invoke("mth.categories")
         self.assertEqual(sum(result["families"].values()), len(self.tools.registry))

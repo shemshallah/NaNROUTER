@@ -1,0 +1,67 @@
+name: MTH remaining native fixture verification
+
+on:
+  pull_request:
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/**"
+      - "spec/wave-capabilities.json"
+      - "tools/run_mth_fixtures.py"
+      - ".github/workflows/mth-remaining-fixtures.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/**"
+      - "spec/wave-capabilities.json"
+      - "tools/run_mth_fixtures.py"
+      - ".github/workflows/mth-remaining-fixtures.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-remaining-mth-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
+          path: nan0s
+      - name: Build pinned NaN0S native CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Execute all 27 previously non-CI-verified MTH native fixtures
+        run: |
+          set -euo pipefail
+          python tools/run_mth_fixtures.py --nan0s-root nan0s \
+          --only graph_degree \
+          --only graph_pattern \
+          --only graph_filter \
+          --only bool2 \
+          --only bitwise \
+          --only integer \
+          --only shift \
+          --only multiply \
+          --only divide \
+          --only stage0 \
+          --only double_endian \
+          --only vector_add \
+          --only preflight_typed \
+          --only native_dispatch \
+          --only vector_add256_f32 \
+          --only vector_sub256_f32 \
+          --only vector_mean256_f32 \
+          --only vector_abs256_f32 \
+          --only vector_relu256_f32 \
+          --only graph_laplacian_csr \
+          --only rss_contract \
+          --only matrix_transpose256 \
+          --only vector_argmax256_f32 \
+          --only vector_argmin256_f32 \
+          --only vector_scale256_f32 \
+          --only matrix_diagonal256 \
+          --only matrix_add256

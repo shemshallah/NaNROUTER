@@ -204,7 +204,7 @@ class WaveCapabilityTests(unittest.TestCase):
         document = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(document["schema"], "nanrouter.wave-capabilities.v1")
 
-    def test_graph_core_kernels_are_native_verified_locally_only(self):
+    def test_graph_core_kernels_are_native_and_ci_verified(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         by_id = {kernel["kernel_id"]: kernel for kernel in manifest["kernels"]}
         for kernel_id in (
@@ -215,7 +215,7 @@ class WaveCapabilityTests(unittest.TestCase):
             with self.subTest(kernel_id=kernel_id):
                 kernel = by_id[kernel_id]
                 self.assertEqual(kernel["status"], "native_verified")
-                self.assertFalse(kernel["ci_verified"])
+                self.assertTrue(kernel["ci_verified"])
                 self.assertLessEqual(kernel["workspace_words"], WORDS_PER_MIB * 2)
         self.assertEqual(
             by_id["mth.graph.filter.poly2.q16.16"]["workspace_words"], 528

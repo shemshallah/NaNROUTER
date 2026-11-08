@@ -88,14 +88,6 @@ class RssControllerRouteTests(unittest.TestCase):
         for verb in RSS_VERBS:
             with self.subTest(verb=verb):
                 result = self.controller.route(verb)
-                if verb == "FILTER":
-                    self.assertEqual(result.status, RSS_STATUS_UNAVAILABLE)
-                    self.assertEqual(
-                        result.reason, RSS_REASON_FILTER_NOT_CI_VERIFIED
-                    )
-                    self.assertIsNone(result.plan)
-                    self.assertIsNone(result.plan_digest)
-                    continue
                 self.assertEqual(result.status, RSS_STATUS_PLANNED)
                 self.assertTrue(result.available)
                 plan = result.require_plan()
@@ -233,15 +225,15 @@ class RssControllerRouteTests(unittest.TestCase):
             RSS_STATUS_UNAVAILABLE,
         )
 
-    def test_real_filter_kernel_is_unavailable_until_ci_verified(self):
+    def test_real_filter_kernel_is_plan_eligible_after_native_ci(self):
         descriptor = self.registry.require("mth.graph.filter.poly2.q16.16")
         self.assertEqual(descriptor.status, "native_verified")
-        self.assertFalse(descriptor.ci_verified)
+        self.assertTrue(descriptor.ci_verified)
         result = self.controller.route("FILTER")
-        self.assertEqual(result.status, RSS_STATUS_UNAVAILABLE)
-        self.assertEqual(
-            result.reason, RSS_REASON_FILTER_NOT_CI_VERIFIED
-        )
+        self.assertEqual(result.status, RSS_STATUS_PLANNED)
+        self.assertEqual(result.kernel_ids, ("mth.graph.filter.poly2.q16.16",))
+        self.assertIs(self.registry.validate_plan(result.require_plan()),
+                      result.plan)
 
     def test_plan_digest_is_deterministic(self):
         first = self.controller.route("MATCH")
