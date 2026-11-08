@@ -22,10 +22,7 @@ from urllib.request import Request, urlopen
 
 from .point_fabric import (
     CentralPointFabric,
-    FabricCapacityError,
-    FabricError,
     FabricRoutingError,
-    PointFrame,
     frame_from_json,
     frames_to_json,
 )
@@ -126,7 +123,13 @@ class PortalRingNode:
                 self.fabric.import_state(checkpoint["state"])
             except Exception as exc:
                 self._error(exc)
-        self.fabric.activate()
+        for hw in (0, 2, 5):
+            try:
+                self.fabric.point(hw)
+            except FabricRoutingError:
+                self.fabric.register(hw, status="active")
+            else:
+                self.fabric.heartbeat(hw, status="active")
         self._lease = lease
         self._handoffs += 1
         self._last_checkpoint = time.monotonic()
@@ -143,7 +146,10 @@ class PortalRingNode:
             self.authority.release(slot=self.slot, lease_id=lease["lease_id"])
         except Exception as exc:
             self._error(exc)
-        self.fabric.deactivate()
+        try:
+            self.fabric.heartbeat(5, status="degraded")
+        except Exception:
+            pass
         self._lease = None
         self._last_error = reason
 
