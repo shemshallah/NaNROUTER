@@ -43,19 +43,17 @@ mth_de_encode:
 
   MOVI r4,#MTH_DE_CLASS
   STW r1,r2,r4
-  MOVI r6,1
-  LD r1,r12,r6
+  LD r1,r12,1
   CALL @mth_de_bswap16
   MOVI r4,#MTH_DE_TAG_LE
   SHL r4,r4,16
   BOOL.14 r1,r1,r4
-  MOVI r6,2
-  LD r2,r12,r6
+  LD r2,r12,2
   ADD r2,r2,r13
   MOVI r4,#MTH_DE_CLASS
   STW r1,r2,r4
 
-  LD r15,r12,r0
+  LD r15,r12,0
   RET
 
 ; r1=pair address, r12=caller frame[1]
@@ -64,35 +62,35 @@ mth_de_decode:
   LDN r3,r1,0
   MOVI r4,#MTH_DE_CLASS
   CMP r3,r4
-  JMP[NE] @mth_de_bad
+  JMP[NE] @mth_de_decode_bad
   LDN r3,r1,1
   CMP r3,r4
-  JMP[NE] @mth_de_bad
+  JMP[NE] @mth_de_decode_bad
   LD r4,r1,0
   LD r5,r1,1
   SHR r6,r4,16
   CMP r6,r0
-  JMP[NE] @mth_de_bad
+  JMP[NE] @mth_de_decode_bad
   SHR r6,r5,16
   MOVI r7,#MTH_DE_TAG_LE
   CMP r6,r7
-  JMP[NE] @mth_de_bad
+  JMP[NE] @mth_de_decode_bad
   MOVI r6,0xFFFF
   BOOL.8 r4,r4,r6
   BOOL.8 r5,r5,r6
   ADD r1,r5,r0
   CALL @mth_de_bswap16
   CMP r1,r4
-  JMP[NE] @mth_de_bad
+  JMP[NE] @mth_de_decode_bad
   ADD r1,r4,r0
   MOVI r2,1
-  LD r15,r12,r0
+  LD r15,r12,0
   RET
 
-mth_de_bad:
+mth_de_decode_bad:
   MOVI r1,0
   MOVI r2,0
-  LD r15,r12,r0
+  LD r15,r12,0
   RET
 
 mth_de_delim:

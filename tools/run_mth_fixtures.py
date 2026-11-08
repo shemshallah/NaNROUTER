@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,6 +28,7 @@ class Fixture:
     steps: int
     marker: str
     status: str = "source_written"
+    requires_nan0s_sources: bool = False
 
 
 FIXTURES: tuple[Fixture, ...] = (
@@ -96,13 +98,32 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("shift", "mth/tests/mth_shift_test.nas", 100_000, "MTH SHIFT PASS", "native_verified"),
     Fixture("multiply", "mth/tests/mth_multiply_test.nas", 100_000, "MTH MUL WIDE PASS", "native_verified"),
     Fixture("divide", "mth/tests/mth_divide_test.nas", 100_000, "MTH DIVMOD PASS", "native_verified"),
+    Fixture("stage0", "mth/tests/mth_stage0_test.nas", 200_000, "MTH STAGE0 PASS", "native_verified"),
+    Fixture("double_endian", "mth/tests/mth_double_endian_test.nas", 200_000, "MTH DOUBLE-ENDIAN REENTRANT PASS", "native_verified"),
+    Fixture("vector_add", "mth/tests/mth_vector_test.nas", 200_000, "MTH U32 VECTOR ADD PASS", "native_verified"),
+    # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical
+    # pinned commit (7f250a1) so the registry exposes nmr_contract_put and the
+    # route linker sources.
+    Fixture("preflight_typed", "mth/tests/mth_preflight_test.nas", 2_000_000, "MTH TYPED PREFLIGHT PASS", "native_verified", requires_nan0s_sources=True),
+    Fixture("native_dispatch", "mth/tests/mth_linker_preflight_test.nas", 3_000_000, "MTH NATIVE DISPATCH PASS", "native_verified", requires_nan0s_sources=True),
 )
+
+
+def _staged_source(fixture: Fixture, nan0s: Path, out_dir: Path) -> Path:
+    """Mirror ``mth/`` beside the canonical NaN0S tree for external includes."""
+    stage_root = out_dir / "stage"
+    if not stage_root.exists():
+        shutil.copytree(REPO_ROOT / "mth", stage_root / "mth")
+        (stage_root / "nan0s").symlink_to(nan0s.resolve(), target_is_directory=True)
+    return stage_root / fixture.path
 
 
 def run_one(fixture: Fixture, nan0s: Path, out_dir: Path) -> tuple[bool, str]:
     source = REPO_ROOT / fixture.path
     if not source.exists():
         return False, f"MISSING {fixture.path}"
+    if fixture.requires_nan0s_sources:
+        source = _staged_source(fixture, nan0s, out_dir)
     image = out_dir / f"{fixture.name}.nan"
     assemble = subprocess.run(
         ["awk", "-f", str(nan0s / "tools/nmk.awk"), "-v", "CMD=emit", str(source)],

@@ -741,20 +741,23 @@ jobs:
           grep -q '^MTH LINKER COMPOSED ADMISSION PASS' build/mth/linker-preflight.out
           grep -q '^MTH NATIVE DISPATCH PASS' build/mth/linker-preflight.out
 
-      - name: Assemble and execute Boolean, bitwise, integer, shift, multiply, divide fixtures
+      - name: Assemble and execute arithmetic, Stage 0, double-endian, and vector fixtures
         run: |
-          for entry in \
-            "mth_bool2_test bool2 'MTH BOOL2 ALL 16 PASS'" \
-            "mth_bitwise_test bitwise 'MTH BITWISE/COMPARE PASS'" \
-            "mth_integer_test integer 'MTH INT32 CHECKED PASS'" \
-            "mth_shift_test shift 'MTH SHIFT PASS'" \
-            "mth_multiply_test multiply 'MTH MUL WIDE PASS'" \
-            "mth_divide_test divide 'MTH DIVMOD PASS'"; do
-            set -- $entry
-            fixture="$1"; name="$2"; marker="$3"
+          while IFS='|' read -r fixture name steps marker; do
+            [ -n "$fixture" ] || continue
             awk -f nan0s/tools/nmk.awk -v CMD=emit "mth/tests/${fixture}.nas" > "build/mth/${name}.nan"
-            nan0s/aarch64/android/nan_cli --img "build/mth/${name}.nan" --steps 100000 --serial > "build/mth/${name}.out" 2> "build/mth/${name}.err"
+            nan0s/aarch64/android/nan_cli --img "build/mth/${name}.nan" --steps "$steps" --serial > "build/mth/${name}.out" 2> "build/mth/${name}.err"
             cat "build/mth/${name}.out"
             cat "build/mth/${name}.err"
             grep -q "^${marker}" "build/mth/${name}.out"
-          done
+          done <<'EOF'
+          mth_bool2_test|bool2|100000|MTH BOOL2 ALL 16 PASS
+          mth_bitwise_test|bitwise|100000|MTH BITWISE/COMPARE PASS
+          mth_integer_test|integer|100000|MTH INT32 CHECKED PASS
+          mth_shift_test|shift|100000|MTH SHIFT PASS
+          mth_multiply_test|multiply|100000|MTH MUL WIDE PASS
+          mth_divide_test|divide|100000|MTH DIVMOD PASS
+          mth_stage0_test|stage0|200000|MTH STAGE0 PASS
+          mth_double_endian_test|double-endian|200000|MTH DOUBLE-ENDIAN REENTRANT PASS
+          mth_vector_test|vector|200000|MTH U32 VECTOR ADD PASS
+          EOF

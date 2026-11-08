@@ -30,12 +30,17 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.matvec256.full.f32", ids)
         self.assertIn("mth.svd.top2.256.f32", ids)
         self.assertIn("mth.topk.256.f32", ids)
-        self.assertEqual(len(ids), 70)
+        self.assertIn("mth.stage0.word_layout.u32", ids)
+        self.assertIn("mth.double_endian.pair.u32", ids)
+        self.assertIn("mth.vector.span_add.checked.u32", ids)
+        self.assertIn("mth.preflight.typed.u32", ids)
+        self.assertIn("mth.execute.native_dispatch.f32", ids)
+        self.assertEqual(len(ids), 75)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 70)
+        self.assertEqual(len(rows), 75)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
@@ -46,7 +51,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 70)
+            self.assertEqual(len(rows), 75)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],

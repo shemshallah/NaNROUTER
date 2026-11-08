@@ -41,6 +41,7 @@ mth_de_test_main:
   MOVI r7,1
   BOOL.6 r5,r5,r7
   LDN r6,r2,1
+  ADD r2,r2,r13
   STW r5,r2,r6
 
   MOVI r1,4096
@@ -58,6 +59,7 @@ mth_de_test_main:
   SHL r7,r7,16
   BOOL.14 r5,r5,r7
   LDN r6,r2,1
+  ADD r2,r2,r13
   STW r5,r2,r6
   MOVI r1,4100
   MOVI r12,@mth_de_frame_b

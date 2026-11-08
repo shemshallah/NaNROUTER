@@ -15,5 +15,14 @@ new physical payload allocation:
 - BSWAPM is explicitly **not** the double-endian redundant pair codec.
 
 The native source remains `mth/nan16/mth_core.nas`; the Stage 0 fixture is
-`mth/tests/mth_stage0_test.nas`. The fixture currently fails locally and is not
-CI-verified, so it must not be described as a passed gate.
+`mth/tests/mth_stage0_test.nas`. As of 2026-11-07 the fixture assembles with
+the canonical NaN0S `nmk.awk` and passes locally under `nan_cli` with marker
+`MTH STAGE0 PASS` after 1,161 steps. The earlier PC 114 failure was a fixture
+bug: the post-`BSWAPM` restoration check compared payload against the saved
+class nibble and class against the saved payload. The fixture now compares
+payload-to-payload and class-to-class.
+
+The fixture is part of the canonical `mth-native-contract` workflow, but that
+workflow has not yet been observed to run this revision. Status therefore
+remains local native evidence, not CI-verified; `spec/wave-capabilities.json`
+records `ci_verified: false` until canonical CI actually runs it.

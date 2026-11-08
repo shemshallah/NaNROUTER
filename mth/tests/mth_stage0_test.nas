@@ -88,9 +88,9 @@ mth_face_loop:
   CALL @mth_bswapm64
   LD r2,r6,0
   LDN r3,r6,0
-  CMP r2,r11
+  CMP r2,r10
   JMP[NE] @mth_fail
-  CMP r3,r10
+  CMP r3,r11
   JMP[NE] @mth_fail
 
   MOVI r1,@mth_pass

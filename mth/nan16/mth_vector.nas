@@ -39,8 +39,7 @@ mth_u32_span_add_validate:
 mth_u32_span_add_commit:
   LD r1,r12,0
   LD r2,r12,1
-  MOVI r9,2
-  LD r3,r12,r9
+  LD r3,r12,2
   ADD r5,r4,r0
 mth_u32_span_add_write:
   CMP r5,r0

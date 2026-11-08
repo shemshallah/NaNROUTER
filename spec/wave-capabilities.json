@@ -1000,6 +1000,76 @@
       "ci_verified": false
     },
     {
+      "kernel_id": "mth.stage0.word_layout.u32",
+      "source": "mth/nan16/mth_core.nas",
+      "fixture": "mth/tests/mth_stage0_test.nas",
+      "marker": "MTH STAGE0 PASS",
+      "steps": 1161,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.double_endian.pair.u32",
+      "source": "mth/nan16/mth_double_endian.nas",
+      "fixture": "mth/tests/mth_double_endian_test.nas",
+      "marker": "MTH DOUBLE-ENDIAN REENTRANT PASS",
+      "steps": 545,
+      "precision": "u32",
+      "workspace_words": 3,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.span_add.checked.u32",
+      "source": "mth/nan16/mth_vector.nas",
+      "fixture": "mth/tests/mth_vector_test.nas",
+      "marker": "MTH U32 VECTOR ADD PASS",
+      "steps": 381,
+      "precision": "u32",
+      "workspace_words": 3,
+      "shape": [
+        32
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.preflight.typed.u32",
+      "source": "mth/nan16/mth_preflight.nas",
+      "fixture": "mth/tests/mth_preflight_test.nas",
+      "marker": "MTH TYPED PREFLIGHT PASS",
+      "steps": 2780,
+      "precision": "u32",
+      "workspace_words": 39,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.execute.native_dispatch.f32",
+      "source": "mth/nan16/mth_execute.nas",
+      "fixture": "mth/tests/mth_linker_preflight_test.nas",
+      "marker": "MTH NATIVE DISPATCH PASS",
+      "steps": 16047,
+      "precision": "float32",
+      "workspace_words": 57,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.negate256.f32",
       "source": "mth/nan16/mth_negate256_f32.nas",
       "fixture": "mth/tests/mth_ring_wave_energy_test.nas",
