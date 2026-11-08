@@ -485,7 +485,87 @@ class HeadObservationJournalTests(unittest.TestCase):
         self.assertEqual(row[0], 1)
         self.assertIsNone(row[1])
         self.assertIsNone(row[2])
+        with sqlite3.connect(previous) as db:
+            types = {
+                item[1]: item[2].upper()
+                for item in db.execute(
+                    "PRAGMA table_info(hermes_head_observation)"
+                )
+            }
+            self.assertEqual(types["source_chart_sha256"], "TEXT")
+            self.assertEqual(types["source_root_block_sha256"], "TEXT")
+            # SQLite INTEGER affinity would silently coerce all-digit
+            # SHA-shaped values to a number and destroy leading zeroes.
+            chart, root = "0" * 64, "1" * 64
+            db.execute(
+                "UPDATE hermes_head_observation "
+                "SET source_chart_sha256=?, source_root_block_sha256=?",
+                (chart, root),
+            )
+            roundtrip = db.execute(
+                "SELECT source_chart_sha256, source_root_block_sha256, "
+                "typeof(source_chart_sha256), typeof(source_root_block_sha256) "
+                "FROM hermes_head_observation"
+            ).fetchone()
+            self.assertEqual(roundtrip, (chart, root, "text", "text"))
 
+    def test_already_upgraded_integer_sha_affinity_is_repaired_without_row_loss(self):
+        previous = self.path.parent / "wrong-type-hermes-head.sqlite"
+        with sqlite3.connect(previous) as db:
+            db.execute("""CREATE TABLE hermes_head_observation (
+                installation_id TEXT NOT NULL, dispatch_id TEXT NOT NULL,
+                request_sha256 TEXT NOT NULL, lease_id INTEGER NOT NULL,
+                universe_id INTEGER NOT NULL, lease_generation INTEGER NOT NULL,
+                head_index INTEGER NOT NULL, ring_epoch INTEGER NOT NULL,
+                bank_before_sha256 TEXT NOT NULL,
+                source_chart_sha256 INTEGER, source_root_block_sha256 INTEGER,
+                bank_after BLOB, bank_after_sha256 TEXT, native_receipt_json TEXT,
+                checkpoint_generation INTEGER, checkpointed_at INTEGER,
+                PRIMARY KEY(installation_id,dispatch_id))""")
+            expected = (
+                self.installation, "legacy-permanent-tombstone-001",
+                digest(b"legacy request"), self.lease["lease_id"],
+                self.lease["universe_id"], self.lease["generation"],
+                1, self.epoch, digest(self.raw),
+                digest(b"source chart sha"), digest(b"mounted root block sha"),
+                None, digest(self.changed), '{"native_status":0}', 6, 123456,
+            )
+            db.execute(
+                "INSERT INTO hermes_head_observation VALUES (?,?,?,?,?,?,?,?,"
+                "?,?,?,?,?,?,?,?)", expected,
+            )
+        for _ in range(2):
+            HermesHeadObservationJournal(
+                previous, lease_registry=self.registry,
+                ring_epoch_reader=lambda: self.epoch,
+                chart_fence_reader=self.journal.chart_fence_reader,
+            )
+            with sqlite3.connect(previous) as db:
+                typed = {
+                    r[1]: r[2].upper() for r in db.execute(
+                        "PRAGMA table_info(hermes_head_observation)"
+                    )
+                }
+                self.assertEqual(typed["source_chart_sha256"], "TEXT")
+                self.assertEqual(typed["source_root_block_sha256"], "TEXT")
+                stored = db.execute(
+                    "SELECT * FROM hermes_head_observation"
+                ).fetchone()
+                self.assertEqual(stored, expected)
+                self.assertEqual(db.execute(
+                    "SELECT COUNT(*) FROM hermes_head_observation"
+                ).fetchone()[0], 1)
+        with sqlite3.connect(previous) as db:
+            db.execute(
+                "UPDATE hermes_head_observation "
+                "SET source_chart_sha256=?, source_root_block_sha256=?",
+                ("0" * 64, "1" * 64),
+            )
+            stored = db.execute(
+                "SELECT source_chart_sha256, source_root_block_sha256 "
+                "FROM hermes_head_observation"
+            ).fetchone()
+        self.assertEqual(stored, ("0" * 64, "1" * 64))
 
 
 if __name__ == "__main__":
