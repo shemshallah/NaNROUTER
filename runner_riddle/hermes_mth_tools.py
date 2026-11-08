@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Mapping
 from pathlib import Path
+import re
 from typing import Any
 
 from .budget import DEFAULT_GUEST_BUDGET_BYTES
@@ -90,6 +91,7 @@ class HermesMthTools:
             {"name": "mth.categories", "description": "Find available families and native ABI coverage."},
             {"name": "mth.compose", "description": "Validate and compose a bounded multi-kernel MTH plan."},
             {"name": "mth.prepare", "description": "Prepare a single native MTH kernel as a typed plan."},
+            {"name": "mth.route", "description": "Resolve HW0:<head>::<MTH family or kernel> inside the leased universe."},
         )
 
     def invoke(self, tool: str, arguments: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -120,6 +122,8 @@ class HermesMthTools:
             return self.compose(args.get("plan"))
         if tool == "mth.prepare":
             return self.prepare(args)
+        if tool == "mth.route":
+            return self.route(args)
         raise HermesMthToolError("unknown MTH tool")
 
     def catalog(self, args: Mapping[str, Any]) -> dict[str, Any]:
@@ -142,6 +146,25 @@ class HermesMthTools:
                 "total": len(matches), "offset": offset,
                 "next_offset": offset + len(selected) if offset + len(selected) < len(matches) else None,
                 "kernels": [_descriptor(k) for k in selected]}
+
+    def route(self, args: Mapping[str, Any]) -> dict[str, Any]:
+        address = args.get("address")
+        head_index = _integer(args.get("head_index"), "head_index", 0, 254)
+        if not isinstance(address, str) or len(address) > 192:
+            raise HermesMthToolError("invalid MTH head address")
+        match = re.fullmatch(r"HW0:(0|[1-9][0-9]{0,2})::([a-z][a-z0-9_.]*)", address)
+        if match is None or int(match.group(1)) != head_index:
+            raise HermesMthToolError("MTH address does not match the leased head")
+        target = match.group(2)
+        if target == "mth":
+            result = self.invoke("mth.categories")
+        elif target.startswith("mth."):
+            result = self.invoke("mth.inspect", {"kernel_id": target})
+        else:
+            result = self.invoke("mth.catalog", {"family": target, "limit": 100})
+        return {"schema": SCHEMA, "tool": "mth.route",
+                "address": address, "head_index": head_index,
+                "result": result}
 
     def prepare(self, args: Mapping[str, Any]) -> dict[str, Any]:
         kernel_id = args.get("kernel_id")
