@@ -1,0 +1,33 @@
+name: graph-sender-attestation
+on:
+  pull_request:
+    paths:
+      - 'runner_riddle/graph_sender_attestation.py'
+      - 'tests/test_graph_sender_attestation.py'
+      - 'docs/GRAPH_SENDER_ATTESTATION.md'
+      - '.github/workflows/graph-sender-attestation.yml'
+  push:
+    paths:
+      - 'runner_riddle/graph_sender_attestation.py'
+      - 'tests/test_graph_sender_attestation.py'
+      - 'docs/GRAPH_SENDER_ATTESTATION.md'
+      - '.github/workflows/graph-sender-attestation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  detached-attestation:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install cryptographic test provider
+        run: python -m pip install cryptography
+      - name: Verify real Ed25519 source commitments
+        run: python -m unittest discover -s tests -p 'test_graph_sender_attestation.py' -v
