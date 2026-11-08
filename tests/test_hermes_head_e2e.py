@@ -132,6 +132,93 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         return published
 
+    def test_real_head1_and_head255_share_one_chart_without_slot_aliasing(self):
+        """The native bank retains disjoint HW0:1 and HW0:255 revisions."""
+        from nanlmind_hermes.head_bank_transport import (
+            export_guest_bank_bytes,
+        )
+        from nanlmind_hermes.universe_chart import (
+            Chart8MiB, restore_local_chart,
+        )
+        # Exact *byte geometry* from NaN0S n16_head_store.nas; the VM,
+        # never this host test, chooses slots and validates NaN classes.
+        stride_words = 266
+        header_words = 8
+
+        def head_span(head):
+            begin = (header_words + (head - 1) * stride_words) * 8
+            return begin, begin + stride_words * 8
+
+        first_span = head_span(1)
+        last_span = head_span(255)
+        self.assertTrue(0 <= first_span[0] < first_span[1] <= last_span[0])
+        self.assertEqual(last_span[1], BANK_BYTES)
+        raw0 = bytes(BANK_BYTES)
+        source0 = self.fence(self.universe_id)
+        req1 = self.request(
+            dispatch_id="native-multihead-0001", raw=raw0,
+            generation=1, feature=127, increment=3, head_index=1,
+        )
+        native1 = self.journal.execute(
+            request=req1, lease_receipt=self.receipt, network_head=0,
+            raw_bank=raw0, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        self.assertTrue(native1["native_guest_invoked_locally"])
+        self.assertTrue(native1["source_snapshot_bound"])
+        self.assertEqual(native1["source_chart_sha256"], source0["chart_sha256"])
+        self.assertEqual(native1["receipt"]["head_generation_after"], 1)
+        self.assertEqual(native1["raw_bank"][last_span[0]:last_span[1]],
+                         raw0[last_span[0]:last_span[1]])
+        self.assertEqual(
+            self.journal_checkpoint(
+                req1, expected_after_sha256=native1["bank_after_sha256"],
+            )["chart_generation"], 2,
+        )
+        source1 = self.fence(self.universe_id)
+        req255 = self.request(
+            dispatch_id="native-multihead-0255", raw=native1["raw_bank"],
+            generation=2, feature=0, increment=2, head_index=255,
+        )
+        native255 = self.journal.execute(
+            request=req255, lease_receipt=self.receipt, network_head=254,
+            raw_bank=native1["raw_bank"], native_guest=self.guest,
+        )
+        self.assertTrue(native255["native_guest_invoked_locally"])
+        self.assertTrue(native255["source_snapshot_bound"])
+        self.assertEqual(
+            native255["source_chart_sha256"], source1["chart_sha256"],
+        )
+        self.assertEqual(native255["receipt"]["head_generation_after"], 1)
+        # Verify the second native guest changed ONLY head255's 266-word
+        # dual-slot storage region, preserving the entire first head.
+        before, after = native1["raw_bank"], native255["raw_bank"]
+        self.assertEqual(after[:last_span[0]], before[:last_span[0]])
+        self.assertNotEqual(after[last_span[0]:last_span[1]],
+                            before[last_span[0]:last_span[1]])
+        self.assertEqual(after[first_span[0]:first_span[1]],
+                         before[first_span[0]:first_span[1]])
+        self.assertEqual(
+            self.journal_checkpoint(
+                req255, expected_after_sha256=native255["bank_after_sha256"],
+            )["chart_generation"], 3,
+        )
+        self.assertIs(self.runner.register.chart, self.runner.chart)
+        self.assertIs(self.runner.heads.chart, self.runner.chart)
+        self.assertEqual(export_guest_bank_bytes(self.runner.chart), after)
+        restored = Chart8MiB.genesis()
+        self.assertEqual(restore_local_chart(restored, self.state), 3)
+        self.assertEqual(export_guest_bank_bytes(restored), after)
+        for request, network_head in ((req1, 0), (req255, 254)):
+            historical = self.journal.inspect(
+                request=request, lease_receipt=self.receipt,
+                network_head=network_head,
+            )
+            self.assertEqual(historical["state"], "checkpointed_locally")
+            self.assertTrue(historical["source_snapshot_bound"])
+            self.assertFalse(historical["canonical_training_committed"])
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 3)
+
     def test_real_native_head255_routes_and_survives_single_chart_restore(self):
         """Network 254 maps to real NaN16 HW0:255 with durable bank bytes."""
         from nanlmind_hermes.native_head_checkpoint import (
