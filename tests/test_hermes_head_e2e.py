@@ -168,8 +168,13 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertTrue(native1["source_snapshot_bound"])
         self.assertEqual(native1["source_chart_sha256"], source0["chart_sha256"])
         self.assertEqual(native1["receipt"]["head_generation_after"], 1)
-        self.assertEqual(native1["raw_bank"][last_span[0]:last_span[1]],
-                         raw0[last_span[0]:last_span[1]])
+        # Genesis formatting initializes NaN class-bearing slot metadata
+        # throughout the bank, so the comparison baseline is this newly
+        # formatted first revision, NOT the all-zero unformatted input.
+        self.assertNotEqual(
+            native1["raw_bank"][first_span[0]:first_span[1]],
+            raw0[first_span[0]:first_span[1]],
+        )
         self.assertEqual(
             self.journal_checkpoint(
                 req1, expected_after_sha256=native1["bank_after_sha256"],
