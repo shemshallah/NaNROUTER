@@ -18,6 +18,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir cryptography 'clocked-sdk==0.7.0'
 COPY --from=native /src/runner/training_merge.py /app/training_merge.py
 COPY --from=native /src/runner/hermes_router_delegate.py /app/runner/hermes_router_delegate.py
+COPY --from=native /src/runner/runner_ring_authority.py /app/runner/runner_ring_authority.py
 COPY --from=native /src/runner/head_cortex_service.py /app/head_cortex_service.py
 COPY --from=native /src/runner/nannet_router /app/nannet_router
 COPY --from=native /src/runner/nannet_clocked /app/nannet_clocked
