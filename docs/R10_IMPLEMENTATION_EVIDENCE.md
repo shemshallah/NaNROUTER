@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 66/66 locally runnable fixtures passed; 61/61 CI fixtures plus 6 local-only kernels; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 855 Python tests passed (7 skipped).
+**Result:** 66/66 locally runnable fixtures passed; 61/61 CI fixtures plus 6 local-only kernels; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 905 Python tests passed (8 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -87,7 +87,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 855 tests in 130.651s
+Ran 905 tests in 130.651s
 OK (skipped=1)
 ```
 
@@ -122,7 +122,13 @@ Covered:
 - `NmpPlan` v2 context wrapper around the frozen `MthPlan` v1 (5 tests);
 - bounded lane work queues and capability-safe stealing (P11, 8 tests);
 - typed math authorization policy with separation-of-duty (P9/§15, 9 tests);
-- standard-library `/v1/math/health|link|execute` ingress with 2 MiB bounds and token redaction (21 tests);
+- standard-library `/v1/math/health|link|execute` ingress with 2 MiB bounds, prepared-lease execution, and token redaction (30 tests);
+- NMP HTTP submit/lease/complete control plane and N16T binary worker handoff;
+- durable N16T session/replay checkpointing with restart restore and replay rejection;
+- plan handoff validation for shape/precision/layout/domain/alias/fuel/cancel (54 registry/system tests);
+- optional principal ACL enforcement on all math-store reads/writes;
+- worker token-digest binding and Class C policy-transition guard;
+- oracle-strength T/A verification extra (10 tests);
 - end-to-end control-plane demo with complete output-leaf provenance (P12, 2 tests).
 
 ## Math integration evidence (P0–P12)

@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 855 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
+**Baseline:** 905 Python tests, 8 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
