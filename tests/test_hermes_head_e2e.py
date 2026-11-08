@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -205,6 +206,53 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
                 network_head=0,
             )["canonical_training_committed"]
         )
+
+        # The exact class-bearing bytes from native learning must also survive
+        # the offline N16PACK1 container. The pack is NOT a live restore.
+        from nanlmind_hermes.universe_pack import (
+            export_n16pack, inspect_n16pack,
+        )
+        stores = {}
+        for store_name, filename in (
+            ("MC0DB", "mapping.sqlite"),
+            ("BS0DB", "content.sqlite"),
+        ):
+            path = self.base / filename
+            with sqlite3.connect(path) as connection:
+                connection.execute(
+                    "CREATE TABLE math_schema(store TEXT PRIMARY KEY,"
+                    "version INTEGER NOT NULL)"
+                )
+                connection.execute(
+                    "INSERT INTO math_schema VALUES (?,1)", (store_name,)
+                )
+                connection.execute(
+                    "CREATE TABLE evidence(key TEXT PRIMARY KEY,"
+                    "value TEXT NOT NULL)"
+                )
+                connection.execute(
+                    "INSERT INTO evidence VALUES (?,?)",
+                    ("native_bank_sha256", second["bank_after_sha256"]),
+                )
+            stores[store_name] = path
+        packed = self.base / "single-real-native-universe.n16pack"
+        archive = export_n16pack(
+            state_dir=self.state,
+            parent_root_sha256=self.parent,
+            expected_chart_generation=3,
+            mc0db=stores["MC0DB"], bs0db=stores["BS0DB"],
+            destination=packed,
+        )
+        self.assertTrue(archive["verified"])
+        self.assertEqual(archive["chart_generation"], 3)
+        self.assertEqual(archive["sections"][0]["name"], "chart")
+        self.assertEqual(
+            archive["sections"][0]["sha256"], sha(bytes(self.chart.bytes)),
+        )
+        self.assertFalse(archive["import_to_live_allowed"])
+        self.assertFalse(archive["cross_store_atomicity_attested"])
+        self.assertFalse(archive["canonical_training_committed"])
+        self.assertEqual(inspect_n16pack(packed)["sections"], archive["sections"])
 
 
 if __name__ == "__main__":
