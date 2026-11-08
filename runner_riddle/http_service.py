@@ -19,6 +19,8 @@ from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
 from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
 from .hierarchy_registry import HierarchyRegistry, HierarchyError
+from .portal_loopback import (PortalLoopbackProxy, PortalProxyError, is_portal_path,
+                              MAX_PORTAL_REQUEST)
 from .hermes_native import HermesNativeLeaseRuntime, HermesNativeError
 from .hermes_dispatch import HermesDispatchJournal, HermesDispatchError, HermesDispatchConflict
 from .n16t_guest import (
@@ -69,6 +71,14 @@ class RiddleService:
         self.hierarchy = HierarchyRegistry(
             data_dir / "hardware-hierarchy.sqlite",
             data_dir / "sc0db.sqlite3", data_dir / "gm0db.sqlite3")
+        self.portal_proxy = None
+        if os.environ.get("RIDDLE_KOYEB_ROUTER_PORTAL_ENABLED") == "1":
+            if (len(os.environ.get("NANNET_AUTHORITY_MASTER_KEY", "")) < 40
+                    or len(os.environ.get("NANLM_MERGE_TOKEN", "")) < 32):
+                raise ServiceConfigError(
+                    "router-owned private NANNET portal requires existing issuer and merge credentials")
+            self.portal_proxy = PortalLoopbackProxy(
+                int(os.environ.get("RIDDLE_EMBEDDED_PORTAL_PORT", "18085")))
         self.hermes_lock = threading.RLock()
         self.hermes_native = None
         self.hermes_dispatches = (HermesDispatchJournal(data_dir / "hermes-dispatch.sqlite")
@@ -219,6 +229,39 @@ def make_handler(service: RiddleService):
             self.end_headers()
             self.wfile.write(frame)
 
+        def _portal(self, method):
+            if service.portal_proxy is None or not is_portal_path(self.path):
+                self._json(404, {"error": "NANNET route is not available"})
+                return
+            try:
+                if self.headers.get("Transfer-Encoding"):
+                    raise PortalProxyError("chunked portal requests are not supported")
+                lengths = self.headers.get_all("Content-Length", [])
+                if method == "POST":
+                    if (len(lengths) != 1 or not lengths[0].isdigit()
+                            or not 1 <= int(lengths[0]) <= MAX_PORTAL_REQUEST):
+                        raise PortalProxyError("bounded Content-Length required")
+                    length = int(lengths[0])
+                    body = self.rfile.read(length)
+                    if len(body) != length:
+                        raise PortalProxyError("truncated NANNET request")
+                else:
+                    if lengths and (len(lengths) != 1 or lengths[0] != "0"):
+                        raise PortalProxyError("GET cannot carry a request body")
+                    body = b""
+                headers = {key: val for key, val in self.headers.items()}
+                status, mime, response = service.portal_proxy.request(
+                    method, self.path, headers, body)
+                self.send_response(status)
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Length", str(len(response)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(response)
+            except PortalProxyError as exc:
+                self._json(503 if "not available" in str(exc) else 400,
+                           {"error": str(exc)[:150]})
+
         def _n16t(self) -> None:
             if service.n16t_guest_pool is None or len(service.n16t_token) < 32:
                 self._json(503, {"error": "N16T guest peer is not configured"})
@@ -273,6 +316,7 @@ def make_handler(service: RiddleService):
                     "hermes_native_guest_configured": service.hermes_native is not None,
                     "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.hermes_n16t_pool is not None),
                     "hermes_n16t_separate_guest_pool": service.hermes_n16t_pool is not None,
+                    "nannet_single_issuer_portal_hosted_by_nanrouter": service.portal_proxy is not None,
                 })
                 return
             if self.path == "/v1/hierarchy":
@@ -325,9 +369,15 @@ def make_handler(service: RiddleService):
                     return
                 self._json(200, {"queue": service.inbox.stats()})
                 return
+            if service.portal_proxy is not None and is_portal_path(self.path):
+                self._portal("GET")
+                return
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if service.portal_proxy is not None and is_portal_path(self.path):
+                self._portal("POST")
+                return
             if self.path == "/n16t":
                 self._n16t()
                 return
