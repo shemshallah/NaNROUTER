@@ -110,7 +110,7 @@ At the time of writing the checked-in `main` contains:
 - **70 manifest kernels** with fixtures; 66 local and 61 CI fixtures;
 - **58 locally runnable fixtures** and **59 total fixtures**, including the K256 pair fixture that is CI-only locally;
 - canonical CI run `42396090387` (and later docs-only runs) passing **121 workflow steps**;
-- **850 Python tests** (1 skipped) after the P7–P12 math integration and authority-hardening additions;
+- **854 Python tests** (1 skipped) after the P7–P12 math integration and authority-hardening additions;
 - **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
@@ -552,7 +552,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 850-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 854-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1683,7 +1683,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 850-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 854-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 
