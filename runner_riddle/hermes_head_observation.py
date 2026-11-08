@@ -277,6 +277,17 @@ class HermesHeadObservationJournal:
         if (output.get("native_guest_invoked_locally") is not True
                 or output.get("canonical_training_committed") is not False):
             raise HermesHeadObservationError("native staging provenance mismatch")
+        # Recheck all live authorities AFTER the guest call and BEFORE making
+        # its output recoverable. A handoff/revocation/checkpoint race must
+        # leave the prior durable reservation ambiguous, never promote the
+        # result under an epoch, lease or chart that has already changed.
+        # This is a second fence, not a substitute for the global scheduler
+        # lock required for canonical publication.
+        resolved_after = self._authorize(
+            request=request, lease_receipt=lease_receipt,
+            network_head=network_head, for_execution=True,
+        )
+        self._fence(request, resolved_after)
         encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":"))
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
