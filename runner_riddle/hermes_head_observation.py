@@ -59,8 +59,26 @@ class HermesHeadObservationJournal:
         self.chart_fence_reader = chart_fence_reader
         Path(self.database).parent.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
-            db.execute("PRAGMA journal_mode=WAL")
-            db.execute("PRAGMA synchronous=FULL")
+            # Setting journal_mode=WAL requires a transient exclusive SQLite
+            # schema lock. Several new router processes can start together;
+            # do not fail admission merely because one peer is migrating.
+            for attempt in range(20):
+                try:
+                    mode = db.execute("PRAGMA journal_mode").fetchone()[0].lower()
+                    if mode != "wal":
+                        mode = db.execute(
+                            "PRAGMA journal_mode=WAL"
+                        ).fetchone()[0].lower()
+                    if mode == "wal":
+                        break
+                except sqlite3.OperationalError as exc:
+                    if "locked" not in str(exc).lower():
+                        raise
+                time.sleep(min(0.02 * (attempt + 1), 0.2))
+            else:
+                raise HermesHeadObservationError(
+                    "cannot enable durable WAL mode under concurrent startup"
+                )
             # Serialize schema upgrades with dispatch writes and with another
             # router starting against the same durable WAL database.
             db.execute("BEGIN IMMEDIATE")
