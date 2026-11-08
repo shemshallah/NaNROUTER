@@ -3434,6 +3434,32 @@ class MathStore:
 
     # -- events --------------------------------------------------------------
 
+    def append_discovery_result(
+        self, result: Any, *, actor: str = "math.discovery.v1", tick: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Persist discovery proposals as additive ``propose`` events.
+
+        Proposals remain non-authoritative; this writes evidence only and never
+        creates a candidate, admission, rule, mapping, or execution row.
+        """
+        proposals = getattr(result, "proposals", None)
+        if not isinstance(proposals, (tuple, list)):
+            raise MathStoreError("discovery result must expose a proposal list")
+        events = []
+        for proposal in proposals:
+            digest = getattr(proposal, "digest", None)
+            to_dict = getattr(proposal, "to_dict", None)
+            proposal_id = getattr(proposal, "proposal_id", None)
+            if not callable(digest) or not callable(to_dict) or not isinstance(
+                proposal_id, str
+            ):
+                raise MathStoreError("discovery proposal is not persistable")
+            events.append(self.append_event(
+                "propose", "discovery", proposal_id,
+                digest=digest(), actor=actor, payload=to_dict(), tick=tick,
+            ))
+        return events
+
     def append_event(self, event_type: str, object_type: str, object_id: str,
                      *, version: int | None = None,
                      generation: int | None = None,

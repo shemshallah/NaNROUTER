@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from runner_riddle.math_discovery import (
     DISCOVERY_ID,
@@ -19,6 +21,7 @@ from runner_riddle.math_discovery import (
 )
 from runner_riddle.math_objects import MathFunction, MathLeaf
 from runner_riddle.math_relation import RelationRecord, RelationSchema, RoleSpec
+from runner_riddle.math_store import MathStore
 
 
 SNAPSHOT_ID = "snp:" + "a" * 64
@@ -592,6 +595,25 @@ class FacadeTests(unittest.TestCase):
                     self.assertEqual(
                         facade.propose().digest(), expected.digest(),
                     )
+
+
+    def test_discovery_result_can_be_persisted_as_non_authoritative_events(self):
+        result = propose_structural(DiscoveryRequest(
+            mechanism="structural",
+            leaves=(vector_leaf(1), vector_leaf(2)),
+            bounds={"max_proposals": 2, "max_fanout": 2, "max_depth": 1},
+        ))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = MathStore(root / "bs0.sqlite3", root / "mc0.sqlite3")
+            events = store.append_discovery_result(result, tick=7)
+        self.assertEqual(len(events), len(result.proposals))
+        for event, proposal in zip(events, result.proposals):
+            self.assertEqual(event["event_type"], "propose")
+            self.assertEqual(event["object_type"], "discovery")
+            self.assertEqual(event["object_id"], proposal.proposal_id)
+            self.assertEqual(event["digest"], proposal.digest())
+        self.assertTrue(result.non_authoritative)
 
 
 if __name__ == "__main__":

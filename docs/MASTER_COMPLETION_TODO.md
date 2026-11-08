@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-07
-**Baseline:** 854 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
+**Baseline:** 855 Python tests, 7 skipped, OK; 70 manifest kernels; 66 local / 61 canonical CI fixtures; `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, and NMP HTTP control-plane work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -111,7 +111,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-92` Boolean-head 1,024/1,024 + leakage/control/shuffled gate.
 - [x] `A-93` Retention/pruning/shadow/rollback/oscillation.
 - [x] `A-94` Deep immutability/content digest.
-- [ ] `A-95` Persist/wire discovery proposals into linker/validity/learning lifecycle.
+- [ ] `A-95` **PARTIAL:** discovery results can be persisted as non-authoritative `propose` events via `MathStore.append_discovery_result`; linker/validity/lifecycle wiring of accepted proposals remains open.
 - [x] `A-96` Wire Boolean-head gate results into `MathLearningService.record_boolean_head_experiment` as utility-only evidence with an explicit authority check.
 - [ ] `A-97` Add Class C self-modification guard: checker/policy/schema/ACL root/control head require signed separate policy transition.
 - [ ] `A-98` Add `rule.activate`/`rule.prune` capabilities to all learning mutators (policy exists; wiring exists for learning; verify store/retention paths).
