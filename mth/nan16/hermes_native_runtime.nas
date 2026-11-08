@@ -8,3 +8,4 @@ n16_server_exchange:
 HALT
 .include "hermes_lease.nas"
 .include "hermes_nannet_route.nas"
+.include "mth_hierarchy_route.nas"
