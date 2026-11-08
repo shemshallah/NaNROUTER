@@ -3,10 +3,18 @@ on:
   pull_request:
     paths:
       - 'tests/test_hermes_head_e2e.py'
+      - 'runner_riddle/hermes_head_observation.py'
+      - 'runner_riddle/native_head_guest.py'
+      - 'runner_riddle/head_bank_handoff.py'
+      - 'runner_riddle/hermes_leases.py'
       - '.github/workflows/hermes-head-e2e.yml'
   push:
     paths:
       - 'tests/test_hermes_head_e2e.py'
+      - 'runner_riddle/hermes_head_observation.py'
+      - 'runner_riddle/native_head_guest.py'
+      - 'runner_riddle/head_bank_handoff.py'
+      - 'runner_riddle/hermes_leases.py'
       - '.github/workflows/hermes-head-e2e.yml'
   workflow_dispatch:
 permissions:
