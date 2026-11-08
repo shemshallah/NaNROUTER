@@ -195,5 +195,6 @@ mth_dispatch_out:
 .org 44000
 mth_dispatch_scratch:
 .word 0
+.org 45000
 mth_dispatch_saved_return:
 .word 0
