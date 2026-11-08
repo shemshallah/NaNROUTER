@@ -367,7 +367,7 @@ def make_handler(service: RiddleService):
                 try:
                     body = self._body()
                     action = self.path.removeprefix("/v1/hermes/leases/")
-                    if action not in ("open", "renew", "resolve", "release", "dispatch", "ack", "inspect"):
+                    if action not in ("open", "renew", "resolve", "release", "dispatch", "ack", "inspect", "math"):
                         self._json(404, {"error": "not found"})
                         return
                     with service.hermes_lock:
@@ -429,8 +429,14 @@ def make_handler(service: RiddleService):
                             result = service.hermes_leases.release(
                                 installation_id=identity, receipt=body["receipt"])
                             self._json(200, result)
-                        elif action in ("dispatch", "ack", "inspect"):
-                            if action != "inspect" and (service.hermes_native is None or service.hermes_n16t_pool is None):
+                        elif action in ("dispatch", "ack", "inspect", "math"):
+                            if action == "math" and service.hermes_native is None:
+                                self._json(503, {"error": "pinned native MTH guest is not configured"})
+                                return
+                            if action in ("dispatch", "ack") and (
+                                    service.hermes_native is None or service.hermes_n16t_pool is None):
+                                self._json(503, {"error": "pinned native HERMES and N16T guest runtimes are required"})
+                                return
                                 self._json(503, {"error": "pinned native HERMES and N16T guest runtimes are required"})
                                 return
                             resolved = service.hermes_leases.resolve(
@@ -444,7 +450,15 @@ def make_handler(service: RiddleService):
                             with service.hermes_leases._connect() as db:
                                 row = service.hermes_leases._live(
                                     db, body["receipt"], identity, int(time.time()))
-                            if action == "dispatch":
+                            if action == "math":
+                                result = service.hermes_native.execute_math(
+                                    identity, body["kernel_id"], body["a"], body["b"])
+                                result.update(native)
+                                result.update({"universe_id": resolved["universe_id"],
+                                               "node_point": resolved["node_point"],
+                                               "head_index": resolved["head_index"]})
+                                self._json(200, result)
+                            elif action == "dispatch":
                                 frame_hex = body.get("frame_hex")
                                 if (not isinstance(frame_hex, str)
                                         or len(frame_hex) % 2 != 0
