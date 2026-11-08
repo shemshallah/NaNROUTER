@@ -303,5 +303,64 @@ class HeadObservationJournalTests(unittest.TestCase):
             self.inspect()
 
 
+    def test_epoch_handoff_during_guest_cannot_persist_native_result(self):
+        guest = self.guest()
+        native_observe = guest.observe
+
+        def racing_guest(**kwargs):
+            output = native_observe(**kwargs)
+            self.epoch += 1
+            return output
+
+        guest.observe = racing_guest
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "epoch"):
+            self.invoke(guest=guest)
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.inspect()["state"], "pending_or_ambiguous")
+        self.epoch -= 1
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "never replay"):
+            self.invoke()
+        self.assertEqual(self.calls, 1)
+
+    def test_new_chart_checkpoint_during_guest_cannot_persist_stale_result(self):
+        guest = self.guest()
+        native_observe = guest.observe
+
+        def racing_guest(**kwargs):
+            output = native_observe(**kwargs)
+            self.chart_generation += 1
+            self.chart_bank_digest = digest(output["raw_bank"])
+            return output
+
+        guest.observe = racing_guest
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "chart fence"):
+            self.invoke(guest=guest)
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.inspect()["state"], "pending_or_ambiguous")
+
+    def test_lease_revocation_during_guest_cannot_publish_result(self):
+        guest = self.guest()
+        native_observe = guest.observe
+
+        def racing_guest(**kwargs):
+            output = native_observe(**kwargs)
+            self.registry.release(
+                installation_id=self.installation,
+                receipt=self.lease,
+            )
+            return output
+
+        guest.observe = racing_guest
+        with self.assertRaises(HermesLeaseError):
+            self.invoke(guest=guest)
+        with sqlite3.connect(self.path) as db:
+            row = db.execute(
+                "SELECT bank_after,checkpointed_at FROM hermes_head_observation"
+            ).fetchone()
+        self.assertEqual(self.calls, 1)
+        self.assertIsNone(row[0])
+        self.assertIsNone(row[1])
+
+
 if __name__ == "__main__":
     unittest.main()
