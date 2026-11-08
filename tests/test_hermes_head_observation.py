@@ -42,6 +42,8 @@ class HeadObservationJournalTests(unittest.TestCase):
         self.parent = digest(b"test-parent")
         self.guest_image = digest(b"native-guest-image")
         self.chart_bank_digest = digest(self.raw)
+        self.chart_sha = digest(b"verified-eight-megabyte-chart")
+        self.root_sha = digest(b"mounted-native-root")
         self.calls = 0
         self.journal = self.make_journal()
         self.request = self.make_request()
@@ -73,8 +75,8 @@ class HeadObservationJournalTests(unittest.TestCase):
                 "parent_root_sha256": self.parent,
                 "chart_generation": self.chart_generation,
                 "bank_sha256": self.chart_bank_digest,
-                "root_block_sha256": digest(b"mounted-native-root"),
-                "chart_sha256": digest(b"verified-eight-megabyte-chart"),
+                "root_block_sha256": self.root_sha,
+                "chart_sha256": self.chart_sha,
                 "snapshot_verified": True,
                 "canonical_training_committed": False,
             },
@@ -195,6 +197,68 @@ class HeadObservationJournalTests(unittest.TestCase):
                 self.assertEqual(self.calls, 0)
         self.journal.chart_fence_reader = real
         self.assertEqual(self.inspect()["state"], "not_recorded")
+
+    def test_certified_chart_source_sha_persisted_across_restart(self):
+        result = self.invoke()
+        self.assertTrue(result["source_snapshot_bound"])
+        self.assertEqual(result["source_chart_sha256"], self.chart_sha)
+        self.assertEqual(result["source_root_block_sha256"], self.root_sha)
+        self.journal = self.make_journal()
+        durable = self.inspect(include_bank=True)
+        self.assertEqual(durable["source_chart_sha256"], self.chart_sha)
+        self.assertEqual(durable["source_root_block_sha256"], self.root_sha)
+        self.assertTrue(durable["source_snapshot_bound"])
+        self.assertEqual(self.calls, 1)
+
+    def test_native_guest_cannot_stage_when_other_chart_bytes_change_same_generation(self):
+        guest = self.guest()
+        original = guest.observe
+
+        def change_unrelated_chart(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.chart_sha = digest(b"same-bank-different-temporal-or-MP-cell")
+            return result
+
+        guest.observe = change_unrelated_chart
+        with self.assertRaisesRegex(
+                HermesHeadObservationConflict, "full chart/root identity changed"):
+            self.invoke(guest=guest)
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.inspect()["state"], "pending_or_ambiguous")
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "never replay"):
+            self.invoke()
+        self.assertEqual(self.calls, 1)
+
+    def test_changed_root_block_with_same_parent_bank_generation_is_denied(self):
+        guest = self.guest()
+        original = guest.observe
+
+        def change_root(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.root_sha = digest(b"new-native-root")
+            return result
+
+        guest.observe = change_root
+        with self.assertRaisesRegex(
+                HermesHeadObservationConflict, "full chart/root identity changed"):
+            self.invoke(guest=guest)
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.inspect()["state"], "pending_or_ambiguous")
+
+    def test_source_identity_corruption_is_not_trusted_on_restart(self):
+        self.invoke()
+        with sqlite3.connect(self.path) as db:
+            db.execute(
+                "UPDATE hermes_head_observation SET source_chart_sha256=?",
+                ("A" * 64,),
+            )
+        with self.assertRaisesRegex(
+                HermesHeadObservationError, "corrupt native source chart"):
+            self.inspect()
+        with self.assertRaisesRegex(
+                HermesHeadObservationError, "corrupt native source chart"):
+            self.invoke()
+        self.assertEqual(self.calls, 1)
 
     def test_crash_after_reservation_is_ambiguous_and_cannot_replay(self):
         with self.assertRaisesRegex(RuntimeError, "power loss"):
@@ -388,6 +452,40 @@ class HeadObservationJournalTests(unittest.TestCase):
         self.assertEqual(self.calls, 1)
         self.assertIsNone(row[0])
         self.assertIsNone(row[1])
+
+    def test_legacy_journal_columns_migrate_without_deleting_records(self):
+        previous = Path(self.path.parent) / "old-hermes-head.sqlite"
+        with sqlite3.connect(previous) as db:
+            db.execute("""CREATE TABLE hermes_head_observation (
+                installation_id TEXT NOT NULL, dispatch_id TEXT NOT NULL,
+                request_sha256 TEXT NOT NULL, lease_id INTEGER NOT NULL,
+                universe_id INTEGER NOT NULL, lease_generation INTEGER NOT NULL,
+                head_index INTEGER NOT NULL, ring_epoch INTEGER NOT NULL,
+                bank_before_sha256 TEXT NOT NULL, bank_after BLOB,
+                bank_after_sha256 TEXT, native_receipt_json TEXT,
+                PRIMARY KEY(installation_id,dispatch_id))""")
+            db.execute("""INSERT INTO hermes_head_observation
+                (installation_id,dispatch_id,request_sha256,lease_id,
+                 universe_id,lease_generation,head_index,ring_epoch,
+                 bank_before_sha256)
+                 VALUES (?,?,?,?,?,?,?,?,?)""", (
+                self.installation, "legacy-durable-dispatch-001",
+                digest(b"legacy request"), self.lease["lease_id"],
+                self.lease["universe_id"], self.lease["generation"],
+                1, 7, digest(self.raw),
+            ))
+        HermesHeadObservationJournal(
+            previous, lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.journal.chart_fence_reader,
+        )
+        with sqlite3.connect(previous) as db:
+            row = db.execute("SELECT COUNT(*),source_chart_sha256,"
+                             "source_root_block_sha256 FROM hermes_head_observation").fetchone()
+        self.assertEqual(row[0], 1)
+        self.assertIsNone(row[1])
+        self.assertIsNone(row[2])
+
 
 
 if __name__ == "__main__":
