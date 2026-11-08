@@ -1,0 +1,26 @@
+name: Native BS0 hardware MC0 SC0 GM0 hierarchy gate
+on:
+  push:
+    paths: ["mth/nan16/mth_hierarchy_route.nas", "mth/tests/mth_hierarchy_route_test.nas", ".github/workflows/native-hierarchy.yml"]
+  pull_request:
+    paths: ["mth/nan16/mth_hierarchy_route.nas", "mth/tests/mth_hierarchy_route_test.nas", ".github/workflows/native-hierarchy.yml"]
+permissions:
+  contents: read
+jobs:
+  native-hierarchy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: bb4598f9d816b125b2e1f6e702f2718466f9d1c5
+          path: nan0s
+      - run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Execute native HW/BS/MC/SC/GM routes and fail-closed future reservations
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_hierarchy_route_test.nas >/tmp/hierarchy.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/hierarchy.nan --steps 2000000 --serial | tee /tmp/hierarchy.out
+          grep -q 'NAN HIERARCHY PASS' /tmp/hierarchy.out
