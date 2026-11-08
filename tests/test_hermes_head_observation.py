@@ -123,6 +123,46 @@ class HeadObservationJournalTests(unittest.TestCase):
             network_head=kwargs.pop("network_head", 0), **kwargs,
         )
 
+    def test_journal_connections_close_and_enforce_full_sync(self):
+        """Every read/write connection is FULL synchronous and closed."""
+        with self.journal._db() as db:
+            self.assertEqual(db.execute("PRAGMA synchronous").fetchone()[0], 2)
+            self.assertEqual(db.execute("PRAGMA journal_mode").fetchone()[0], "wal")
+            self.assertEqual(
+                db.execute("SELECT COUNT(*) FROM hermes_head_observation")
+                .fetchone()[0], 0,
+            )
+        with self.assertRaises(sqlite3.ProgrammingError):
+            db.execute("SELECT 1")
+
+        # Failed scoped work must roll back and release the handle as well.
+        with self.assertRaisesRegex(RuntimeError, "injected rollback"):
+            with self.journal._db() as aborted:
+                aborted.execute("BEGIN IMMEDIATE")
+                aborted.execute("CREATE TABLE should_not_survive (n INTEGER)")
+                raise RuntimeError("injected rollback")
+        with self.assertRaises(sqlite3.ProgrammingError):
+            aborted.execute("SELECT 1")
+        with self.journal._db() as check:
+            self.assertIsNone(check.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name='should_not_survive'"
+            ).fetchone())
+
+    def test_native_journal_after_many_reopens_still_replays_once(self):
+        """Reopened connections preserve the reservation's at-most-once ID."""
+        for _ in range(24):
+            with self.journal._db() as db:
+                self.assertEqual(db.execute("PRAGMA synchronous").fetchone()[0], 2)
+        original = self.invoke()
+        self.assertEqual(self.calls, 1)
+        for _ in range(12):
+            self.journal = self.make_journal()
+            duplicate = self.invoke()
+            self.assertTrue(duplicate["replayed_from_journal"])
+            self.assertEqual(duplicate["bank_after_sha256"], original["bank_after_sha256"])
+            self.assertEqual(self.calls, 1)
+
     def test_native_result_staged_once_and_recovered_after_reopen(self):
         first = self.invoke()
         self.assertEqual(self.calls, 1)
