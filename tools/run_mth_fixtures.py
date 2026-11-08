@@ -104,6 +104,11 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("stage0", "mth/tests/mth_stage0_test.nas", 200_000, "MTH STAGE0 PASS", "native_verified"),
     Fixture("double_endian", "mth/tests/mth_double_endian_test.nas", 200_000, "MTH DOUBLE-ENDIAN REENTRANT PASS", "native_verified"),
     Fixture("vector_add", "mth/tests/mth_vector_test.nas", 200_000, "MTH U32 VECTOR ADD PASS", "native_verified"),
+    Fixture("vector_add256_f32", "mth/tests/mth_vector_add256_f32_test.nas", 100_000, "MTH VECTOR ADD256 F32 PASS", "native_verified"),
+    Fixture("vector_sub256_f32", "mth/tests/mth_vector_sub256_f32_test.nas", 100_000, "MTH VECTOR SUB256 F32 PASS", "native_verified"),
+    Fixture("vector_mean256_f32", "mth/tests/mth_vector_mean256_f32_test.nas", 100_000, "MTH VECTOR MEAN256 F32 PASS", "native_verified"),
+    Fixture("vector_abs256_f32", "mth/tests/mth_vector_abs256_f32_test.nas", 100_000, "MTH VECTOR ABS256 PASS", "native_verified"),
+    Fixture("vector_relu256_f32", "mth/tests/mth_vector_relu256_f32_test.nas", 100_000, "MTH VECTOR RELU256 PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical
     # pinned commit (7f250a1) so the registry exposes nmr_contract_put and the
     # route linker sources.

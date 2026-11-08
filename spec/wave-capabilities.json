@@ -1124,6 +1124,76 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.vector.add256.f32",
+      "source": "mth/nan16/mth_vector_add256_f32.nas",
+      "fixture": "mth/tests/mth_vector_add256_f32_test.nas",
+      "marker": "MTH VECTOR ADD256 F32 PASS",
+      "steps": 10436,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.sub256.f32",
+      "source": "mth/nan16/mth_vector_sub256_f32.nas",
+      "fixture": "mth/tests/mth_vector_sub256_f32_test.nas",
+      "marker": "MTH VECTOR SUB256 F32 PASS",
+      "steps": 10484,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.mean256.f32",
+      "source": "mth/nan16/mth_vector_mean256_f32.nas",
+      "fixture": "mth/tests/mth_vector_mean256_f32_test.nas",
+      "marker": "MTH VECTOR MEAN256 F32 PASS",
+      "steps": 15969,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.abs256.f32",
+      "source": "mth/nan16/mth_vector_abs256_f32.nas",
+      "fixture": "mth/tests/mth_vector_abs256_f32_test.nas",
+      "marker": "MTH VECTOR ABS256 PASS",
+      "steps": 5328,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.relu256.f32",
+      "source": "mth/nan16/mth_vector_relu256_f32.nas",
+      "fixture": "mth/tests/mth_vector_relu256_f32_test.nas",
+      "marker": "MTH VECTOR RELU256 PASS",
+      "steps": 6615,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
