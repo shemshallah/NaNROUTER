@@ -4,7 +4,8 @@ import unittest
 from contextlib import closing
 
 from runner_riddle.wave_store import (
-    CapabilityConflictError, JobConflictError, LeaseError, OperatorConflictError,
+    CapabilityConflictError, JobConflictError, LeaseError,
+    NannetNodeConflictError, NannetNodeNotFoundError, OperatorConflictError,
     StaleGenerationError, WaveStore, WaveStoreError,
 )
 
@@ -436,10 +437,223 @@ class WaveStoreTests(unittest.TestCase):
         self.assertEqual(self.store.stats()["jobs"]["dead"], 1)
         self.assertEqual(self.store.health()["status"], "degraded")
 
+    def register_node(self, *, universe="universe-0", node="node-1",
+                      point=17, generation=1, status="active",
+                      route="nan://GM0:SC0:MC0:BS0:0:HW0:0",
+                      signature=None, route_digest=None, tick=100):
+        return self.store.register_nannet_node(
+            universe_id=universe,
+            node_id=node,
+            node_point=point,
+            public_key_fingerprint=self.digest,
+            generation=generation,
+            status=status,
+            route=route,
+            signature=self.signature if signature is None else signature,
+            route_digest=route_digest,
+            nanclock_tick=tick,
+        )
+
+    def test_nannet_node_registration_lookup_and_versioning(self):
+        first = self.register_node(
+            route_digest=self.other_digest, tick=10,
+        )
+        self.assertEqual(first["universe_id"], "universe-0")
+        self.assertEqual(first["node_id"], "node-1")
+        self.assertEqual(first["node_point"], 17)
+        self.assertEqual(first["generation"], 1)
+        self.assertEqual(first["status"], "active")
+        self.assertEqual(first["signature"], self.signature)
+        self.assertEqual(first["route_digest"], self.other_digest)
+        self.assertEqual(first["registered_tick"], 10)
+        self.assertIn("updated_tick", first)
+
+        self.assertEqual(
+            self.store.get_nannet_node("universe-0"), first
+        )
+        self.assertEqual(
+            self.store.get_nannet_node_by_node_id("node-1"), first
+        )
+        self.assertEqual(
+            self.store.require_nannet_node("universe-0"), first
+        )
+
+        replay = self.register_node(
+            route_digest=self.other_digest, tick=11,
+        )
+        self.assertEqual(replay["generation"], 1)
+        self.assertEqual(replay["updated_tick"], 10)
+        self.assertEqual(len(self.store.nannet_node_history("universe-0")), 1)
+
+        second = self.register_node(
+            generation=2, status="degraded", route="nan://GM0:SC0:MC0:BS0:1:HW0:0",
+            signature=self.other_digest, tick=20,
+        )
+        self.assertEqual(second["generation"], 2)
+        self.assertEqual(second["status"], "degraded")
+        self.assertEqual(second["signature"], self.other_digest)
+        self.assertEqual(second["registered_tick"], 10)
+        self.assertEqual(second["updated_tick"], 20)
+        self.assertEqual(self.store.get_nannet_node("universe-0"), second)
+
+        version_one = self.store.get_nannet_node("universe-0", generation=1)
+        self.assertEqual(version_one["status"], "active")
+        self.assertEqual(version_one["signature"], self.signature)
+        self.assertEqual(version_one["nanclock_tick"], 10)
+        history = self.store.nannet_node_history("universe-0")
+        self.assertEqual([row["generation"] for row in history], [2, 1])
+
+        with self.assertRaises(NannetNodeConflictError):
+            self.register_node(generation=1, tick=30)
+        with self.assertRaises(NannetNodeConflictError):
+            self.register_node(
+                generation=2, status="active", tick=30,
+            )
+        self.assertEqual(
+            self.store.get_nannet_node("universe-0")["generation"], 2
+        )
+
+    def test_nannet_node_revoke_frees_node_and_point(self):
+        self.register_node(tick=10)
+        revoked = self.store.revoke_nannet_node(
+            "universe-0", generation=2, signature=self.other_digest,
+            route_digest=self.digest, nanclock_tick=20,
+        )
+        self.assertEqual(revoked["status"], "revoked")
+        self.assertEqual(revoked["route"], "")
+        self.assertEqual(revoked["generation"], 2)
+        with self.assertRaises(NannetNodeConflictError):
+            self.store.revoke_nannet_node("universe-0", generation=2,
+                                          nanclock_tick=21)
+        with self.assertRaises(NannetNodeConflictError):
+            self.register_node(generation=1, tick=21)
+
+        rebound = self.register_node(
+            universe="universe-1", generation=1, tick=30,
+        )
+        self.assertEqual(rebound["node_id"], "node-1")
+        self.assertEqual(rebound["node_point"], 17)
+        self.assertEqual(
+            self.store.get_nannet_node("universe-0")["status"], "revoked"
+        )
+        self.assertEqual(
+            self.store.get_nannet_node("universe-1")["status"], "active"
+        )
+        third = self.register_node(
+            universe="universe-2", node="node-2", point=18,
+            generation=1, tick=31,
+        )
+        self.assertEqual(third["status"], "active")
+        self.assertEqual(len(self.store.list_nannet_nodes()), 3)
+        self.assertEqual(
+            len(self.store.list_nannet_nodes(status="revoked")), 1
+        )
+
+    def test_nannet_node_unknown_and_validation(self):
+        self.assertIsNone(self.store.get_nannet_node("missing"))
+        self.assertIsNone(
+            self.store.get_nannet_node("missing", generation=3)
+        )
+        self.assertIsNone(
+            self.store.get_nannet_node_by_node_id("missing")
+        )
+        self.assertEqual(
+            self.store.nannet_node_history("missing"), []
+        )
+        with self.assertRaises(NannetNodeNotFoundError):
+            self.store.require_nannet_node("missing")
+        with self.assertRaises(NannetNodeNotFoundError):
+            self.store.require_nannet_node("missing", generation=2)
+
+        invalid = (
+            {"node_point": 0},
+            {"node_point": 256},
+            {"public_key_fingerprint": "short"},
+            {"status": "unknown"},
+            {"status": "revoked", "route": "nan://still-routed"},
+            {"generation": -1},
+            {"signature": "not-a-digest"},
+            {"route_digest": "not-a-digest"},
+        )
+        for kwargs in invalid:
+            with self.subTest(kwargs=kwargs):
+                args = {
+                    "universe_id": "u-invalid",
+                    "node_id": "n-invalid",
+                    "node_point": 33,
+                    "public_key_fingerprint": self.digest,
+                    "generation": 1,
+                    "status": "active",
+                    "route": "nan://route",
+                    "nanclock_tick": 1,
+                }
+                args.update(kwargs)
+                with self.assertRaises(WaveStoreError):
+                    self.store.register_nannet_node(**args)
+
+        self.register_node(universe="u1", node="n1", point=1, tick=1)
+        with self.assertRaises(NannetNodeConflictError):
+            self.register_node(universe="u2", node="n1", point=2, tick=2)
+        with self.assertRaises(NannetNodeConflictError):
+            self.register_node(universe="u2", node="n2", point=1, tick=3)
+
+    def test_nannet_node_persistence_is_not_a_routing_or_lease_authority(self):
+        self.register_node(tick=10)
+        stats = self.store.stats()
+        self.assertEqual(stats["mc0"]["wave_nannet_node"], 1)
+        self.assertEqual(stats["mc0"]["wave_nannet_node_version"], 1)
+        self.assertEqual(stats["jobs"], {
+            "queued": 0, "leased": 0, "done": 0, "failed": 0, "dead": 0,
+        })
+        self.assertEqual(stats["leases"], {
+            "active": 0, "expired": 0, "completed": 0, "failed": 0,
+        })
+        self.assertIsNone(
+            self.store.lease_job(owner="MC0:0/R0", now_tick=11)
+        )
+        self.assertEqual(
+            self.store.dispatchable_capabilities(
+                operator_digest=self.digest, workspace=0
+            ),
+            [],
+        )
+
+    def test_nannet_node_stores_no_secret_material(self):
+        with self.assertRaises(TypeError):
+            self.store.register_nannet_node(
+                universe_id="u1", node_id="n1", node_point=1,
+                public_key_fingerprint=self.digest,
+                secret_key="do-not-store-this",
+            )
+        self.register_node(universe="u1", node="n1", point=1, tick=1)
+        with closing(sqlite3.connect(self.mc0_path)) as db:
+            columns = {
+                row[1] for row in db.execute(
+                    "PRAGMA table_info(wave_nannet_node)"
+                )
+            }
+            version_columns = {
+                row[1] for row in db.execute(
+                    "PRAGMA table_info(wave_nannet_node_version)"
+                )
+            }
+            current = db.execute(
+                "SELECT * FROM wave_nannet_node"
+            ).fetchone()
+        forbidden = {"secret", "secret_key", "private_key", "token",
+                     "raw_token", "password"}
+        self.assertFalse(columns & forbidden)
+        self.assertFalse(version_columns & forbidden)
+        self.assertNotIn("do-not-store-this", str(current))
+        self.assertIn("public_key_fingerprint", columns)
+        self.assertIn("signature", columns)
+        self.assertIn("route_digest", columns)
+
     def test_required_control_and_evidence_tables_exist(self):
         expected = {
             self.mc0_path: {
                 "wave_job", "wave_lease", "wave_operator", "wave_capability",
+                "wave_nannet_node", "wave_nannet_node_version",
                 "wave_fold_certificate", "wave_match_index", "wave_schema",
             },
             self.bs0_path: {

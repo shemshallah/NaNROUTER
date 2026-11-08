@@ -13,7 +13,21 @@ The bridge is deliberately small and mechanical.  It packs and unpacks exact
 the words beyond range validation, and it never chooses a runner slot.  Slot
 selection and epoch validation belong to the router and scheduler.
 
-Binary envelope v1 layout (all integers big-endian)::
+Binary envelope v2 layout (all integers big-endian)::
+
+    offset  size  field
+    0       4     magic              b"N16B"
+    4       1     version            2
+    5       1     active_slot        0..5
+    6       8     request_id         unsigned 64-bit
+    14      8     epoch              unsigned 64-bit
+    22      4     nan_word_count     number of 64-bit NaN16 words
+    26      1     result_status      bounded status code (see RESULT_STATUSES)
+    27      5     point_zero         b"BS0:0" stable ingress identity
+    32      32    digest             SHA-256 over the header above + payload
+    64      N     payload            N / 8 exact 64-bit words
+
+Legacy v1 envelopes remain decodable for compatibility::
 
     offset  size  field
     0       4     magic              b"N16B"
@@ -25,10 +39,11 @@ Binary envelope v1 layout (all integers big-endian)::
     26      32    digest             SHA-256 over the header above + payload
     58      N     payload            N / 8 exact 64-bit words
 
-The envelope digest binds every header field, including the slot and epoch.
-A router accepts an envelope only when its slot and epoch equal the scheduler's
-current activation.  Point 0 remains the public address before and after a ring
-cycle; the active slot is evidence, not an address component.
+The envelope digest binds every header field, including the slot, epoch, word
+count, point-0 identity, and result status.  A router accepts an envelope only
+when its slot and epoch equal the scheduler's current activation.  Point 0
+remains the public address before and after a ring cycle; the active slot is
+evidence, not an address component.
 """
 from __future__ import annotations
 
@@ -45,6 +60,7 @@ from .wave_ring_scheduler import SLOT_COUNT, WaveRingScheduler
 # Stable point-0 identity.  BSR0 is the zero-based wire coordinate used by the
 # existing bridge protocol; the human/display label for point 0 is BSR1.
 POINT_ZERO_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+POINT_ZERO_IDENTITY = "BS0:0"
 POINT_ZERO_WIRE = "BSR0"
 POINT_ZERO_LABEL = "point-0"
 
@@ -52,19 +68,54 @@ POINT_ZERO_LABEL = "point-0"
 WIRE_ENDIAN = "big"
 WORD_BITS = 64
 WORD_BYTES = WORD_BITS // 8
-# 1 MiB / 8-byte NaN16 word = 131,072 words.  Bridge instances may set a
+# 2 MiB / 8-byte NaN16 word = 262,144 words.  Bridge instances may set a
 # smaller per-frame limit; this is only the hard ceiling.
 MAX_FRAME_WORDS = 262144
 MAX_PAYLOAD_BYTES = MAX_FRAME_WORDS * WORD_BYTES
 
 MAGIC = b"N16B"
-VERSION = 1
-SUPPORTED_VERSIONS = frozenset({VERSION})
+LEGACY_VERSION = 1
+VERSION = 2
+SUPPORTED_VERSIONS = frozenset({LEGACY_VERSION, VERSION})
 
-_HEADER = struct.Struct(">4sBBQQI32s")
-_HEADER_SIZE = _HEADER.size
+# Bounded result status vocabulary from DEEP_PLAN_CONT section 6.6.  A request
+# envelope uses "ok" as its neutral default; a result envelope carries the
+# executor's actual status.
+RESULT_STATUS_OK = "ok"
+RESULT_STATUSES = (
+    "ok",
+    "invalid_descriptor",
+    "bad_domain",
+    "overflow",
+    "saturation",
+    "nonconvergence",
+    "insufficient_workspace",
+    "stale_generation",
+    "unauthorized",
+    "cancelled",
+    "budget_exhausted",
+)
+_RESULT_STATUS_CODES = {
+    status: code for code, status in enumerate(RESULT_STATUSES)
+}
+_RESULT_STATUS_NAMES = {
+    code: status for status, code in _RESULT_STATUS_CODES.items()
+}
+_RESULT_STATUS_ALIASES = {
+    "success": "ok",
+    "invalid": "invalid_descriptor",
+    "stale": "stale_generation",
+    "budget": "budget_exhausted",
+}
+
+_HEADER_V1 = struct.Struct(">4sBBQQI32s")
+_HEADER_V2 = struct.Struct(">4sBBQQIB5s")
+_HEADER_V1_SIZE = _HEADER_V1.size
+_HEADER_V2_SIZE = _HEADER_V2.size
 _MAX_UINT64 = (1 << 64) - 1
 _DIGEST_SIZE = 32
+_HEADER_V2_WIRE_SIZE = _HEADER_V2_SIZE + _DIGEST_SIZE
+_POINT_ZERO_BYTES = POINT_ZERO_IDENTITY.encode("ascii")
 _FORBIDDEN_ROUTE_MARKERS = ("/R", "NANROUTER-")
 
 
@@ -102,6 +153,10 @@ class RouterBusyError(Point0BridgeError):
 
 class ExecutorResultError(Point0BridgeError):
     """The caller-supplied executor did not return a valid binary payload."""
+
+
+class ResultDigestMismatchError(EnvelopeFormatError):
+    """A result digest does not match the caller's expected output digest."""
 
 
 # Familiar aliases used in documentation and by callers.
@@ -147,6 +202,73 @@ def _canonical_route(route: Any) -> str:
     raise FrameError(
         f"route must use the stable point-0 address {POINT_ZERO_ADDRESS!r}"
     )
+
+
+def _canonical_point_zero(value: Any) -> str:
+    """Return the canonical point-0 identity or reject a foreign identity."""
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        try:
+            value = bytes(value).decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise EnvelopeFormatError("point_zero must be ASCII") from exc
+    if not isinstance(value, str):
+        raise EnvelopeFormatError("point_zero must be a string")
+    text = value.strip()
+    if text in (POINT_ZERO_IDENTITY, POINT_ZERO_WIRE):
+        return POINT_ZERO_IDENTITY
+    raise EnvelopeFormatError(
+        f"point_zero must be {POINT_ZERO_IDENTITY!r} (wire {POINT_ZERO_WIRE!r})"
+    )
+
+
+def _canonical_result_status(value: Any) -> str:
+    """Normalize a bounded result status, rejecting unknown values."""
+    if not isinstance(value, str) or not value.strip():
+        raise EnvelopeFormatError("result_status must be a non-empty string")
+    key = value.strip().lower()
+    key = _RESULT_STATUS_ALIASES.get(key, key)
+    if key not in RESULT_STATUSES:
+        raise EnvelopeFormatError(
+            "result_status must be one of: " + ", ".join(RESULT_STATUSES)
+        )
+    return key
+
+
+def _result_status_code(value: Any) -> int:
+    return _RESULT_STATUS_CODES[_canonical_result_status(value)]
+
+
+def _result_status_name(code: Any) -> str:
+    if not _is_int(code) or code not in _RESULT_STATUS_NAMES:
+        raise EnvelopeFormatError(
+            f"unsupported result_status code: {code!r}"
+        )
+    return _RESULT_STATUS_NAMES[code]
+
+
+def _coerce_sha256(name: str, value: Any) -> bytes:
+    """Accept a 32-byte digest or a 64-character hex digest."""
+    if isinstance(value, str):
+        if len(value) != 64 or any(
+            ch not in "0123456789abcdefABCDEF" for ch in value
+        ):
+            raise Point0BridgeError(
+                f"{name} must be a 64-character SHA-256 hex string"
+            )
+        return bytes.fromhex(value)
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        raw = bytes(value)
+        if len(raw) != _DIGEST_SIZE:
+            raise Point0BridgeError(f"{name} must be a 32-byte SHA-256 value")
+        return raw
+    raise Point0BridgeError(
+        f"{name} must be a 32-byte SHA-256 value or a 64-character hex string"
+    )
+
+
+def _output_digest(payload: bytes) -> bytes:
+    """SHA-256 over the exact binary result payload (the output words)."""
+    return hashlib.sha256(bytes(payload)).digest()
 
 
 def _freeze_words(words: Any) -> tuple[int, ...]:
@@ -241,7 +363,7 @@ class NanFrame:
         return self.route
 
 
-def _digest_material(
+def _compute_digest_v1(
     magic: bytes,
     version: int,
     active_slot: int,
@@ -250,7 +372,7 @@ def _digest_material(
     length: int,
     payload: bytes,
 ) -> bytes:
-    return (
+    return hashlib.sha256(
         struct.pack(
             ">4sBBQQI",
             magic,
@@ -261,28 +383,40 @@ def _digest_material(
             length,
         )
         + payload
-    )
+    ).digest()
 
 
-def _compute_digest(
+def _compute_digest_v2(
     magic: bytes,
     version: int,
     active_slot: int,
     request_id: int,
     epoch: int,
-    length: int,
+    nan_word_count: int,
+    result_status: str,
+    point_zero: str,
     payload: bytes,
 ) -> bytes:
+    _canonical_point_zero(point_zero)
     return hashlib.sha256(
-        _digest_material(
-            magic, version, active_slot, request_id, epoch, length, payload
+        struct.pack(
+            ">4sBBQQIB5s",
+            magic,
+            version,
+            active_slot,
+            request_id,
+            epoch,
+            nan_word_count,
+            _result_status_code(result_status),
+            _POINT_ZERO_BYTES,
         )
+        + payload
     ).digest()
 
 
 @dataclass(frozen=True)
 class BinaryEnvelope:
-    """Point-0 binary transport envelope (v1, network byte order)."""
+    """Point-0 binary transport envelope (v2; legacy v1 decoding supported)."""
 
     magic: bytes
     version: int
@@ -292,11 +426,41 @@ class BinaryEnvelope:
     digest: bytes
     active_slot: int
     epoch: int
+    point_zero: str = POINT_ZERO_IDENTITY
+    nan_word_count: int | None = None
+    result_status: str = RESULT_STATUS_OK
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "magic", bytes(self.magic))
         object.__setattr__(self, "payload", bytes(self.payload))
         object.__setattr__(self, "digest", bytes(self.digest))
+        object.__setattr__(
+            self, "point_zero", _canonical_point_zero(self.point_zero)
+        )
+        object.__setattr__(
+            self, "result_status", _canonical_result_status(self.result_status)
+        )
+        count = self.nan_word_count
+        if count is None:
+            count = len(self.payload) // WORD_BYTES
+        if not _is_int(count):
+            raise EnvelopeFormatError(
+                "nan_word_count must be a nonnegative integer"
+            )
+        object.__setattr__(self, "nan_word_count", count)
+
+    @property
+    def word_count(self) -> int:
+        return int(self.nan_word_count)
+
+    @property
+    def output_digest(self) -> bytes:
+        """SHA-256 over the exact binary payload (the NaN16 output words)."""
+        return _output_digest(self.payload)
+
+    @property
+    def payload_digest(self) -> bytes:
+        return self.output_digest
 
     @classmethod
     def create(
@@ -308,16 +472,23 @@ class BinaryEnvelope:
         epoch: int,
         magic: bytes = MAGIC,
         version: int = VERSION,
+        point_zero: str = POINT_ZERO_IDENTITY,
+        nan_word_count: int | None = None,
+        result_status: str = RESULT_STATUS_OK,
     ) -> "BinaryEnvelope":
         """Build an envelope and compute its digest from its exact bytes."""
         payload = bytes(payload)
         request_id = _require_uint("request_id", request_id)
         active_slot = _require_active_slot(active_slot)
         epoch = _require_uint("epoch", epoch)
+        point_zero = _canonical_point_zero(point_zero)
+        result_status = _canonical_result_status(result_status)
         if not isinstance(magic, (bytes, bytearray)) or len(magic) != 4:
             raise EnvelopeFormatError("magic must be exactly four bytes")
-        if not _is_int(version) or not 0 <= version <= 255:
-            raise EnvelopeFormatError("version must be an unsigned byte")
+        if not _is_int(version) or version not in SUPPORTED_VERSIONS:
+            raise EnvelopeFormatError(
+                f"unsupported binary envelope version: {version!r}"
+            )
         if len(payload) > MAX_PAYLOAD_BYTES:
             raise FrameTooLargeError(
                 f"payload exceeds {MAX_PAYLOAD_BYTES} bytes"
@@ -326,41 +497,86 @@ class BinaryEnvelope:
             raise EnvelopeFormatError(
                 "payload length must be a multiple of eight bytes"
             )
-        length = len(payload)
-        digest = _compute_digest(
-            bytes(magic),
-            version,
-            active_slot,
-            request_id,
-            epoch,
-            length,
-            payload,
-        )
+        count = len(payload) // WORD_BYTES
+        if nan_word_count is not None:
+            if not _is_int(nan_word_count) or nan_word_count != count:
+                raise EnvelopeFormatError(
+                    "nan_word_count must equal the number of 64-bit words "
+                    "in the payload"
+                )
+        if version == LEGACY_VERSION:
+            if result_status != RESULT_STATUS_OK:
+                raise EnvelopeFormatError(
+                    "legacy v1 envelopes cannot carry a non-ok result_status"
+                )
+            digest = _compute_digest_v1(
+                bytes(magic),
+                version,
+                active_slot,
+                request_id,
+                epoch,
+                len(payload),
+                payload,
+            )
+        else:
+            digest = _compute_digest_v2(
+                bytes(magic),
+                version,
+                active_slot,
+                request_id,
+                epoch,
+                count,
+                result_status,
+                point_zero,
+                payload,
+            )
         return cls(
             magic=bytes(magic),
             version=version,
             request_id=request_id,
-            length=length,
+            length=len(payload),
             payload=payload,
             digest=digest,
             active_slot=active_slot,
             epoch=epoch,
+            point_zero=point_zero,
+            nan_word_count=count,
+            result_status=result_status,
         )
 
     def to_bytes(self) -> bytes:
         """Serialize the envelope, including its stored digest."""
         try:
-            header = _HEADER.pack(
-                self.magic,
-                self.version,
-                self.active_slot,
-                self.request_id,
-                self.epoch,
-                self.length,
-                self.digest,
-            )
+            if self.version == LEGACY_VERSION:
+                header = _HEADER_V1.pack(
+                    self.magic,
+                    self.version,
+                    self.active_slot,
+                    self.request_id,
+                    self.epoch,
+                    self.length,
+                    self.digest,
+                )
+            elif self.version == VERSION:
+                prefix = _HEADER_V2.pack(
+                    self.magic,
+                    self.version,
+                    self.active_slot,
+                    self.request_id,
+                    self.epoch,
+                    int(self.nan_word_count),
+                    _result_status_code(self.result_status),
+                    self.point_zero.encode("ascii"),
+                )
+                return prefix + self.digest + self.payload
+            else:
+                raise EnvelopeFormatError(
+                    f"unsupported binary envelope version: {self.version!r}"
+                )
         except struct.error as exc:
-            raise EnvelopeFormatError("envelope fields do not fit the v1 wire layout") from exc
+            raise EnvelopeFormatError(
+                "envelope fields do not fit the wire layout"
+            ) from exc
         return header + self.payload
 
     @classmethod
@@ -369,28 +585,75 @@ class BinaryEnvelope:
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise EnvelopeFormatError("envelope must be bytes-like")
         raw = bytes(data)
-        if len(raw) < _HEADER_SIZE:
+        if len(raw) < 5:
             raise EnvelopeFormatError("binary envelope is shorter than its header")
-        (
-            magic,
-            version,
-            active_slot,
-            request_id,
-            epoch,
-            length,
-            digest,
-        ) = _HEADER.unpack_from(raw, 0)
-        payload = raw[_HEADER_SIZE:]
-        envelope = cls(
-            magic=magic,
-            version=version,
-            request_id=request_id,
-            length=length,
-            payload=payload,
-            digest=digest,
-            active_slot=active_slot,
-            epoch=epoch,
-        )
+        version = raw[4]
+        if version == LEGACY_VERSION:
+            if len(raw) < _HEADER_V1_SIZE:
+                raise EnvelopeFormatError(
+                    "binary envelope is shorter than its header"
+                )
+            (
+                magic,
+                version,
+                active_slot,
+                request_id,
+                epoch,
+                length,
+                digest,
+            ) = _HEADER_V1.unpack_from(raw, 0)
+            payload = raw[_HEADER_V1_SIZE:]
+            envelope = cls(
+                magic=magic,
+                version=version,
+                request_id=request_id,
+                length=length,
+                payload=payload,
+                digest=digest,
+                active_slot=active_slot,
+                epoch=epoch,
+                nan_word_count=length // WORD_BYTES,
+            )
+        elif version == VERSION:
+            if len(raw) < _HEADER_V2_WIRE_SIZE:
+                raise EnvelopeFormatError(
+                    "binary envelope is shorter than its header"
+                )
+            (
+                magic,
+                version,
+                active_slot,
+                request_id,
+                epoch,
+                nan_word_count,
+                status_code,
+                point_zero,
+            ) = _HEADER_V2.unpack_from(raw, 0)
+            try:
+                point_zero_text = point_zero.decode("ascii")
+            except UnicodeDecodeError as exc:
+                raise EnvelopeFormatError(
+                    "point_zero must be ASCII"
+                ) from exc
+            digest = raw[_HEADER_V2_SIZE:_HEADER_V2_WIRE_SIZE]
+            payload = raw[_HEADER_V2_WIRE_SIZE:]
+            envelope = cls(
+                magic=magic,
+                version=version,
+                request_id=request_id,
+                length=len(payload),
+                payload=payload,
+                digest=digest,
+                active_slot=active_slot,
+                epoch=epoch,
+                point_zero=point_zero_text,
+                nan_word_count=nan_word_count,
+                result_status=_result_status_name(status_code),
+            )
+        else:
+            raise EnvelopeFormatError(
+                f"unsupported binary envelope version: {version!r}"
+            )
         _validate_envelope(envelope, MAX_FRAME_WORDS)
         return envelope
 
@@ -436,15 +699,51 @@ def _validate_envelope(
         raise EnvelopeFormatError("epoch must be an unsigned 64-bit integer")
     if not isinstance(envelope.digest, (bytes, bytearray)) or len(envelope.digest) != _DIGEST_SIZE:
         raise EnvelopeFormatError("digest must be a 32-byte SHA-256 value")
-    expected = _compute_digest(
-        bytes(envelope.magic),
-        envelope.version,
-        envelope.active_slot,
-        envelope.request_id,
-        envelope.epoch,
-        envelope.length,
-        envelope.payload,
-    )
+    if envelope.point_zero != POINT_ZERO_IDENTITY:
+        raise EnvelopeFormatError(
+            f"point_zero must be {POINT_ZERO_IDENTITY!r}"
+        )
+    if (
+        not _is_int(envelope.nan_word_count)
+        or not 0 <= envelope.nan_word_count <= max_words
+    ):
+        raise FrameTooLargeError(
+            f"nan_word_count must be in 0..{max_words}"
+        )
+    if envelope.nan_word_count != envelope.length // WORD_BYTES:
+        raise EnvelopeFormatError(
+            "nan_word_count does not match the binary payload length"
+        )
+    if envelope.version == LEGACY_VERSION:
+        if envelope.result_status != RESULT_STATUS_OK:
+            raise EnvelopeFormatError(
+                "legacy v1 envelopes cannot carry a non-ok result_status"
+            )
+        expected = _compute_digest_v1(
+            bytes(envelope.magic),
+            envelope.version,
+            envelope.active_slot,
+            envelope.request_id,
+            envelope.epoch,
+            envelope.length,
+            envelope.payload,
+        )
+    else:
+        if envelope.result_status not in RESULT_STATUSES:
+            raise EnvelopeFormatError(
+                f"unsupported result_status: {envelope.result_status!r}"
+            )
+        expected = _compute_digest_v2(
+            bytes(envelope.magic),
+            envelope.version,
+            envelope.active_slot,
+            envelope.request_id,
+            envelope.epoch,
+            envelope.nan_word_count,
+            envelope.result_status,
+            envelope.point_zero,
+            envelope.payload,
+        )
     if not hmac.compare_digest(bytes(envelope.digest), expected):
         raise EnvelopeFormatError("binary envelope digest mismatch")
 
@@ -485,11 +784,14 @@ class Point0Bridge:
         *,
         active_slot: int = 0,
         epoch: int = 0,
+        result_status: str = RESULT_STATUS_OK,
+        version: int = VERSION,
     ) -> BinaryEnvelope:
         """Encode a point-0 frame into one bounded binary envelope.
 
         ``active_slot`` and ``epoch`` are routing evidence supplied by the
         router, never by a client.  Standalone codec users get slot 0/epoch 0.
+        ``result_status`` is normally set on a result envelope, not a request.
         """
         if not isinstance(frame, NanFrame):
             raise FrameError("frame must be a NanFrame")
@@ -509,6 +811,9 @@ class Point0Bridge:
             payload=payload,
             active_slot=active_slot,
             epoch=epoch,
+            version=version,
+            nan_word_count=len(frame.words),
+            result_status=result_status,
         )
 
     def decode(
@@ -518,12 +823,15 @@ class Point0Bridge:
         expected_active_slot: int | None = None,
         expected_epoch: int | None = None,
         expected_request_id: int | None = None,
+        expected_result_digest: bytes | str | None = None,
+        expected_output_digest: bytes | str | None = None,
     ) -> NanFrame:
         """Validate and decode an envelope back to an exact point-0 frame.
 
-        Passing the expected slot, epoch, or request id turns the codec into a
-        binding check: a stale epoch or an inactive slot is rejected instead of
-        being silently decoded.
+        Passing the expected slot, epoch, request id, result digest, or output
+        digest turns the codec into a binding check.  ``expected_result_digest``
+        binds the full result envelope; ``expected_output_digest`` binds only
+        the exact binary output payload.
         """
         if isinstance(envelope, (bytes, bytearray, memoryview)):
             envelope = BinaryEnvelope.from_bytes(envelope)
@@ -552,10 +860,29 @@ class Point0Bridge:
                 raise EnvelopeFormatError(
                     "binary envelope request_id does not match the request frame"
                 )
+        if expected_result_digest is not None:
+            expected = _coerce_sha256(
+                "expected_result_digest", expected_result_digest
+            )
+            if not hmac.compare_digest(envelope.digest, expected):
+                raise ResultDigestMismatchError(
+                    "result digest does not match the expected result digest"
+                )
+        if expected_output_digest is not None:
+            expected = _coerce_sha256(
+                "expected_output_digest", expected_output_digest
+            )
+            if not hmac.compare_digest(envelope.output_digest, expected):
+                raise ResultDigestMismatchError(
+                    "result digest does not match the expected output digest"
+                )
         words = _unpack_words(envelope.payload)
         provenance = (
             ("bridge", "point-0"),
             ("wire", POINT_ZERO_WIRE),
+            ("point_zero", POINT_ZERO_IDENTITY),
+            ("nan_word_count", str(envelope.nan_word_count)),
+            ("result_status", envelope.result_status),
             ("active_slot", str(envelope.active_slot)),
             ("epoch", str(envelope.epoch)),
         )
@@ -569,13 +896,16 @@ class Point0Bridge:
 
 @dataclass(frozen=True)
 class Point0Result:
-    """Decoded NaN16 result plus non-address routing evidence."""
+    """Decoded NaN16 result plus non-address routing and output evidence."""
 
     frame: NanFrame
     active_slot: int
     epoch: int
     request_digest: bytes = b""
     result_digest: bytes = b""
+    result_status: str = RESULT_STATUS_OK
+    output_digest: bytes = b""
+    point_zero: str = POINT_ZERO_IDENTITY
 
     def __post_init__(self) -> None:
         if not isinstance(self.frame, NanFrame):
@@ -584,8 +914,29 @@ class Point0Result:
             self, "active_slot", _require_active_slot(self.active_slot)
         )
         object.__setattr__(self, "epoch", _require_uint("epoch", self.epoch))
-        object.__setattr__(self, "request_digest", bytes(self.request_digest))
-        object.__setattr__(self, "result_digest", bytes(self.result_digest))
+        request_digest = bytes(self.request_digest)
+        result_digest = bytes(self.result_digest)
+        output_digest = bytes(self.output_digest)
+        for name, digest in (
+            ("request_digest", request_digest),
+            ("result_digest", result_digest),
+            ("output_digest", output_digest),
+        ):
+            if digest and len(digest) != _DIGEST_SIZE:
+                raise Point0BridgeError(
+                    f"{name} must be a 32-byte SHA-256 value"
+                )
+        if not output_digest:
+            output_digest = _output_digest(_pack_words(self.frame.words))
+        object.__setattr__(self, "request_digest", request_digest)
+        object.__setattr__(self, "result_digest", result_digest)
+        object.__setattr__(self, "output_digest", output_digest)
+        object.__setattr__(
+            self, "result_status", _canonical_result_status(self.result_status)
+        )
+        object.__setattr__(
+            self, "point_zero", _canonical_point_zero(self.point_zero)
+        )
 
     @property
     def words(self) -> tuple[int, ...]:
@@ -593,6 +944,10 @@ class Point0Result:
 
     @property
     def word_count(self) -> int:
+        return len(self.frame.words)
+
+    @property
+    def nan_word_count(self) -> int:
         return len(self.frame.words)
 
     @property
@@ -620,18 +975,50 @@ class Point0Result:
     def metadata(self) -> dict[str, str]:
         return self.frame.metadata
 
+    def verify_output(self, expected_output_digest: bytes | str) -> None:
+        """Raise unless the output payload matches the expected digest."""
+        expected = _coerce_sha256(
+            "expected_output_digest", expected_output_digest
+        )
+        if not hmac.compare_digest(self.output_digest, expected):
+            raise ResultDigestMismatchError(
+                "result digest does not match the expected output digest"
+            )
+
     def to_dict(self) -> dict[str, Any]:
         """Return JSON-safe result evidence; the route never names a slot."""
         return {
             "route": self.route,
             "wire": POINT_ZERO_WIRE,
+            "point_zero": self.point_zero,
             "request_id": self.request_id,
-            "word_count": len(self.words),
+            "word_count": self.word_count,
+            "nan_word_count": self.nan_word_count,
+            "result_status": self.result_status,
             "active_slot": self.active_slot,
             "epoch": self.epoch,
             "request_digest": self.request_digest.hex(),
             "result_digest": self.result_digest.hex(),
+            "output_digest": self.output_digest.hex(),
         }
+
+
+@dataclass(frozen=True)
+class Point0ExecutorResult:
+    """Optional executor return type carrying a bounded result status."""
+
+    payload: bytes
+    result_status: str = RESULT_STATUS_OK
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "payload", bytes(self.payload))
+        object.__setattr__(
+            self, "result_status", _canonical_result_status(self.result_status)
+        )
+
+
+# Familiar alias for callers that prefer the longer name.
+Point0ExecutionResult = Point0ExecutorResult
 
 
 @dataclass(frozen=True)
@@ -640,7 +1027,7 @@ class _ActiveState:
     epoch: int
 
 
-Executor = Callable[[int, int, bytes], bytes]
+Executor = Callable[[int, int, bytes], bytes | Point0ExecutorResult]
 
 
 class Point0Router:
@@ -693,7 +1080,13 @@ class Point0Router:
         """The public address is always stable point 0."""
         return POINT_ZERO_ADDRESS
 
-    def submit(self, frame: NanFrame) -> Point0Result:
+    def submit(
+        self,
+        frame: NanFrame,
+        *,
+        expected_result_digest: bytes | str | None = None,
+        expected_output_digest: bytes | str | None = None,
+    ) -> Point0Result:
         """Encode, route to the one active slot, execute, and decode."""
         if not isinstance(frame, NanFrame):
             raise FrameError("frame must be a NanFrame")
@@ -702,17 +1095,61 @@ class Point0Router:
                 f"frame has {len(frame.words)} words; "
                 f"limit is {self.bridge.max_words}"
             )
+        if expected_result_digest is not None:
+            _coerce_sha256("expected_result_digest", expected_result_digest)
+        if expected_output_digest is not None:
+            _coerce_sha256("expected_output_digest", expected_output_digest)
         with self._lock:
             state = self._active_state()
             envelope = self.bridge.encode(
                 frame, active_slot=state.slot, epoch=state.epoch
             )
-            return self._dispatch_locked(envelope)
+            result = self._dispatch_locked(envelope)
+            self._verify_expected(
+                result,
+                expected_result_digest=expected_result_digest,
+                expected_output_digest=expected_output_digest,
+            )
+            return result
 
-    def dispatch(self, envelope: BinaryEnvelope | bytes) -> Point0Result:
+    def dispatch(
+        self,
+        envelope: BinaryEnvelope | bytes,
+        *,
+        expected_result_digest: bytes | str | None = None,
+        expected_output_digest: bytes | str | None = None,
+    ) -> Point0Result:
         """Retry one already-encoded point-0 envelope if it is still current."""
+        if expected_result_digest is not None:
+            _coerce_sha256("expected_result_digest", expected_result_digest)
+        if expected_output_digest is not None:
+            _coerce_sha256("expected_output_digest", expected_output_digest)
         with self._lock:
-            return self._dispatch_locked(envelope)
+            result = self._dispatch_locked(envelope)
+            self._verify_expected(
+                result,
+                expected_result_digest=expected_result_digest,
+                expected_output_digest=expected_output_digest,
+            )
+            return result
+
+    def _verify_expected(
+        self,
+        result: Point0Result,
+        *,
+        expected_result_digest: bytes | str | None,
+        expected_output_digest: bytes | str | None,
+    ) -> None:
+        if expected_result_digest is not None:
+            expected = _coerce_sha256(
+                "expected_result_digest", expected_result_digest
+            )
+            if not hmac.compare_digest(result.result_digest, expected):
+                raise ResultDigestMismatchError(
+                    "result digest does not match the expected result digest"
+                )
+        if expected_output_digest is not None:
+            result.verify_output(expected_output_digest)
 
     def _dispatch_locked(
         self, envelope: BinaryEnvelope | bytes
@@ -735,9 +1172,15 @@ class Point0Router:
 
         self._in_flight = True
         try:
-            result_payload = self._executor(
+            executed = self._executor(
                 state.slot, state.epoch, envelope.payload
             )
+            if isinstance(executed, Point0ExecutorResult):
+                result_payload = executed.payload
+                result_status = executed.result_status
+            else:
+                result_payload = executed
+                result_status = RESULT_STATUS_OK
             if not isinstance(result_payload, (bytes, bytearray, memoryview)):
                 raise ExecutorResultError(
                     "executor must return binary bytes"
@@ -761,6 +1204,8 @@ class Point0Router:
             payload=result_payload,
             active_slot=state.slot,
             epoch=state.epoch,
+            nan_word_count=len(result_payload) // WORD_BYTES,
+            result_status=result_status,
         )
         result_frame = self.bridge.decode(
             result_envelope,
@@ -774,6 +1219,9 @@ class Point0Router:
             epoch=state.epoch,
             request_digest=envelope.digest,
             result_digest=result_envelope.digest,
+            result_status=result_status,
+            output_digest=result_envelope.output_digest,
+            point_zero=result_envelope.point_zero,
         )
 
     def _require_binding(
@@ -851,6 +1299,7 @@ __all__ = [
     "FrameError",
     "FrameTooLargeError",
     "InactiveSlotError",
+    "LEGACY_VERSION",
     "MAGIC",
     "MAX_FRAME_WORDS",
     "MAX_PAYLOAD_BYTES",
@@ -858,13 +1307,19 @@ __all__ = [
     "NoActiveSlotError",
     "OversizedFrameError",
     "POINT_ZERO_ADDRESS",
+    "POINT_ZERO_IDENTITY",
     "POINT_ZERO_LABEL",
     "POINT_ZERO_WIRE",
     "Point0Bridge",
     "Point0BridgeError",
     "Point0Error",
+    "Point0ExecutionResult",
+    "Point0ExecutorResult",
     "Point0Result",
     "Point0Router",
+    "RESULT_STATUSES",
+    "RESULT_STATUS_OK",
+    "ResultDigestMismatchError",
     "RouterBusyError",
     "StaleEnvelopeError",
     "StaleEpochError",

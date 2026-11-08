@@ -20,6 +20,7 @@ JOB_STATES = ("queued", "leased", "done", "failed", "dead")
 LEASE_STATES = ("active", "expired", "completed", "failed")
 OPERATOR_STATUSES = ("candidate", "active", "deprecated", "revoked")
 CAPABILITY_STATUSES = ("declared", "native_verified", "degraded", "revoked")
+NANNET_NODE_STATUSES = ("declared", "active", "degraded", "revoked")
 EVIDENCE_LEVELS = ("declared", "measured", "replayed", "native_verified", "certified")
 FEEDBACK_STATES = ("pending", "acked")
 
@@ -45,6 +46,14 @@ class OperatorConflictError(WaveStoreError):
 
 
 class CapabilityConflictError(WaveStoreError):
+    pass
+
+
+class NannetNodeConflictError(WaveStoreError):
+    pass
+
+
+class NannetNodeNotFoundError(WaveStoreError):
     pass
 
 
@@ -122,6 +131,61 @@ CREATE TABLE IF NOT EXISTS wave_capability (
 );
 CREATE INDEX IF NOT EXISTS wave_capability_dispatch
     ON wave_capability(status, verified_digest, workspace);
+
+-- One current NANNET0 binding per universe plus its immutable version history.
+-- This is control/version metadata only: it is not a route table, job queue, or
+-- lease authority.  No secret key material is stored; only public fingerprints
+-- and bounded signature digests are persisted.
+CREATE TABLE IF NOT EXISTS wave_nannet_node (
+    universe_id TEXT PRIMARY KEY,
+    node_id TEXT NOT NULL,
+    node_point INTEGER NOT NULL CHECK(node_point BETWEEN 1 AND 255),
+    public_key_fingerprint TEXT NOT NULL CHECK(length(public_key_fingerprint) = 64),
+    generation INTEGER NOT NULL CHECK(generation >= 0),
+    status TEXT NOT NULL
+        CHECK(status IN ('declared','active','degraded','revoked')),
+    route TEXT NOT NULL DEFAULT '',
+    route_digest TEXT CHECK(route_digest IS NULL OR length(route_digest) = 64),
+    signature TEXT CHECK(signature IS NULL OR length(signature) = 64),
+    registered_tick INTEGER NOT NULL CHECK(registered_tick >= 0),
+    updated_tick INTEGER NOT NULL CHECK(updated_tick >= 0),
+    CHECK(updated_tick >= registered_tick),
+    CHECK(status != 'revoked' OR route = '')
+);
+CREATE UNIQUE INDEX IF NOT EXISTS wave_nannet_node_current_node
+    ON wave_nannet_node(node_id) WHERE status != 'revoked';
+CREATE UNIQUE INDEX IF NOT EXISTS wave_nannet_node_current_point
+    ON wave_nannet_node(node_point) WHERE status != 'revoked';
+CREATE INDEX IF NOT EXISTS wave_nannet_node_status
+    ON wave_nannet_node(status, updated_tick, universe_id);
+
+CREATE TABLE IF NOT EXISTS wave_nannet_node_version (
+    universe_id TEXT NOT NULL,
+    generation INTEGER NOT NULL CHECK(generation >= 0),
+    node_id TEXT NOT NULL,
+    node_point INTEGER NOT NULL CHECK(node_point BETWEEN 1 AND 255),
+    public_key_fingerprint TEXT NOT NULL CHECK(length(public_key_fingerprint) = 64),
+    status TEXT NOT NULL
+        CHECK(status IN ('declared','active','degraded','revoked')),
+    route TEXT NOT NULL DEFAULT '',
+    route_digest TEXT CHECK(route_digest IS NULL OR length(route_digest) = 64),
+    signature TEXT CHECK(signature IS NULL OR length(signature) = 64),
+    registered_tick INTEGER NOT NULL CHECK(registered_tick >= 0),
+    nanclock_tick INTEGER NOT NULL CHECK(nanclock_tick >= 0),
+    PRIMARY KEY(universe_id, generation),
+    CHECK(nanclock_tick >= registered_tick),
+    CHECK(status != 'revoked' OR route = '')
+);
+CREATE INDEX IF NOT EXISTS wave_nannet_node_version_lookup
+    ON wave_nannet_node_version(universe_id, generation DESC);
+CREATE INDEX IF NOT EXISTS wave_nannet_node_version_status
+    ON wave_nannet_node_version(status, nanclock_tick);
+CREATE TRIGGER IF NOT EXISTS wave_nannet_node_version_no_update
+    BEFORE UPDATE ON wave_nannet_node_version
+    BEGIN SELECT RAISE(ABORT, 'wave_nannet_node_version is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS wave_nannet_node_version_no_delete
+    BEFORE DELETE ON wave_nannet_node_version
+    BEGIN SELECT RAISE(ABORT, 'wave_nannet_node_version is append-only'); END;
 
 CREATE TABLE IF NOT EXISTS wave_fold_certificate (
     certificate_id TEXT PRIMARY KEY,
@@ -269,6 +333,22 @@ def _require_enum(name: str, value: Any, allowed: Iterable[str]) -> str:
     choices = tuple(allowed)
     if value not in choices:
         raise WaveStoreError(f"{name} must be one of: {', '.join(choices)}")
+    return value
+
+
+def _bounded_text(name: str, value: Any, *, maximum: int) -> str:
+    if not isinstance(value, str) or not value or len(value) > maximum:
+        raise WaveStoreError(
+            f"{name} must be a non-empty string of at most {maximum} characters"
+        )
+    return value
+
+
+def _route_text(name: str, value: Any) -> str:
+    if not isinstance(value, str) or len(value) > 512:
+        raise WaveStoreError(f"{name} must be a string of at most 512 characters")
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in value):
+        raise WaveStoreError(f"{name} must not contain control characters")
     return value
 
 
@@ -873,6 +953,258 @@ class WaveStore:
             rows = db.execute(query, args).fetchall()
         return [_row_record(row) for row in rows]
 
+    # -- MC0DB NANNET0 node bindings ------------------------------------------
+
+    def register_nannet_node(
+        self,
+        *,
+        universe_id: str,
+        node_id: str,
+        node_point: int,
+        public_key_fingerprint: str,
+        generation: int = 0,
+        status: str = "declared",
+        route: str = "",
+        route_digest: str | None = None,
+        signature: str | None = None,
+        nanclock_tick: int = 0,
+    ) -> dict[str, Any]:
+        """Register or version one universe's single NANNET0 node binding.
+
+        This is durable control/version metadata only.  It does not create a
+        job, lease, capability, route, or second routing authority.
+        """
+        _bounded_text("universe_id", universe_id, maximum=128)
+        _bounded_text("node_id", node_id, maximum=128)
+        _require_int("node_point", node_point, minimum=1)
+        if node_point > 255:
+            raise WaveStoreError("node_point must be in 1..255")
+        _require_digest("public_key_fingerprint", public_key_fingerprint)
+        _require_int("generation", generation)
+        _require_enum("status", status, NANNET_NODE_STATUSES)
+        _route_text("route", route)
+        if status == "revoked" and route:
+            raise WaveStoreError("revoked node must not advertise a route")
+        if route_digest is not None:
+            _require_digest("route_digest", route_digest)
+        if signature is not None:
+            _require_digest("signature", signature)
+        _require_int("nanclock_tick", nanclock_tick)
+
+        values = {
+            "universe_id": universe_id,
+            "node_id": node_id,
+            "node_point": node_point,
+            "public_key_fingerprint": public_key_fingerprint,
+            "generation": generation,
+            "status": status,
+            "route": route,
+            "route_digest": route_digest,
+            "signature": signature,
+        }
+        with self._connect(self.mc0_path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT * FROM wave_nannet_node WHERE universe_id=?",
+                (universe_id,),
+            ).fetchone()
+            if row is None:
+                duplicate = db.execute("""
+                    SELECT universe_id, node_id, node_point
+                    FROM wave_nannet_node
+                    WHERE status != 'revoked'
+                      AND (node_id=? OR node_point=?)
+                    LIMIT 1
+                """, (node_id, node_point)).fetchone()
+                if duplicate is not None:
+                    db.rollback()
+                    raise NannetNodeConflictError(
+                        "node_id or node_point is already bound to another "
+                        f"active universe ({duplicate['universe_id']})"
+                    )
+                registered_tick = nanclock_tick
+                db.execute("""
+                    INSERT INTO wave_nannet_node
+                    (universe_id, node_id, node_point, public_key_fingerprint,
+                     generation, status, route, route_digest, signature,
+                     registered_tick, updated_tick)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (universe_id, node_id, node_point, public_key_fingerprint,
+                      generation, status, route, route_digest, signature,
+                      registered_tick, nanclock_tick))
+                db.execute("""
+                    INSERT INTO wave_nannet_node_version
+                    (universe_id, generation, node_id, node_point,
+                     public_key_fingerprint, status, route, route_digest,
+                     signature, registered_tick, nanclock_tick)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (universe_id, generation, node_id, node_point,
+                      public_key_fingerprint, status, route, route_digest,
+                      signature, registered_tick, nanclock_tick))
+            else:
+                current_generation = int(row["generation"])
+                if generation < current_generation:
+                    db.rollback()
+                    raise NannetNodeConflictError(
+                        f"binding generation {generation} is older than "
+                        f"stored generation {current_generation}"
+                    )
+                if generation == current_generation:
+                    same = all(
+                        row[column] == value
+                        for column, value in values.items()
+                    )
+                    db.commit()
+                    if not same:
+                        raise NannetNodeConflictError(
+                            "binding generation is already registered with a "
+                            "different contract"
+                        )
+                    return _row_record(row)
+                duplicate = db.execute("""
+                    SELECT universe_id, node_id, node_point
+                    FROM wave_nannet_node
+                    WHERE universe_id != ? AND status != 'revoked'
+                      AND (node_id=? OR node_point=?)
+                    LIMIT 1
+                """, (universe_id, node_id, node_point)).fetchone()
+                if duplicate is not None:
+                    db.rollback()
+                    raise NannetNodeConflictError(
+                        "node_id or node_point is already bound to another "
+                        f"active universe ({duplicate['universe_id']})"
+                    )
+                registered_tick = int(row["registered_tick"])
+                db.execute("""
+                    INSERT INTO wave_nannet_node_version
+                    (universe_id, generation, node_id, node_point,
+                     public_key_fingerprint, status, route, route_digest,
+                     signature, registered_tick, nanclock_tick)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (universe_id, generation, node_id, node_point,
+                      public_key_fingerprint, status, route, route_digest,
+                      signature, registered_tick, nanclock_tick))
+                db.execute("""
+                    UPDATE wave_nannet_node SET node_id=?, node_point=?,
+                        public_key_fingerprint=?, generation=?, status=?,
+                        route=?, route_digest=?, signature=?, updated_tick=?
+                    WHERE universe_id=?
+                """, (node_id, node_point, public_key_fingerprint, generation,
+                      status, route, route_digest, signature, nanclock_tick,
+                      universe_id))
+            row = db.execute(
+                "SELECT * FROM wave_nannet_node WHERE universe_id=?",
+                (universe_id,),
+            ).fetchone()
+            db.commit()
+            return _row_record(row)
+
+    def get_nannet_node(
+        self, universe_id: str, *, generation: int | None = None
+    ) -> dict[str, Any] | None:
+        """Look up the current binding or one immutable historical version."""
+        _bounded_text("universe_id", universe_id, maximum=128)
+        if generation is None:
+            query = "SELECT * FROM wave_nannet_node WHERE universe_id=?"
+            args: list[Any] = [universe_id]
+        else:
+            _require_int("generation", generation)
+            query = """
+                SELECT * FROM wave_nannet_node_version
+                WHERE universe_id=? AND generation=?
+            """
+            args = [universe_id, generation]
+        with self._connect(self.mc0_path) as db:
+            row = db.execute(query, args).fetchone()
+        return None if row is None else _row_record(row)
+
+    def require_nannet_node(
+        self, universe_id: str, *, generation: int | None = None
+    ) -> dict[str, Any]:
+        binding = self.get_nannet_node(universe_id, generation=generation)
+        if binding is None:
+            suffix = "" if generation is None else f" generation {generation}"
+            raise NannetNodeNotFoundError(
+                f"universe {universe_id!r} has no NANNET node binding{suffix}"
+            )
+        return binding
+
+    def get_nannet_node_by_node_id(
+        self, node_id: str
+    ) -> dict[str, Any] | None:
+        _bounded_text("node_id", node_id, maximum=128)
+        with self._connect(self.mc0_path) as db:
+            row = db.execute("""
+                SELECT * FROM wave_nannet_node
+                WHERE node_id=?
+                ORDER BY (status = 'revoked'), universe_id
+                LIMIT 1
+            """, (node_id,)).fetchone()
+        return None if row is None else _row_record(row)
+
+    def nannet_node_history(
+        self, universe_id: str, *, limit: int = 64
+    ) -> list[dict[str, Any]]:
+        _bounded_text("universe_id", universe_id, maximum=128)
+        _require_int("limit", limit, minimum=1)
+        if limit > 1024:
+            raise WaveStoreError("limit must be <= 1024")
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute("""
+                SELECT * FROM wave_nannet_node_version
+                WHERE universe_id=?
+                ORDER BY generation DESC
+                LIMIT ?
+            """, (universe_id, limit)).fetchall()
+        return [_row_record(row) for row in rows]
+
+    def list_nannet_nodes(
+        self, *, status: str | None = None, limit: int = 128
+    ) -> list[dict[str, Any]]:
+        _require_int("limit", limit, minimum=1)
+        if limit > 1024:
+            raise WaveStoreError("limit must be <= 1024")
+        query = "SELECT * FROM wave_nannet_node"
+        args: list[Any] = []
+        if status is not None:
+            _require_enum("status", status, NANNET_NODE_STATUSES)
+            query += " WHERE status=?"
+            args.append(status)
+        query += " ORDER BY universe_id LIMIT ?"
+        args.append(limit)
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(query, args).fetchall()
+        return [_row_record(row) for row in rows]
+
+    def revoke_nannet_node(
+        self,
+        universe_id: str,
+        *,
+        generation: int,
+        signature: str | None = None,
+        route_digest: str | None = None,
+        nanclock_tick: int = 0,
+    ) -> dict[str, Any]:
+        """Advance a binding generation and clear its route."""
+        current = self.require_nannet_node(universe_id)
+        _require_int("generation", generation)
+        if generation <= int(current["generation"]):
+            raise NannetNodeConflictError(
+                "revocation generation must advance"
+            )
+        return self.register_nannet_node(
+            universe_id=current["universe_id"],
+            node_id=current["node_id"],
+            node_point=int(current["node_point"]),
+            public_key_fingerprint=current["public_key_fingerprint"],
+            generation=generation,
+            status="revoked",
+            route="",
+            route_digest=route_digest,
+            signature=signature,
+            nanclock_tick=nanclock_tick,
+        )
+
     # -- MC0DB fold certificates and match index ------------------------------
 
     def append_fold_certificate(self, *, universe_id: str, generation: int,
@@ -1206,6 +1538,12 @@ class WaveStore:
             "wave_lease": sum(leases.values()),
             "wave_operator": self._table_count(self.mc0_path, "wave_operator"),
             "wave_capability": self._table_count(self.mc0_path, "wave_capability"),
+            "wave_nannet_node": self._table_count(
+                self.mc0_path, "wave_nannet_node"
+            ),
+            "wave_nannet_node_version": self._table_count(
+                self.mc0_path, "wave_nannet_node_version"
+            ),
             "wave_fold_certificate": self._table_count(
                 self.mc0_path, "wave_fold_certificate"
             ),

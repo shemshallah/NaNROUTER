@@ -70,6 +70,26 @@ class NannetNodeTests(unittest.TestCase):
         self.assertEqual(value["universe_id"], "u1")
         self.assertEqual(value["node_point"], 1)
 
+    def test_unknown_node_lookup_returns_none(self):
+        registry = NannetNodeRegistry()
+        self.assertIsNone(registry.get("missing"))
+        self.assertEqual(registry.count(), 0)
+
+    def test_binding_contains_no_secret_material(self):
+        value = binding().to_dict()
+        self.assertNotIn("secret", value)
+        self.assertNotIn("private_key", value)
+        self.assertNotIn("token", value)
+        self.assertIn("public_key_fingerprint", value)
+
+    def test_generation_must_advance_on_revoke(self):
+        registry = NannetNodeRegistry()
+        registry.register(binding())
+        with self.assertRaises(NannetNodeError):
+            registry.revoke("u1", generation=1)
+        with self.assertRaises(NannetNodeError):
+            registry.revoke("missing", generation=2)
+
 
 if __name__ == "__main__":
     unittest.main()

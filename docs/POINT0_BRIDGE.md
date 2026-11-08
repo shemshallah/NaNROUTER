@@ -55,7 +55,7 @@ The v1 bridge accepts only the point-0 root as the route. Address selectors
 are not interpreted here; putting a selector in `route` is rejected so that it
 cannot smuggle a runner-slot identity into the public route.
 
-## Binary envelope v1
+## Binary envelope v2
 
 All integers use network byte order (`WIRE_ENDIAN == "big"`), independent of
 the host.
@@ -63,32 +63,67 @@ the host.
 | Offset | Size | Field |
 |---:|---:|---|
 | 0 | 4 | magic: `b"N16B"` |
-| 4 | 1 | version: `1` |
+| 4 | 1 | version: `2` |
 | 5 | 1 | active slot: `0..5`, unsigned byte |
 | 6 | 8 | request id: unsigned 64-bit |
 | 14 | 8 | epoch: unsigned 64-bit |
-| 22 | 4 | payload length: unsigned 32-bit bytes |
-| 26 | 32 | SHA-256 digest |
-| 58 | N | payload: `N / 8` exact 64-bit words |
+| 22 | 4 | `nan_word_count`: number of 64-bit NaN16 words |
+| 26 | 1 | `result_status`: bounded status code |
+| 27 | 5 | `point_zero`: `b"BS0:0"` stable ingress identity |
+| 32 | 32 | SHA-256 digest |
+| 64 | N | payload: `N / 8` exact 64-bit words |
 
 The digest is:
 
 ```text
 SHA-256(
     magic || version || active_slot || request_id_be64 || epoch_be64 ||
-    payload_length_be32 || payload
+    nan_word_count_be32 || result_status_u8 || point_zero_5bytes || payload
 )
 ```
 
-It binds both the transport metadata and every payload byte. The bridge rejects
-a wrong magic, unsupported version, declared-length mismatch, payload that is
-not a whole number of 64-bit words, an out-of-range slot/epoch, and any digest
-mismatch. It also rejects truncated envelopes and envelopes with trailing
-bytes.
+It binds the transport metadata, point-0 identity, word count, result status,
+and every payload byte. The bridge rejects a wrong magic, unsupported version,
+payload that is not a whole number of 64-bit words, a `nan_word_count` that does
+not equal the payload length, a non-canonical point-0 identity, an unknown
+status code, an out-of-range slot/epoch, and any digest mismatch. It also
+rejects truncated envelopes and envelopes with trailing bytes.
 
-The hard length bound is `MAX_FRAME_WORDS == 131072` (1 MiB / 8 bytes), therefore
-`MAX_PAYLOAD_BYTES == 524288`. A custom bridge may use a smaller `max_words`
+`result_status` is one of:
+
+```text
+ok, invalid_descriptor, bad_domain, overflow, saturation, nonconvergence,
+insufficient_workspace, stale_generation, unauthorized, cancelled,
+budget_exhausted
+```
+
+`success`, `invalid`, `stale`, and `budget` are accepted as input aliases and
+normalize to their canonical names. A request envelope uses `ok` as its neutral
+default; a result envelope carries the executor's actual status.
+
+The hard length bound is `MAX_FRAME_WORDS == 262144` (2 MiB / 8 bytes), therefore
+`MAX_PAYLOAD_BYTES == 2097152`. A custom bridge may use a smaller `max_words`
 bound.
+
+### Legacy v1 compatibility
+
+Version 1 envelopes remain decodable. The v1 layout is unchanged:
+
+| Offset | Size | Field |
+|---:|---:|---|
+| 0 | 4 | magic: `b"N16B"` |
+| 4 | 1 | version: `1` |
+| 5 | 1 | active slot: `0..5` |
+| 6 | 8 | request id |
+| 14 | 8 | epoch |
+| 22 | 4 | payload length in bytes |
+| 26 | 32 | SHA-256 digest |
+| 58 | N | payload: `N / 8` exact 64-bit words |
+
+A decoded v1 envelope is upgraded in memory with `point_zero="BS0:0"`,
+`nan_word_count=length/8`, and `result_status="ok"`. Re-serializing it keeps the
+v1 wire layout and the original v1 digest. New envelopes always use v2 unless a
+caller explicitly requests `version=LEGACY_VERSION`.
 
 The envelope is a point-0 transport profile. It does not redefine the address
 grammar, the six runner slots, or the existing `BSR0` wire coordinate.
@@ -96,6 +131,8 @@ grammar, the six runner slots, or the existing `BSR0` wire coordinate.
 ## Bridge API
 
 ```python
+import hashlib
+
 from runner_riddle.point0_bridge import NanFrame, Point0Bridge
 
 bridge = Point0Bridge()
@@ -110,23 +147,32 @@ decoded = bridge.decode(
     expected_active_slot=2,
     expected_epoch=7,
     expected_request_id=42,
+    expected_output_digest=hashlib.sha256(envelope.payload).digest(),
 )
 assert decoded.words == frame.words
 assert decoded.request_id == 42
 assert decoded.route == "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 ```
 
-`encode()` defaults to slot `0` and epoch `0` for standalone codec use. The
-router always supplies the current scheduler slot and epoch.
+`encode()` defaults to slot `0`, epoch `0`, `result_status="ok"`, and the v2
+wire version for standalone codec use. The router always supplies the current
+scheduler slot and epoch; a request envelope never accepts them from a client.
 
 `decode()` accepts either a `BinaryEnvelope` or its bytes. The optional
 `expected_active_slot`, `expected_epoch`, and `expected_request_id` arguments
 turn decoding into a binding check. A mismatched epoch raises
 `StaleEnvelopeError`; a mismatched slot raises `InactiveSlotError`.
 
+`expected_result_digest` checks the full result-envelope digest.
+`expected_output_digest` checks SHA-256 over the exact result payload (the
+output words). Both accept a 32-byte digest or 64-character hex and raise
+`ResultDigestMismatchError` on mismatch. `Point0Result.verify_output(...)` and
+`Point0Result.output_digest` expose the same output check after routing.
+
 `BinaryEnvelope.create(...)` builds an envelope and computes its digest from the
 exact header and payload. `to_bytes()` and `from_bytes()` provide the wire
-representation; `from_bytes()` validates before returning.
+representation; `from_bytes()` validates before returning. Pass
+`version=LEGACY_VERSION` only when a legacy v1 envelope is required.
 
 No host arithmetic is performed on frame words. The bridge only range-checks,
 packs, unpacks, and hashes bytes.
@@ -221,15 +267,60 @@ and `OversizedFrameError` are aliases for compatibility.
 
 `Point0Result` exposes:
 
-- `frame` and convenience `words`, `request_id`, `route`, `address`,
-  `provenance`;
+- `frame` and convenience `words`, `word_count`, `nan_word_count`,
+  `request_id`, `route`, `address`, `provenance`;
 - `active_slot` and `epoch` as non-address evidence;
-- `request_digest` and `result_digest` (32-byte SHA-256 values);
+- `point_zero`, `result_status`, and `output_digest` (SHA-256 of the exact
+  output payload);
+- `request_digest` and `result_digest` (32-byte SHA-256 values; `result_digest`
+  covers the full result envelope);
+- `verify_output(...)` to check an expected output digest;
 - `to_dict()` for JSON-safe evidence.
+
+`submit(frame)` and `dispatch(envelope)` accept keyword-only
+`expected_result_digest` and/or `expected_output_digest` checks. An executor may
+return bytes (status `ok`) or a `Point0ExecutorResult(payload, result_status)`
+to report one of the bounded statuses.
 
 `to_dict()["route"]` remains `POINT_ZERO_ADDRESS`. The slot is in
 `to_dict()["active_slot"]`, not in the route. There is no `R0..R5` or
-`NANROUTER-*` substring in the public route.
+`NANROUTER-*` substring in the public route. Envelope evidence contains no
+bearer token, API key, or private key material.
+
+## NANNET0 binding persistence
+
+`WaveStore` adds two MC0DB tables without changing `wave_schema=1`:
+
+- `wave_nannet_node` — the current binding per `universe_id`;
+- `wave_nannet_node_version` — immutable generation history.
+
+```python
+node = store.register_nannet_node(
+    universe_id="universe-0",
+    node_id="nannet-0",
+    node_point=17,                    # 1..255, never a head index
+    public_key_fingerprint=fingerprint,
+    generation=1,
+    status="active",
+    route="nan://GM0:SC0:MC0:BS0:0:HW0:0",
+    route_digest=route_digest,
+    signature=signature_digest,
+    nanclock_tick=10,
+)
+assert store.require_nannet_node("universe-0")["generation"] == 1
+assert store.get_nannet_node("universe-0", generation=1)["status"] == "active"
+```
+
+The API also provides `get_nannet_node_by_node_id`, `nannet_node_history`,
+`list_nannet_nodes`, and `revoke_nannet_node`. Generations are monotonic;
+same-generation replay is idempotent only for an identical contract; stale,
+conflicting, or duplicate live `node_id`/`node_point` registrations are
+rejected. Revocation clears the route. Only public fingerprints and bounded
+signature digests are stored — no secret key material.
+
+This table is version/evidence metadata only. It does not create jobs, leases,
+capabilities, routes, or a second routing authority; the ring scheduler and
+point-0 router remain the only dispatch path.
 
 ## Invariants
 
@@ -254,12 +345,13 @@ and `OversizedFrameError` are aliases for compatibility.
 python3 -m unittest tests.test_point0_bridge -v
 ```
 
-The suite covers 0/1/131072-word round trips, boundary lengths, big-endian
-layout, bad magic/version/length/digest, truncation/trailing bytes, stable
-point-0 identity, active-slot routing, a scheduler cycle reaching the new slot
-through the same point-0 address, stale/inactive rejection before executor
-calls, no-slot rejection, request-id preservation, and route-string slot
-leakage.
+The suite covers 0/1/262144-word round trips, boundary lengths, big-endian v2
+layout, v1 legacy decode/re-serialize, point-0 identity, `nan_word_count`,
+bounded result statuses, bad magic/version/length/digest, truncation/trailing
+bytes, expected result/output digests, stable point-0 identity, active-slot
+routing, a scheduler cycle reaching the new slot through the same point-0
+address, stale/inactive rejection before executor calls, no-slot rejection,
+request-id preservation, route-string slot leakage, and secret non-leakage.
 
 ## Limitations
 

@@ -42,6 +42,7 @@
         "wave_lease_state",
         "wave_operator_status",
         "wave_capability_status",
+        "wave_nannet_node_status",
         "wave_feedback_state",
         "evidence_level"
       ],
@@ -75,6 +76,14 @@
           "const": [
             "declared",
             "native_verified",
+            "degraded",
+            "revoked"
+          ]
+        },
+        "wave_nannet_node_status": {
+          "const": [
+            "declared",
+            "active",
             "degraded",
             "revoked"
           ]
@@ -185,7 +194,7 @@
       ],
       "properties": {
         "role": {
-          "const": "control/meta: jobs, leases, operators, capabilities, fold certificates, match index"
+          "const": "control/meta: jobs, leases, operators, capabilities, NANNET0 node bindings, fold certificates, match index"
         },
         "tables": {
           "type": "object",
@@ -195,6 +204,8 @@
             "wave_lease",
             "wave_operator",
             "wave_capability",
+            "wave_nannet_node",
+            "wave_nannet_node_version",
             "wave_fold_certificate",
             "wave_match_index"
           ],
@@ -210,6 +221,12 @@
             },
             "wave_capability": {
               "$ref": "#/$defs/wave_capability"
+            },
+            "wave_nannet_node": {
+              "$ref": "#/$defs/wave_nannet_node"
+            },
+            "wave_nannet_node_version": {
+              "$ref": "#/$defs/wave_nannet_node_version"
             },
             "wave_fold_certificate": {
               "$ref": "#/$defs/wave_fold_certificate"
@@ -533,6 +550,163 @@
             "dispatch requires an exact verified_digest match",
             "dispatch requires capability workspace greater than or equal to the job workspace",
             "epoch is monotonic and stale epoch updates are rejected"
+          ]
+        }
+      }
+    },
+    "wave_nannet_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "universe_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "universe_id",
+            "node_id",
+            "node_point",
+            "public_key_fingerprint",
+            "generation",
+            "status",
+            "route",
+            "registered_tick",
+            "updated_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "route_digest",
+            "signature"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "public_key_fingerprint",
+            "route_digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "universe_id": "TEXT",
+            "node_id": "TEXT",
+            "node_point": "INTEGER",
+            "public_key_fingerprint": "TEXT",
+            "generation": "INTEGER",
+            "status": "TEXT",
+            "route": "TEXT",
+            "route_digest": "TEXT",
+            "signature": "TEXT",
+            "registered_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "declared",
+            "active",
+            "degraded",
+            "revoked"
+          ]
+        },
+        "constraints": {
+          "const": [
+            "exactly one current NANNET0 binding per universe",
+            "one current node_id and node_point across universes; revoked bindings are not routable",
+            "generation is monotonic; stale or conflicting same-generation registration is rejected",
+            "route is empty when status is revoked",
+            "no secret key material is stored; only public fingerprints and bounded signature digests are persisted",
+            "this table is control/version metadata, not a routing, job, or lease authority"
+          ]
+        }
+      }
+    },
+    "wave_nannet_node_version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "universe_id",
+            "generation"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "universe_id",
+            "generation",
+            "node_id",
+            "node_point",
+            "public_key_fingerprint",
+            "status",
+            "route",
+            "registered_tick",
+            "nanclock_tick"
+          ]
+        },
+        "nullable_fields": {
+          "const": [
+            "route_digest",
+            "signature"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "public_key_fingerprint",
+            "route_digest",
+            "signature"
+          ]
+        },
+        "columns": {
+          "const": {
+            "universe_id": "TEXT",
+            "generation": "INTEGER",
+            "node_id": "TEXT",
+            "node_point": "INTEGER",
+            "public_key_fingerprint": "TEXT",
+            "status": "TEXT",
+            "route": "TEXT",
+            "route_digest": "TEXT",
+            "signature": "TEXT",
+            "registered_tick": "INTEGER",
+            "nanclock_tick": "INTEGER"
+          }
+        },
+        "status_field": {
+          "const": "status"
+        },
+        "status_enum": {
+          "const": [
+            "declared",
+            "active",
+            "degraded",
+            "revoked"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "immutable version history for wave_nannet_node",
+            "versions are ordered by monotonic generation per universe",
+            "no secret key material is stored"
           ]
         }
       }

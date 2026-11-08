@@ -249,9 +249,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `E-02` Executor paging + native dispatch + evidence capture.
 - [ ] `E-03` Result/evidence contract beyond digest.
 - [x] `E-04` Plan validator shape/precision/layout/alias/domain/fuel/cancel checks (executor enforcement of fuel/cancel remains open).
-- [ ] `E-05` NANNET0 point-0 envelope fields (`point_zero`, `nan_word_count`, `result_status`) and expected-output verification.
+- [x] `E-05` Point-0 v2 envelope fields (`point_zero`, `nan_word_count`, `result_status`), strict validation, legacy v1 compatibility, and expected result/output digest verification.
 - [ ] `E-06` Page-map digest and page-map digest in descriptor.
-- [ ] `E-07` NANNET0 MC0DB persistence and signature exchange.
+- [x] `E-07` NANNET0 MC0DB persistence, generation history, duplicate/point constraints, revocation, and digest/signature metadata (cryptographic signature verification remains external).
 - [ ] `E-08` Capacity-vs-SNR synthetic harness with six gate conditions; real measurement blocked.
 - [ ] `E-09` Complete Appendix A to 63 rows (missing preflight/admission).
 - [ ] `E-10` Fix stale kernel/test counts and 1 MiB references.
