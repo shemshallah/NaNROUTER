@@ -172,6 +172,26 @@ def make_native_receipt(packet):
     return {**body, "receipt_digest": digest_object(body)}
 
 
+class PacketBoundTests(unittest.TestCase):
+    def test_packet_rejects_excessive_inputs(self):
+        inputs = tuple(
+            {"leaf_id": f"nml:U0:vector:{index}", "version": 1,
+             "digest": "0" * 64}
+            for index in range(nmp.MAX_INPUTS + 1)
+        )
+        with self.assertRaises(nmp.NmpValidationError):
+            make_packet(inputs=inputs)
+
+    def test_packet_rejects_oversized_evidence(self):
+        with self.assertRaises(nmp.NmpValidationError):
+            make_packet(evidence={"blob": "x" * (nmp.MAX_EVIDENCE_BYTES + 1)})
+
+    def test_packet_rejects_excessive_history(self):
+        history = tuple({} for _ in range(nmp.MAX_HISTORY_ENTRIES + 1))
+        with self.assertRaises(nmp.NmpValidationError):
+            make_packet(history=history)
+
+
 class NativeAdmissionReceiptTests(unittest.TestCase):
     def make_preflighted(self):
         packet = make_packet(

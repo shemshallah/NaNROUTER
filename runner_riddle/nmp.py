@@ -38,6 +38,17 @@ NANNET0 = NANNET0_LANE
 LANE_COUNT = 255
 LANES = LANE_COUNT
 
+# Bounded host-control packet surface.  These are intentionally generous but
+# finite so an evidence/metadata field cannot grow without limit.
+MAX_INPUTS = 64
+MAX_HISTORY_ENTRIES = 4096
+MAX_EVIDENCE_BYTES = 1_048_576
+MAX_PACKET_FIELD_BYTES = 2_097_152
+
+
+def _json_size(value: Any) -> int:
+    return len(canonical_json(value).encode("utf-8"))
+
 CREATED = "CREATED"
 RESOLVED = "RESOLVED"
 CLASSIFIED = "CLASSIFIED"
@@ -726,6 +737,10 @@ class NmpPacket:
         object.__setattr__(self, "function_version", _integer(self.function_version, "function_version", minimum=1))
         object.__setattr__(self, "candidate_id", _text(self.candidate_id, "candidate_id", maximum=256))
         object.__setattr__(self, "inputs", _tuple_of_dicts(self.inputs, "inputs"))
+        if len(self.inputs) > MAX_INPUTS:
+            raise NmpValidationError(
+                f"packet inputs exceed the bound of {MAX_INPUTS}"
+            )
 
         for field_name in ("admission_id", "preflight_result", "request_id",
                            "output_leaf_id", "reason", "failure_class", "job_id",
@@ -785,9 +800,25 @@ class NmpPacket:
         object.__setattr__(self, "provenance", dict(self.provenance or {}))
         object.__setattr__(self, "evidence", dict(self.evidence or {}))
         object.__setattr__(self, "metadata", dict(self.metadata or {}))
+        if _json_size(self.evidence) > MAX_EVIDENCE_BYTES:
+            raise NmpValidationError(
+                f"packet evidence exceeds {MAX_EVIDENCE_BYTES} bytes"
+            )
+        field_bytes = sum(_json_size(value) for value in (
+            self.inputs, self.evidence, self.metadata, self.provenance,
+            self.numerical_policy,
+        ))
+        if field_bytes > MAX_PACKET_FIELD_BYTES:
+            raise NmpValidationError(
+                f"packet fields exceed {MAX_PACKET_FIELD_BYTES} bytes"
+            )
         if self.admission_receipt is not None:
             object.__setattr__(self, "admission_receipt", validate_native_admission_receipt(self.admission_receipt, self))
         object.__setattr__(self, "history", _tuple_of_dicts(self.history, "history"))
+        if len(self.history) > MAX_HISTORY_ENTRIES:
+            raise NmpValidationError(
+                f"packet history exceeds {MAX_HISTORY_ENTRIES} entries"
+            )
         object.__setattr__(self, "child_packet_ids", tuple(
             _text(item, "child_packet_id", maximum=512) for item in (self.child_packet_ids or ())
         ))
@@ -3385,6 +3416,10 @@ __all__ = [
     "LANE_COUNT",
     "LANES",
     "MAX_LANE",
+    "MAX_EVIDENCE_BYTES",
+    "MAX_HISTORY_ENTRIES",
+    "MAX_INPUTS",
+    "MAX_PACKET_FIELD_BYTES",
     "NANNET0",
     "NANNET0_LANE",
     "NMP_SCHEMA",

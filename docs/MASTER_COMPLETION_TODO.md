@@ -101,7 +101,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `A-76` Wire lane work queues/stealing into the bridge/scheduler (currently contract-only).
 - [ ] `A-77` Implement durable ring incarnation/epoch recovery in the bridge path.
 - [ ] `A-78` Add remote worker/peer protocol with selected-step-only payloads, quotas, timeouts.
-- [ ] `A-79` Add packet/input/history/evidence total size bounds.
+- [x] `A-79` NMP packet/input/history/evidence total size bounds (64 inputs, 4,096 history entries, 1 MiB evidence, 2 MiB packet fields).
 - [ ] `A-80` Add network/clock drift model and phase/delay/jitter behavior.
 
 ## A6. Learning/retention/security
