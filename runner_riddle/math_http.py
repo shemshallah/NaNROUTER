@@ -9,10 +9,13 @@ renders only token-free, bounded responses.
 
 It never performs host arithmetic, never prepares an NMP packet, never leases a
 runner slot, and never invents execution state.  ``/v1/math/link`` calls the
-existing linker through ``MathRuntime.propose``.  ``/v1/math/execute`` is only
-available when the caller supplies a service object that already owns a
-prepared packet/lease and exposes ``execute(request)``; without that service the
-route returns a typed ``UNAVAILABLE`` result instead of creating state.
+existing linker through ``MathRuntime.propose``.  ``/v1/math/execute`` delegates
+to an optional service object.  :class:`PreparedMathExecutionService` is the
+provided wrapper: it is constructed server-side with a
+:class:`runner_riddle.math_execution.MathExecutionBridge` and a bounded registry
+of already prepared leases, then exposes only opaque handle IDs plus result
+metadata to HTTP callers.  Without such a service the route returns a typed
+``UNAVAILABLE`` result instead of creating state.
 
 The pure :meth:`MathHttpAdapter.handle` method is the injectable core used by
 tests without opening a socket.  :class:`MathHttpServer` is an optional
@@ -21,6 +24,7 @@ loopback-only lifecycle wrapper.
 from __future__ import annotations
 
 from collections.abc import Mapping
+import copy
 from dataclasses import dataclass
 import hmac
 import json
@@ -36,6 +40,7 @@ from .math_execution import (
     MathExecutionConfigError,
     MathExecutionError,
     MathExecutionGateError,
+    MathExecutionLease,
     MathExecutionPlanError,
     MathExecutionRingError,
     MathExecutionStateError,
@@ -59,6 +64,13 @@ MAX_CANDIDATES = 256
 MAX_LINK_DEPTH = 8
 MAX_LINK_FANOUT = 256
 MAX_LINK_FUEL = 65_536
+MAX_PREPARED_HANDLES = 256
+MAX_HANDLE_ID_CHARS = 128
+MAX_RESULT_DIGEST_CHARS = 256
+MAX_RESULT_STATUS_CHARS = 128
+MAX_OUTPUT_LEAF_ID_CHARS = 512
+MAX_EVIDENCE_BYTES = 16_384
+MAX_NOW_TICK = 2**63 - 1
 _MAX_DRAIN_BYTES = 65_536
 
 HEALTH_PATH = "/v1/math/health"
@@ -97,6 +109,36 @@ _LINK_FIELDS = frozenset(
         "snapshot_id",
     }
 )
+_EXECUTE_FIELDS = frozenset(
+    {
+        "commit",
+        "digest",
+        "evidence",
+        "handle",
+        "handle_id",
+        "leaf_id",
+        "lease",
+        "lease_id",
+        "now_tick",
+        "output",
+        "output_digest",
+        "output_leaf_id",
+        "packet_id",
+        "result_digest",
+        "result_status",
+        "status",
+    }
+)
+_EXECUTE_HANDLE_FIELDS = (
+    "handle_id",
+    "handle",
+    "lease_id",
+    "lease",
+    "packet_id",
+)
+_EXECUTE_DIGEST_FIELDS = ("result_digest", "digest", "output_digest")
+_EXECUTE_STATUS_FIELDS = ("result_status", "status")
+_EXECUTE_OUTPUT_FIELDS = ("output_leaf_id", "leaf_id", "output")
 _RED_STATUSES = frozenset(
     {"red", "error", "failed", "unhealthy", "unavailable"}
 )
@@ -288,7 +330,39 @@ def _request_secrets(headers: Any) -> list[str]:
 
 def _is_secret_key(key: Any) -> bool:
     text = str(key).lower()
+    if text.endswith("_digest"):
+        # The execution bridge exposes deliberate one-way lease digests.
+        return False
     return any(part in text for part in _SECRET_KEY_PARTS)
+
+
+def _find_secret_key(value: Any) -> str | None:
+    """Return the first token-like key found anywhere in a request."""
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if _is_secret_key(key):
+                return str(key)
+            found = _find_secret_key(item)
+            if found is not None:
+                return found
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            found = _find_secret_key(item)
+            if found is not None:
+                return found
+    return None
+
+
+def _valid_handle_id(value: Any) -> bool:
+    """Accept a compact, non-whitespace prepared handle identifier."""
+    return (
+        isinstance(value, str)
+        and 0 < len(value) <= MAX_HANDLE_ID_CHARS
+        and all(
+            char.isprintable() and not char.isspace()
+            for char in value
+        )
+    )
 
 
 def _redact(value: Any, secrets: list[str] | tuple[str, ...]) -> Any:
@@ -423,6 +497,21 @@ def _int_field(
             f"{name} must be between {minimum} and {maximum}",
         )
     return value
+
+
+def _alias_field(
+    body: Mapping[str, Any],
+    names: tuple[str, ...],
+    label: str,
+) -> str | None:
+    present = [name for name in names if name in body]
+    if len(present) > 1:
+        raise MathHttpError(
+            400,
+            "INVALID_REQUEST",
+            f"exactly one of {', '.join(names)} is allowed for {label}",
+        )
+    return present[0] if present else None
 
 
 def _bounded_bounds(value: Any) -> LinkBounds:
@@ -1116,6 +1205,611 @@ class MathHttpAdapter:
         )
 
 
+@dataclass(frozen=True)
+class PreparedMathExecutionHandle:
+    """One server-owned prepared packet/lease exposed by an opaque handle ID.
+
+    ``executor`` is optional.  When it is absent, the request must carry a
+    caller-supplied ``result_digest``; that digest is handed to
+    :meth:`MathExecutionBridge.execute` as result metadata, never as a lease
+    token.  ``deadline_tick`` defaults to the lease's own deadline.
+    """
+
+    handle_id: str
+    lease: MathExecutionLease
+    executor: Any = None
+    deadline_tick: int | None = None
+    owner: str | None = None
+
+    def __post_init__(self) -> None:
+        if not _valid_handle_id(self.handle_id):
+            raise ValueError(
+                "handle_id must be 1.."
+                f"{MAX_HANDLE_ID_CHARS} printable non-whitespace characters"
+            )
+        if self.lease is None:
+            raise TypeError("lease must be a prepared MathExecutionLease")
+        if self.deadline_tick is not None:
+            if (
+                isinstance(self.deadline_tick, bool)
+                or not isinstance(self.deadline_tick, int)
+                or self.deadline_tick < 0
+            ):
+                raise ValueError("deadline_tick must be an integer >= 0")
+        if self.owner is not None and (
+            not isinstance(self.owner, str) or not self.owner
+        ):
+            raise ValueError("owner must be a non-empty string")
+
+
+class PreparedMathExecutionService:
+    """Bounded registry of prepared leases executed through one bridge.
+
+    The service is the wrapper that ``/v1/math/execute`` is allowed to
+    delegate to.  It never prepares packets, acquires leases, performs host
+    arithmetic, or accepts raw worker/lease tokens from HTTP clients.  A
+    handle is registered server-side with an already leased
+    :class:`MathExecutionLease`; HTTP requests only name the handle and supply
+    result metadata.  Handle IDs therefore behave as opaque capabilities and
+    should be issued only to the caller that owns the lease.
+
+    Successful terminal results are cached by handle ID so duplicate execute
+    or commit requests return the same token-free result without invoking the
+    executor or bridge a second time.
+    """
+
+    def __init__(
+        self,
+        bridge: MathExecutionBridge,
+        handles: Any = None,
+        *,
+        executor: Any = None,
+        max_handles: int = MAX_PREPARED_HANDLES,
+        max_results: int | None = None,
+    ) -> None:
+        if not callable(getattr(bridge, "execute", None)):
+            raise TypeError("bridge must expose execute(...)")
+        if (
+            isinstance(max_handles, bool)
+            or not isinstance(max_handles, int)
+            or not 1 <= max_handles <= MAX_PREPARED_HANDLES
+        ):
+            raise ValueError(
+                f"max_handles must be in 1..{MAX_PREPARED_HANDLES}"
+            )
+        if max_results is None:
+            max_results = max_handles
+        if (
+            isinstance(max_results, bool)
+            or not isinstance(max_results, int)
+            or not 1 <= max_results <= MAX_PREPARED_HANDLES
+        ):
+            raise ValueError(
+                f"max_results must be in 1..{MAX_PREPARED_HANDLES}"
+            )
+
+        self.bridge = bridge
+        self.max_handles = max_handles
+        self.max_results = max_results
+        self._default_executor = executor
+        self._lock = threading.RLock()
+        self._handles: dict[str, PreparedMathExecutionHandle] = {}
+        self._locks: dict[str, threading.Lock] = {}
+        self._results: dict[str, dict[str, Any]] = {}
+
+        if handles is not None:
+            if isinstance(handles, Mapping):
+                for handle_id, value in handles.items():
+                    if isinstance(value, PreparedMathExecutionHandle):
+                        if value.handle_id != handle_id:
+                            raise ValueError(
+                                "handle map key does not match handle_id"
+                            )
+                        self.register(value)
+                    else:
+                        self.register(handle_id, value)
+            elif isinstance(handles, PreparedMathExecutionHandle):
+                self.register(handles)
+            else:
+                try:
+                    iterator = iter(handles)
+                except TypeError as exc:
+                    raise TypeError(
+                        "handles must be a mapping or iterable of handles"
+                    ) from exc
+                for value in iterator:
+                    if (
+                        isinstance(value, tuple)
+                        and len(value) == 2
+                        and isinstance(value[0], str)
+                    ):
+                        self.register(value[0], value[1])
+                    else:
+                        self.register(value)
+
+    def __repr__(self) -> str:
+        return (
+            "PreparedMathExecutionService("
+            f"handles={len(self)}, capacity={self.max_handles}, "
+            f"completed={len(self._results)})"
+        )
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._handles)
+
+    def __contains__(self, handle_id: object) -> bool:
+        with self._lock:
+            return handle_id in self._handles
+
+    @property
+    def handle_ids(self) -> tuple[str, ...]:
+        with self._lock:
+            return tuple(self._handles)
+
+    # -- registry ------------------------------------------------------------
+
+    def register(
+        self,
+        handle_or_id: Any,
+        lease: Any = None,
+        *,
+        executor: Any = None,
+        deadline_tick: int | None = None,
+        owner: str | None = None,
+    ) -> PreparedMathExecutionHandle:
+        """Register one prepared lease; duplicate IDs are never replaced."""
+        if isinstance(handle_or_id, PreparedMathExecutionHandle):
+            if (
+                lease is not None
+                or executor is not None
+                or deadline_tick is not None
+                or owner is not None
+            ):
+                raise TypeError(
+                    "extra handle fields cannot accompany a typed handle"
+                )
+            handle = handle_or_id
+        else:
+            if not isinstance(handle_or_id, str):
+                raise TypeError("handle_id must be a string")
+            if isinstance(lease, PreparedMathExecutionHandle):
+                if lease.handle_id != handle_or_id:
+                    raise ValueError("handle map key does not match handle_id")
+                handle = lease
+            else:
+                if isinstance(lease, Mapping):
+                    spec = dict(lease)
+                    unknown = set(spec) - {
+                        "deadline_tick",
+                        "executor",
+                        "execution_lease",
+                        "lease",
+                        "owner",
+                    }
+                    if unknown:
+                        raise ValueError(
+                            "unsupported handle field(s): "
+                            + ", ".join(sorted(unknown))
+                        )
+                    lease = spec.get("lease", spec.get("execution_lease"))
+                    if "executor" in spec:
+                        executor = spec["executor"]
+                    if "deadline_tick" in spec:
+                        deadline_tick = spec["deadline_tick"]
+                    if "owner" in spec:
+                        owner = spec["owner"]
+                if lease is None:
+                    raise TypeError("a prepared lease is required")
+                if executor is None:
+                    executor = self._default_executor
+                handle = PreparedMathExecutionHandle(
+                    handle_or_id,
+                    lease,
+                    executor=executor,
+                    deadline_tick=deadline_tick,
+                    owner=owner,
+                )
+
+        with self._lock:
+            if handle.handle_id in self._handles:
+                raise MathExecutionStateError(
+                    f"prepared handle {handle.handle_id!r} is already registered"
+                )
+            if len(self._handles) >= self.max_handles:
+                raise MathExecutionStateError(
+                    "prepared handle registry is full"
+                )
+            self._handles[handle.handle_id] = handle
+            self._locks[handle.handle_id] = threading.Lock()
+        return handle
+
+    def remove(self, handle_id: str) -> bool:
+        """Revoke a handle and any cached result; returns ``True`` if removed."""
+        with self._lock:
+            self._results.pop(handle_id, None)
+            self._locks.pop(handle_id, None)
+            return self._handles.pop(handle_id, None) is not None
+
+    revoke = remove
+    unregister = remove
+    add = register
+    put = register
+
+    def prune_expired(self, now_tick: int) -> tuple[str, ...]:
+        """Drop handles whose lease deadline is at or before *now_tick*."""
+        if isinstance(now_tick, bool) or not isinstance(now_tick, int):
+            raise ValueError("now_tick must be an integer")
+        removed: list[str] = []
+        with self._lock:
+            for handle_id, handle in tuple(self._handles.items()):
+                deadline = self._deadline(handle)
+                if deadline is not None and now_tick >= deadline:
+                    self._handles.pop(handle_id, None)
+                    self._locks.pop(handle_id, None)
+                    self._results.pop(handle_id, None)
+                    removed.append(handle_id)
+        return tuple(removed)
+
+    def health(self) -> dict[str, Any]:
+        """Return token-free registry health for the math health route."""
+        with self._lock:
+            handles = len(self._handles)
+            results = len(self._results)
+        return {
+            "status": "green",
+            "available": True,
+            "prepared_handles": handles,
+            "capacity": self.max_handles,
+            "completed_results": results,
+        }
+
+    # -- execution -----------------------------------------------------------
+
+    def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        """Execute one prepared handle named by a bounded, token-free request."""
+        fields = self._validate_request(request)
+        handle_id = fields["handle_id"]
+        with self._lock:
+            handle = self._handles.get(handle_id)
+            if handle is None:
+                raise MathHttpError(
+                    404,
+                    "HANDLE_NOT_FOUND",
+                    "prepared execution handle was not found",
+                    reason="unknown_handle",
+                )
+            handle_lock = self._locks.get(handle_id)
+            if handle_lock is None:
+                handle_lock = threading.Lock()
+                self._locks[handle_id] = handle_lock
+
+        # Serialize one handle so concurrent duplicates cannot execute twice.
+        with handle_lock:
+            with self._lock:
+                handle = self._handles.get(handle_id)
+                if handle is None:
+                    raise MathHttpError(
+                        404,
+                        "HANDLE_NOT_FOUND",
+                        "prepared execution handle was not found",
+                        reason="unknown_handle",
+                    )
+                cached = self._results.get(handle_id)
+            if cached is not None:
+                return self._replay(handle, cached, fields)
+
+            deadline = self._deadline(handle)
+            if deadline is not None and fields["now_tick"] >= deadline:
+                self.remove(handle_id)
+                raise MathExecutionStateError(
+                    "prepared lease deadline has expired"
+                )
+
+            if fields["result_digest"] is not None:
+                digest = fields["result_digest"]
+
+                def executor(_lease: Any) -> str:
+                    return digest
+
+            elif handle.executor is not None:
+                executor = handle.executor
+            else:
+                raise MathHttpError(
+                    400,
+                    "RESULT_DIGEST_REQUIRED",
+                    "result_digest is required when the handle has no executor",
+                    reason="result_digest_required",
+                )
+
+            try:
+                result = self.bridge.execute(
+                    handle.lease,
+                    executor,
+                    now_tick=fields["now_tick"],
+                    result_status=fields["result_status"],
+                    output_leaf_id=fields["output_leaf_id"],
+                    evidence=fields["evidence"],
+                    commit=fields["commit"],
+                )
+            except MathExecutionError:
+                raise
+            except Exception as exc:
+                # Executor errors can contain secrets; expose only the type.
+                raise MathExecutionStateError(
+                    f"prepared execution failed ({type(exc).__name__})"
+                ) from None
+
+            safe, metadata = self._finalize_result(
+                handle, result, duplicate=False,
+            )
+            with self._lock:
+                if handle_id in self._handles:
+                    self._cache_result(handle_id, safe, metadata)
+            return safe
+
+    # -- internals -----------------------------------------------------------
+
+    @staticmethod
+    def _deadline(handle: PreparedMathExecutionHandle) -> int | None:
+        if handle.deadline_tick is not None:
+            return handle.deadline_tick
+        deadline = getattr(handle.lease, "deadline_tick", None)
+        if deadline is None:
+            return None
+        if isinstance(deadline, bool) or not isinstance(deadline, int):
+            raise MathExecutionBindingError("lease deadline is malformed")
+        return deadline
+
+    def _secrets_for(self, handle: PreparedMathExecutionHandle) -> list[str]:
+        secrets: list[str] = []
+        for value in (
+            getattr(handle.lease, "lease_token", None),
+            getattr(self.bridge, "worker_token", None),
+            getattr(self.bridge, "submit_token", None),
+        ):
+            if isinstance(value, str) and value and value not in secrets:
+                secrets.append(value)
+        return secrets
+
+    def _validate_request(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        if not isinstance(request, Mapping):
+            raise MathHttpError(
+                400, "INVALID_REQUEST", "execute request must be an object"
+            )
+        secret_key = _find_secret_key(request)
+        if secret_key is not None:
+            raise MathHttpError(
+                400,
+                "RAW_SECRET_NOT_PERMITTED",
+                f"{secret_key} is not accepted; supply only a prepared handle",
+                reason="raw_secret_not_permitted",
+            )
+        unknown = set(request) - _EXECUTE_FIELDS
+        if unknown:
+            raise MathHttpError(
+                400,
+                "UNSUPPORTED_FIELD",
+                "unsupported field(s): " + ", ".join(sorted(unknown)),
+            )
+        present = [
+            name for name in _EXECUTE_HANDLE_FIELDS if name in request
+        ]
+        if len(present) != 1:
+            raise MathHttpError(
+                400,
+                "INVALID_REQUEST",
+                "exactly one prepared handle field is required: "
+                + ", ".join(_EXECUTE_HANDLE_FIELDS),
+            )
+        handle_id = request[present[0]]
+        if not _valid_handle_id(handle_id):
+            raise MathHttpError(
+                400,
+                "INVALID_REQUEST",
+                "handle_id must be 1.."
+                f"{MAX_HANDLE_ID_CHARS} printable non-whitespace characters",
+            )
+        digest_field = _alias_field(
+            request, _EXECUTE_DIGEST_FIELDS, "result digest",
+        )
+        status_field = _alias_field(
+            request, _EXECUTE_STATUS_FIELDS, "result status",
+        )
+        output_field = _alias_field(
+            request, _EXECUTE_OUTPUT_FIELDS, "output leaf",
+        )
+        result_digest = (
+            None if digest_field is None else _text_field(
+                request, digest_field, maximum=MAX_RESULT_DIGEST_CHARS,
+            )
+        )
+        result_status = (
+            None if status_field is None else _text_field(
+                request, status_field, maximum=MAX_RESULT_STATUS_CHARS,
+            )
+        )
+        output_leaf_id = (
+            None if output_field is None else _text_field(
+                request, output_field, maximum=MAX_OUTPUT_LEAF_ID_CHARS,
+            )
+        )
+        commit = _bool_field(request, "commit")
+        now_tick = _int_field(
+            request,
+            "now_tick",
+            default=0,
+            minimum=0,
+            maximum=MAX_NOW_TICK,
+        )
+        evidence = request.get("evidence")
+        if evidence is not None:
+            if not isinstance(evidence, Mapping):
+                raise MathHttpError(
+                    400, "INVALID_REQUEST", "evidence must be an object"
+                )
+            try:
+                encoded = json.dumps(
+                    evidence,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    allow_nan=False,
+                ).encode("utf-8")
+            except (TypeError, ValueError) as exc:
+                raise MathHttpError(
+                    400,
+                    "INVALID_REQUEST",
+                    "evidence must be JSON-serializable",
+                ) from exc
+            if len(encoded) > MAX_EVIDENCE_BYTES:
+                raise MathHttpError(
+                    400,
+                    "INVALID_REQUEST",
+                    f"evidence exceeds {MAX_EVIDENCE_BYTES} bytes",
+                )
+            evidence = dict(evidence)
+        return {
+            "handle_id": handle_id,
+            "result_digest": result_digest,
+            "result_status": result_status,
+            "output_leaf_id": output_leaf_id,
+            "commit": commit,
+            "now_tick": now_tick if now_tick is not None else 0,
+            "evidence": evidence,
+        }
+
+    def _finalize_result(
+        self,
+        handle: PreparedMathExecutionHandle,
+        result: Any,
+        *,
+        duplicate: bool,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        if isinstance(result, Mapping):
+            raw = dict(result)
+        elif callable(getattr(result, "to_dict", None)):
+            raw = dict(result.to_dict())
+        else:
+            raise MathExecutionBindingError(
+                "bridge returned no serializable execution result"
+            )
+
+        digest = raw.get("result_digest")
+        status = raw.get("result_status")
+        output = raw.get("output_leaf_id")
+        outcome = raw.get("outcome")
+        committed = bool(
+            raw.get("committed")
+            or raw.get("state") == "COMMITTED"
+            or outcome == "COMMITTED"
+        )
+        raw.setdefault("schema", "nanrouter.math-execution-result.v1")
+        raw["handle_id"] = handle.handle_id
+        if outcome is not None:
+            raw["status"] = outcome
+        elif raw.get("status") is None:
+            raw["status"] = raw.get("state") or (
+                "COMMITTED" if committed else "COMPLETED"
+            )
+        raw["duplicate"] = bool(duplicate or raw.get("duplicate"))
+        safe = _redact(raw, self._secrets_for(handle))
+        if not isinstance(safe, dict):
+            raise MathExecutionBindingError(
+                "bridge returned no serializable execution result"
+            )
+        return safe, {
+            "result_digest": digest if isinstance(digest, str) else None,
+            "result_status": status if isinstance(status, str) else None,
+            "output_leaf_id": output if isinstance(output, str) else None,
+            "committed": committed,
+        }
+
+    def _cache_result(
+        self,
+        handle_id: str,
+        result: Mapping[str, Any],
+        metadata: Mapping[str, Any],
+    ) -> None:
+        self._results[handle_id] = {
+            "result": copy.deepcopy(dict(result)),
+            **dict(metadata),
+        }
+        while len(self._results) > self.max_results:
+            oldest = next(iter(self._results))
+            self._results.pop(oldest, None)
+            # Never leave a handle executable after its idempotence record is
+            # gone; a replay must fail closed instead of running twice.
+            self._handles.pop(oldest, None)
+            self._locks.pop(oldest, None)
+
+    def _replay(
+        self,
+        handle: PreparedMathExecutionHandle,
+        cached: Mapping[str, Any],
+        fields: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        requested_digest = fields["result_digest"]
+        cached_digest = cached.get("result_digest")
+        if (
+            requested_digest is not None
+            and cached_digest is not None
+            and requested_digest != cached_digest
+        ):
+            raise MathExecutionBindingError(
+                "result_digest does not match the completed execution"
+            )
+        requested_status = fields["result_status"]
+        cached_status = cached.get("result_status")
+        if (
+            requested_status is not None
+            and requested_status != cached_status
+        ):
+            raise MathExecutionBindingError(
+                "result_status does not match the completed execution"
+            )
+        requested_output = fields["output_leaf_id"]
+        cached_output = cached.get("output_leaf_id")
+        if (
+            requested_output is not None
+            and requested_output != cached_output
+        ):
+            raise MathExecutionBindingError(
+                "output_leaf_id does not match the completed execution"
+            )
+
+        if fields["commit"] and not cached.get("committed"):
+            if not isinstance(cached_digest, str) or not cached_digest:
+                raise MathExecutionConfigError(
+                    "completed execution has no result digest to commit"
+                )
+            complete = getattr(self.bridge, "complete", None)
+            if not callable(complete):
+                raise MathExecutionConfigError(
+                    "bridge cannot commit a completed execution"
+                )
+            result = complete(
+                handle.lease,
+                cached_digest,
+                now_tick=fields["now_tick"],
+                result_status=cached_status or "OK",
+                output_leaf_id=cached_output,
+                evidence=fields["evidence"],
+                commit=True,
+            )
+            safe, metadata = self._finalize_result(
+                handle, result, duplicate=True,
+            )
+            with self._lock:
+                if handle.handle_id in self._handles:
+                    self._cache_result(handle.handle_id, safe, metadata)
+            return safe
+
+        payload = copy.deepcopy(dict(cached["result"]))
+        payload["duplicate"] = True
+        return payload
+
+
 def _link_error_code(exc: LinkError) -> str:
     if exc.code == "address_context_mismatch":
         return "ADDRESS_CONTEXT_MISMATCH"
@@ -1458,15 +2152,19 @@ __all__ = [
     "LINK_PATH",
     "MAX_BODY_BYTES",
     "MAX_CANDIDATES",
+    "MAX_HANDLE_ID_CHARS",
     "MAX_LINK_DEPTH",
     "MAX_LINK_FANOUT",
     "MAX_LINK_FUEL",
     "MAX_OPERANDS",
+    "MAX_PREPARED_HANDLES",
     "MAX_REQUEST_BYTES",
     "MathHttpAdapter",
     "MathHttpError",
     "MathHttpResponse",
     "MathHttpServer",
+    "PreparedMathExecutionHandle",
+    "PreparedMathExecutionService",
     "SCHEMA",
     "make_math_handler",
 ]

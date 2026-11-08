@@ -130,7 +130,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-121` `/v1/math/health|link|execute` seam with JAHS/auth/token redaction.
 - [x] `A-122` Math health in `MthSystem.health(math_health=...)` and `MathRuntime.health()`.
 - [x] `A-123` Demo output provenance and hypergraph relation.
-- [ ] `A-124` **PARTIAL:** NMP HTTP submit/lease/complete routes are implemented with durable job payloads and N16T worker evidence; the `/v1/math/execute` route remains a typed `UNAVAILABLE` seam.
+- [x] `A-124` `/v1/math/execute` now resolves a server-owned prepared handle and calls `MathExecutionBridge.execute`; clients cannot submit raw tokens. Handle/result registry remains process-local.
 - [ ] `A-125` Add math HTTP submit/lease/complete routes or explicitly document point-0-only ingress.
 - [ ] `A-126` Add path-wide no-host-math runtime audit.
 - [ ] `A-127` Add demo negative-suite orchestration (mismatch/stale/unavailable/unauthorized together).
@@ -145,6 +145,8 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `A-134` Authenticated worker-identity-to-capability-owner binding callback (interface exists; deployment verifier still caller-supplied).
 - [ ] `A-135` Guest-built native admission receipt production and output-digest verification in the normal worker path.
 - [ ] `A-136` N16T message types beyond HELLO/CAPABILITIES/CLOSE; corpus/training/candidate/merge capabilities remain unimplemented.
+- [ ] `A-137` Durable prepared-handle/idempotence registry for `/v1/math/execute` (currently process-local).
+- [ ] `A-138` Bind opaque execution handle IDs to authenticated callers in deployment.
 
 
 ---

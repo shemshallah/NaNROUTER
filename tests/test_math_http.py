@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import contextlib
+from dataclasses import replace
 import io
 import json
 import tempfile
+from types import SimpleNamespace
 import unittest
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from runner_riddle.math_execution import MathExecutionStateError
+from runner_riddle.math_execution import (
+    MathExecutionBridge,
+    MathExecutionStateError,
+)
 from runner_riddle.math_http import (
     EXECUTE_PATH,
     HEALTH_PATH,
@@ -18,12 +23,16 @@ from runner_riddle.math_http import (
     SCHEMA,
     MathHttpAdapter,
     MathHttpServer,
+    PreparedMathExecutionHandle,
+    PreparedMathExecutionService,
     make_math_handler,
 )
 from runner_riddle.math_registry import MathFunctionRegistry
 from runner_riddle.math_runtime import MathRuntime
+from runner_riddle.math_store import MathStore
 from runner_riddle.mth_registry import MthRegistry
-from runner_riddle.wave_ring_scheduler import JAHS_SEAL
+from runner_riddle.mth_system import MthSystem
+from runner_riddle.wave_ring_scheduler import JAHS_SEAL, WaveRingScheduler
 from runner_riddle.wave_service import WaveService
 from runner_riddle.wave_store import WaveStore
 
@@ -495,6 +504,373 @@ class MathHttpTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(document["schema"], SCHEMA)
         self.assertGreaterEqual(document["link"]["candidate_count"], 1)
+
+
+class TokenLeakingPreparedBridge:
+    """Bridge-shaped test double that deliberately exposes server secrets."""
+
+    def __init__(self):
+        self.worker_token = WORKER_TOKEN
+        self.submit_token = SUBMIT_TOKEN
+        self.calls = 0
+
+    def execute(self, lease, executor, **kwargs):
+        self.calls += 1
+        digest = executor(lease) if callable(executor) else executor
+        return {
+            "schema": "nanrouter.math-execution-result.v1",
+            "packet_id": lease.packet_id,
+            "job_id": "job:test",
+            "outcome": "COMPLETED",
+            "result_digest": digest,
+            "result_status": kwargs.get("result_status") or "OK",
+            "committed": bool(kwargs.get("commit")),
+            "lease_token": lease.lease_token,
+            "note": f"used worker {self.worker_token}",
+        }
+
+
+class PreparedMathExecutionServiceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.native = MthRegistry.load(REPO / "spec" / "wave-capabilities.json")
+        cls.functions = MathFunctionRegistry.load(
+            REPO / "spec" / "math-functions.v1.json",
+            implementations=cls.native,
+        )
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        self.math_store = MathStore(
+            root / "math-bs.sqlite3", root / "math-mc.sqlite3",
+        )
+        self.a = self.math_store.put_leaf(make_leaf(1, "a"))
+        self.b = self.math_store.put_leaf(make_leaf(2, "b"))
+        self.wave_store = WaveStore(
+            root / "wave-bs.sqlite3", root / "wave-mc.sqlite3",
+        )
+        self.wave_service = WaveService(
+            self.wave_store, SUBMIT_TOKEN, WORKER_TOKEN, ADMIN_TOKEN,
+        )
+        self.scheduler = WaveRingScheduler(cycle_ticks=10, now_tick=0)
+        self.system = MthSystem(
+            self.native, self.wave_store, self.wave_service, self.scheduler,
+        )
+        self.runtime = MathRuntime(
+            self.functions, store=self.math_store, system=self.system,
+        )
+        self.bridge = MathExecutionBridge(
+            self.runtime,
+            self.system,
+            submit_token=SUBMIT_TOKEN,
+            worker_token=WORKER_TOKEN,
+        )
+        self.scheduler.start(0)
+
+    # -- Helpers --------------------------------------------------------------
+
+    def prepared_lease(self, snapshot_char="f"):
+        result = self.runtime.propose(
+            [f"{self.a.leaf_id}@v1", f"{self.b.leaf_id}@v1"],
+            snapshot_id="snp:" + snapshot_char * 64,
+            max_candidates=8,
+        )
+        candidate = next(
+            item for item in result.items
+            if item.function_id == "math.vector.dot"
+        )
+        admission = self.runtime.preflight(candidate)
+        compiled = self.runtime.compile(candidate, admission)
+        descriptor = self.native.require(compiled.plan.kernel_ids[0])
+        self.wave_store.register_capability(
+            kernel_id=descriptor.kernel_id,
+            runner_id="NANROUTER-0",
+            verified_digest=descriptor.source_digest,
+            workspace=1,
+            precision=descriptor.precision,
+            status="native_verified",
+            epoch=1,
+        )
+        packet = self.bridge.prepare_packet(compiled)
+        submission = self.bridge.submit(packet, compiled, now_tick=0)
+        lease = self.bridge.lease(submission, now_tick=0)
+        self.assertIsNotNone(lease)
+        return lease
+
+    def call(
+        self,
+        adapter,
+        *,
+        method="POST",
+        path=EXECUTE_PATH,
+        body=None,
+        token=None,
+    ):
+        raw = b"" if body is None else json.dumps(
+            body, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")
+        headers = {
+            "Content-Length": str(len(raw)),
+            "Content-Type": "application/json",
+            JAHS_HEADER: JAHS_SEAL,
+        }
+        if token is not None:
+            headers["Authorization"] = "Bearer " + token
+        return adapter.handle(method, path, headers, raw)
+
+    # -- Prepared execution ---------------------------------------------------
+
+    def test_prepared_handle_success_uses_request_result_metadata(self):
+        lease = self.prepared_lease()
+        service = PreparedMathExecutionService(
+            self.bridge, {"prep-success": lease},
+        )
+        adapter = MathHttpAdapter(self.runtime, service=service)
+        response = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-success",
+                "result_digest": "a" * 64,
+                "result_status": "OK",
+                "output_leaf_id": "nml:U0:vector:result@v1",
+                "commit": True,
+                "now_tick": 1,
+            },
+        )
+        self.assertEqual(response.status, 200)
+        execution = response.json()["execution"]
+        self.assertEqual(execution["schema"], "nanrouter.math-execution-result.v1")
+        self.assertEqual(execution["handle_id"], "prep-success")
+        self.assertEqual(execution["packet_id"], lease.packet_id)
+        self.assertEqual(execution["status"], "COMMITTED")
+        self.assertEqual(execution["outcome"], "COMMITTED")
+        self.assertEqual(execution["result_digest"], "a" * 64)
+        self.assertEqual(execution["result_status"], "OK")
+        self.assertEqual(
+            execution["output_leaf_id"], "nml:U0:vector:result@v1",
+        )
+        self.assertTrue(execution["committed"])
+        self.assertFalse(execution["duplicate"])
+        self.assertIn("lease_token_digest", execution)
+        self.assertNotEqual(
+            execution["lease_token_digest"], lease.lease_token,
+        )
+        self.assertNotIn(
+            lease.lease_token.encode("utf-8"),
+            response.body,
+        )
+
+    def test_unknown_prepared_handle_is_a_typed_404(self):
+        service = PreparedMathExecutionService(self.bridge, {})
+        adapter = MathHttpAdapter(self.runtime, service=service)
+        response = self.call(
+            adapter,
+            body={
+                "handle_id": "missing-handle",
+                "result_digest": "a" * 64,
+                "now_tick": 1,
+            },
+        )
+        self.assertEqual(response.status, 404)
+        error = response.json()["error"]
+        self.assertEqual(error["code"], "HANDLE_NOT_FOUND")
+        self.assertEqual(error["reason"], "unknown_handle")
+
+    def test_expired_prepared_lease_is_rejected_before_the_executor(self):
+        lease = self.prepared_lease()
+        calls = []
+        handle = PreparedMathExecutionHandle(
+            "prep-expired",
+            replace(lease, deadline_tick=1),
+            executor=lambda: calls.append("called") or "a" * 64,
+        )
+        service = PreparedMathExecutionService(self.bridge, {handle.handle_id: handle})
+        adapter = MathHttpAdapter(self.runtime, service=service)
+        response = self.call(
+            adapter,
+            body={"handle_id": "prep-expired", "now_tick": 1},
+        )
+        self.assertEqual(response.status, 409)
+        self.assertEqual(
+            response.json()["error"]["code"], "STATE_REJECTED"
+        )
+        self.assertEqual(calls, [])
+        self.assertNotIn("prep-expired", service.handle_ids)
+
+    def test_missing_service_remains_a_typed_unavailable(self):
+        adapter = MathHttpAdapter(self.runtime)
+        response = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-success",
+                "result_digest": "a" * 64,
+                "now_tick": 1,
+            },
+        )
+        self.assertEqual(response.status, 503)
+        error = response.json()["error"]
+        self.assertEqual(error["code"], "UNAVAILABLE")
+        self.assertEqual(
+            error["reason"], "execute_service_not_configured"
+        )
+
+    def test_raw_lease_tokens_are_rejected_and_never_echoed(self):
+        lease = self.prepared_lease()
+        service = PreparedMathExecutionService(
+            self.bridge, {"prep-token": lease},
+        )
+        adapter = MathHttpAdapter(
+            self.runtime, service=service, auth=self.wave_service,
+        )
+        response = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-token",
+                "lease_token": lease.lease_token,
+                "worker_token": WORKER_TOKEN,
+                "result_digest": "a" * 64,
+                "now_tick": 1,
+            },
+            token=SUBMIT_TOKEN,
+        )
+        self.assertEqual(response.status, 400)
+        self.assertEqual(
+            response.json()["error"]["code"], "RAW_SECRET_NOT_PERMITTED"
+        )
+        rendered = response.body.decode("utf-8")
+        self.assertNotIn(lease.lease_token, rendered)
+        self.assertNotIn(WORKER_TOKEN, rendered)
+        self.assertNotIn(SUBMIT_TOKEN, rendered)
+
+    def test_service_scrubs_tokens_from_bridge_results(self):
+        lease = SimpleNamespace(
+            lease_token=WORKER_TOKEN,
+            deadline_tick=64,
+            packet_id="nmp:test",
+        )
+        bridge = TokenLeakingPreparedBridge()
+        service = PreparedMathExecutionService(
+            bridge, {"prep-leak": lease},
+        )
+        result = service.execute(
+            {
+                "handle_id": "prep-leak",
+                "result_digest": "b" * 64,
+                "now_tick": 1,
+                "commit": True,
+            }
+        )
+        rendered = json.dumps(result, sort_keys=True)
+        self.assertNotIn(WORKER_TOKEN, rendered)
+        self.assertNotIn(SUBMIT_TOKEN, rendered)
+        self.assertNotIn(lease.lease_token, rendered)
+        self.assertEqual(result["lease_token"], "[REDACTED]")
+        self.assertEqual(bridge.calls, 1)
+
+    def test_duplicate_execution_and_commit_are_idempotent(self):
+        lease = self.prepared_lease()
+        calls = []
+        handle = PreparedMathExecutionHandle(
+            "prep-idempotent",
+            lease,
+            executor=lambda: calls.append("executed") or "c" * 64,
+        )
+        service = PreparedMathExecutionService(
+            self.bridge, {handle.handle_id: handle},
+        )
+        adapter = MathHttpAdapter(self.runtime, service=service)
+
+        first = self.call(
+            adapter,
+            body={"handle_id": "prep-idempotent", "now_tick": 1},
+        )
+        duplicate = self.call(
+            adapter,
+            body={"handle_id": "prep-idempotent", "now_tick": 1},
+        )
+        committed = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-idempotent",
+                "now_tick": 2,
+                "commit": True,
+            },
+        )
+        duplicate_commit = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-idempotent",
+                "now_tick": 2,
+                "commit": True,
+            },
+        )
+
+        self.assertEqual(
+            [item.status for item in (first, duplicate, committed, duplicate_commit)],
+            [200, 200, 200, 200],
+        )
+        executions = [item.json()["execution"] for item in (
+            first, duplicate, committed, duplicate_commit,
+        )]
+        self.assertEqual(executions[0]["status"], "COMPLETED")
+        self.assertFalse(executions[0]["duplicate"])
+        self.assertEqual(executions[1]["status"], "COMPLETED")
+        self.assertTrue(executions[1]["duplicate"])
+        self.assertEqual(executions[2]["status"], "COMMITTED")
+        self.assertTrue(executions[2]["committed"])
+        self.assertTrue(executions[2]["duplicate"])
+        self.assertTrue(executions[3]["committed"])
+        self.assertTrue(executions[3]["duplicate"])
+        self.assertEqual(calls, ["executed"])
+
+    def test_prepared_service_health_reports_registry_state(self):
+        lease = self.prepared_lease()
+        service = PreparedMathExecutionService(
+            self.bridge, {"prep-health": lease},
+        )
+        adapter = MathHttpAdapter(self.runtime, service=service)
+        response = self.call(
+            adapter, method="GET", path=HEALTH_PATH, body=None,
+        )
+        self.assertEqual(response.status, 200)
+        health = response.json()["health"]
+        self.assertEqual(health["execute"]["available"], True)
+        self.assertEqual(
+            health["components"]["execute"]["prepared_handles"], 1,
+        )
+        self.assertEqual(
+            health["components"]["execute"]["capacity"], service.max_handles,
+        )
+
+    def test_duplicate_with_conflicting_digest_is_rejected(self):
+        lease = self.prepared_lease()
+        service = PreparedMathExecutionService(
+            self.bridge, {"prep-conflict": lease},
+        )
+        adapter = MathHttpAdapter(self.runtime, service=service)
+        first = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-conflict",
+                "result_digest": "d" * 64,
+                "now_tick": 1,
+            },
+        )
+        second = self.call(
+            adapter,
+            body={
+                "handle_id": "prep-conflict",
+                "result_digest": "e" * 64,
+                "now_tick": 2,
+            },
+        )
+        self.assertEqual(first.status, 200)
+        self.assertEqual(second.status, 409)
+        self.assertEqual(
+            second.json()["error"]["code"], "BINDING_REJECTED"
+        )
 
 
 if __name__ == "__main__":

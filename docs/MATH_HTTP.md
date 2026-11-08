@@ -1,7 +1,7 @@
 # Math HTTP ingress (Track F)
 
 Status: implemented in `runner_riddle/math_http.py`; tests in
-`tests/test_math_http.py` (21 tests, no `MathRuntime` or bridge changes).
+`tests/test_math_http.py` (30 tests, no `MathRuntime` or bridge changes).
 
 This module is a thin standard-library transport around the existing math
 control plane. It does not perform host arithmetic, prepare NMP packets, create
@@ -108,22 +108,73 @@ The linker remains proposal-only: the response always reports
 
 ## Execute
 
-`POST /v1/math/execute` deliberately does not prepare a packet or acquire a
-lease. Execution state is caller-owned: the adapter requires a service object
-that already owns the prepared packet/lease and exposes:
+`POST /v1/math/execute` is a prepared-packet/lease execution route. The
+transport never prepares a packet, acquires a lease, performs host arithmetic,
+or calls the NMP/ring control plane directly. Production callers bind a
+`PreparedMathExecutionService` around an existing `MathExecutionBridge`:
 
 ```python
-service.execute(request: dict) -> dict | None
+service = PreparedMathExecutionService(
+    bridge,                    # MathExecutionBridge
+    {"handle-1": lease},       # bounded handle -> prepared MathExecutionLease
+    max_handles=256,
+)
+adapter = MathHttpAdapter(runtime, service=service)
 ```
 
-`request` is the parsed JSON body; the returned mapping is rendered under
-`execution`. A returned `None` becomes `{"status": "ACCEPTED"}`. The adapter
-never calls `MathExecutionBridge.prepare_packet`, `submit`, `lease`, or
-`execute` itself, and a bare `MathExecutionBridge` is rejected by the
-constructor so a caller cannot accidentally hand over an unbound bridge.
+Handles can also be added with `service.register(...)`, optionally with a
+server-owned executor, an explicit `deadline_tick`, or an `owner` label. The
+registry rejects duplicate handle IDs and registrations beyond `max_handles`;
+it never silently replaces a live lease. `service.remove(handle_id)` (aliases
+`revoke`/`unregister`) drops a handle and its cached result, while
+`prune_expired(now_tick)` removes handles whose lease deadline has passed.
 
-When no such service is configured, the route fails closed with an explicit
-typed result instead of inventing state:
+Accepted request fields:
+
+| Field | Meaning |
+|---|---|
+| `handle_id` | Required prepared handle ID; aliases `handle`, `lease_id`, `lease`, `packet_id` (exactly one) |
+| `result_digest` | Caller-supplied result digest; aliases `digest`, `output_digest`; required when the handle has no server executor |
+| `result_status` | Optional bounded result status string; alias `status` |
+| `output_leaf_id` | Optional bounded output leaf reference; aliases `leaf_id`, `output` |
+| `commit` | Boolean; commit the completed packet, default `false` |
+| `now_tick` | Integer `>= 0`, default `0` |
+| `evidence` | Optional JSON object, bounded at 16 KiB |
+
+The service resolves the server-owned handle, checks its lease deadline, and
+calls `bridge.execute(lease, executor, ...)`. The executor is either the
+executor stored with the handle or a callback returning the request's
+`result_digest`; the digest is result metadata, never a lease or worker token.
+A successful response is token-free and typed:
+
+```json
+{
+  "schema": "nanrouter.math-http.v1",
+  "route": "/v1/math/execute",
+  "execution": {
+    "schema": "nanrouter.math-execution-result.v1",
+    "handle_id": "handle-1",
+    "packet_id": "nmp:...",
+    "status": "COMMITTED",
+    "outcome": "COMMITTED",
+    "result_digest": "...",
+    "committed": true,
+    "duplicate": false
+  }
+}
+```
+
+Successful terminal results are cached by handle ID. Replaying the same
+execute or commit request returns the same result with `"duplicate": true`
+without invoking the executor or bridge again. A later `commit: true` upgrades
+an already completed result to committed without re-execution. A replay whose
+`result_digest`, `result_status`, or `output_leaf_id` conflicts with the cached
+result is rejected as `409 BINDING_REJECTED`. The cache is bounded; when an old
+cache entry is evicted its handle is removed too, so replay fails closed rather
+than executing twice.
+
+When no service is configured, the route fails closed with an explicit typed
+result instead of inventing state:
 
 ```json
 {
@@ -137,8 +188,19 @@ typed result instead of inventing state:
 ```
 
 A service that exposes `health()` but no `execute()` yields the same status
-with reason `execute_service_missing_execute`. Execution transport errors keep
-their typed meaning:
+with reason `execute_service_missing_execute`. Prepared-service failures add
+these typed cases:
+
+| Condition | Status | Error code / reason |
+|---|---|---|
+| Unknown handle | 404 | `HANDLE_NOT_FOUND` / `unknown_handle` |
+| Expired lease deadline | 409 | `STATE_REJECTED` |
+| Raw lease/worker token field | 400 | `RAW_SECRET_NOT_PERMITTED` / `raw_secret_not_permitted` |
+| Missing digest with no executor | 400 | `RESULT_DIGEST_REQUIRED` / `result_digest_required` |
+| Replay conflicts with cached result | 409 | `BINDING_REJECTED` |
+| Unsupported request field | 400 | `UNSUPPORTED_FIELD` |
+
+Execution transport errors keep their typed meaning:
 
 | Condition | Status | Error code |
 |---|---|---|
@@ -180,9 +242,13 @@ method; the adapter reuses that check and returns `401 UNAUTHORIZED` or
 
 The adapter never includes request headers or request bodies in responses.
 Token-like result keys (`token`, `secret`, `password`, `api_key`, and related
-names) are replaced with `[REDACTED]`, and every known caller credential is
-also scrubbed from string values. Health output passes through the same
-redaction. Access logging is disabled so headers cannot reach process logs.
+names) are replaced with `[REDACTED]`, while deliberate one-way `*_digest`
+fields (for example `lease_token_digest`) are preserved. Every known caller
+credential is also scrubbed from string values. The prepared execution service
+separately scrubs the lease token and the bridge's configured worker/submit
+tokens before its result reaches the adapter. Health output passes through the
+same redaction. Access logging is disabled so headers cannot reach process
+logs.
 
 ## Handler and server
 
@@ -194,10 +260,20 @@ bound before invoking the adapter.
 
 ## Limitations
 
-- The execute route is an ingress seam, not an executor. It intentionally
-  requires a caller-owned prepared/leased service. This repository does not
-  define that wrapper here because doing so would duplicate `MathExecutionBridge`
-  packet/lease authority.
+- The execute route is an ingress seam, not a packet/lease factory. The
+  prepared service must be populated server-side with `MathExecutionLease`
+  objects from the existing bridge; this repository does not add an HTTP route
+  that prepares packets or acquires leases.
+- The handle registry and idempotence cache are process-local and in-memory.
+  They are not durable across restart; recovery must re-register leases from
+  the authoritative WaveStore rows. Duplicate suppression is per process, not
+  cluster-wide.
+- A handle ID is an opaque capability. Unless a deployment binds it to an
+  authenticated caller at a higher layer, anyone holding the ID can submit
+  result metadata for that lease.
+- `result_digest` is caller-supplied completion evidence. The transport does
+  not recompute or verify numerical results; that remains the bridge/kernel
+  authority boundary.
 - There is no built-in token store. Authentication is delegated to
   `WaveService` when provided; without it, only the JAHS gate and any
   service-level checks apply.
@@ -216,5 +292,8 @@ Coverage includes the exact 2 MiB bound and oversized rejection, missing and
 invalid JAHS, invalid JSON/content types, unknown fields and execute flags,
 link candidate output, raw `::` expressions, `math://` operands, address
 context and unknown-leaf rejection, execute unavailable and delegated
-behavior, typed execution state errors, WaveService auth reuse, token
-redaction, routing/method errors, and an optional loopback round trip.
+behavior, typed execution state errors, prepared-handle success, unknown
+handles, expired leases, raw-token rejection and token non-leakage, duplicate
+execute/commit idempotence, conflicting-result rejection, prepared-service
+health, WaveService auth reuse, token redaction, routing/method errors, and an
+optional loopback round trip.
