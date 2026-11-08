@@ -97,22 +97,27 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             native_image_sha256=self.image_sha256,
         )
 
-    def stage_and_checkpoint(self, result, before_digest):
-        from nanlmind_hermes.head_bank_transport import stage_guest_bank_bytes
-        expected = self.chart.snapshot_generation
-        stage = stage_guest_bank_bytes(
-            self.chart, result["raw_bank"],
-            payload_sha256=result["bank_after_sha256"],
-            expected_region_sha256=before_digest,
-            expected_parent_root=self.parent,
-            expected_snapshot_generation=expected,
+    def journal_checkpoint(self, request, *, expected_after_sha256):
+        from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
+        from nanlmind_hermes.universe_chart import restore_local_chart
+        committer = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal
         )
-        self.assertEqual(stage["region_sha256"], result["bank_after_sha256"])
-        generation = self.save(
-            self.state, self.parent, self.chart.bytes, expected,
+        published = committer.commit(
+            request=request, lease_receipt=self.receipt, network_head=0
         )
-        self.chart.snapshot_generation = generation
-        return generation
+        self.assertTrue(published["local_checkpoint_verified"])
+        self.assertTrue(published["authenticated_router_journal_checked"])
+        self.assertFalse(published["canonical_training_committed"])
+        self.assertFalse(published["nannet_merge_issued"])
+        self.assertEqual(published["bank_after_sha256"], expected_after_sha256)
+        # HERMES retains a single chart: synchronize its in-process view
+        # with the independently committed SHA-verified N16SNAP1 overlay.
+        self.assertEqual(
+            restore_local_chart(self.chart, self.state),
+            published["chart_generation"],
+        )
+        return published
 
     def test_pinned_guest_two_native_revisions_then_tombstones_survive_restart(self):
         from nanlmind_hermes.head_bank_transport import (
@@ -146,15 +151,13 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
                 network_head=0,
             )["state"], "completed_staging_only",
         )
-        self.assertEqual(
-            self.stage_and_checkpoint(first, sha(raw)), 2,
+        verified = self.journal_checkpoint(
+            first_request, expected_after_sha256=first["bank_after_sha256"],
         )
+        self.assertEqual(verified["chart_generation"], 2)
         self.assertEqual(
             self.fence(self.universe_id)["bank_sha256"],
             first["bank_after_sha256"],
-        )
-        verified = self.journal.confirm_local_checkpoint(
-            request=first_request, lease_receipt=self.receipt, network_head=0,
         )
         self.assertTrue(verified["local_checkpoint_verified"])
         self.assertFalse(verified["canonical_training_committed"])
@@ -184,12 +187,22 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         self.assertEqual(second["receipt"]["head_generation_before"], 1)
         self.assertEqual(second["receipt"]["head_generation_after"], 2)
-        self.assertEqual(
-            self.stage_and_checkpoint(second, first["bank_after_sha256"]), 3,
+        from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
+        second_checkpoint = self.journal_checkpoint(
+            second_request, expected_after_sha256=second["bank_after_sha256"],
         )
-        self.journal.confirm_local_checkpoint(
-            request=second_request, lease_receipt=self.receipt, network_head=0,
+        self.assertEqual(second_checkpoint["chart_generation"], 3)
+        # The first completed update remains a permanent replay tombstone
+        # even though two more chart slots have superseded its exact bank.
+        historical = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal,
+        ).commit(
+            request=first_request, lease_receipt=self.receipt, network_head=0,
         )
+        self.assertTrue(historical["historical_local_checkpoint_verified"])
+        self.assertFalse(historical["current_chart_contains_result"])
+        self.assertEqual(historical["chart_generation"], 2)
+        self.assertEqual(historical["current_chart_generation"], 3)
         restored = Chart8MiB.genesis()
         self.assertEqual(restore_local_chart(restored, self.state), 3)
         self.assertEqual(export_guest_bank_bytes(restored), second["raw_bank"])
