@@ -134,8 +134,8 @@ CMP r4,r0
 JMP[EQ] @say_done
 PUTC r4
 SHR r2,r2,8
-ADDI r1,r1,0
-ADDI r3,r3,65535
+MOVI r12,1
+SUB r3,r3,r12
 JMP[NE] @say_byte
 ADDI r1,r1,1
 JMP @say_loop
