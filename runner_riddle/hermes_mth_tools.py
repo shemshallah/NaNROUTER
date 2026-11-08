@@ -60,6 +60,7 @@ def _descriptor(kernel) -> dict[str, Any]:
         "steps": kernel.steps,
         "status": kernel.status,
         "ci_verified": kernel.ci_verified,
+        "planning_eligible": kernel.status == "native_verified" and kernel.ci_verified,
         "tags": list(kernel.tags),
         "execution_mode": _dispatch_mode(kernel.kernel_id),
     }
@@ -135,7 +136,9 @@ class HermesMthTools:
         if (not isinstance(tags, list) or len(tags) > 8
                 or any(not isinstance(t, str) for t in tags)):
             raise HermesMthToolError("tags must be a list of at most eight strings")
-        matches = self.registry.resolve(tags=tags, require_ci=True)
+        # Catalog all registered kernels, including unverified ones; never
+        # confuse discoverability with permission to compose/execute.
+        matches = self.registry.resolve(tags=tags, require_ci=False)
         family = args.get("family")
         if family is not None:
             if not isinstance(family, str) or not family.isascii() or not family.isalnum():
@@ -170,7 +173,9 @@ class HermesMthTools:
         kernel_id = args.get("kernel_id")
         if not isinstance(kernel_id, str):
             raise HermesMthToolError("kernel_id must be a string")
-        self.registry.require(kernel_id)
+        kernel = self.registry.require(kernel_id)
+        if not (kernel.status == "native_verified" and kernel.ci_verified):
+            raise HermesMthToolError("kernel is not CI-verified for plan admission")
         step = {"name": "kernel", "kernel_id": kernel_id,
                 "inputs": args.get("inputs", []),
                 "outputs": args.get("outputs", []),
