@@ -72,6 +72,7 @@ class HeadObservationJournalTests(unittest.TestCase):
                 "parent_root_sha256": self.parent,
                 "chart_generation": self.chart_generation,
                 "bank_sha256": self.chart_bank_digest,
+                "snapshot_verified": True,
             },
         )
 
@@ -208,6 +209,98 @@ class HeadObservationJournalTests(unittest.TestCase):
             self.journal.inspect(
                 request=task, lease_receipt=self.lease, network_head=253
             )
+
+
+    def confirm(self, request=None):
+        return self.journal.confirm_local_checkpoint(
+            request=self.request if request is None else request,
+            lease_receipt=self.lease, network_head=0,
+        )
+
+    def test_staged_bank_reclaimed_only_after_exact_verified_next_checkpoint(self):
+        self.invoke()
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "chart_generation"):
+            self.confirm()
+        self.chart_generation = self.request.chart_generation + 1
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "bank_sha256"):
+            self.confirm()
+        self.chart_bank_digest = digest(self.changed)
+        recorded = self.confirm()
+        self.assertTrue(recorded["local_checkpoint_verified"])
+        self.assertFalse(recorded["canonical_training_committed"])
+        self.assertEqual(recorded["checkpoint_generation"], 6)
+        self.assertEqual(self.inspect()["state"], "checkpointed_locally")
+        self.assertNotIn("raw_bank", self.inspect(include_bank=True))
+        with sqlite3.connect(self.path) as db:
+            row = db.execute(
+                "SELECT bank_after,checkpoint_generation,checkpointed_at "
+                "FROM hermes_head_observation"
+            ).fetchone()
+        self.assertIsNone(row[0])
+        self.assertEqual(row[1], 6)
+        self.assertIsNotNone(row[2])
+        self.journal = self.make_journal()
+        replayed = self.invoke()
+        self.assertTrue(replayed["replayed_from_journal"])
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.confirm()["checkpoint_generation"], 6)
+
+    def test_permanent_tombstone_prevents_new_request_under_old_dispatch_id(self):
+        self.invoke()
+        self.chart_generation = 6
+        self.chart_bank_digest = digest(self.changed)
+        self.confirm()
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "different native head"):
+            self.invoke(request=self.make_request(increment=4))
+        self.assertEqual(self.calls, 1)
+
+    def test_capacity_can_be_reused_only_after_a_verified_local_checkpoint(self):
+        self.journal.MAX_OUTSTANDING = 1
+        self.invoke()
+        next_request = self.make_request(dispatch_id="native-head-dispatch-0002")
+        with self.assertRaisesRegex(HermesHeadObservationError, "capacity"):
+            self.invoke(request=next_request)
+        self.chart_generation = 6
+        self.chart_bank_digest = digest(self.changed)
+        self.confirm()
+        next_request = self.make_request(
+            dispatch_id="native-head-dispatch-0002",
+            chart_generation=6,
+            bank_before_sha256=digest(self.changed),
+        )
+        next_bank = bytes([0xDA]) + self.changed[1:]
+        result = self.invoke(
+            request=next_request, raw_bank=self.changed,
+            guest=self.guest(changed=next_bank),
+        )
+        self.assertEqual(result["bank_after_sha256"], digest(next_bank))
+        self.assertEqual(self.calls, 2)
+
+    def test_checkpoint_requires_validated_snapshot_not_only_digest_labels(self):
+        self.invoke()
+        self.chart_generation = 6
+        self.chart_bank_digest = digest(self.changed)
+        original = self.journal.chart_fence_reader
+        self.journal.chart_fence_reader = lambda universe: {
+            **original(universe), "snapshot_verified": False,
+        }
+        with self.assertRaisesRegex(HermesHeadObservationError, "trusted durable"):
+            self.confirm()
+        self.journal.chart_fence_reader = original
+        self.assertEqual(self.inspect()["state"], "completed_staging_only")
+
+    def test_checkpoint_tombstone_corruption_is_detected(self):
+        self.invoke()
+        self.chart_generation = 6
+        self.chart_bank_digest = digest(self.changed)
+        self.confirm()
+        with sqlite3.connect(self.path) as db:
+            db.execute(
+                "UPDATE hermes_head_observation SET bank_after_sha256=?",
+                (digest(b"tampered checkpoint record"),),
+            )
+        with self.assertRaisesRegex(HermesHeadObservationError, "digest mismatch"):
+            self.inspect()
 
 
 if __name__ == "__main__":
