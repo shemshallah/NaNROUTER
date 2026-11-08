@@ -3,7 +3,7 @@
 ; and self-checks the round trip, tamper, slot and gate rejections.
 .org 0
 JMP @t_main
-.include "mth/nan16/hermes_n16bridge.nas"
+.include "../nan16/hermes_n16bridge.nas"
 
 ; r1 = byte ptr, r2 = len : print lowercase hex then newline
 t_hex:
