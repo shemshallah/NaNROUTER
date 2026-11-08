@@ -2,6 +2,8 @@
 
 **Bootstrap logic, address mapping, and NaNNet routing control plane.**
 
+**BS0 hardware allocation:** BS0:0 is the shared NANNET runner-ring port, distinct from hardware-node HW0:0. BS0/HW4 is WordNet reserved; HW5–HW255 are available for portal allocation (later NaNROUTER). The six BSR worker IDs are internal to BS0 and do not consume six HW slots. See `docs/BS0_HARDWARE_SLOT_CONTRACT.md`.
+
 NaNROUTER organizes the networking and learning-control layers around the existing NaNLMind single-universe model. It does not create a second topology or a second owner of memory. The canonical computational state remains the NaNLMind universe; this repository defines how Bootstrap observes it, learns its maps, routes through authorized bins, and proposes safe mapping changes.
 
 ## Current design boundary
