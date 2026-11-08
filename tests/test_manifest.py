@@ -12,31 +12,27 @@ class ManifestTests(unittest.TestCase):
         cls.points = tomllib.loads((ROOT / "spec/point-map.toml").read_text())
         cls.policy = tomllib.loads((ROOT / "spec/bin-policy.toml").read_text())
 
-    def test_exact_permanent_point_assignments(self):
+    def test_bs0_fixed_hardware_nodes_and_reserved_wordnet(self):
         points = {p["id"]: p for p in self.points["point"]}
-        self.assertEqual(set(points), {0, 1, 2, 3, 4, 5, 6, 7, 8})
-        self.assertEqual(points[0]["label"], "BSR1")
-        self.assertEqual(points[0]["bsr_wire"], 0)
-        self.assertEqual(points[4]["label"], "BSR2")
-        self.assertEqual(points[4]["bsr_wire"], 1)
-        self.assertEqual(points[5]["label"], "BSR3")
-        self.assertEqual(points[5]["bsr_wire"], 2)
-        self.assertEqual(points[6]["label"], "BSR4")
-        self.assertEqual(points[6]["bsr_wire"], 3)
-        self.assertEqual(points[7]["label"], "BSR5")
-        self.assertEqual(points[7]["bsr_wire"], 4)
-        self.assertEqual(points[8]["label"], "BSR6")
-        self.assertEqual(points[8]["bsr_wire"], 5)
+        self.assertEqual(set(points), {0, 1, 2, 3, 4})
+        self.assertEqual(points[0]["label"], "HW0")
         self.assertEqual(points[1]["role"], "personal-phone")
-        self.assertEqual(points[2]["role"], "hermes-demo")
-        self.assertEqual(points[3]["role"], "clocked-demo")
+        self.assertEqual(points[2]["role"], "hermes-hardware-node")
+        self.assertEqual(points[3]["role"], "clocked-hardware-node")
+        self.assertEqual(points[4]["role"], "wordnet-universe")
+        self.assertEqual(points[4]["registration"], "reserved")
+        self.assertTrue(all(p["permanent"] for p in points.values()))
+        self.assertNotIn(5, points)
 
-    def test_local_bsr_heads_are_explicitly_bound_not_namespace_casts(self):
+    def test_local_bsr_head_indices_are_not_hardware_node_addresses(self):
         bindings = self.points["head_namespace"]["bsr_binding"]
         self.assertEqual(
-            [(b["head_index"], b["node_point"], b["bsr_wire"]) for b in bindings],
-            [(0, 0, 0), (4, 4, 1), (5, 5, 2), (6, 6, 3), (7, 7, 4), (8, 8, 5)]
+            [(b["head_index"], b["runner_ring_port"], b["bsr_wire"]) for b in bindings],
+            [(0, "BS0:0", 0), (4, "BS0:0", 1), (5, "BS0:0", 2),
+             (6, "BS0:0", 3), (7, "BS0:0", 4), (8, "BS0:0", 5)],
         )
+        # The numerical BSR head indices are not reservations on HW5-HW8.
+        self.assertTrue(self.points["registration"]["per_bootstrap_hardware_namespace"])
 
     def test_master_cache_contains_committed_head_and_object_atlases(self):
         schema = json.loads((ROOT / "spec/master-network-cache.schema.json").read_text())
@@ -65,10 +61,12 @@ class ManifestTests(unittest.TestCase):
 
     def test_registration_range_is_exact(self):
         registration = self.points["registration"]
-        self.assertEqual(registration["available_points"], "9..255")
-        self.assertEqual(self.points["registration_min"], 9)
+        self.assertEqual(registration["available_points"], "5..255")
+        self.assertEqual(self.points["registration_min"], 5)
         self.assertEqual(self.points["registration_max"], 255)
-        self.assertEqual(255 - 9 + 1, 247)
+        self.assertEqual(registration["reserved_hw_slots"], [0, 1, 2, 3, 4])
+        self.assertEqual(registration["wordnet_hw"], 4)
+        self.assertEqual(255 - 5 + 1, 251)
 
     def test_head_inventory_has_250_boolean_learners(self):
         heads = self.points["head_namespace"]
@@ -110,6 +108,9 @@ class ManifestTests(unittest.TestCase):
         self.assertFalse(gateway["owns_master_route_cache"])
         self.assertEqual(cluster["runner_units"], 6)
         self.assertEqual(cluster["runner_wire_bsr"], [0, 1, 2, 3, 4, 5])
+        self.assertEqual(gateway["nannet_port"], "BS0:0")
+        self.assertFalse(gateway["port_is_hardware_node"])
+        self.assertTrue(gateway["attached_hardware_root"].endswith("HW0:0"))
 
     def test_master_cache_and_micro_route_contracts(self):
         route = json.loads((ROOT / "spec/route-record.schema.json").read_text())
