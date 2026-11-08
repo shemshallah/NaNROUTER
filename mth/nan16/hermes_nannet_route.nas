@@ -5,7 +5,7 @@
 ;
 ; ABI in: r1=lease slot, r2=lease id, r3=universe id, r4=generation,
 ;         r5=owner tag, r6=local head (0..254), r7=trusted now tick,
-;         r8=server-bound node point (1..255).
+;         r8=server-bound node point (1..256).
 ; out OK: r1=universe id, r2=local head, r3=0, r4=NANNET node point,
 ;         r5=generation
 ; out failure: r1=r2=r4=r5=0, r3=error
@@ -20,7 +20,7 @@ CMP r6,r9
 JMP[GE] @nhl_nannet_port
 CMP r8,r0
 JMP[EQ] @nhl_nannet_bad
-MOVI r9,255
+MOVI r9,256
 CMP r8,r9
 JMP[GT] @nhl_nannet_bad
 SHL r9,r1,3
