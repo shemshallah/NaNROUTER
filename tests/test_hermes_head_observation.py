@@ -69,10 +69,14 @@ class HeadObservationJournalTests(unittest.TestCase):
             self.path, lease_registry=self.registry,
             ring_epoch_reader=lambda: self.epoch,
             chart_fence_reader=lambda universe: {
+                "schema": "nanlm.native-head-checkpoint-fence/1",
                 "parent_root_sha256": self.parent,
                 "chart_generation": self.chart_generation,
                 "bank_sha256": self.chart_bank_digest,
+                "root_block_sha256": digest(b"mounted-native-root"),
+                "chart_sha256": digest(b"verified-eight-megabyte-chart"),
                 "snapshot_verified": True,
+                "canonical_training_committed": False,
             },
         )
 
@@ -167,6 +171,30 @@ class HeadObservationJournalTests(unittest.TestCase):
         with self.assertRaises(HermesLeaseError):
             self.invoke()
         self.assertEqual(self.calls, 0)
+
+    def test_unverified_or_rootless_chart_fence_refused_before_native_guest(self):
+        real = self.journal.chart_fence_reader
+        for mutation in (
+            {"snapshot_verified": False},
+            {"snapshot_verified": "yes"},
+            {"schema": "untrusted-digest-labels/1"},
+            {"schema": None},
+            {"root_block_sha256": None},
+            {"root_block_sha256": "G" * 64},
+            {"chart_sha256": "A" * 64},
+            {"canonical_training_committed": True},
+        ):
+            with self.subTest(mutation=mutation):
+                self.journal.chart_fence_reader = (
+                    lambda universe, mutation=mutation: {
+                        **real(universe), **mutation
+                    }
+                )
+                with self.assertRaises(HermesHeadObservationError):
+                    self.invoke()
+                self.assertEqual(self.calls, 0)
+        self.journal.chart_fence_reader = real
+        self.assertEqual(self.inspect()["state"], "not_recorded")
 
     def test_crash_after_reservation_is_ambiguous_and_cannot_replay(self):
         with self.assertRaisesRegex(RuntimeError, "power loss"):
@@ -284,7 +312,7 @@ class HeadObservationJournalTests(unittest.TestCase):
         self.journal.chart_fence_reader = lambda universe: {
             **original(universe), "snapshot_verified": False,
         }
-        with self.assertRaisesRegex(HermesHeadObservationError, "trusted durable"):
+        with self.assertRaisesRegex(HermesHeadObservationError, "SHA-verified"):
             self.confirm()
         self.journal.chart_fence_reader = original
         self.assertEqual(self.inspect()["state"], "completed_staging_only")
