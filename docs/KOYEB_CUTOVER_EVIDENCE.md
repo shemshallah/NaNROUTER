@@ -86,6 +86,13 @@ GET  /v1/ring/points  -> HW0:0, HW2:0, HW5:0, HW9:0 active
 POST /v1/ring/register {"hw":9} -> registered
 POST /v1/ring/submit  HW0 -> HW9 -> delivered
 POST /v1/ring/drain   {"hw":9} -> count 1, word 7ff112345678f8ff
+
+HERMES in/out through the same public single-service ring:
+
+POST /v1/ring/submit {HW2 -> HW5, kind=hermes.nan.out} -> delivered
+POST /v1/ring/drain  {"hw":5} -> hermes.nan.out
+POST /v1/ring/submit {HW5 -> HW2, kind=hermes.nan.in}  -> delivered
+POST /v1/ring/drain  {"hw":2} -> hermes.nan.in
 ```
 
 ### External standby handoff evidence (2026-11-08)
