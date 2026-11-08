@@ -185,7 +185,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-32` Entropy/cross-entropy/KL/CDF/inverse-CDF.
 - [ ] `B-33` Seeded PRNG and categorical sampling.
 - [ ] `B-34` **PARTIAL:** host-only attention plan controller composes qk_dot/scale/mask/softmax/weighted_sum/head_concat/projection and returns typed UNAVAILABLE until native mask/softmax/weighted-sum/concat kernels exist. No host math or execution.
-- [ ] `B-35` Loss/gradient/optimizer primitives, clipping, moving averages, Adam, finite-difference checks.
+- [ ] `B-35` **PARTIAL:** host-only loss/gradient/optimizer plan controller composes loss→gradient_accumulate→clip→moving_average→update and returns typed UNAVAILABLE until native kernels exist. Hyperparameter records and finite-difference fixtures remain open.
 - [ ] `B-36` Token/sequence operations: embedding gather, positions, slicing, masks, n-grams.
 - [ ] `B-37` Output/sampling: temperature/top-p/penalties/greedy tie-break.
 
