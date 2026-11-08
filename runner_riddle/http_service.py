@@ -339,8 +339,10 @@ def make_handler(service: RiddleService):
                             installation_id=body["installation_id"],
                             receipt=body["receipt"],
                             head_index=body["head_index"])
-                        result = service.hermes_mth.invoke(
-                            body["tool"], body.get("arguments", {}))
+                        arguments = body.get("arguments", {})
+                        if body["tool"] == "mth.route" and isinstance(arguments, dict):
+                            arguments = {**arguments, "head_index": route["head_index"]}
+                        result = service.hermes_mth.invoke(body["tool"], arguments)
                     self._json(200, {
                         "route": {key: route[key] for key in
                                   ("lease_id", "universe_id", "head_index")},
