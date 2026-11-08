@@ -1,0 +1,59 @@
+name: native-nan16-head-guest-attachment
+on:
+  push:
+    paths:
+      - 'runner_riddle/n16t_guest.py'
+      - 'runner_riddle/native_head_guest.py'
+      - 'tests/test_native_head_guest.py'
+      - '.github/workflows/native-head-guest.yml'
+  pull_request:
+    paths:
+      - 'runner_riddle/n16t_guest.py'
+      - 'runner_riddle/native_head_guest.py'
+      - 'tests/test_native_head_guest.py'
+      - '.github/workflows/native-head-guest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  head-guest-on-c-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10','3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: router
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 3b045ff48c8b862db290c3702789c43bde459048
+          path: nan0s
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile NaN0S C VM with raw NaN16 guest-word ABI
+        run: |
+          cd nan0s/aarch64/android
+          cc -std=gnu99 -O2 -fPIC -shared -ffp-contract=off -fno-fast-math \
+            core/nan16.c core/nan_dev.c core/nan_load.c \
+            core/nan_render.c core/nan_state.c core/nan_net_driver.c \
+            -o ../../libnan_head.so -lm
+      - name: Assemble pinned NaN16 head worker and label map
+        run: |
+          cd nan0s
+          LC_ALL=C awk -f tools/nmk.awk -v CMD=emit \
+            -v LABELS="$GITHUB_WORKSPACE/nan0s/head.labels" \
+            src/nannet/n16_head_worker.nas > "$GITHUB_WORKSPACE/nan0s/head.nan"
+          test -s head.nan
+          test -s head.labels
+      - name: Execute genuine native guest and failure regressions
+        working-directory: router
+        env:
+          NAN_HEAD_GUEST_LIBRARY: ${{ github.workspace }}/nan0s/libnan_head.so
+          NAN_HEAD_GUEST_IMAGE: ${{ github.workspace }}/nan0s/head.nan
+          NAN_HEAD_GUEST_LABELS: ${{ github.workspace }}/nan0s/head.labels
+        run: python -m unittest discover -s tests -p 'test_native_head_guest.py' -v

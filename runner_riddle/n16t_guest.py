@@ -1203,6 +1203,7 @@ class _NaN16GuestVM:
         *,
         max_steps: int = 12_000_000,
         run_slice: int = 250_000,
+        required_labels: tuple[str, ...] = ("n16_server_exchange",),
     ) -> None:
         if max_steps < 1 or run_slice < 1:
             raise ValueError("NaN16 execution budgets must be positive")
@@ -1210,8 +1211,13 @@ class _NaN16GuestVM:
         self._max_steps = max_steps
         self._run_slice = run_slice
         self._labels = _load_labels(Path(labels_path))
-        if "n16_server_exchange" not in self._labels:
-            raise ValueError("NaN16 image is missing n16_server_exchange")
+        if (not isinstance(required_labels, tuple) or not required_labels
+                or any(not isinstance(name, str) or not name
+                       for name in required_labels)):
+            raise ValueError("required guest entry labels must be nonempty")
+        for name in required_labels:
+            if name not in self._labels:
+                raise ValueError("NaN16 image is missing required guest entry " + name)
         image = Path(image_path).read_bytes()
         if not image:
             raise ValueError("NaN16 guest image is empty")
@@ -1253,6 +1259,16 @@ class _NaN16GuestVM:
         lib.nan_write_bytes.restype = ctypes.c_int
         lib.nan_read_bytes.argtypes = [vm, ctypes.c_uint32, byte_ptr, ctypes.c_size_t]
         lib.nan_read_bytes.restype = ctypes.c_int
+        # Optional raw-word bulk transport. Older pinned libraries remain
+        # usable for N16T byte frames, but native head-bank transfer MUST fail
+        # closed if the class-preserving entrypoints are absent.
+        for raw_name in ("nan_write_words_raw", "nan_read_words_raw"):
+            try:
+                raw_fn = getattr(lib, raw_name)
+            except AttributeError:
+                continue
+            raw_fn.argtypes = [vm, ctypes.c_uint32, byte_ptr, ctypes.c_size_t]
+            raw_fn.restype = ctypes.c_int
         lib.nan_set_reg.argtypes = [vm, ctypes.c_int, ctypes.c_uint32]
         lib.nan_set_reg.restype = None
         lib.nan_reg.argtypes = [vm, ctypes.c_int]
@@ -1288,6 +1304,55 @@ class _NaN16GuestVM:
         if rc != 0:
             raise N16TGuestRuntimeError("NaN16 guest memory read failed")
         return buffer.raw[:length]
+
+    def write_raw_words(self, first_word: int, data: bytes) -> None:
+        """Exact class-bearing eight-byte words, NOT N16T corpus bytes."""
+        if (type(data) is not bytes or len(data) % 8 or len(data) > 8 * 1_048_576
+                or type(first_word) is not int or first_word < 0
+                or first_word > 0x00400000
+                or first_word + len(data)//8 > 0x00400000):
+            raise ValueError("invalid bounded raw NaN16 word span")
+        if not data:
+            return
+        with self._lock:
+            if self._closed:
+                raise N16TGuestRuntimeError("NaN16 guest VM is closed")
+            try:
+                raw_fn = self._lib.nan_write_words_raw
+            except AttributeError as exc:
+                raise N16TGuestRuntimeError(
+                    "pinned NaN16 C VM lacks class-preserving raw word write ABI"
+                ) from exc
+            buf = ctypes.create_string_buffer(data)
+            if raw_fn(self._vm, first_word,
+                      ctypes.cast(buf, ctypes.POINTER(ctypes.c_uint8)),
+                      len(data)//8) != 0:
+                raise N16TGuestRuntimeError("native raw-word write rejected")
+
+    def read_raw_words(self, first_word: int, word_count: int) -> bytes:
+        """Exact near+far class/payload transport with guest-word indexing."""
+        if (type(first_word) is not int or type(word_count) is not int
+                or word_count < 0 or word_count > 1_048_576
+                or first_word < 0 or first_word > 0x00400000
+                or first_word + word_count > 0x00400000):
+            raise ValueError("invalid bounded raw NaN16 read span")
+        if word_count == 0:
+            return b""
+        with self._lock:
+            if self._closed:
+                raise N16TGuestRuntimeError("NaN16 guest VM is closed")
+            try:
+                raw_fn = self._lib.nan_read_words_raw
+            except AttributeError as exc:
+                raise N16TGuestRuntimeError(
+                    "pinned NaN16 C VM lacks class-preserving raw word read ABI"
+                ) from exc
+            buf = ctypes.create_string_buffer(word_count*8)
+            if raw_fn(self._vm, first_word,
+                      ctypes.cast(buf, ctypes.POINTER(ctypes.c_uint8)),
+                      word_count) != 0:
+                raise N16TGuestRuntimeError("native raw-word read rejected")
+            return buf.raw[:word_count*8]
 
     def reg(self, index: int) -> int:
         return int(self._lib.nan_reg(self._vm, index))
