@@ -6,6 +6,7 @@ Canonical v2 grammar (apex first, every layer separated by ``::``)::
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255:vector#1337
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1:vector#1337:subrelation(42)
+    nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:MP123
 
 ``GM0:0`` is the global-mesh apex layer.  ``SC0:0``, ``MC0:0`` and ``BS0:0``
 are the supercluster, macrocluster and bootstrap-service layers.  ``HW0:0``
@@ -46,6 +47,9 @@ _ROOT_V1 = re.compile(
     r"HW(?P<root_ns>\d+):(?P<root_head>\d+)(?P<selectors>(?:::|:).+)?$"
 )
 
+# HW0:MP0..32639 is the mirror-pair namespace, not 32640 new heads.
+# Ranges remain symbolic; no 32K-entry selector expansion.
+_MP = re.compile(r"^HW(?P<namespace>\\d+):MP(?P<start>\\d+)(?:-(?P<end>\\d+))?$")
 _HEAD = re.compile(r"^HW(?P<namespace>\d+):(?P<headspec>\d+(?:[-,]\d+)*)$")
 _OBJECT = re.compile(
     r"^(?P<kind>vector|hyperedge|rule|route|bin|temporal)#"
@@ -64,7 +68,7 @@ _OBJECT_LEGACY = re.compile(
 # callers that treat every boundary uniformly.
 _LEAF_PREFIX = re.compile(r"^:+(?P<leaf>(?:vector|hyperedge|rule|route|bin|temporal)#.+)$")
 _HEAD_LEAF = re.compile(
-    r"^(?P<head>HW\d+:\d+(?:[-,]\d+)*)"
+    r"^(?P<head>HW\d+:(?:MP\d+(?:-\d+)?|\d+(?:[-,]\d+)*))"
     r"(?P<leaf>:(?:vector|hyperedge|rule|route|bin|temporal)#.+)$"
 )
 
@@ -98,6 +102,22 @@ class HeadSelector:
 
 
 @dataclass(frozen=True)
+class MirrorPairSelector:
+    """One pair ordinal or a lazily paged interval in HW0's mirror namespace."""
+    namespace: int
+    start: int
+    end: int
+
+    @property
+    def is_range(self) -> bool:
+        return self.start != self.end
+
+    @property
+    def ordinal(self) -> int | None:
+        return self.start if self.start == self.end else None
+
+
+@dataclass(frozen=True)
 class ObjectSelector:
     kind: str
     object_id: str
@@ -113,7 +133,7 @@ class NanAddress:
     bs_node: int
     root_namespace: int
     root_head: int
-    selectors: tuple[HeadSelector | ObjectSelector, ...]
+    selectors: tuple[HeadSelector | MirrorPairSelector | ObjectSelector, ...]
     gm_instance: int = 0
     sc_instance: int = 0
     mc_instance: int = 0
@@ -150,6 +170,11 @@ class NanAddress:
         )
 
     @property
+    def mirror_pair_selectors(self) -> tuple[MirrorPairSelector, ...]:
+        return tuple(item for item in self.selectors
+                     if isinstance(item, MirrorPairSelector))
+
+    @property
     def object_selectors(self) -> tuple[ObjectSelector, ...]:
         return tuple(
             item for item in self.selectors if isinstance(item, ObjectSelector)
@@ -161,6 +186,11 @@ class NanAddress:
         for selector in self.selectors:
             if isinstance(selector, HeadSelector):
                 rendered += "::" + _render_heads(selector)
+                continue
+            if isinstance(selector, MirrorPairSelector):
+                rendered += f"::HW{selector.namespace}:MP{selector.start}"
+                if selector.is_range:
+                    rendered += f"-{selector.end}"
                 continue
             rendered += f":{selector.kind}#{selector.object_id}"
             if selector.subrelation is not None:
@@ -207,7 +237,17 @@ def _expand_heads(spec: str) -> tuple[int, ...]:
     return tuple(heads)
 
 
-def _parse_selector(token: str) -> HeadSelector | ObjectSelector:
+def _parse_selector(token: str) -> HeadSelector | MirrorPairSelector | ObjectSelector:
+    mp = _MP.fullmatch(token)
+    if mp:
+        namespace = _check_coordinate("MP namespace", int(mp.group("namespace")), 255)
+        if namespace != 0:
+            raise AddressError("mirror pairs belong to HW0 only")
+        start = int(mp.group("start"))
+        end = int(mp.group("end") or start)
+        if not (0 <= start <= end < 32640):
+            raise AddressError("mirror pair ordinal must be 0..32639, with increasing range")
+        return MirrorPairSelector(namespace, start, end)
     head = _HEAD.fullmatch(token)
     if head:
         namespace = _check_coordinate(
@@ -233,12 +273,12 @@ def _parse_selector(token: str) -> HeadSelector | ObjectSelector:
     raise AddressError(f"unsupported selector: {token}")
 
 
-def _parse_selectors(raw: str) -> tuple[HeadSelector | ObjectSelector, ...]:
+def _parse_selectors(raw: str) -> tuple[HeadSelector | MirrorPairSelector | ObjectSelector, ...]:
     if not raw:
         return ()
     # ``::`` separates layers/selectors; a single ``:`` introduces a leaf.
     if raw.startswith("::"):
-        result: list[HeadSelector | ObjectSelector] = []
+        result: list[HeadSelector | MirrorPairSelector | ObjectSelector] = []
         for chunk in raw[2:].split("::"):
             if not chunk:
                 raise AddressError("empty address selector")
