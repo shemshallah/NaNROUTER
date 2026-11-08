@@ -131,6 +131,89 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         return published
 
+    def test_real_native_cas_recovers_after_crash_before_router_ack(self):
+        """Real guest runs once; a failed post-CAS ACK cannot double-write."""
+        from nanlmind_hermes.native_head_checkpoint import (
+            NativeHeadCheckpointCoordinator,
+        )
+        raw = bytes(BANK_BYTES)
+        source = self.fence(self.universe_id)
+        request = self.request(
+            dispatch_id="native-head-e2e-interrupted-ack-003",
+            raw=raw, generation=source["chart_generation"],
+            feature=63, increment=1,
+        )
+        staged = self.journal.execute(
+            request=request, lease_receipt=self.receipt, network_head=0,
+            raw_bank=raw, native_guest=self.guest, allow_genesis_format=True,
+        )
+        self.assertTrue(staged["native_guest_invoked_locally"])
+        self.assertTrue(staged["source_snapshot_bound"])
+        self.assertEqual(
+            staged["source_chart_sha256"], source["chart_sha256"],
+        )
+        self.assertEqual(
+            staged["source_root_block_sha256"], source["root_block_sha256"],
+        )
+        def crash_before_ack(*, request, lease_receipt, network_head):
+            raise RuntimeError("simulated crash after full-page CAS")
+
+        self.journal.confirm_local_checkpoint = crash_before_ack
+        coordinator = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal,
+        )
+        with self.assertRaisesRegex(RuntimeError, "after full-page CAS"):
+            coordinator.commit(
+                request=request, lease_receipt=self.receipt, network_head=0,
+            )
+        durable = self.fence(self.universe_id)
+        self.assertEqual(durable["chart_generation"], 2)
+        self.assertEqual(durable["bank_sha256"], staged["bank_after_sha256"])
+        self.assertEqual(
+            self.journal.inspect(
+                request=request, lease_receipt=self.receipt, network_head=0,
+            )["state"], "completed_staging_only",
+        )
+
+        # Restart the actual durable router journal. The next coordinator
+        # verifies both adjacent chart snapshots, ACKs the old dispatch and
+        # never calls the native guest or creates an extra chart generation.
+        self.journal = HermesHeadObservationJournal(
+            self.base / "dispatch.sqlite",
+            lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.fence,
+        )
+        recovered = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal,
+        ).commit(
+            request=request, lease_receipt=self.receipt, network_head=0,
+        )
+        self.assertTrue(recovered["recovered_prior_local_checkpoint"])
+        self.assertTrue(recovered["local_checkpoint_verified"])
+        self.assertTrue(recovered["source_snapshot_bound"])
+        self.assertEqual(
+            recovered["source_chart_sha256"], source["chart_sha256"],
+        )
+        self.assertFalse(recovered["native_execution_newly_invoked"])
+        self.assertFalse(recovered["canonical_training_committed"])
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
+        history = self.journal.inspect(
+            request=request, lease_receipt=self.receipt, network_head=0,
+        )
+        self.assertEqual(history["state"], "checkpointed_locally")
+        self.assertTrue(history["source_snapshot_bound"])
+        self.assertEqual(
+            history["source_root_block_sha256"], source["root_block_sha256"],
+        )
+        replay = self.journal.execute(
+            request=request, lease_receipt=self.receipt, network_head=0,
+            raw_bank=raw, native_guest=self.guest, allow_genesis_format=True,
+        )
+        self.assertTrue(replay["replayed_from_journal"])
+        self.assertNotIn("raw_bank", replay)
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
+
     def test_pinned_guest_two_native_revisions_then_tombstones_survive_restart(self):
         from nanlmind_hermes.head_bank_transport import (
             export_guest_bank_bytes,
