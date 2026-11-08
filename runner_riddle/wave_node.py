@@ -30,8 +30,8 @@ class NannetNodeBinding:
         ):
             if not value or len(value) > 128:
                 raise NannetNodeError(f"{name} must be 1..128 characters")
-        if not 1 <= self.node_point <= 255:
-            raise NannetNodeError("node_point must be in 1..255")
+        if not 1 <= self.node_point <= 256:
+            raise NannetNodeError("node_point must be in 1..256")
         if len(self.public_key_fingerprint) != 64 or any(
             c not in "0123456789abcdef" for c in self.public_key_fingerprint
         ):
