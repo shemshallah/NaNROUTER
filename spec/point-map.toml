@@ -1,95 +1,66 @@
 schema = "nanrouter.point-map.v1"
-namespace = "overbootstrap-node-point"
+namespace = "overbootstrap-hardware-node"
 point_min = 0
 point_max = 255
-registration_min = 9
+registration_min = 5
 registration_max = 255
 
-# Display names are one-based; existing NANNET wire BSR coordinates remain 0-based.
-# point 0 is BSR1 for humans and BSR0 on the wire.
+# Shared bootstrap BS0:0 is the one NANNET runner-ring port; it is NOT a HW
+# hardware node and consumes NONE of HW0..HW255. The six CPU/BSR workers are
+# members of BS0's internal ring, not extra HW allocations.
+# These HW IDs are specific to BS0. Other bootstrap namespaces have their
+# own independent hardware-node allocation maps.
 [[point]]
 id = 0
-role = "bootstrap-runner-ring"
-label = "BSR1"
-bsr_display = 1
-bsr_wire = 0
+role = "bootstrap-hardware-node"
+label = "HW0"
 permanent = true
 registration = "reserved"
 
 [[point]]
 id = 1
 role = "personal-phone"
-label = "permanently-attached-phone"
+label = "Android HW1"
 permanent = true
 registration = "paired-device-only"
 
 [[point]]
 id = 2
-role = "hermes-demo"
-label = "Hermes demonstration"
+role = "hermes-hardware-node"
+label = "Hermes HW2"
 permanent = true
-registration = "demo-only"
+registration = "paired-device-only"
 
 [[point]]
 id = 3
-role = "clocked-demo"
-label = "Clocked demonstration"
+role = "clocked-hardware-node"
+label = "Clocked HW3"
 permanent = true
-registration = "demo-only"
+registration = "paired-device-only"
 
 [[point]]
 id = 4
-role = "bootstrap-runner-ring"
-label = "BSR2"
-bsr_display = 2
-bsr_wire = 1
-permanent = true
-registration = "reserved"
-
-[[point]]
-id = 5
-role = "bootstrap-runner-ring"
-label = "BSR3"
-bsr_display = 3
-bsr_wire = 2
-permanent = true
-registration = "reserved"
-
-[[point]]
-id = 6
-role = "bootstrap-runner-ring"
-label = "BSR4"
-bsr_display = 4
-bsr_wire = 3
-permanent = true
-registration = "reserved"
-
-[[point]]
-id = 7
-role = "bootstrap-runner-ring"
-label = "BSR5"
-bsr_display = 5
-bsr_wire = 4
-permanent = true
-registration = "reserved"
-
-[[point]]
-id = 8
-role = "bootstrap-runner-ring"
-label = "BSR6"
-bsr_display = 6
-bsr_wire = 5
+role = "wordnet-universe"
+label = "WordNet HW4"
 permanent = true
 registration = "reserved"
 
 [registration]
-available_points = "9..255"
+available_points = "5..255"
+reserved_hw_slots = [0, 1, 2, 3, 4]
+wordnet_hw = 4
+allocation_authority = "NANNET portal, moving to NaNROUTER after authenticated cutover"
 requires_nannet_registration = true
 requires_unique_identity = true
 requires_route_authority = true
 ephemeral_points_may_not_be_promoted_to_permanent = true
 permanent_points_may_not_be_reassigned_by_learning = true
+per_bootstrap_hardware_namespace = true
 
+# Local head indices inside a hardware/universe topology are NOT global HW
+# hardware node numbers or the BS0:0 network port. Existing 6 runner-head
+# compute/control positions may remain internal to the HW0 learning topology;
+# they are NOT HW4-HW8 reservations or separate runner hardware addresses.
 [head_namespace]
 count = 256
 reserved_bsr_heads = [0, 4, 5, 6, 7, 8]
@@ -97,39 +68,40 @@ boolean_learning_heads = "all head indices except reserved_bsr_heads"
 boolean_learning_head_count = 250
 head_namespace_is_not_node_point_namespace = true
 
-# These are local head IDs, explicitly bound to node points; numeric equality
-# is not an implicit namespace conversion.
 [[head_namespace.bsr_binding]]
 head_index = 0
-node_point = 0
+runner_ring_port = "BS0:0"
 bsr_wire = 0
 
 [[head_namespace.bsr_binding]]
 head_index = 4
-node_point = 4
+runner_ring_port = "BS0:0"
 bsr_wire = 1
 
 [[head_namespace.bsr_binding]]
 head_index = 5
-node_point = 5
+runner_ring_port = "BS0:0"
 bsr_wire = 2
 
 [[head_namespace.bsr_binding]]
 head_index = 6
-node_point = 6
+runner_ring_port = "BS0:0"
 bsr_wire = 3
 
 [[head_namespace.bsr_binding]]
 head_index = 7
-node_point = 7
+runner_ring_port = "BS0:0"
 bsr_wire = 4
 
 [[head_namespace.bsr_binding]]
 head_index = 8
-node_point = 8
+runner_ring_port = "BS0:0"
 bsr_wire = 5
 
 [network_gateway]
+nannet_port = "BS0:0"
+nannet_port_address = "nan://GM0:SC0:MC0:BS0:0"
+attached_hardware_root = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 canonical_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 bootstrap_service_class = 0
 bootstrap_node = 0
@@ -137,6 +109,7 @@ hosting = "Koyeb"
 availability_role = "persistent-24x7-ingress-egress"
 owns_runner_heads = false
 owns_master_route_cache = false
+port_is_hardware_node = false
 
 [macrocluster]
 canonical_address = "nan://GM0:SC0:MC0:0"
@@ -144,5 +117,6 @@ macrocluster_class = 0
 macrocluster_id = 0
 runner_units = 6
 runner_wire_bsr = [0, 1, 2, 3, 4, 5]
-control = "runner-ring"
-network_gateway_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+control = "BS0:0 shared runner-ring port"
+network_gateway_address = "nan://GM0:SC0:MC0:BS0:0"
+hardware_root_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
