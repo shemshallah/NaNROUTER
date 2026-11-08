@@ -37,7 +37,8 @@ def is_portal_path(path):
     target = split.path
     if (split.scheme or split.netloc or split.fragment or "\x00" in path
             or "\\" in path or path.startswith("//")
-            or not target.startswith("/v1/") or "//" in target):
+            or not target.startswith("/v1/") or "//" in target
+            or any(segment in (".", "..") for segment in target.split("/"))):
         return False
     return not any(target == base or target.startswith(base + "/")
                    for base in _ROOT_OWNED)
