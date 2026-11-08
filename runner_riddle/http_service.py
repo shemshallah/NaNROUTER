@@ -15,6 +15,7 @@ from .macro import BootstrapMacroPlanner, CurriculumState, PolicyError, SignedRa
 from .cache import MasterRouteCache, RouteError
 from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
+from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
 from .n16t_guest import (
     MAX_FRAME_BYTES as N16T_MAX_FRAME_BYTES,
     MIN_FRAME_BYTES as N16T_MIN_FRAME_BYTES,
@@ -50,6 +51,13 @@ class RiddleService:
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
         self.route_key = os.environ.get("RIDDLE_ROUTE_HMAC_KEY", "").encode()
         self.feedback_key = os.environ.get("RIDDLE_FEEDBACK_HMAC_KEY", "").encode()
+        self.hermes_delegate_token = os.environ.get("RIDDLE_HERMES_DELEGATION_TOKEN", "")
+        hermes_signing_key = os.environ.get("RIDDLE_HERMES_RECEIPT_HMAC_KEY", "").encode()
+        self.hermes_leases = None
+        if self.hermes_delegate_token or hermes_signing_key:
+            if len(self.hermes_delegate_token) < 32 or len(hermes_signing_key) < 32:
+                raise ServiceConfigError("both HERMES portal delegation token and receipt key must be 32+ bytes")
+            self.hermes_leases = HermesLeaseRegistry(data_dir / "hermes-universe-leases.sqlite", hermes_signing_key)
         self.n16t_token = os.environ.get("RIDDLE_N16T_SUBMIT_TOKEN", "")
         self.n16t_guest_pool = None
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
@@ -209,6 +217,7 @@ def make_handler(service: RiddleService):
                     "volume_registry": service.volume_registry_health(),
                     "runner_ring": self._ring_health(service),
                     "live_route_commit": False,
+                    "hermes_delegated_lease_authority": service.hermes_leases is not None,
                 })
                 return
             if self.path == "/v1/riddle/feedback":
@@ -262,6 +271,46 @@ def make_handler(service: RiddleService):
         def do_POST(self):
             if self.path == "/n16t":
                 self._n16t()
+                return
+            if self.path.startswith("/v1/hermes/leases/"):
+                # This is a portal-to-router route, NOT a public guest API.
+                # The portal must first validate its NANNET installation/HW
+                # identity, scopes and revocation before delegating the call.
+                if service.hermes_leases is None:
+                    self._json(503, {"error": "HERMES delegated lease authority is not configured"})
+                    return
+                if not self._authorized(service.hermes_delegate_token):
+                    self._json(401, {"error": "NANNET portal delegation required"})
+                    return
+                try:
+                    body = self._body()
+                    action = self.path.removeprefix("/v1/hermes/leases/")
+                    if action == "open":
+                        receipt = service.hermes_leases.open(
+                            installation_id=body["installation_id"],
+                            node_point=body["node_point"], request_id=body["request_id"],
+                            ttl_seconds=body.get("ttl_seconds", 900))
+                        self._json(200, {"receipt": receipt})
+                    elif action == "renew":
+                        receipt = service.hermes_leases.renew(
+                            installation_id=body["installation_id"], receipt=body["receipt"],
+                            ttl_seconds=body.get("ttl_seconds", 900))
+                        self._json(200, {"receipt": receipt})
+                    elif action == "resolve":
+                        resolved = service.hermes_leases.resolve(
+                            installation_id=body["installation_id"], receipt=body["receipt"],
+                            head_index=body["head_index"])
+                        self._json(200, {"route": resolved})
+                    elif action == "release":
+                        result = service.hermes_leases.release(
+                            installation_id=body["installation_id"], receipt=body["receipt"])
+                        self._json(200, result)
+                    else:
+                        self._json(404, {"error": "not found"})
+                except (KeyError, TypeError, ValueError) as exc:
+                    self._json(400, {"error": str(exc)})
+                except Exception:
+                    self._json(500, {"error": "internal HERMES lease service error"})
                 return
             try:
                 body = self._body()
