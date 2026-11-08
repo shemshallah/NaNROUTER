@@ -17,11 +17,13 @@ from .budget import DEFAULT_GUEST_BUDGET_BYTES
 from .mth_registry import MthRegistry, MthRegistryError, MthPlanError
 
 SCHEMA = "nanrouter.hermes-mth-tools.v1"
-# mth_execute.nas has exactly these two admitted program/operator paths today.
+# mth_execute.nas is the sole admitted dynamic program/operator allowlist.
 # Other manifest entries are native fixture-verified, NOT general callable ABIs.
 NATIVE_DISPATCH = frozenset({
     "mth.vector.dot256.f32",
     "mth.vector.cosine256.f32",
+    "mth.vector.add256.f32",
+    "mth.vector.sub256.f32",
 })
 MAX_CATALOG_PAGE = 100
 MAX_PLAN_STEPS = 64
