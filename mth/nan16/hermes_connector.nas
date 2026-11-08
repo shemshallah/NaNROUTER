@@ -577,7 +577,8 @@ RET
 ; builder state hc_bst: 0 active, 1 nspan, 2 data words, 3 seq, 4 cslot, 5 record addr
 ; hc_call_begin: r1=cslot r2=tool hash r3=head(0..254) r4=trusted now -> r1 = seq, r3
 hc_call_begin:
-ST r15,r0,@hc_cb_retST r1,r0,@hc_cb_cs
+ST r15,r0,@hc_cb_ret
+ST r1,r0,@hc_cb_cs
 ST r2,r0,@hc_cb_hash
 ST r3,r0,@hc_cb_head
 ST r4,r0,@hc_cb_now
@@ -1156,7 +1157,8 @@ hc_hb_dst:
 .word 0
 hc_hb_rec:
 .word 0
-hc_hb_seqv:.word 0
+hc_hb_seqv:
+.word 0
 
 ; hc_hello_parse: r1 = src bytes, r2 = total, r3 = cslot -> r1 = granted window words, r3
 hc_hello_parse:
