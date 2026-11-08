@@ -1,0 +1,29 @@
+name: NaNROUTER Koyeb portal parity image
+on:
+  pull_request:
+    paths:
+      - deploy/portal/**
+      - .github/workflows/portal-image-ci.yml
+  push:
+    paths:
+      - deploy/portal/**
+      - .github/workflows/portal-image-ci.yml
+permissions:
+  contents: read
+jobs:
+  build-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the source-pinned portal image
+        run: docker build --pull -t nanrouter-portal:parity -f deploy/portal/Dockerfile .
+      - name: Check process entrypoint and imports
+        run: |
+          docker run --rm --entrypoint sh nanrouter-portal:parity -ec '
+            sh -n /app/start_portal.sh
+            test -s /app/state/hermes-universe.nmg
+            test -x /app/nanlm-universal
+            python -c "import nannet_router.http_service, nannet_clocked.gateway, nanlmind_nannet"
+            echo PORTAL_PINNED_RUNTIME_PARITY_PASS
+          '
