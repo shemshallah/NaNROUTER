@@ -171,7 +171,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
 - [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/abs/relu are implemented and locally verified; broadcast, squared norm beyond existing norm kernel, distance, and normalization remain open.
-- [ ] `B-22` Argmin/argmax/masks/permutation/prefix sums.
+- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; masks/permutation/prefix sums remain open.
 - [ ] `B-23` **PARTIAL:** native 256×256 float32 transpose is locally verified; reshape/multiply/elementwise/axis reductions/diagonal/identity/zero/normalization remain open.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
