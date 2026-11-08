@@ -63,7 +63,8 @@ class HermesNativeLeaseRuntime:
             raise HermesNativeError("HERMES NaN16 label map missing")
         labels = Path(self.labels).read_text(encoding="utf-8")
         for name in ("n16_server_exchange", "nhl_open", "nhl_renew",
-                     "nhl_release", "nhl_nannet_route", "nhr_hw_admit"):
+                     "nhl_release", "nhl_nannet_route", "nhr_hw_admit",
+                     "mth_u32_add_checked", "mth_u32_sub_checked"):
             if not re.search(r"(?m)^" + name + r"\s+\d+\s*$", labels):
                 raise HermesNativeError("HERMES guest missing required native entry " + name)
         self._vm_factory = vm_factory
@@ -127,6 +128,38 @@ class HermesNativeLeaseRuntime:
             return {"native_hardware_admitted": True,
                     "native_hardware_entry": "nhr_hw_admit",
                     "node_point": node_point, "hw": hw}
+
+    def execute_math(self, installation_id, kernel_id, a, b):
+        """Execute allowlisted scalar MTH math in the loaded *real* NaN16 VM.
+
+        Python validates authentication/shape only. All arithmetic, overflow,
+        and underflow decisions occur in mth_integer.nas.
+        """
+        entries = {
+            "mth.u32.add_checked": "mth_u32_add_checked",
+            "mth.u32.sub_checked": "mth_u32_sub_checked",
+        }
+        entry = entries.get(kernel_id) if isinstance(kernel_id, str) else None
+        if entry is None:
+            raise HermesNativeError("MTH kernel ID is not in the pinned native allowlist")
+        for name, value in (("a", a), ("b", b)):
+            if type(value) is not int or not 0 <= value <= 0xFFFFFFFF:
+                raise HermesNativeError("MTH operand " + name + " must be an unsigned NaN16 payload")
+        with self._lock:
+            vm, _ = self._guest(installation_id)
+            try:
+                vm.call(entry, {1: a, 2: b})
+                value = vm.reg(1)
+                exact = vm.reg(2)
+            except (ValueError, OSError, N16TGuestRuntimeError) as exc:
+                raise HermesNativeError("pinned MTH NaN16 kernel failed closed") from exc
+            if exact not in (0, 1):
+                raise HermesNativeError("MTH native kernel returned invalid exactness status")
+            return {
+                "kernel_id": kernel_id, "native_kernel_entry": entry,
+                "value_u32": value, "exact": bool(exact),
+                "native_nan16_execution": True, "model_training_committed": False,
+            }
 
     def _guest(self, installation_id):
         if self._closed:
