@@ -62,7 +62,7 @@ class HermesMthToolsTests(unittest.TestCase):
         result = self.tools.invoke("mth.categories")
         self.assertEqual(sum(result["families"].values()), len(self.tools.registry))
         self.assertEqual(sum(result["execution_modes"].values()), len(self.tools.registry))
-        self.assertEqual(result["execution_modes"].get("admission_gated_native_abi"), 2)
+        self.assertEqual(result["execution_modes"].get("admission_gated_native_abi"), 4)
 
     def test_head_directed_kernel_and_family_resolution(self):
         family = self.tools.invoke("mth.route", {
