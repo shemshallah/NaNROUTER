@@ -1,0 +1,47 @@
+# Proposed single Koyeb service, owned/built from NaNROUTER.
+# This file does NOT deploy anything. Migrate the existing NANNET authority
+# SQLite volume and issuer secret without ever running two public writers.
+name: nanrouter-bs0
+type: web
+ports:
+  - port: 8080
+    protocol: http
+build:
+  docker:
+    dockerfile: Dockerfile
+env:
+  - key: PORT
+    value: "8080"
+  - key: RIDDLE_DATA_DIR
+    value: /data
+  - key: RIDDLE_KOYEB_ROUTER_PORTAL_ENABLED
+    value: "1"
+  - key: RIDDLE_HERMES_NATIVE_ENABLED
+    value: "1"
+  - key: RIDDLE_REQUIRE_EXISTING_ISSUER_DB
+    value: "1"
+  - key: NANNET_AUTHORITY_DB
+    value: /data/nannet-authority.sqlite
+  - key: NANLM_MERGE_ROOT
+    value: /data
+  - key: NANLM_MERGE_TOKEN
+    secret: true
+  - key: NANNET_AUTHORITY_MASTER_KEY
+    secret: true
+  - key: RIDDLE_INTAKE_TOKEN
+    secret: true
+  - key: RIDDLE_WORKER_TOKEN
+    secret: true
+  - key: RIDDLE_FEEDBACK_HMAC_KEY
+    secret: true
+  - key: RIDDLE_HERMES_DELEGATION_TOKEN
+    secret: true
+  - key: RIDDLE_HERMES_RECEIPT_HMAC_KEY
+    secret: true
+  - key: RIDDLE_N16T_SUBMIT_TOKEN
+    secret: true
+  - key: RIDDLE_HIERARCHY_ADMIN_TOKEN
+    secret: true
+volumes:
+  - mount_path: /data
+    size_gb: 2
