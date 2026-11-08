@@ -50,16 +50,27 @@ from .math_objects import (
 MATH_SCHEMA_VERSION = 1
 MATH_STORE_SCHEMA = "nanrouter.math-store.v1"
 MATH_STORE_HEALTH_SCHEMA = "nanrouter.math-store-health.v1"
+PAGE_RECORD_SCHEMA = "nanrouter.math-page-record.v1"
+PAGE_MAP_SCHEMA = "nanrouter.math-page-map.v1"
 
 DEFAULT_CHUNK_BYTES = 1_048_576          # 1 MiB, the existing wave payload bound
 DEFAULT_MAX_PAYLOAD_BYTES = 2_097_152    # 2 MiB total math payload bound
+DEFAULT_PAGE_BYTES = 32 * 1024           # 32 KiB universe page
+
+PAGE_COUNT = 256                         # MC0 universe page map: 0..255
+HEAD_PAGE_COUNT = 255                    # pages 0..254 are head pages
+NANNET0_PAGE_ID = 255                    # page 255 is the NANNET0 node page
+PAGE_KINDS = frozenset({"head", "nannet0"})
+PAGE_STATES = frozenset({
+    "pinned", "sealed", "evicted", "released", "quarantined",
+})
 
 MAPPING_OBJECT_TYPES = frozenset({"leaf", "function", "rule", "relation"})
 COMMIT_INTENT_STATES = frozenset({"pending", "finalized", "failed"})
 EVENT_TYPES = frozenset({
     "propose", "preflight", "execute", "commit", "null", "void", "rollback",
     "mapping", "admission", "candidate", "leaf", "function", "rule",
-    "relation", "cache", "certificate",
+    "relation", "cache", "certificate", "page",
 })
 
 
@@ -101,6 +112,26 @@ class MathNmpError(MathStoreError):
 
 class MathNmpTransitionError(MathNmpError):
     """An NMP transition does not chain from the stored current state."""
+
+
+class MathPageError(MathStoreError):
+    """Base error for durable universe page records."""
+
+
+class MathPageBoundsError(MathPageError):
+    """A page id is outside the fixed 0..255 universe page map."""
+
+
+class Nannet0PageError(MathPageBoundsError):
+    """NANNET0 (page/ring position 255) was used as a logical lane or head."""
+
+
+class MathPageConflictError(MathConflictError, MathPageError):
+    """A page already has a different immutable leaf binding."""
+
+
+class MathPageUnderflowError(MathPageError):
+    """A release tried to decrement a page pin count below zero."""
 
 
 class MathStoreAuthorizationDenied(MathStoreError, AuthorizationDenied):
@@ -168,6 +199,22 @@ def _optional_digest(name: str, value: Any) -> str | None:
     if value is None:
         return None
     return _require_digest(name, value)
+
+
+def _require_page_id(name: str, value: Any) -> int:
+    """Validate a universe page id without conflating it with a lane id.
+
+    Page ids are the fixed 0..255 universe page-map positions.  Positions
+    0..254 are head pages; position 255 is the NANNET0 node page, not a
+    256th lane, head, or runner slot.
+    """
+    if (isinstance(value, bool) or not isinstance(value, int)
+            or value < 0 or value > PAGE_COUNT - 1):
+        raise MathPageBoundsError(
+            f"{name} must be an integer in 0..{PAGE_COUNT - 1} "
+            "(255 is the NANNET0 page, not a lane)"
+        )
+    return value
 
 
 def _canonical(value: Any, name: str) -> str:
@@ -510,6 +557,73 @@ CREATE TABLE IF NOT EXISTS math_preflight_cache (
 CREATE INDEX IF NOT EXISTS math_preflight_cache_snapshot
     ON math_preflight_cache(snapshot_id, candidate_id, updated_tick);
 
+CREATE TABLE IF NOT EXISTS math_page (
+    page_id INTEGER PRIMARY KEY CHECK(page_id BETWEEN 0 AND 255),
+    owner TEXT NOT NULL CHECK(length(owner) BETWEEN 1 AND 256),
+    generation INTEGER NOT NULL CHECK(generation >= 1),
+    state TEXT NOT NULL DEFAULT 'pinned'
+        CHECK(state IN ('pinned','sealed','evicted','released','quarantined')),
+    kind TEXT NOT NULL CHECK(
+        (kind = 'head' AND page_id BETWEEN 0 AND 254)
+        OR (kind = 'nannet0' AND page_id = 255)
+    ),
+    leaf_id TEXT NOT NULL,
+    leaf_version INTEGER NOT NULL CHECK(leaf_version >= 1),
+    leaf_digest TEXT NOT NULL CHECK(length(leaf_digest) = 64),
+    storage_tier TEXT NOT NULL DEFAULT 'MC0DB',
+    pin_count INTEGER NOT NULL DEFAULT 1 CHECK(pin_count >= 0),
+    operator_id TEXT,
+    operator_version INTEGER
+        CHECK(operator_version IS NULL OR operator_version >= 1),
+    operator_digest TEXT
+        CHECK(operator_digest IS NULL OR length(operator_digest) = 64),
+    page_digest TEXT NOT NULL CHECK(length(page_digest) = 64),
+    created_tick INTEGER NOT NULL CHECK(created_tick >= 0),
+    updated_tick INTEGER NOT NULL CHECK(updated_tick >= 0),
+    CHECK(updated_tick >= created_tick)
+);
+CREATE INDEX IF NOT EXISTS math_page_state
+    ON math_page(state, page_id);
+CREATE INDEX IF NOT EXISTS math_page_owner
+    ON math_page(owner, updated_tick, page_id);
+CREATE INDEX IF NOT EXISTS math_page_leaf
+    ON math_page(leaf_id, leaf_version);
+
+CREATE TABLE IF NOT EXISTS math_page_version (
+    page_id INTEGER NOT NULL CHECK(page_id BETWEEN 0 AND 255),
+    generation INTEGER NOT NULL CHECK(generation >= 1),
+    owner TEXT NOT NULL CHECK(length(owner) BETWEEN 1 AND 256),
+    state TEXT NOT NULL
+        CHECK(state IN ('pinned','sealed','evicted','released','quarantined')),
+    kind TEXT NOT NULL CHECK(
+        (kind = 'head' AND page_id BETWEEN 0 AND 254)
+        OR (kind = 'nannet0' AND page_id = 255)
+    ),
+    leaf_id TEXT NOT NULL,
+    leaf_version INTEGER NOT NULL CHECK(leaf_version >= 1),
+    leaf_digest TEXT NOT NULL CHECK(length(leaf_digest) = 64),
+    storage_tier TEXT NOT NULL DEFAULT 'MC0DB',
+    pin_count INTEGER NOT NULL DEFAULT 1 CHECK(pin_count >= 0),
+    operator_id TEXT,
+    operator_version INTEGER
+        CHECK(operator_version IS NULL OR operator_version >= 1),
+    operator_digest TEXT
+        CHECK(operator_digest IS NULL OR length(operator_digest) = 64),
+    page_digest TEXT NOT NULL CHECK(length(page_digest) = 64),
+    page_json TEXT NOT NULL,
+    created_tick INTEGER NOT NULL CHECK(created_tick >= 0),
+    PRIMARY KEY(page_id, generation),
+    FOREIGN KEY(page_id) REFERENCES math_page(page_id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS math_page_version_leaf
+    ON math_page_version(leaf_id, leaf_version, page_id);
+CREATE TRIGGER IF NOT EXISTS math_page_version_no_update
+    BEFORE UPDATE ON math_page_version
+    BEGIN SELECT RAISE(ABORT, 'math_page_version is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS math_page_version_no_delete
+    BEFORE DELETE ON math_page_version
+    BEGIN SELECT RAISE(ABORT, 'math_page_version is immutable'); END;
+
 CREATE TABLE IF NOT EXISTS math_commit_intent (
     intent_id TEXT PRIMARY KEY,
     mapping_id TEXT NOT NULL,
@@ -794,6 +908,10 @@ class MathStore:
                 ),
                 "commit_evidence": self._table_count(
                     self.bs0_path, "math_commit_evidence"
+                ),
+                "pages": self._table_count(self.mc0_path, "math_page"),
+                "page_versions": self._table_count(
+                    self.mc0_path, "math_page_version"
                 ),
                 "nmp_packets": self._table_count(
                     self.mc0_path, "math_nmp_packet"
@@ -2886,6 +3004,726 @@ class MathStore:
             )
         return removed
 
+    # -- durable universe page records --------------------------------------
+    #
+    # A page is a fixed MC0 universe position (0..255), not a lane and not a
+    # runner slot.  Positions 0..254 are head pages; position 255 is the one
+    # NANNET0 node page.  The leaf binding is immutable: a page may be pinned
+    # again to the same leaf version, but it can never be rebound to different
+    # content.  Every pin/release/state mutation is a compare-and-swap that
+    # writes one immutable math_page_version row and the current math_page
+    # head inside the same MC0DB transaction.
+
+    @staticmethod
+    def page_key(page_id: int) -> str:
+        """Return the canonical ``page:NNN`` key for a universe page id."""
+        _require_page_id("page_id", page_id)
+        return f"page:{page_id:03d}"
+
+    @staticmethod
+    def page_kind(page_id: int) -> str:
+        """Return ``head`` for 0..254 and ``nannet0`` for page 255."""
+        _require_page_id("page_id", page_id)
+        return "nannet0" if page_id == NANNET0_PAGE_ID else "head"
+
+    @staticmethod
+    def _page_state_pins(state: str, pin_count: int) -> None:
+        if state == "released" and pin_count != 0:
+            raise MathPageError(
+                "a released page must have pin_count 0"
+            )
+        if state == "pinned" and pin_count == 0:
+            raise MathPageError(
+                "a pinned page must have at least one pin"
+            )
+
+    @staticmethod
+    def _page_snapshot(record: Mapping[str, Any], *,
+                       tick: int | None = None) -> dict[str, Any]:
+        page_id = int(record["page_id"])
+        updated_tick = (
+            int(record["updated_tick"]) if tick is None else int(tick)
+        )
+        return {
+            "schema": PAGE_RECORD_SCHEMA,
+            "page_id": page_id,
+            "kind": str(record["kind"]),
+            "generation": int(record["generation"]),
+            "owner": str(record["owner"]),
+            "state": str(record["state"]),
+            "leaf_id": str(record["leaf_id"]),
+            "leaf_version": int(record["leaf_version"]),
+            "leaf_digest": str(record["leaf_digest"]),
+            "storage_tier": str(record["storage_tier"]),
+            "pin_count": int(record["pin_count"]),
+            "operator_id": record["operator_id"],
+            "operator_version": (
+                None if record["operator_version"] is None
+                else int(record["operator_version"])
+            ),
+            "operator_digest": record["operator_digest"],
+            "created_tick": int(record["created_tick"]),
+            "updated_tick": updated_tick,
+        }
+
+    @staticmethod
+    def _page_fingerprint(snapshot: Mapping[str, Any]) -> str:
+        return sha256_text(canonical_json(dict(snapshot)))
+
+    def _insert_page_version_tx(self, db: sqlite3.Connection,
+                                snapshot: Mapping[str, Any], *,
+                                tick: int) -> str:
+        page_json = canonical_json(dict(snapshot))
+        page_digest = sha256_text(page_json)
+        db.execute(
+            "INSERT INTO math_page_version(page_id, generation, owner, "
+            "state, kind, leaf_id, leaf_version, leaf_digest, storage_tier, "
+            "pin_count, operator_id, operator_version, operator_digest, "
+            "page_digest, page_json, created_tick) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                int(snapshot["page_id"]), int(snapshot["generation"]),
+                str(snapshot["owner"]), str(snapshot["state"]),
+                str(snapshot["kind"]), str(snapshot["leaf_id"]),
+                int(snapshot["leaf_version"]), str(snapshot["leaf_digest"]),
+                str(snapshot["storage_tier"]), int(snapshot["pin_count"]),
+                snapshot["operator_id"], snapshot["operator_version"],
+                snapshot["operator_digest"], page_digest, page_json, tick,
+            ),
+        )
+        return page_digest
+
+    def _decorate_page_record(self, record: Mapping[str, Any]) -> dict[str, Any]:
+        decorated = dict(record)
+        page_id = int(decorated["page_id"])
+        decorated["page_key"] = self.page_key(page_id)
+        decorated["kind"] = (
+            "nannet0" if page_id == NANNET0_PAGE_ID else "head"
+        )
+        decorated["role"] = decorated["kind"]
+        decorated["nannet0"] = page_id == NANNET0_PAGE_ID
+        decorated["lane_id"] = (
+            None if page_id == NANNET0_PAGE_ID else page_id
+        )
+        decorated["head"] = (
+            None if page_id == NANNET0_PAGE_ID else page_id
+        )
+        decorated["leaf_ref"] = (
+            f"{decorated['leaf_id']}@v{int(decorated['leaf_version'])}"
+        )
+        # Read-only aliases for callers that use the compact leaf
+        # ``version``/``digest`` vocabulary; the explicit columns remain
+        # authoritative.
+        decorated["version"] = int(decorated["leaf_version"])
+        decorated["digest"] = str(decorated["leaf_digest"])
+        decorated["page_version"] = int(decorated["generation"])
+        decorated["page_bytes"] = DEFAULT_PAGE_BYTES
+        decorated.setdefault("historical", False)
+        return decorated
+
+    def _resolve_page_leaf(self, leaf: Any, *, leaf_id: str | None,
+                           leaf_version: int | None,
+                           digest: str | None) -> tuple[str, int, str]:
+        """Resolve a leaf reference and enforce an immutable version/digest."""
+        if leaf is not None and leaf_id is not None:
+            raise MathPageError("provide leaf or leaf_id, not both")
+        declared_digest: str | None = None
+        if leaf is not None:
+            if isinstance(leaf, MathLeaf):
+                leaf_id = leaf.leaf_id
+                if leaf_version is not None and leaf_version != leaf.version:
+                    raise MathPageConflictError(
+                        "leaf ref version conflicts with leaf_version"
+                    )
+                leaf_version = leaf.version
+                declared_digest = leaf.digest()
+            elif isinstance(leaf, Mapping):
+                if "leaf_id" not in leaf:
+                    raise MathPageError("leaf mapping requires leaf_id")
+                leaf_id = str(leaf["leaf_id"])
+                embedded = leaf.get("leaf_version", leaf.get("version"))
+                if embedded is not None:
+                    _require_int("leaf_version", embedded, minimum=1)
+                    if (leaf_version is not None
+                            and int(leaf_version) != int(embedded)):
+                        raise MathPageConflictError(
+                            "leaf ref version conflicts with leaf_version"
+                        )
+                    leaf_version = int(embedded)
+            elif isinstance(leaf, str):
+                target = self.resolve(
+                    leaf,
+                    required_version=leaf_version,
+                )
+                leaf_id = target.leaf_id
+                leaf_version = target.version
+                declared_digest = target.digest()
+            else:
+                raise MathPageError(
+                    "leaf must be a MathLeaf, mapping, leaf reference, or None"
+                )
+        if leaf_id is None:
+            raise MathPageError("pin_page requires a leaf reference")
+        _require_text("leaf_id", leaf_id, maximum=200)
+        if leaf_version is None:
+            target = self.resolve(leaf_id)
+            leaf_version = target.version
+            declared_digest = target.digest()
+        else:
+            _require_int("leaf_version", leaf_version, minimum=1)
+            target = self.get_leaf(
+                leaf_id, int(leaf_version), _authorize=False
+            )
+            if declared_digest is not None \
+                    and declared_digest != target.digest():
+                raise MathPageConflictError(
+                    f"leaf {leaf_id!r} version {leaf_version} digest changed"
+                )
+        row = self._leaf_version_row(leaf_id, int(leaf_version))
+        stored_digest = str(row["leaf_digest"])
+        if target.digest() != stored_digest:
+            raise MathPageConflictError(
+                f"leaf {leaf_id!r} version {leaf_version} is not canonical"
+            )
+        if digest is None:
+            digest = stored_digest
+        else:
+            _require_digest("digest", digest)
+            if digest != stored_digest:
+                raise MathPageConflictError(
+                    f"page digest does not match leaf {leaf_id!r} "
+                    f"version {leaf_version}"
+                )
+        return leaf_id, int(leaf_version), stored_digest
+
+    @staticmethod
+    def _page_operator_binding(
+        operator_id: str | None, operator_version: int | None,
+        operator_digest: str | None,
+        existing: Mapping[str, Any] | None = None,
+    ) -> tuple[str | None, int | None, str | None]:
+        if operator_id is not None:
+            _require_text("operator_id", operator_id, maximum=200)
+        if operator_version is not None:
+            _require_int("operator_version", operator_version, minimum=1)
+        if operator_digest is not None:
+            _require_digest("operator_digest", operator_digest)
+        if (operator_id is None) != (operator_version is None):
+            raise MathPageError(
+                "operator_id and operator_version must be provided together"
+            )
+        if existing is not None:
+            old_id = existing["operator_id"]
+            old_version = existing["operator_version"]
+            old_digest = existing["operator_digest"]
+            if old_id is not None and operator_id is not None \
+                    and (old_id != operator_id
+                         or int(old_version) != int(operator_version)):
+                raise MathPageConflictError(
+                    "page is already bound to a different operator version"
+                )
+            if old_digest is not None and operator_digest is not None \
+                    and old_digest != operator_digest:
+                raise MathPageConflictError(
+                    "page is already bound to a different operator digest"
+                )
+            if operator_id is None:
+                operator_id = old_id
+                operator_version = old_version
+            if operator_digest is None:
+                operator_digest = old_digest
+        return operator_id, operator_version, operator_digest
+
+    def pin_page(self, page_id: int, owner: str, leaf: Any = None,
+                 digest: str | None = None,
+                 generation: int | None = None, tick: int = 0, *,
+                 leaf_ref: Any = None,
+                 leaf_id: str | None = None,
+                 leaf_version: int | None = None,
+                 version: int | None = None,
+                 expected_generation: int | None = None,
+                 storage_tier: str = "MC0DB",
+                 state: str = "pinned",
+                 operator_id: str | None = None,
+                 operator_version: int | None = None,
+                 operator_digest: str | None = None) -> dict[str, Any]:
+        """Publish or pin a page to one immutable leaf version.
+
+        ``generation`` is the expected current generation for compare-and-swap
+        (0 or 1 for a new page, ``None`` to accept the current head).  Each
+        accepted pin increments both ``pin_count`` and the page generation.  A
+        page that already names a different leaf id/version/digest is never
+        rebound.
+        """
+        page_id = _require_page_id("page_id", page_id)
+        _require_text("owner", owner, maximum=256)
+        _require_text("storage_tier", storage_tier, maximum=64)
+        _require_int("tick", tick)
+        if state not in PAGE_STATES:
+            raise MathPageError(
+                f"state must be one of: {', '.join(sorted(PAGE_STATES))}"
+            )
+        if generation is not None:
+            _require_int("generation", generation)
+        if expected_generation is not None:
+            _require_int("expected_generation", expected_generation)
+        if (generation is not None and expected_generation is not None
+                and generation != expected_generation):
+            raise MathPageError(
+                "generation and expected_generation disagree"
+            )
+        expected = (
+            expected_generation if expected_generation is not None
+            else generation
+        )
+        if leaf_ref is not None:
+            if leaf is not None:
+                raise MathPageError("provide leaf or leaf_ref, not both")
+            leaf = leaf_ref
+        if version is not None:
+            if (leaf_version is not None
+                    and int(leaf_version) != int(version)):
+                raise MathPageError(
+                    "version and leaf_version disagree"
+                )
+            leaf_version = version
+        kind = self.page_kind(page_id)
+        key = self.page_key(page_id)
+        self._authorize(WRITE, "page", key)
+        resolved_leaf_id, resolved_version, resolved_digest = \
+            self._resolve_page_leaf(
+                leaf, leaf_id=leaf_id, leaf_version=leaf_version,
+                digest=digest,
+            )
+        action: str
+        event_generation: int
+        event_digest: str
+        event_payload: dict[str, Any]
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_page WHERE page_id=?", (page_id,)
+            ).fetchone()
+            if row is None:
+                # Match put_leaf's creation CAS vocabulary: a new page may
+                # expect either 0 (no row) or 1 (the first generation).
+                if expected not in (None, 0, 1):
+                    raise StaleGenerationError(
+                        f"new page {key!r} must expect generation 0 or 1, "
+                        f"not {expected}"
+                    )
+                op_id, op_version, op_digest = self._page_operator_binding(
+                    operator_id, operator_version, operator_digest,
+                )
+                snapshot = {
+                    "schema": PAGE_RECORD_SCHEMA,
+                    "page_id": page_id,
+                    "kind": kind,
+                    "generation": 1,
+                    "owner": owner,
+                    "state": state,
+                    "leaf_id": resolved_leaf_id,
+                    "leaf_version": resolved_version,
+                    "leaf_digest": resolved_digest,
+                    "storage_tier": storage_tier,
+                    "pin_count": 1,
+                    "operator_id": op_id,
+                    "operator_version": op_version,
+                    "operator_digest": op_digest,
+                    "created_tick": tick,
+                    "updated_tick": tick,
+                }
+                self._page_state_pins(snapshot["state"], 1)
+                page_json = canonical_json(snapshot)
+                page_digest = sha256_text(page_json)
+                db.execute(
+                    "INSERT INTO math_page(page_id, owner, generation, state, "
+                    "kind, leaf_id, leaf_version, leaf_digest, storage_tier, "
+                    "pin_count, operator_id, operator_version, "
+                    "operator_digest, page_digest, created_tick, updated_tick) "
+                    "VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)",
+                    (
+                        page_id, owner, state, kind, resolved_leaf_id,
+                        resolved_version, resolved_digest, storage_tier,
+                        op_id, op_version, op_digest, page_digest, tick, tick,
+                    ),
+                )
+                self._insert_page_version_tx(db, snapshot, tick=tick)
+                action = "publish"
+                event_generation = 1
+                event_digest = page_digest
+                event_payload = {
+                    "action": action, "owner": owner,
+                    "leaf_id": resolved_leaf_id,
+                    "leaf_version": resolved_version,
+                    "pin_count": 1,
+                }
+            else:
+                existing = _row_record(row)
+                if (str(existing["leaf_id"]) != resolved_leaf_id
+                        or int(existing["leaf_version"]) != resolved_version
+                        or str(existing["leaf_digest"]) != resolved_digest):
+                    raise MathPageConflictError(
+                        f"page {key!r} is immutable and already bound to "
+                        f"{existing['leaf_id']}@v{existing['leaf_version']}"
+                    )
+                current_generation = int(existing["generation"])
+                expected_current = (
+                    current_generation if expected is None else expected
+                )
+                if current_generation != expected_current:
+                    raise StaleGenerationError(
+                        f"page {key!r} is at generation "
+                        f"{current_generation}, not {expected_current}"
+                    )
+                op_id, op_version, op_digest = self._page_operator_binding(
+                    operator_id, operator_version, operator_digest,
+                    existing,
+                )
+                new_generation = current_generation + 1
+                new_pin_count = int(existing["pin_count"]) + 1
+                snapshot = self._page_snapshot(existing, tick=tick)
+                snapshot.update({
+                    "generation": new_generation,
+                    "owner": owner,
+                    "state": state,
+                    "storage_tier": storage_tier,
+                    "pin_count": new_pin_count,
+                    "operator_id": op_id,
+                    "operator_version": op_version,
+                    "operator_digest": op_digest,
+                })
+                self._page_state_pins(snapshot["state"], new_pin_count)
+                page_json = canonical_json(snapshot)
+                page_digest = sha256_text(page_json)
+                db.execute(
+                    "UPDATE math_page SET owner=?, generation=?, state=?, "
+                    "storage_tier=?, pin_count=?, operator_id=?, "
+                    "operator_version=?, operator_digest=?, page_digest=?, "
+                    "updated_tick=? WHERE page_id=?",
+                    (
+                        owner, new_generation, state, storage_tier,
+                        new_pin_count, op_id, op_version, op_digest,
+                        page_digest, tick, page_id,
+                    ),
+                )
+                self._insert_page_version_tx(db, snapshot, tick=tick)
+                action = "pin"
+                event_generation = new_generation
+                event_digest = page_digest
+                event_payload = {
+                    "action": action, "owner": owner,
+                    "leaf_id": resolved_leaf_id,
+                    "leaf_version": resolved_version,
+                    "pin_count": new_pin_count,
+                    "previous_generation": current_generation,
+                    "operator_version": op_version,
+                }
+        self.append_event(
+            "page", "page", key, version=event_generation,
+            generation=event_generation, digest=event_digest,
+            payload=event_payload, tick=tick,
+        )
+        return self.get_page(page_id, _authorize=False)
+
+    def release_page(self, page_id: int,
+                     expected_generation: int | None = None, *,
+                     generation: int | None = None,
+                     tick: int = 0) -> dict[str, Any]:
+        """Release one pin using a generation CAS; underflow is rejected."""
+        page_id = _require_page_id("page_id", page_id)
+        _require_int("tick", tick)
+        if generation is not None:
+            _require_int("generation", generation)
+        if expected_generation is not None:
+            _require_int("expected_generation", expected_generation)
+        if (generation is not None and expected_generation is not None
+                and generation != expected_generation):
+            raise MathPageError(
+                "generation and expected_generation disagree"
+            )
+        expected = (
+            expected_generation if expected_generation is not None
+            else generation
+        )
+        key = self.page_key(page_id)
+        self._authorize(WRITE, "page", key)
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_page WHERE page_id=?", (page_id,)
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(f"unknown page {key!r}")
+            existing = _row_record(row)
+            current_generation = int(existing["generation"])
+            expected_current = (
+                current_generation if expected is None else expected
+            )
+            if current_generation != expected_current:
+                raise StaleGenerationError(
+                    f"page {key!r} is at generation "
+                    f"{current_generation}, not {expected_current}"
+                )
+            current_pins = int(existing["pin_count"])
+            if current_pins <= 0:
+                raise MathPageUnderflowError(
+                    f"page {key!r} has no pins to release"
+                )
+            new_pin_count = current_pins - 1
+            new_state = str(existing["state"])
+            if new_pin_count == 0 and new_state != "quarantined":
+                new_state = "released"
+            new_generation = current_generation + 1
+            snapshot = self._page_snapshot(existing, tick=tick)
+            snapshot.update({
+                "generation": new_generation,
+                "state": new_state,
+                "pin_count": new_pin_count,
+            })
+            page_json = canonical_json(snapshot)
+            page_digest = sha256_text(page_json)
+            db.execute(
+                "UPDATE math_page SET generation=?, state=?, pin_count=?, "
+                "page_digest=?, updated_tick=? WHERE page_id=?",
+                (
+                    new_generation, new_state, new_pin_count, page_digest,
+                    tick, page_id,
+                ),
+            )
+            self._insert_page_version_tx(db, snapshot, tick=tick)
+        self.append_event(
+            "page", "page", key, version=new_generation,
+            generation=new_generation, digest=page_digest,
+            payload={
+                "action": "release", "owner": existing["owner"],
+                "leaf_id": existing["leaf_id"],
+                "leaf_version": int(existing["leaf_version"]),
+                "pin_count": new_pin_count,
+                "previous_generation": current_generation,
+            },
+            tick=tick,
+        )
+        return self.get_page(page_id, _authorize=False)
+
+    def get_page(self, page_id: int, *, generation: int | None = None,
+                 _authorize: bool = True) -> dict[str, Any]:
+        """Load the current page head or one immutable historical generation."""
+        page_id = _require_page_id("page_id", page_id)
+        if generation is not None:
+            _require_int("generation", generation, minimum=1)
+        key = self.page_key(page_id)
+        if _authorize:
+            self._authorize(READ, "page", key)
+        if generation is None:
+            with self._connect(self.mc0_path) as db:
+                row = db.execute(
+                    "SELECT * FROM math_page WHERE page_id=?", (page_id,)
+                ).fetchone()
+            if row is None:
+                raise MathReferenceError(f"unknown page {key!r}")
+            record = _row_record(row)
+            snapshot = self._page_snapshot(record)
+            if self._page_fingerprint(snapshot) != str(record["page_digest"]):
+                raise MathReferenceError(
+                    f"page {key!r} generation {record['generation']} "
+                    "digest mismatch"
+                )
+            record["historical"] = False
+            return self._decorate_page_record(record)
+        with self._connect(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_page_version "
+                "WHERE page_id=? AND generation=?",
+                (page_id, generation),
+            ).fetchone()
+        if row is None:
+            raise MathReferenceError(
+                f"page {key!r} generation {generation} is missing"
+            )
+        page_json = str(row["page_json"])
+        try:
+            snapshot = json.loads(page_json)
+            if canonical_json(snapshot) != page_json:
+                raise MathReferenceError(
+                    f"page {key!r} generation {generation} is not canonical"
+                )
+        except MathReferenceError:
+            raise
+        except (TypeError, ValueError) as exc:
+            raise MathReferenceError(
+                f"page {key!r} generation {generation} has invalid JSON"
+            ) from exc
+        except MathObjectError as exc:
+            raise MathReferenceError(
+                f"page {key!r} generation {generation} is not canonical"
+            ) from exc
+        if (sha256_text(page_json) != str(row["page_digest"])
+                or int(snapshot.get("page_id", -1)) != page_id
+                or int(snapshot.get("generation", -1)) != generation):
+            raise MathReferenceError(
+                f"page {key!r} generation {generation} digest mismatch"
+            )
+        record = dict(snapshot)
+        record["page_digest"] = str(row["page_digest"])
+        record["recorded_tick"] = int(row["created_tick"])
+        record["historical"] = True
+        return self._decorate_page_record(record)
+
+    def list_pages(self, *, owner: str | None = None,
+                   state: str | None = None,
+                   leaf_id: str | None = None,
+                   limit: int = 1024) -> list[dict[str, Any]]:
+        """List current page heads in ascending page-id order."""
+        _require_int("limit", limit, minimum=1)
+        if limit > 65536:
+            raise MathPageError("limit must be <= 65536")
+        if owner is not None:
+            _require_text("owner", owner, maximum=256)
+        if state is not None and state not in PAGE_STATES:
+            raise MathPageError(
+                f"state must be one of: {', '.join(sorted(PAGE_STATES))}"
+            )
+        if leaf_id is not None:
+            _require_text("leaf_id", leaf_id, maximum=200)
+        self._authorize(READ, "page", "*")
+        query = "SELECT * FROM math_page WHERE 1=1"
+        args: list[Any] = []
+        if owner is not None:
+            query += " AND owner=?"
+            args.append(owner)
+        if state is not None:
+            query += " AND state=?"
+            args.append(state)
+        if leaf_id is not None:
+            query += " AND leaf_id=?"
+            args.append(leaf_id)
+        query += " ORDER BY page_id ASC LIMIT ?"
+        args.append(limit)
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(query, args).fetchall()
+        return [self._decorate_page_record(_row_record(row))
+                for row in rows]
+
+    def update_page_state(self, page_id: int, state: str,
+                          expected_generation: int | None = None, *,
+                          generation: int | None = None,
+                          tick: int = 0) -> dict[str, Any]:
+        """CAS the page lifecycle state without changing its leaf binding."""
+        page_id = _require_page_id("page_id", page_id)
+        if state not in PAGE_STATES:
+            raise MathPageError(
+                f"state must be one of: {', '.join(sorted(PAGE_STATES))}"
+            )
+        _require_int("tick", tick)
+        if generation is not None:
+            _require_int("generation", generation)
+        if expected_generation is not None:
+            _require_int("expected_generation", expected_generation)
+        if (generation is not None and expected_generation is not None
+                and generation != expected_generation):
+            raise MathPageError(
+                "generation and expected_generation disagree"
+            )
+        expected = (
+            expected_generation if expected_generation is not None
+            else generation
+        )
+        key = self.page_key(page_id)
+        self._authorize(WRITE, "page", key)
+        with self._write(self.mc0_path) as db:
+            row = db.execute(
+                "SELECT * FROM math_page WHERE page_id=?", (page_id,)
+            ).fetchone()
+            if row is None:
+                raise MathReferenceError(f"unknown page {key!r}")
+            existing = _row_record(row)
+            current_generation = int(existing["generation"])
+            expected_current = (
+                current_generation if expected is None else expected
+            )
+            if current_generation != expected_current:
+                raise StaleGenerationError(
+                    f"page {key!r} is at generation "
+                    f"{current_generation}, not {expected_current}"
+                )
+            pin_count = int(existing["pin_count"])
+            self._page_state_pins(state, pin_count)
+            if str(existing["state"]) == state:
+                return self._decorate_page_record(existing)
+            new_generation = current_generation + 1
+            snapshot = self._page_snapshot(existing, tick=tick)
+            snapshot.update({
+                "generation": new_generation,
+                "state": state,
+            })
+            page_json = canonical_json(snapshot)
+            page_digest = sha256_text(page_json)
+            db.execute(
+                "UPDATE math_page SET generation=?, state=?, page_digest=?, "
+                "updated_tick=? WHERE page_id=?",
+                (new_generation, state, page_digest, tick, page_id),
+            )
+            self._insert_page_version_tx(db, snapshot, tick=tick)
+        self.append_event(
+            "page", "page", key, version=new_generation,
+            generation=new_generation, digest=page_digest,
+            payload={
+                "action": "state", "state": state,
+                "previous_state": existing["state"],
+                "previous_generation": current_generation,
+            },
+            tick=tick,
+        )
+        return self.get_page(page_id, _authorize=False)
+
+    def page_map(self, *, include_digest: bool = True) -> dict[str, Any]:
+        """Return the deterministic 256-slot page map.
+
+        The digest covers page content binding (leaf id/version/digest and
+        operator id/version/digest), not pin counts, owners, lifecycle state,
+        or timestamps.  Pinning, releasing, or sealing a page therefore does
+        not invalidate an operator descriptor that carries the same page-map
+        digest; binding different content or an operator version does.
+        """
+        self._authorize(READ, "page", "map")
+        with self._connect(self.mc0_path) as db:
+            rows = db.execute(
+                "SELECT page_id, kind, leaf_id, leaf_version, leaf_digest, "
+                "operator_id, operator_version, operator_digest "
+                "FROM math_page ORDER BY page_id ASC"
+            ).fetchall()
+        pages: list[dict[str, Any] | None] = [None] * PAGE_COUNT
+        for row in rows:
+            page_id = int(row["page_id"])
+            pages[page_id] = {
+                "page_id": page_id,
+                "page_key": self.page_key(page_id),
+                "kind": str(row["kind"]),
+                "leaf_id": str(row["leaf_id"]),
+                "leaf_version": int(row["leaf_version"]),
+                "leaf_digest": str(row["leaf_digest"]),
+                "operator_id": row["operator_id"],
+                "operator_version": (
+                    None if row["operator_version"] is None
+                    else int(row["operator_version"])
+                ),
+                "operator_digest": row["operator_digest"],
+            }
+        document = {
+            "schema": PAGE_MAP_SCHEMA,
+            "page_count": PAGE_COUNT,
+            "head_page_count": HEAD_PAGE_COUNT,
+            "nannet0_page": NANNET0_PAGE_ID,
+            "page_bytes": DEFAULT_PAGE_BYTES,
+            "pages": pages,
+        }
+        if include_digest:
+            document["digest"] = sha256_text(canonical_json(document))
+        return document
+
+    def page_map_digest(self) -> str:
+        """Return the lowercase SHA-256 digest of the current page map."""
+        return str(self.page_map()["digest"])
+
     # -- cross-store commit intents -----------------------------------------
     #
     # BS0DB and MC0DB are separate SQLite databases, so this is not a
@@ -3802,6 +4640,12 @@ class MathStore:
                 "math_commit_intent": self._table_count(
                     self.mc0_path, "math_commit_intent"
                 ),
+                "math_page": self._table_count(
+                    self.mc0_path, "math_page"
+                ),
+                "math_page_version": self._table_count(
+                    self.mc0_path, "math_page_version"
+                ),
                 "math_commit_evidence": self._table_count(
                     self.bs0_path, "math_commit_evidence"
                 ),
@@ -3906,11 +4750,15 @@ class MathStore:
 
 
 __all__ = [
-    "COMMIT_INTENT_STATES", "DEFAULT_CHUNK_BYTES",
-    "DEFAULT_MAX_PAYLOAD_BYTES", "EVENT_TYPES", "MAPPING_OBJECT_TYPES",
-    "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA", "MathCommitError",
+    "COMMIT_INTENT_STATES", "DEFAULT_CHUNK_BYTES", "DEFAULT_PAGE_BYTES",
+    "DEFAULT_MAX_PAYLOAD_BYTES", "EVENT_TYPES", "HEAD_PAGE_COUNT",
+    "MAPPING_OBJECT_TYPES", "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA",
+    "NANNET0_PAGE_ID", "PAGE_COUNT", "PAGE_KINDS", "PAGE_MAP_SCHEMA",
+    "PAGE_RECORD_SCHEMA", "PAGE_STATES", "MathCommitError",
     "MathConflictError", "MathNmpError", "MathNmpTransitionError",
-    "MathPayloadError", "MathReferenceError",
+    "MathPageBoundsError", "MathPageConflictError", "MathPageError",
+    "MathPageUnderflowError", "MathPayloadError", "MathReferenceError",
     "MathSchemaError", "MathStore", "MathStoreAuthorizationDenied",
-    "MathStoreAuthorizationError", "MathStoreError", "StaleGenerationError",
+    "MathStoreAuthorizationError", "MathStoreError", "Nannet0PageError",
+    "StaleGenerationError",
 ]

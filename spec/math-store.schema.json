@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/shemshallah/NaNROUTER/spec/math-store.schema.json",
   "title": "NaNROUTER additive math store storage contract",
-  "description": "Additive math_* tables stored in the existing BS0DB/MC0DB SQLite files. A separate math_schema row owns this contract; wave_schema remains version 1 and is never reinterpreted by this layer. math_mapping is not a second job/lease authority.",
+  "description": "Additive math_* tables stored in the existing BS0DB/MC0DB SQLite files. A separate math_schema row owns this contract; wave_schema remains version 1 and is never reinterpreted by this layer. math_mapping is not a second job/lease authority. math_page/math_page_version are durable MC0 universe page records (0..255, with 255 reserved for NANNET0, never a lane).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,6 +11,7 @@
     "wave_schema_compatibility",
     "stores",
     "payload_chunking",
+    "page_records",
     "status_enums"
   ],
   "properties": {
@@ -103,6 +104,8 @@
                 "math_nmp_transition",
                 "math_mapping",
                 "math_preflight_cache",
+                "math_page",
+                "math_page_version",
                 "math_commit_intent"
               ],
               "properties": {
@@ -151,6 +154,12 @@
                 "math_preflight_cache": {
                   "$ref": "#/$defs/math_preflight_cache"
                 },
+                "math_page": {
+                  "$ref": "#/$defs/math_page"
+                },
+                "math_page_version": {
+                  "$ref": "#/$defs/math_page_version"
+                },
                 "math_commit_intent": {
                   "$ref": "#/$defs/math_commit_intent"
                 }
@@ -187,6 +196,72 @@
         }
       }
     },
+    "page_records": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page_count",
+        "head_page_count",
+        "nannet0_page",
+        "page_bytes",
+        "page_kind",
+        "page_state",
+        "page_map_schema",
+        "page_map_digest_algorithm",
+        "page_map_digest_covers",
+        "pin_semantics"
+      ],
+      "properties": {
+        "page_count": {
+          "const": 256
+        },
+        "head_page_count": {
+          "const": 255
+        },
+        "nannet0_page": {
+          "const": 255
+        },
+        "page_bytes": {
+          "const": 32768
+        },
+        "page_kind": {
+          "const": [
+            "head",
+            "nannet0"
+          ]
+        },
+        "page_state": {
+          "const": [
+            "pinned",
+            "sealed",
+            "evicted",
+            "released",
+            "quarantined"
+          ]
+        },
+        "page_map_schema": {
+          "const": "nanrouter.math-page-map.v1"
+        },
+        "page_map_digest_algorithm": {
+          "const": "sha256 of canonical JSON with sorted keys, compact separators, ensure_ascii=false, allow_nan=false"
+        },
+        "page_map_digest_covers": {
+          "const": [
+            "page_id",
+            "kind",
+            "leaf_id",
+            "leaf_version",
+            "leaf_digest",
+            "operator_id",
+            "operator_version",
+            "operator_digest"
+          ]
+        },
+        "pin_semantics": {
+          "const": "pins increment pin_count and generation; releases decrement and reject underflow; leaf id/version/digest binding is immutable"
+        }
+      }
+    },
     "status_enums": {
       "type": "object",
       "additionalProperties": false,
@@ -201,7 +276,9 @@
         "mapping_status",
         "commit_intent_state",
         "event_type",
-        "nmp_state"
+        "nmp_state",
+        "page_state",
+        "page_kind"
       ],
       "properties": {
         "math_leaf_kind": {
@@ -322,7 +399,8 @@
             "rule",
             "relation",
             "cache",
-            "certificate"
+            "certificate",
+            "page"
           ]
         },
         "nmp_state": {
@@ -346,6 +424,21 @@
             "CANCELLED",
             "INVALID",
             "EXPERIMENTAL"
+          ]
+        },
+        "page_state": {
+          "const": [
+            "pinned",
+            "sealed",
+            "evicted",
+            "released",
+            "quarantined"
+          ]
+        },
+        "page_kind": {
+          "const": [
+            "head",
+            "nannet0"
           ]
         }
       }
@@ -1296,6 +1389,182 @@
         "constraints": {
           "const": [
             "disposable: eviction never deletes canonical math data"
+          ]
+        }
+      }
+    },
+    "math_page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "page_id"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "page_id",
+            "owner",
+            "generation",
+            "state",
+            "kind",
+            "leaf_id",
+            "leaf_version",
+            "leaf_digest",
+            "storage_tier",
+            "pin_count",
+            "page_digest",
+            "created_tick",
+            "updated_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "page_id": "INTEGER",
+            "owner": "TEXT",
+            "generation": "INTEGER",
+            "state": "TEXT",
+            "kind": "TEXT",
+            "leaf_id": "TEXT",
+            "leaf_version": "INTEGER",
+            "leaf_digest": "TEXT",
+            "storage_tier": "TEXT",
+            "pin_count": "INTEGER",
+            "operator_id": "TEXT",
+            "operator_version": "INTEGER",
+            "operator_digest": "TEXT",
+            "page_digest": "TEXT",
+            "created_tick": "INTEGER",
+            "updated_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "operator_id",
+            "operator_version",
+            "operator_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "leaf_digest",
+            "operator_digest",
+            "page_digest"
+          ]
+        },
+        "status_field": {
+          "const": "state"
+        },
+        "status_enum": {
+          "const": [
+            "pinned",
+            "sealed",
+            "evicted",
+            "released",
+            "quarantined"
+          ]
+        },
+        "bounds": {
+          "const": {
+            "page_id": "0..255",
+            "head_pages": "0..254",
+            "nannet0_page": 255
+          }
+        },
+        "constraints": {
+          "const": [
+            "page_id is the fixed 0..255 universe page map, never a lane or runner slot",
+            "page 255 is the NANNET0 node page; pages 0..254 are head pages",
+            "leaf id/version/digest binding is immutable after first publication",
+            "pins increment pin_count; releases decrement and never underflow",
+            "generation advances only by compare-and-swap",
+            "a failed CAS or binding conflict leaves the previous page head active",
+            "operator id/version/digest tie cache invalidation to the operator version"
+          ]
+        }
+      }
+    },
+    "math_page_version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_key",
+        "required_fields",
+        "columns"
+      ],
+      "properties": {
+        "primary_key": {
+          "const": [
+            "page_id",
+            "generation"
+          ]
+        },
+        "required_fields": {
+          "const": [
+            "page_id",
+            "generation",
+            "owner",
+            "state",
+            "kind",
+            "leaf_id",
+            "leaf_version",
+            "leaf_digest",
+            "storage_tier",
+            "pin_count",
+            "page_digest",
+            "page_json",
+            "created_tick"
+          ]
+        },
+        "columns": {
+          "const": {
+            "page_id": "INTEGER",
+            "generation": "INTEGER",
+            "owner": "TEXT",
+            "state": "TEXT",
+            "kind": "TEXT",
+            "leaf_id": "TEXT",
+            "leaf_version": "INTEGER",
+            "leaf_digest": "TEXT",
+            "storage_tier": "TEXT",
+            "pin_count": "INTEGER",
+            "operator_id": "TEXT",
+            "operator_version": "INTEGER",
+            "operator_digest": "TEXT",
+            "page_digest": "TEXT",
+            "page_json": "TEXT",
+            "created_tick": "INTEGER"
+          }
+        },
+        "nullable_fields": {
+          "const": [
+            "operator_id",
+            "operator_version",
+            "operator_digest"
+          ]
+        },
+        "digest_fields": {
+          "const": [
+            "leaf_digest",
+            "operator_digest",
+            "page_digest"
+          ]
+        },
+        "append_only": {
+          "const": true
+        },
+        "constraints": {
+          "const": [
+            "one immutable row per page id and generation, written in the same MC0DB transaction as the current head",
+            "page_json is canonical JSON of the page snapshot and hashes to page_digest",
+            "UPDATE and DELETE are rejected by triggers",
+            "historical generations remain readable after later pins, releases, or state changes"
           ]
         }
       }

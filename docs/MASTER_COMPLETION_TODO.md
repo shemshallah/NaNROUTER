@@ -68,7 +68,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-36` Add `math_nmp_packet`/transition counts to health; runtime/bridge transitions now write the durable ledger.
 - [ ] `A-37` Enforce content-digest equality by default for all new versioned records (legacy compatibility clearly fenced).
 - [ ] `A-38` Enforce full result provenance: input IDs/versions/digests, function/rule snapshot, candidate/linker, runner/lease, native source/fixture digest, numerical policy, output digest, signature.
-- [ ] `A-39` Add durable universe page-record table/versioning and cache invalidation tied to operator version.
+- [x] `A-39` Durable universe page records with 0..255 bounds, head/NANNET0 mapping, immutable versions, generation CAS, pin/release, page-map digest, and atomic MC0DB head+version publication. Provider-mounted pages and cross-store page events remain open.
 - [ ] `A-40` Add missing/corrupt/evicted cache generation tests and audit-digest-set preservation.
 - [ ] `A-41` Add durable alias record/schema/ACL (HW0 aliases currently caller-supplied).
 
@@ -245,7 +245,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 # E. `DEEP_PLAN_CONT.md` completion
 
-- [ ] `E-01` Page-record table with owner/pin/digest/version/generation/atomic publication.
+- [x] `E-01` Page-record table with owner/pin/digest/version/generation/atomic publication (durable row layer; provider-mounted page files remain open).
 - [ ] `E-02` Executor paging + native dispatch + evidence capture.
 - [ ] `E-03` Result/evidence contract beyond digest.
 - [x] `E-04` Plan validator shape/precision/layout/alias/domain/fuel/cancel checks (executor enforcement of fuel/cancel remains open).
