@@ -20,6 +20,8 @@ from .ring import RunnerRing, RunnerRingError
 from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
 from .hermes_native import HermesNativeLeaseRuntime, HermesNativeError
 from .hermes_dispatch import HermesDispatchJournal, HermesDispatchError, HermesDispatchConflict
+from .hermes_mth_tools import HermesMthTools, HermesMthToolError
+from .mth_registry import MthRegistryError
 from .n16t_guest import (
     MAX_FRAME_BYTES as N16T_MAX_FRAME_BYTES,
     MIN_FRAME_BYTES as N16T_MIN_FRAME_BYTES,
@@ -63,6 +65,8 @@ class RiddleService:
                 raise ServiceConfigError("both HERMES portal delegation token and receipt key must be 32+ bytes")
             self.hermes_leases = HermesLeaseRegistry(data_dir / "hermes-universe-leases.sqlite", hermes_signing_key)
         self.hermes_lock = threading.RLock()
+        self.hermes_mth = (HermesMthTools.from_checkout()
+                           if self.hermes_leases is not None else None)
         self.hermes_native = None
         self.hermes_dispatches = (HermesDispatchJournal(data_dir / "hermes-dispatch.sqlite")
                                   if self.hermes_leases is not None else None)
@@ -318,6 +322,34 @@ def make_handler(service: RiddleService):
         def do_POST(self):
             if self.path == "/n16t":
                 self._n16t()
+                return
+            if self.path == "/v1/hermes/mth/call":
+                # Same protected portal delegation and active universe receipt
+                # as native head dispatch. Catalog/plan tools never execute math.
+                if service.hermes_leases is None or service.hermes_mth is None:
+                    self._json(503, {"error": "HERMES MTH catalog unavailable"})
+                    return
+                if not self._authorized(service.hermes_delegate_token):
+                    self._json(401, {"error": "NANNET portal delegation required"})
+                    return
+                try:
+                    body = self._body()
+                    with service.hermes_lock:
+                        route = service.hermes_leases.resolve(
+                            installation_id=body["installation_id"],
+                            receipt=body["receipt"],
+                            head_index=body["head_index"])
+                        result = service.hermes_mth.invoke(
+                            body["tool"], body.get("arguments", {}))
+                    self._json(200, {
+                        "route": {key: route[key] for key in
+                                  ("lease_id", "universe_id", "head_index")},
+                        "tool_result": result,
+                        "native_execution_committed": False,
+                    })
+                except (KeyError, TypeError, ValueError, HermesMthToolError,
+                        MthRegistryError) as exc:
+                    self._json(400, {"error": str(exc)[:200]})
                 return
             if self.path.startswith("/v1/hermes/leases/"):
                 # This is a portal-to-router route, NOT a public guest API.
