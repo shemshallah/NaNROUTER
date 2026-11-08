@@ -53,7 +53,7 @@ FROM debian:bookworm-slim AS nanlmind-portal-builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git build-essential ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-ARG NANLMIND_COMMIT=37f025818ef615edc2383040d861ddea9411880f
+ARG NANLMIND_COMMIT=f46fa41d34823a3a164c310ef2145f9dc019a805
 RUN mkdir -p /src /out \
     && git -C /src init \
     && git -C /src remote add origin https://github.com/shemshallah/NaNLMind.git \
