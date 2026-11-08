@@ -152,6 +152,11 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             allow_genesis_format=True,
         )
         self.assertTrue(first["native_guest_invoked_locally"])
+        self.assertTrue(first["source_snapshot_bound"])
+        self.assertEqual(first["source_chart_sha256"], first_fence["chart_sha256"])
+        self.assertEqual(
+            first["source_root_block_sha256"], first_fence["root_block_sha256"],
+        )
         self.assertEqual(first["receipt"]["head_generation_before"], 0)
         self.assertEqual(first["receipt"]["head_generation_after"], 1)
         self.assertFalse(first["canonical_training_committed"])
@@ -186,6 +191,8 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             allow_genesis_format=True,
         )
         self.assertTrue(repeat["replayed_from_journal"])
+        self.assertTrue(repeat["source_snapshot_bound"])
+        self.assertEqual(repeat["source_chart_sha256"], first_fence["chart_sha256"])
         self.assertNotIn("raw_bank", repeat)
         self.assertEqual(repeat["bank_after_sha256"], first["bank_after_sha256"])
         # The live chart is the very same object: replay must not allocate
@@ -205,9 +212,21 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             dispatch_id="native-head-e2e-dispatch-002",
             raw=first["raw_bank"], generation=2, feature=0, increment=2,
         )
+        second_source = self.fence(self.universe_id)
         second = self.journal.execute(
             request=second_request, lease_receipt=self.receipt,
             network_head=0, raw_bank=first["raw_bank"], native_guest=self.guest,
+        )
+        self.assertTrue(second["source_snapshot_bound"])
+        self.assertEqual(
+            second["source_chart_sha256"], second_source["chart_sha256"],
+        )
+        self.assertEqual(
+            second["source_root_block_sha256"],
+            second_source["root_block_sha256"],
+        )
+        self.assertNotEqual(
+            first["source_chart_sha256"], second["source_chart_sha256"],
         )
         self.assertEqual(second["receipt"]["head_generation_before"], 1)
         self.assertEqual(second["receipt"]["head_generation_after"], 2)
@@ -224,6 +243,10 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             request=first_request, lease_receipt=self.receipt, network_head=0,
         )
         self.assertTrue(historical["historical_local_checkpoint_verified"])
+        self.assertTrue(historical["source_snapshot_bound"])
+        self.assertEqual(
+            historical["source_chart_sha256"], first["source_chart_sha256"],
+        )
         self.assertFalse(historical["current_chart_contains_result"])
         self.assertEqual(historical["chart_generation"], 2)
         self.assertEqual(historical["current_chart_generation"], 3)
