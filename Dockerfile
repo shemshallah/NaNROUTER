@@ -16,6 +16,10 @@ COPY mth/nan16/hermes_lease.nas /src/hermes_lease.nas
 COPY mth/nan16/hermes_nannet_route.nas /src/hermes_nannet_route.nas
 COPY mth/nan16/mth_hierarchy_route.nas /src/mth_hierarchy_route.nas
 COPY mth/nan16/mth_integer.nas /src/mth_integer.nas
+COPY mth/nan16/mth_jahs_gate.nas /src/mth_jahs_gate.nas
+COPY mth/nan16/hermes_n16bridge.nas /src/hermes_n16bridge.nas
+COPY mth/nan16/hermes_connector.nas /src/hermes_connector.nas
+COPY mth/nan16/hermes_tooltab.nas /src/hermes_tooltab.nas
 RUN set -eu; \
     cc -std=gnu99 -O2 -Wall -Wno-misleading-indentation \
        -ffp-contract=off -fno-fast-math -fPIC -shared -DNAN_WORDS=0x100000 \
@@ -26,6 +30,7 @@ RUN set -eu; \
        /nan0s/aarch64/android/core/nan_state.c \
        /nan0s/aarch64/android/core/nan_net_driver.c \
        -o /out/libnan16.so -lm; \
+    cp /nan0s/src/nannet/runner_task.nas /src/runner_task.nas; \
     cd /src; \
     awk -f /nan0s/tools/nmk.awk -v CMD=emit -v LABELS=/out/hermes.labels \
         hermes_native_runtime.nas > /out/hermes.nan; \
@@ -34,6 +39,9 @@ RUN set -eu; \
     grep -q '^nhl_nannet_route ' /out/hermes.labels; \
     grep -q '^nhr_hw_admit ' /out/hermes.labels; \
     grep -q '^mth_u32_add_checked ' /out/hermes.labels; \
+    grep -q '^hc_open ' /out/hermes.labels; \
+    grep -q '^hc_nmp_submit ' /out/hermes.labels; \
+    grep -q '^hb_sha256 ' /out/hermes.labels; \
     grep -q '^n16_server_exchange ' /out/n16t.labels; \
     sha256sum /out/libnan16.so | cut -d' ' -f1 > /out/libnan16.sha256; \
     sha256sum /out/hermes.nan | cut -d' ' -f1 > /out/hermes.sha256
