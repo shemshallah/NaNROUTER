@@ -170,9 +170,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B2. Tier 2–3 numeric/array operations
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
-- [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/abs/relu are implemented and locally verified; broadcast, squared norm beyond existing norm kernel, distance, and normalization remain open.
+- [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/scale/abs/relu are implemented and locally verified; broadcast, distance, and normalization remain open.
 - [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; masks/permutation/prefix sums remain open.
-- [ ] `B-23` **PARTIAL:** native 256×256 float32 transpose is locally verified; reshape/multiply/elementwise/axis reductions/diagonal/identity/zero/normalization remain open.
+- [ ] `B-23` **PARTIAL:** native 256×256 transpose, diagonal extraction, and elementwise add are locally verified; reshape/multiply/axis reductions/identity/zero/normalization remain open.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
 - [ ] `B-26` General sparse-CSR pair action and full-grid 256-tile native execution.
@@ -187,7 +187,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-34` **PARTIAL:** host-only attention plan controller composes qk_dot/scale/mask/softmax/weighted_sum/head_concat/projection and returns typed UNAVAILABLE until native mask/softmax/weighted-sum/concat kernels exist. No host math or execution.
 - [ ] `B-35` **PARTIAL:** host-only loss/gradient/optimizer plan controller composes loss→gradient_accumulate→clip→moving_average→update and returns typed UNAVAILABLE until native kernels exist. Hyperparameter records and finite-difference fixtures remain open.
 - [ ] `B-36` Token/sequence operations: embedding gather, positions, slicing, masks, n-grams.
-- [ ] `B-37` Output/sampling: temperature/top-p/penalties/greedy tie-break.
+- [ ] `B-37` **PARTIAL:** host-only sampling/output controller composes logit scale/temperature/penalties/top-k/top-p/normalize/sample or greedy tie-break; missing native kernels return typed UNAVAILABLE.
 
 ## B4. Semantics/evidence/layers
 
