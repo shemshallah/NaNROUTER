@@ -202,6 +202,96 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
         self.assertFalse(repeat["canonical_training_committed"])
 
+    def test_real_native_guest_ring_handoff_denies_staging_and_reexecution(self):
+        """Epoch changes after native instructions cannot publish guest output."""
+        from runner_riddle.hermes_head_observation import (
+            HermesHeadObservationConflict,
+        )
+        raw = bytes(BANK_BYTES)
+        request = self.request(
+            dispatch_id="native-head-real-epoch-race-001",
+            raw=raw, generation=1, feature=127, increment=1,
+        )
+        observed = [0]
+        original = self.guest.observe
+
+        def handoff_during_guest(**kwargs):
+            output = original(**kwargs)
+            observed[0] += 1
+            self.epoch += 1
+            return output
+
+        self.guest.observe = handoff_during_guest
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "epoch"):
+            self.journal.execute(
+                request=request, lease_receipt=self.receipt,
+                network_head=0, raw_bank=raw, native_guest=self.guest,
+                allow_genesis_format=True,
+            )
+        self.assertEqual(observed[0], 1)
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 1)
+        pending = self.journal.inspect(
+            request=request, lease_receipt=self.receipt, network_head=0,
+        )
+        self.assertEqual(pending["state"], "pending_or_ambiguous")
+        self.assertFalse(pending["canonical_training_committed"])
+        # Even if the test clock goes backwards, the durable reservation
+        # refuses to execute the same native dispatch a second time.
+        self.epoch -= 1
+        with self.assertRaisesRegex(HermesHeadObservationConflict, "never replay"):
+            self.journal.execute(
+                request=request, lease_receipt=self.receipt,
+                network_head=0, raw_bank=raw, native_guest=self.guest,
+                allow_genesis_format=True,
+            )
+        self.assertEqual(observed[0], 1)
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 1)
+
+    def test_real_native_guest_revoked_lease_does_not_stage_result(self):
+        """A revoked signed lease cannot complete after true NaN16 execution."""
+        from runner_riddle.hermes_leases import HermesLeaseError
+        raw = bytes(BANK_BYTES)
+        request = self.request(
+            dispatch_id="native-head-real-lease-race-002",
+            raw=raw, generation=1, feature=0, increment=1,
+        )
+        observed = [0]
+        original = self.guest.observe
+
+        def revoke_during_guest(**kwargs):
+            output = original(**kwargs)
+            observed[0] += 1
+            self.registry.release(
+                installation_id=self.installation, receipt=self.receipt,
+            )
+            return output
+
+        self.guest.observe = revoke_during_guest
+        with self.assertRaises(HermesLeaseError):
+            self.journal.execute(
+                request=request, lease_receipt=self.receipt,
+                network_head=0, raw_bank=raw, native_guest=self.guest,
+                allow_genesis_format=True,
+            )
+        self.assertEqual(observed[0], 1)
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 1)
+        with sqlite3.connect(self.base / "dispatch.sqlite") as db:
+            row = db.execute(
+                "SELECT bank_after, checkpointed_at "
+                "FROM hermes_head_observation WHERE dispatch_id=?",
+                (request.dispatch_id,),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertIsNone(row[0])
+        self.assertIsNone(row[1])
+        with self.assertRaises(HermesLeaseError):
+            self.journal.execute(
+                request=request, lease_receipt=self.receipt,
+                network_head=0, raw_bank=raw, native_guest=self.guest,
+                allow_genesis_format=True,
+            )
+        self.assertEqual(observed[0], 1)
+
     def test_real_native_cas_recovers_after_crash_before_router_ack(self):
         """Real guest runs once; a failed post-CAS ACK cannot double-write."""
         from nanlmind_hermes.native_head_checkpoint import (
