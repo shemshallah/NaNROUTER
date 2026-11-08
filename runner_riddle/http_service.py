@@ -77,6 +77,7 @@ class RiddleService:
                 raise ServiceConfigError("HERMES pinned native guest is not ready") from exc
         self.n16t_token = os.environ.get("RIDDLE_N16T_SUBMIT_TOKEN", "")
         self.n16t_guest_pool = None
+        self.hermes_n16t_pool = None
         if len(self.intake_token) < 32 or len(self.worker_token) < 32:
             raise ServiceConfigError("RIDDLE_INTAKE_TOKEN and RIDDLE_WORKER_TOKEN must each be 32+ characters")
         if len(self.feedback_key) < 32:
@@ -85,24 +86,34 @@ class RiddleService:
             if len(self.n16t_token) < 32:
                 raise ServiceConfigError("RIDDLE_N16T_SUBMIT_TOKEN must be 32+ characters")
             try:
-                # HERMES uses a shared N16T guest pool. Restoring its exact
-                # accepted-frame replay cursor is compulsory on router
-                # restart; process-local VM sessions would permit replay.
-                # The independent HERMES dispatch journal protects semantic
-                # at-most-once reservations even if no response was stored.
-                durable_n16t = None
+                # The generic /n16t submit service must NOT share a VM
+                # session affinity key with a HERMES delegated universe.
+                # Its own session store (optional) is independent.
+                self.n16t_guest_pool = N16TGuestPool.from_env(max_sessions=8)
                 if self.hermes_native is not None:
-                    durable_n16t = (
+                    # HERMES always has a distinct durable native N16T pool.
+                    # Reconstruct exactly the guest's accepted frame cursor
+                    # on restart, never a fresh session under an old lease.
+                    hermes_store = os.environ.get(
+                        "RIDDLE_HERMES_N16T_SESSION_STORE",
+                        str(data_dir / "hermes-n16t-sessions.sqlite"))
+                    generic_store = (
                         os.environ.get("RIDDLE_N16T_SESSION_STORE")
                         or os.environ.get("N16T_SESSION_STORE")
-                        or str(data_dir / "hermes-n16t-sessions.sqlite")
                     )
-                self.n16t_guest_pool = N16TGuestPool.from_env(
-                    max_sessions=8, store=durable_n16t)
+                    if generic_store and (os.path.realpath(generic_store)
+                                          == os.path.realpath(hermes_store)):
+                        raise ServiceConfigError(
+                            "generic N16T and delegated HERMES guest pools must use distinct stores")
+                    self.hermes_n16t_pool = N16TGuestPool.from_env(
+                        max_sessions=8, store=hermes_store)
             except Exception as exc:
                 raise ServiceConfigError("N16T guest runtime configuration is incomplete or invalid") from exc
 
     def close(self) -> None:
+        if self.hermes_n16t_pool is not None:
+            self.hermes_n16t_pool.close()
+            self.hermes_n16t_pool = None
         if self.hermes_native is not None:
             self.hermes_native.close()
             self.hermes_native = None
@@ -252,7 +263,8 @@ def make_handler(service: RiddleService):
                     "live_route_commit": False,
                     "hermes_delegated_lease_authority": service.hermes_leases is not None,
                     "hermes_native_guest_configured": service.hermes_native is not None,
-                    "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.n16t_guest_pool is not None),
+                    "hermes_n16t_dispatch_ready": (service.hermes_native is not None and service.hermes_n16t_pool is not None),
+                    "hermes_n16t_separate_guest_pool": service.hermes_n16t_pool is not None,
                 })
                 return
             if self.path == "/v1/riddle/feedback":
@@ -362,7 +374,7 @@ def make_handler(service: RiddleService):
                                 installation_id=identity, receipt=body["receipt"])
                             self._json(200, result)
                         elif action in ("dispatch", "ack", "inspect"):
-                            if action != "inspect" and (service.hermes_native is None or service.n16t_guest_pool is None):
+                            if action != "inspect" and (service.hermes_native is None or service.hermes_n16t_pool is None):
                                 self._json(503, {"error": "pinned native HERMES and N16T guest runtimes are required"})
                                 return
                             resolved = service.hermes_leases.resolve(
@@ -388,7 +400,7 @@ def make_handler(service: RiddleService):
                                     head_index=body["head_index"],
                                     dispatch_id=body["dispatch_id"],
                                     frame=bytes.fromhex(frame_hex),
-                                    native_exchange=service.n16t_guest_pool.exchange)
+                                    native_exchange=service.hermes_n16t_pool.exchange)
                                 result.update(native)
                                 result.update({"lease_id": resolved["lease_id"],
                                                "universe_id": resolved["universe_id"],
