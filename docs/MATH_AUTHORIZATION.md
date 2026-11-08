@@ -1,7 +1,9 @@
 # Math authorization policy
 
 Status: implemented in `runner_riddle/math_auth.py`; tests in
-`tests/test_math_auth.py` (9 tests).
+`tests/test_math_auth.py` (9 tests). Optional `MathStore` enforcement is
+implemented in `runner_riddle/math_store.py`; tests in
+`tests/test_math_store.py`.
 
 This is the **authorization policy decision point** for `GAME_PLAN_::` §15. It
 does not authenticate callers and stores no credentials. The caller must
@@ -43,6 +45,34 @@ and exposes a `verify(token, owner)` callback compatible with the NMP HTTP
 `verify_worker_identity` seam. It does not authenticate a credential by itself;
 the deployment must obtain the token from its trusted transport.
 
+## MathStore enforcement
+
+`MathStore(..., authorizer=None, principal=None)` optionally enforces this
+policy. With no authorizer, behavior is unchanged and no principal is needed.
+When an authorizer is configured:
+
+- Every public read requires `math.read`; every mutation requires `math.write`.
+  This includes payloads, leaves/versions, mappings/CAS/rollback, events,
+  candidates/admissions, functions/rules, preflight cache writes/deletes, NMP
+  packet/transitions, commit intent/evidence/finalize/fail/recovery, discovery
+  events, and health projections.
+- A missing principal is denied (`PRINCIPAL_REQUIRED`), a revoked principal is
+  denied (`PRINCIPAL_REVOKED`), and a role/capability denial raises
+  `MathStoreAuthorizationDenied` (also an `AuthorizationDenied`) before any SQL
+  touches BS0DB or MC0DB.
+- Denials are fail-closed: no payload, version, mapping, event, cache entry,
+  NMP record, intent, or evidence row is written. A denied rollback/CAS leaves
+  the previous mapping pointer intact.
+- A mutation that returns a freshly stored object reloads it without a second
+  read check, so a write-only capability is sufficient for the write itself.
+  Direct reads still require `math.read`.
+
+Relation versions have no dedicated writer; relation writes flow through mapping
+CAS/rollback with `object_type="relation"`. The store keeps only the configured
+`Principal` (identity, roles, capabilities, epoch, attributes); it never stores
+bearer tokens, passwords, credentials, or secrets. The caller must authenticate
+the principal before constructing the store.
+
 ## Non-claims
 
 - This module does not validate bearer tokens, issue sessions, or store
@@ -52,4 +82,5 @@ the deployment must obtain the token from its trusted transport.
   remain separate axes.
 - `MathLearningService` optionally enforces this policy (`authorizer=` plus
   `principal=`); with no authorizer, legacy behavior is preserved. Denied
-  lifecycle mutations fail closed before any store write.
+  lifecycle mutations fail closed before any store write. `MathStore` applies
+  the same optional pattern to its own reads and writes.

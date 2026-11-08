@@ -13,15 +13,21 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
+from runner_riddle import nmp
+from runner_riddle.math_auth import (
+    READ, WRITE, AuthorizationDenied, MathAuthorizer, Principal,
+)
 from runner_riddle.math_objects import (
     MathAdmission, MathCandidate, MathFunction, MathLeaf, MathRule,
-    candidate_id_for, canonical_json, digest_object,
+    candidate_id_for, canonical_json, digest_object, sha256_text,
 )
 from runner_riddle.math_store import (
     DEFAULT_CHUNK_BYTES, MATH_SCHEMA_VERSION, MathConflictError,
     MathContentDigestError, MathReferenceError, MathSchemaError, MathStore,
-    MathStoreError, StaleGenerationError,
+    MathStoreAuthorizationDenied, MathStoreError, StaleGenerationError,
 )
 from runner_riddle.wave_store import WaveStore
 
@@ -108,6 +114,64 @@ class MathStoreTests(unittest.TestCase):
             preflight_digest="b" * 64,
             **kwargs,
         )
+
+    def make_nmp_packet(self, *, packet_id="nmp:auth-1", state=None,
+                        candidate_id="cnd:test-1"):
+        return nmp.NmpPacket(
+            packet_id=packet_id,
+            snapshot_id="snapshot-1",
+            base_generation=7,
+            lane_id=3,
+            universe_id="U0",
+            function_id="math.vector.dot.v1",
+            function_version=1,
+            candidate_id=candidate_id,
+            inputs=(
+                {"leaf_id": self.leaf_id, "version": 1, "digest": "a" * 64},
+            ),
+            admission_id="adm:test-1",
+            admission_verdict="VALID",
+            preflight_digest="b" * 64,
+            preflight_result="VALID",
+            ruleset_id="math.rules.core.v1",
+            ruleset_version=1,
+            ruleset_snapshot_id="rules-snapshot-1",
+            capability_set=(
+                {"required": "vector.dot", "workspace": 256},
+            ),
+            capability_epoch=1,
+            guest_words=256,
+            ring_incarnation="ring-inc-1",
+            ring_epoch=1,
+            jahs=nmp.JAHS_SEAL,
+            state=nmp.CREATED if state is None else state,
+            metadata={"request_tag": "math-store-auth-test"},
+        )
+
+    @staticmethod
+    def discovery_result(*, proposal_id="disc:auth-1"):
+        proposal = SimpleNamespace(
+            proposal_id=proposal_id,
+            digest=lambda: "a" * 64,
+            to_dict=lambda: {"proposal_id": proposal_id},
+        )
+        return SimpleNamespace(proposals=[proposal])
+
+    def math_table_counts(self):
+        counts = {}
+        for path in (self.bs0_path, self.mc0_path):
+            with closing(sqlite3.connect(path)) as db:
+                tables = [
+                    row[0] for row in db.execute(
+                        "SELECT name FROM sqlite_master "
+                        "WHERE type='table' AND name LIKE 'math_%'"
+                    )
+                ]
+                for table in tables:
+                    counts[(Path(path).name, table)] = db.execute(
+                        f"SELECT COUNT(*) FROM {table}"
+                    ).fetchone()[0]
+        return counts
 
     def payload_ref(self, leaf_id, version=None):
         query = ("SELECT payload_ref, content_digest FROM math_leaf_version "
@@ -825,6 +889,410 @@ class MathStoreTests(unittest.TestCase):
         self.assertEqual(health["status"], "green")
         self.assertEqual(health["counts"]["math_candidate"], 1)
         self.assertEqual(health["counts"]["math_admission"], 1)
+
+    # -- optional authorization enforcement --------------------------------
+
+    def test_authorized_principal_can_write_and_read_across_groups(self):
+        policy = MathAuthorizer()
+        writer = Principal(
+            "worker:writer", roles=frozenset({"store_writer"}),
+        )
+        store = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=writer,
+        )
+
+        leaf = store.put_leaf(self.make_leaf(content={"value": 1}))
+        self.assertEqual(store.get_leaf(leaf.leaf_id).content, {"value": 1})
+        version = store.put_version(
+            leaf.leaf_id, {"value": 2},
+            expected_version=1, expected_generation=1,
+        )
+        self.assertEqual(version.version, 2)
+
+        mapping_id = "leaf:" + leaf.leaf_id
+        rolled_back = store.rollback_mapping(
+            mapping_id, 1, expected_version=2, expected_generation=2,
+        )
+        self.assertEqual((rolled_back["current_version"],
+                          rolled_back["generation"]), (1, 3))
+        republished = store.set_mapping(
+            mapping_id, object_type="leaf", object_id=leaf.leaf_id,
+            version=2, digest=version.digest(),
+            expected_version=1, expected_generation=3,
+        )
+        self.assertEqual((republished["current_version"],
+                          republished["generation"]), (2, 4))
+        self.assertEqual(store.resolve("map:" + mapping_id).content,
+                         {"value": 2})
+
+        function = store.put_function(self.make_function())
+        self.assertEqual(store.get_function(function.function_id).digest(),
+                         function.digest())
+        rule = store.put_rule(self.make_rule())
+        self.assertEqual(store.get_rule(rule.rule_id).to_dict(), rule.to_dict())
+        candidate = store.put_candidate(self.make_candidate(
+            candidate_id="cnd:auth-authorized",
+        ))
+        self.assertEqual(
+            store.get_candidate(candidate.candidate_id).to_dict(),
+            candidate.to_dict(),
+        )
+        admission = store.put_admission(self.make_admission(
+            admission_id="adm:auth-authorized",
+        ))
+        self.assertEqual(store.get_admission(
+            admission.admission_id).verdict, "VALID")
+
+        cache_key = "preflight:auth-authorized"
+        store.put_preflight_cache(
+            cache_key, snapshot_id="snapshot-1",
+            candidate_id=candidate.candidate_id, verdict="VALID",
+            result={"verdict": "VALID", "checks": 3},
+            invalidation_digest="c" * 64,
+        )
+        self.assertEqual(
+            store.get_preflight_cache(cache_key)["result"]["checks"], 3,
+        )
+        self.assertTrue(store.invalidate_preflight_cache(cache_key))
+
+        event = store.append_event(
+            "propose", "candidate", "cnd:event-auth", version=1,
+            digest="a" * 64, tick=10,
+        )
+        self.assertEqual(store.list_events()[-1]["event_id"],
+                         event["event_id"])
+        self.assertEqual(
+            len(store.append_discovery_result(self.discovery_result())), 1,
+        )
+
+        packet = self.make_nmp_packet(packet_id="nmp:auth-authorized")
+        store.put_nmp_packet(packet, tick=11)
+        transition = store.append_nmp_transition(
+            packet.packet_id, nmp.CREATED, nmp.RESOLVED, tick=12,
+            evidence={"ok": True},
+        )
+        self.assertEqual(transition["to_state"], nmp.RESOLVED)
+        self.assertEqual(
+            store.get_nmp_packet(packet.packet_id)["state"], nmp.RESOLVED,
+        )
+        self.assertEqual(
+            store.latest_nmp_transition(packet.packet_id)["to_state"],
+            nmp.RESOLVED,
+        )
+
+        payload = store.put_payload(b"authorized-payload")
+        self.assertEqual(store.get_payload(payload["digest"]),
+                         b"authorized-payload")
+
+        evidence = {"kind": "auth-test", "marker": "authorized"}
+        evidence_digest = sha256_text(canonical_json(evidence))
+        intent = store.begin_commit_intent(
+            "leaf", leaf.leaf_id, target_version=1,
+            target_digest=leaf.digest(), evidence_digest=evidence_digest,
+            expected_version=2, expected_generation=4,
+            intent_id="intent:auth-authorized", tick=20,
+        )
+        store.append_commit_evidence(intent["intent_id"], evidence, tick=21)
+        self.assertTrue(store.verify_commit_evidence(intent["intent_id"]))
+        finalized = store.finalize_commit_intent(
+            intent["intent_id"], tick=22,
+        )
+        self.assertEqual(finalized["state"], "finalized")
+        self.assertEqual(
+            store.get_commit_evidence(intent["intent_id"])["evidence"],
+            evidence,
+        )
+
+        failed_intent = store.begin_commit_intent(
+            "leaf", leaf.leaf_id, target_version=2,
+            target_digest=version.digest(), evidence_digest="d" * 64,
+            expected_version=1, expected_generation=5,
+            intent_id="intent:auth-failed", tick=23,
+        )
+        self.assertEqual(
+            store.fail_commit_intent(
+                failed_intent["intent_id"], "authorized abort", tick=24,
+            )["state"],
+            "failed",
+        )
+        self.assertEqual(store.list_commit_intents(state="pending"), [])
+        self.assertEqual(store.recover_pending_intents(tick=25), [])
+        self.assertEqual(store.list_commit_evidence()[0]["intent_id"],
+                         intent["intent_id"])
+        self.assertEqual(store.health()["status"], "green")
+        self.assertEqual(store.math_health()["status"], "green")
+
+    def test_custom_write_only_and_read_only_roles_are_enforced(self):
+        policy = MathAuthorizer(role_actions={
+            "store_writer": frozenset({WRITE}),
+            "supervisor": frozenset({READ}),
+        })
+        writer_store = MathStore(
+            self.bs0_path, self.mc0_path, authorizer=policy,
+            principal=Principal(
+                "worker:write", roles=frozenset({"store_writer"}),
+            ),
+        )
+        leaf = writer_store.put_leaf(self.make_leaf())
+        version_two = writer_store.put_version(
+            leaf.leaf_id, {"value": 8},
+            expected_version=1, expected_generation=1,
+        )
+        self.assertEqual(version_two.version, 2)
+        mapping_id = "leaf:" + leaf.leaf_id
+        writer_store.set_mapping(
+            mapping_id, object_type="leaf", object_id=leaf.leaf_id,
+            version=1, digest=leaf.digest(),
+            expected_version=2, expected_generation=2,
+        )
+        writer_store.rollback_mapping(
+            mapping_id, 2,
+            expected_version=1, expected_generation=3,
+        )
+
+        reader_store = MathStore(
+            self.bs0_path, self.mc0_path, authorizer=policy,
+            principal=Principal(
+                "worker:read", roles=frozenset({"supervisor"}),
+            ),
+        )
+        self.assertEqual(reader_store.get_leaf(leaf.leaf_id).content,
+                         {"value": 8})
+        with self.assertRaises(MathStoreAuthorizationDenied):
+            writer_store.get_leaf(leaf.leaf_id)
+        with self.assertRaises(MathStoreAuthorizationDenied):
+            reader_store.put_leaf(
+                self.make_leaf(leaf_id="nml:auth:read-only"),
+            )
+
+    def test_denied_principal_cannot_write_or_read(self):
+        policy = MathAuthorizer()
+        leaf = self.store.put_leaf(self.make_leaf())
+        proposer = Principal(
+            "worker:proposer", roles=frozenset({"proposer"}),
+        )
+        denied_write = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=proposer,
+        )
+        counts_before = self.math_table_counts()
+        with mock.patch.object(
+            denied_write, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                denied_write.put_leaf(
+                    self.make_leaf(leaf_id="nml:auth:denied-write")
+                )
+        self.assertIsInstance(raised.exception, AuthorizationDenied)
+        self.assertEqual(raised.exception.action, WRITE)
+        self.assertEqual(raised.exception.reason, "ROLE_NOT_PERMITTED")
+        self.assertEqual(self.math_table_counts(), counts_before)
+
+        no_roles = Principal("worker:none")
+        denied_read = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=no_roles,
+        )
+        with mock.patch.object(
+            denied_read, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                denied_read.get_leaf(leaf.leaf_id)
+        self.assertEqual(raised.exception.action, READ)
+        self.assertEqual(raised.exception.reason, "ROLE_NOT_PERMITTED")
+
+        reader = Principal(
+            "worker:reader", roles=frozenset({"supervisor"}),
+        )
+        readable = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=reader,
+        )
+        self.assertEqual(readable.get_leaf(leaf.leaf_id).content,
+                         {"value": 7})
+
+    def test_revoked_principal_is_denied_before_sql(self):
+        policy = MathAuthorizer()
+        revoked = Principal(
+            "worker:revoked", roles=frozenset({"admin"}), revoked=True,
+        )
+        store = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=revoked,
+        )
+        counts_before = self.math_table_counts()
+        with mock.patch.object(
+            store, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                store.put_leaf(self.make_leaf())
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REVOKED")
+        self.assertEqual(raised.exception.action, WRITE)
+        with mock.patch.object(
+            store, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                store.get_leaf(self.leaf_id)
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REVOKED")
+        self.assertEqual(raised.exception.action, READ)
+        self.assertEqual(self.math_table_counts(), counts_before)
+
+    def test_missing_principal_is_denied_before_sql(self):
+        policy = MathAuthorizer()
+        store = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=None,
+        )
+        counts_before = self.math_table_counts()
+        with mock.patch.object(
+            store, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                store.put_leaf(self.make_leaf())
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REQUIRED")
+        self.assertEqual(raised.exception.action, WRITE)
+        with mock.patch.object(
+            store, "_connect",
+            side_effect=AssertionError("SQL ran before denial"),
+        ):
+            with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                store.get_leaf(self.leaf_id)
+        self.assertEqual(raised.exception.reason, "PRINCIPAL_REQUIRED")
+        self.assertEqual(raised.exception.action, READ)
+        self.assertEqual(self.math_table_counts(), counts_before)
+
+    def test_legacy_store_without_authorizer_is_unchanged(self):
+        ignored_principal = Principal("worker:none")
+        legacy = MathStore(
+            self.bs0_path, self.mc0_path,
+            principal=ignored_principal,
+        )
+        self.assertIsNone(legacy.authorizer)
+        leaf = legacy.put_leaf(self.make_leaf())
+        self.assertEqual(legacy.get_leaf(leaf.leaf_id).content, {"value": 7})
+        self.assertEqual(legacy.health()["status"], "green")
+
+    def test_denied_writes_do_not_mutate_any_mutation_group(self):
+        policy = MathAuthorizer()
+        proposer = Principal(
+            "worker:proposer", roles=frozenset({"proposer"}),
+        )
+        denied = MathStore(
+            self.bs0_path, self.mc0_path,
+            authorizer=policy, principal=proposer,
+        )
+
+        leaf = self.store.put_leaf(self.make_leaf(content={"value": 1}))
+        second = self.store.put_version(
+            self.leaf_id, {"value": 2},
+            expected_version=1, expected_generation=1,
+        )
+        self.store.put_function(self.make_function())
+        self.store.put_rule(self.make_rule())
+        candidate = self.store.put_candidate(
+            self.make_candidate(candidate_id="cnd:auth-existing")
+        )
+        self.store.put_admission(
+            self.make_admission(admission_id="adm:auth-existing")
+        )
+        cache_key = "preflight:auth-existing"
+        self.store.put_preflight_cache(
+            cache_key, snapshot_id="snapshot-1",
+            candidate_id=candidate.candidate_id, verdict="VALID",
+            result={"verdict": "VALID"}, invalidation_digest="c" * 64,
+        )
+        packet = self.make_nmp_packet(packet_id="nmp:auth-existing")
+        self.store.put_nmp_packet(packet)
+        evidence = {"kind": "auth-test", "marker": "denied"}
+        evidence_digest = sha256_text(canonical_json(evidence))
+        intent = self.store.begin_commit_intent(
+            "leaf", self.leaf_id, target_version=1,
+            target_digest=leaf.digest(), evidence_digest=evidence_digest,
+            expected_version=2, expected_generation=2,
+            intent_id="intent:auth-denied", tick=30,
+        )
+        mapping_id = "leaf:" + self.leaf_id
+        mapping_before = self.store.get_mapping(mapping_id)
+        counts_before = self.math_table_counts()
+
+        attempts = (
+            ("payload", lambda: denied.put_payload(b"denied")),
+            ("leaf", lambda: denied.put_leaf(
+                self.make_leaf(leaf_id="nml:auth:denied-leaf"))),
+            ("version", lambda: denied.put_version(
+                self.leaf_id, {"value": 3},
+                expected_version=2, expected_generation=2)),
+            ("function", lambda: denied.put_function(
+                self.make_function(
+                    version=2,
+                    signature={"inputs": ["scalar"], "output": "scalar"},
+                ))),
+            ("rule", lambda: denied.put_rule(
+                self.make_rule(version=2, contract={"claim": "denied"}))),
+            ("candidate", lambda: denied.put_candidate(
+                self.make_candidate(candidate_id="cnd:auth-denied"))),
+            ("admission", lambda: denied.put_admission(
+                self.make_admission(admission_id="adm:auth-denied"))),
+            ("cache-put", lambda: denied.put_preflight_cache(
+                cache_key, snapshot_id="snapshot-1",
+                candidate_id=candidate.candidate_id, verdict="INVALID",
+                result={"verdict": "INVALID"},
+                invalidation_digest="e" * 64)),
+            ("cache-delete", lambda: denied.invalidate_preflight_cache(
+                cache_key)),
+            ("event", lambda: denied.append_event(
+                "propose", "candidate", "cnd:auth-denied")),
+            ("discovery", lambda: denied.append_discovery_result(
+                self.discovery_result())),
+            ("nmp-packet", lambda: denied.put_nmp_packet(
+                self.make_nmp_packet(packet_id="nmp:auth-denied"))),
+            ("nmp-transition", lambda: denied.append_nmp_transition(
+                packet.packet_id, nmp.CREATED, nmp.RESOLVED)),
+            ("mapping-cas", lambda: denied.set_mapping(
+                "leaf:auth-denied", object_type="leaf",
+                object_id=self.leaf_id, version=1,
+                digest=self.store.get_leaf(self.leaf_id, 1).digest(),
+                expected_version=0, expected_generation=0)),
+            ("mapping-rollback", lambda: denied.rollback_mapping(
+                mapping_id, 1,
+                expected_version=2, expected_generation=2)),
+            ("commit-begin", lambda: denied.begin_commit_intent(
+                "leaf", self.leaf_id, target_version=2,
+                target_digest=second.digest(), evidence_digest="d" * 64,
+                expected_version=2, expected_generation=2,
+                intent_id="intent:auth-denied-new", tick=31)),
+            ("commit-evidence", lambda: denied.append_commit_evidence(
+                intent["intent_id"], evidence, tick=32)),
+            ("commit-finalize", lambda: denied.finalize_commit_intent(
+                intent["intent_id"], tick=33)),
+            ("commit-fail", lambda: denied.fail_commit_intent(
+                intent["intent_id"], "denied", tick=34)),
+            ("commit-recover", lambda: denied.recover_pending_intents(
+                tick=35)),
+        )
+        for label, call in attempts:
+            with self.subTest(label):
+                with self.assertRaises(MathStoreAuthorizationDenied) as raised:
+                    call()
+                self.assertEqual(raised.exception.action, WRITE)
+                self.assertEqual(raised.exception.reason,
+                                 "ROLE_NOT_PERMITTED")
+        self.assertEqual(self.math_table_counts(), counts_before)
+        self.assertEqual(self.store.get_mapping(mapping_id), mapping_before)
+        self.assertEqual(
+            self.store.get_nmp_packet(packet.packet_id)["state"], nmp.CREATED,
+        )
+        self.assertEqual(
+            self.store.get_commit_intent(intent["intent_id"])["state"],
+            "pending",
+        )
+        self.assertIsNotNone(self.store.get_preflight_cache(cache_key))
 
 
 if __name__ == "__main__":

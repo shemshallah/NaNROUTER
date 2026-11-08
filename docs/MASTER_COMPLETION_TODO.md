@@ -115,7 +115,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-96` Wire Boolean-head gate results into `MathLearningService.record_boolean_head_experiment` as utility-only evidence with an explicit authority check.
 - [ ] `A-97` **PARTIAL:** typed `ClassCPolicyTransition` with separate signed policy digests, policy roles/capability, distinct proposer/approver, and no-signature-verification marker is implemented (2 tests). Wiring it into every checker/schema/ACL/control-head mutation remains open.
 - [ ] `A-98` Add `rule.activate`/`rule.prune` capabilities to all learning mutators (policy exists; wiring exists for learning; verify store/retention paths).
-- [ ] `A-99` Add authenticated principal/ACL to all `MathStore` mutations.
+- [x] `A-99` Optional authenticated principal/ACL enforcement on all `MathStore` reads and mutations; legacy no-authorizer behavior preserved; denial occurs before SQL.
 - [ ] `A-100` Add durable denied-operation audit rows for validity/execution denials.
 - [ ] `A-101` Add refutation/counterexample retention and audit-digest protection.
 - [ ] `A-102` Add subsumption-aware negative memory.

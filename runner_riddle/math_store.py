@@ -22,6 +22,11 @@ Payloads are content addressed by SHA-256.  A blob larger than
 ``chunk_bytes`` (1 MiB by default) is split into independently stored chunks,
 so a 2 MiB math payload does not depend on a deployed provider accepting one
 oversized SQLite blob.
+
+Authorization is optional.  Passing ``authorizer=`` and ``principal=`` makes
+every public read require ``math.read`` and every mutation require
+``math.write`` before any SQL touches either database.  With no authorizer the
+store keeps its legacy behavior and stores no token or credential.
 """
 from __future__ import annotations
 
@@ -33,6 +38,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
+from .math_auth import (
+    AuthorizationDecision, AuthorizationDenied, MathAuthorizer, Principal,
+    READ, WRITE,
+)
 from .math_objects import (
     MathAdmission, MathCandidate, MathFunction, MathLeaf, MathObjectError,
     MathRule, VERDICTS, canonical_json, digest_object, sha256_text,
@@ -92,6 +101,27 @@ class MathNmpError(MathStoreError):
 
 class MathNmpTransitionError(MathNmpError):
     """An NMP transition does not chain from the stored current state."""
+
+
+class MathStoreAuthorizationDenied(MathStoreError, AuthorizationDenied):
+    """A math store read/write is not authorized for the configured principal.
+
+    This is deliberately both a store error and the authorization policy's
+    typed denial.  Denials are raised before any SQL touches BS0DB or MC0DB.
+    """
+
+    def __init__(self, reason: str, *, principal_id: str | None = None,
+                 action: str | None = None,
+                 decision: AuthorizationDecision | None = None) -> None:
+        MathStoreError.__init__(self, reason)
+        self.reason = reason
+        self.principal_id = principal_id
+        self.action = action
+        self.decision = decision
+
+
+# Both names are exported for convenience, matching the learning service.
+MathStoreAuthorizationError = MathStoreAuthorizationDenied
 
 
 # Approximate secret-key detection for NMP evidence.  Digests and hashes of a
@@ -609,17 +639,28 @@ class MathStore:
     def __init__(self, bs0_path: str | Path, mc0_path: str | Path, *,
                  max_payload_bytes: int = DEFAULT_MAX_PAYLOAD_BYTES,
                  chunk_bytes: int = DEFAULT_CHUNK_BYTES,
-                 strict_content_digest: bool = False):
+                 strict_content_digest: bool = False,
+                 authorizer: MathAuthorizer | None = None,
+                 principal: Principal | None = None):
         if Path(bs0_path).resolve() == Path(mc0_path).resolve():
             raise MathStoreError("BS0DB and MC0DB must be distinct databases")
         _require_int("max_payload_bytes", max_payload_bytes, minimum=1)
         _require_int("chunk_bytes", chunk_bytes, minimum=1)
         if not isinstance(strict_content_digest, bool):
             raise MathStoreError("strict_content_digest must be a boolean")
+        if authorizer is not None and not isinstance(authorizer, MathAuthorizer):
+            raise MathStoreError("authorizer must be a MathAuthorizer or None")
+        if principal is not None and not isinstance(principal, Principal):
+            raise MathStoreError("principal must be a Principal or None")
         self.bs0_path = str(bs0_path)
         self.mc0_path = str(mc0_path)
         self.max_payload_bytes = max_payload_bytes
         self.chunk_bytes = chunk_bytes
+        # Optional policy enforcement.  With no authorizer the store keeps its
+        # legacy behavior; the caller is responsible for authenticating any
+        # principal before constructing it.  No token or credential is stored.
+        self.authorizer = authorizer
+        self.principal = principal
         # Legacy records without metadata_version remain loadable.  Setting
         # metadata_version on a leaf (or this flag on the store) opts into
         # declared-content-digest equality for both writes and reloads.
@@ -683,6 +724,36 @@ class MathStore:
             # WaveStore and are intentionally left untouched here.
             db.executescript(schema_sql)
 
+    # -- authorization -------------------------------------------------------
+
+    def _authorize(self, action: str, object_type: str,
+                   object_id: str) -> AuthorizationDecision | None:
+        """Fail closed before SQL when an authorizer is configured.
+
+        With no authorizer the legacy store returns ``None`` and performs no
+        principal check.  A configured authorizer requires a principal: missing,
+        revoked, and role-denied principals raise
+        :class:`MathStoreAuthorizationDenied` before either database is touched.
+        """
+        if self.authorizer is None:
+            return None
+        if self.principal is None:
+            raise MathStoreAuthorizationDenied(
+                "PRINCIPAL_REQUIRED", action=action,
+            )
+        decision = self.authorizer.authorize(
+            self.principal, action,
+            context={"object_type": object_type, "object_id": object_id},
+        )
+        if not decision.allowed:
+            raise MathStoreAuthorizationDenied(
+                decision.reason,
+                principal_id=decision.principal_id,
+                action=decision.action,
+                decision=decision,
+            )
+        return decision
+
     # -- small helpers -------------------------------------------------------
 
     def _schema_version(self, path: str, store: str) -> int:
@@ -700,6 +771,7 @@ class MathStore:
 
     def health(self) -> dict[str, Any]:
         """Token-free, read-only health projection of the math schema."""
+        self._authorize(READ, "store", "health")
         try:
             bs0_version = self._schema_version(self.bs0_path, "BS0DB")
             mc0_version = self._schema_version(self.mc0_path, "MC0DB")
@@ -882,6 +954,7 @@ class MathStore:
         _require_int("tick", tick)
         digest = hashlib.sha256(blob).hexdigest()
         chunk_count = (len(blob) + self.chunk_bytes - 1) // self.chunk_bytes
+        self._authorize(WRITE, "payload", digest)
 
         with self._write(self.bs0_path) as db:
             rows = db.execute(
@@ -925,14 +998,18 @@ class MathStore:
             "reused": False,
         }
 
-    def get_payload(self, digest: str, *, encoding: str | None = None) -> bytes:
+    def get_payload(self, digest: str, *, encoding: str | None = None,
+                    _authorize: bool = True) -> bytes:
         _require_digest("digest", digest)
+        if _authorize:
+            self._authorize(READ, "payload", digest)
         rows = self._fetch_payload_rows(digest)
         data, _ = self._decode_payload_rows(rows, digest, encoding=encoding)
         return data
 
     def get_payload_record(self, digest: str) -> dict[str, Any]:
         _require_digest("digest", digest)
+        self._authorize(READ, "payload", digest)
         rows = self._fetch_payload_rows(digest)
         data, meta = self._decode_payload_rows(rows, digest)
         meta["data"] = data
@@ -948,6 +1025,7 @@ class MathStore:
 
     def list_payload_chunks(self, digest: str) -> list[dict[str, Any]]:
         _require_digest("digest", digest)
+        self._authorize(READ, "payload", digest)
         rows = self._fetch_payload_rows(digest)
         self._decode_payload_rows(rows, digest)
         return [
@@ -977,8 +1055,11 @@ class MathStore:
             raise MathPayloadError(f"{name} digest changed during storage")
         return digest, encoded
 
-    def _require_payload(self, digest: str, *, encoding: str | None = None) -> bytes:
-        return self.get_payload(digest, encoding=encoding)
+    def _require_payload(self, digest: str, *, encoding: str | None = None,
+                         _authorize: bool = True) -> bytes:
+        return self.get_payload(
+            digest, encoding=encoding, _authorize=_authorize,
+        )
 
     # -- leaves --------------------------------------------------------------
 
@@ -1120,6 +1201,7 @@ class MathStore:
         if candidate.version != 1:
             raise MathStoreError("put_leaf only creates version 1")
 
+        self._authorize(WRITE, "leaf", candidate.leaf_id)
         self._verify_declared_content_digest(
             candidate, self._payload_content_digest(candidate),
             operation="put_leaf",
@@ -1173,7 +1255,7 @@ class MathStore:
                 payload={"operation": "put_leaf", "content_digest": content_digest},
                 tick=tick,
             )
-        return self.get_leaf(candidate.leaf_id, version=1)
+        return self.get_leaf(candidate.leaf_id, version=1, _authorize=False)
 
     def put_version(self, leaf_id: str, content: Mapping[str, Any] | None = None,
                     parents: Iterable[Mapping[str, Any]] | None = None, *,
@@ -1191,8 +1273,9 @@ class MathStore:
         """
         _require_text("leaf_id", leaf_id, maximum=200)
         _require_int("tick", tick)
-        current = self.get_leaf(leaf_id)
-        head = self.get_leaf_meta(leaf_id)
+        self._authorize(WRITE, "leaf", leaf_id)
+        current = self.get_leaf(leaf_id, _authorize=False)
+        head = self.get_leaf_meta(leaf_id, _authorize=False)
         exp_version = current.version if expected_version is None else expected_version
         exp_generation = (head["generation"] if expected_generation is None
                           else expected_generation)
@@ -1265,7 +1348,8 @@ class MathStore:
                      "content_digest": content_digest},
             tick=tick,
         )
-        return self.get_leaf(leaf_id, version=next_leaf.version)
+        return self.get_leaf(leaf_id, version=next_leaf.version,
+                             _authorize=False)
 
     def _leaf_version_row(self, leaf_id: str,
                           version: int | None) -> sqlite3.Row:
@@ -1288,11 +1372,14 @@ class MathStore:
             )
         return row
 
-    def get_leaf(self, leaf_id: str, version: int | None = None) -> MathLeaf:
+    def get_leaf(self, leaf_id: str, version: int | None = None, *,
+                 _authorize: bool = True) -> MathLeaf:
         """Load and verify one immutable leaf version (current by default)."""
         _require_text("leaf_id", leaf_id, maximum=200)
         if version is not None:
             _require_int("version", version, minimum=1)
+        if _authorize:
+            self._authorize(READ, "leaf", leaf_id)
         row = self._leaf_version_row(leaf_id, version)
         try:
             stored_json = str(row["leaf_json"])
@@ -1342,7 +1429,8 @@ class MathStore:
                     "content payload reference"
                 )
             payload = self._require_payload(
-                str(payload_ref), encoding="canonical-json"
+                str(payload_ref), encoding="canonical-json",
+                _authorize=_authorize,
             )
             if hashlib.sha256(payload).hexdigest() != str(content_digest):
                 raise MathPayloadError(
@@ -1366,9 +1454,12 @@ class MathStore:
         )
         return leaf
 
-    def get_leaf_meta(self, leaf_id: str) -> dict[str, Any]:
+    def get_leaf_meta(self, leaf_id: str, *,
+                      _authorize: bool = True) -> dict[str, Any]:
         """Return current pointer metadata for a leaf (no payload load)."""
         _require_text("leaf_id", leaf_id, maximum=200)
+        if _authorize:
+            self._authorize(READ, "leaf", leaf_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_leaf WHERE leaf_id=?", (leaf_id,)
@@ -1383,6 +1474,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "leaf", leaf_id)
         with self._connect(self.mc0_path) as db:
             head = db.execute(
                 "SELECT * FROM math_leaf WHERE leaf_id=?", (leaf_id,)
@@ -1428,6 +1520,7 @@ class MathStore:
             _require_int("required_version", required_version, minimum=1)
         if expected_generation is not None:
             _require_int("expected_generation", expected_generation, minimum=0)
+        self._authorize(READ, "leaf", leaf_ref)
 
         if leaf_ref.startswith("map:"):
             mapping_id = leaf_ref[4:]
@@ -1487,6 +1580,7 @@ class MathStore:
         if not isinstance(function, MathFunction):
             raise MathStoreError("function must be a MathFunction")
         _require_int("tick", tick)
+        self._authorize(WRITE, "function", function.function_id)
         try:
             document = function.to_dict()
             function_json = canonical_json(document)
@@ -1602,13 +1696,17 @@ class MathStore:
                 digest=contract_digest, payload={"operation": "put_function"},
                 tick=tick,
             )
-        return self.get_function(function.function_id, function.version)
+        return self.get_function(function.function_id, function.version,
+                                 _authorize=False)
 
     def get_function(self, function_id: str,
-                     version: int | None = None) -> MathFunction:
+                     version: int | None = None, *,
+                     _authorize: bool = True) -> MathFunction:
         _require_text("function_id", function_id, maximum=160)
         if version is not None:
             _require_int("version", version, minimum=1)
+        if _authorize:
+            self._authorize(READ, "function", function_id)
         with self._connect(self.mc0_path) as db:
             if version is None:
                 head = db.execute(
@@ -1630,7 +1728,8 @@ class MathStore:
                 f"function {function_id!r} version {version} is missing"
             )
         payload = self._require_payload(
-            str(row["payload_ref"]), encoding="canonical-json"
+            str(row["payload_ref"]), encoding="canonical-json",
+            _authorize=_authorize,
         )
         try:
             document = json.loads(payload.decode("utf-8"))
@@ -1666,6 +1765,7 @@ class MathStore:
 
     def get_function_meta(self, function_id: str) -> dict[str, Any]:
         _require_text("function_id", function_id, maximum=160)
+        self._authorize(READ, "function", function_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_function WHERE function_id=?",
@@ -1683,6 +1783,7 @@ class MathStore:
         if not isinstance(rule, MathRule):
             raise MathStoreError("rule must be a MathRule")
         _require_int("tick", tick)
+        self._authorize(WRITE, "rule", rule.rule_id)
         try:
             document = rule.to_dict()
             rule_json = canonical_json(document)
@@ -1789,12 +1890,15 @@ class MathStore:
                 digest=rule_digest, payload={"operation": "put_rule"},
                 tick=tick,
             )
-        return self.get_rule(rule.rule_id, rule.version)
+        return self.get_rule(rule.rule_id, rule.version, _authorize=False)
 
-    def get_rule(self, rule_id: str, version: int | None = None) -> MathRule:
+    def get_rule(self, rule_id: str, version: int | None = None, *,
+                 _authorize: bool = True) -> MathRule:
         _require_text("rule_id", rule_id, maximum=160)
         if version is not None:
             _require_int("version", version, minimum=1)
+        if _authorize:
+            self._authorize(READ, "rule", rule_id)
         with self._connect(self.mc0_path) as db:
             if version is None:
                 head = db.execute(
@@ -1813,7 +1917,8 @@ class MathStore:
                 f"rule {rule_id!r} version {version} is missing"
             )
         payload = self._require_payload(
-            str(row["payload_ref"]), encoding="canonical-json"
+            str(row["payload_ref"]), encoding="canonical-json",
+            _authorize=_authorize,
         )
         try:
             document = json.loads(payload.decode("utf-8"))
@@ -1849,6 +1954,7 @@ class MathStore:
 
     def get_rule_meta(self, rule_id: str) -> dict[str, Any]:
         _require_text("rule_id", rule_id, maximum=160)
+        self._authorize(READ, "rule", rule_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_rule WHERE rule_id=?", (rule_id,)
@@ -1863,6 +1969,7 @@ class MathStore:
         if not isinstance(candidate, MathCandidate):
             raise MathStoreError("candidate must be a MathCandidate")
         _require_int("tick", tick)
+        self._authorize(WRITE, "candidate", candidate.candidate_id)
         try:
             document = candidate.to_dict()
             candidate_json = canonical_json(document)
@@ -1906,10 +2013,13 @@ class MathStore:
                          "function_id": candidate.function_id},
                 tick=tick,
             )
-        return self.get_candidate(candidate.candidate_id)
+        return self.get_candidate(candidate.candidate_id, _authorize=False)
 
-    def get_candidate(self, candidate_id: str) -> MathCandidate:
+    def get_candidate(self, candidate_id: str, *,
+                      _authorize: bool = True) -> MathCandidate:
         _require_text("candidate_id", candidate_id, maximum=200)
+        if _authorize:
+            self._authorize(READ, "candidate", candidate_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_candidate WHERE candidate_id=?",
@@ -1918,7 +2028,8 @@ class MathStore:
         if row is None:
             raise MathReferenceError(f"unknown candidate {candidate_id!r}")
         payload = self._require_payload(
-            str(row["payload_ref"]), encoding="canonical-json"
+            str(row["payload_ref"]), encoding="canonical-json",
+            _authorize=_authorize,
         )
         if hashlib.sha256(payload).hexdigest() != str(row["candidate_digest"]):
             raise MathReferenceError(
@@ -1941,6 +2052,7 @@ class MathStore:
         if not isinstance(admission, MathAdmission):
             raise MathStoreError("admission must be a MathAdmission")
         _require_int("tick", tick)
+        self._authorize(WRITE, "admission", admission.admission_id)
         if admission.preflight_digest:
             _require_digest("preflight_digest", admission.preflight_digest)
         try:
@@ -1987,10 +2099,13 @@ class MathStore:
                          "verdict": admission.verdict},
                 tick=tick,
             )
-        return self.get_admission(admission.admission_id)
+        return self.get_admission(admission.admission_id, _authorize=False)
 
-    def get_admission(self, admission_id: str) -> MathAdmission:
+    def get_admission(self, admission_id: str, *,
+                      _authorize: bool = True) -> MathAdmission:
         _require_text("admission_id", admission_id, maximum=200)
+        if _authorize:
+            self._authorize(READ, "admission", admission_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_admission WHERE admission_id=?",
@@ -1999,7 +2114,8 @@ class MathStore:
         if row is None:
             raise MathReferenceError(f"unknown admission {admission_id!r}")
         payload = self._require_payload(
-            str(row["payload_ref"]), encoding="canonical-json"
+            str(row["payload_ref"]), encoding="canonical-json",
+            _authorize=_authorize,
         )
         if hashlib.sha256(payload).hexdigest() != str(row["admission_digest"]):
             raise MathReferenceError(
@@ -2197,6 +2313,7 @@ class MathStore:
                                          maximum=512)
         if plan_digest is not None:
             plan_digest = _require_digest("plan_digest", plan_digest)
+        self._authorize(WRITE, "nmp_packet", str(document["packet_id"]))
 
         with self._write(self.mc0_path) as db:
             row = db.execute(
@@ -2233,6 +2350,7 @@ class MathStore:
     def get_nmp_packet(self, packet_id: str) -> dict[str, Any]:
         """Load one packet and verify its digest and transition chain."""
         _require_text("packet_id", packet_id, maximum=512)
+        self._authorize(READ, "nmp_packet", packet_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_nmp_packet WHERE packet_id=?",
@@ -2272,6 +2390,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "nmp_packet", state or "*")
         query = "SELECT * FROM math_nmp_packet"
         args: list[Any] = []
         if state is not None:
@@ -2290,6 +2409,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "nmp_transition", packet_id)
         with self._connect(self.mc0_path) as db:
             packet = db.execute(
                 "SELECT packet_id FROM math_nmp_packet WHERE packet_id=?",
@@ -2319,6 +2439,7 @@ class MathStore:
     def latest_nmp_transition(self, packet_id: str) -> dict[str, Any] | None:
         """Return the newest transition for a packet, or ``None``."""
         _require_text("packet_id", packet_id, maximum=512)
+        self._authorize(READ, "nmp_transition", packet_id)
         with self._connect(self.mc0_path) as db:
             packet = db.execute(
                 "SELECT packet_id FROM math_nmp_packet WHERE packet_id=?",
@@ -2351,6 +2472,7 @@ class MathStore:
         _require_int("tick", tick)
         if not isinstance(seed, bool):
             raise MathStoreError("seed must be a boolean")
+        self._authorize(WRITE, "nmp_transition", packet_id)
         module = _nmp_module()
         source = self._nmp_state(from_state, "from_state")
         target = self._nmp_state(to_state, "to_state")
@@ -2435,8 +2557,11 @@ class MathStore:
 
     # -- mappings ------------------------------------------------------------
 
-    def get_mapping(self, mapping_id: str) -> dict[str, Any]:
+    def get_mapping(self, mapping_id: str, *,
+                    _authorize: bool = True) -> dict[str, Any]:
         _require_text("mapping_id", mapping_id, maximum=300)
+        if _authorize:
+            self._authorize(READ, "mapping", mapping_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_mapping WHERE mapping_id=?", (mapping_id,)
@@ -2450,6 +2575,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "mapping", object_type or "*")
         query = "SELECT * FROM math_mapping"
         args: list[Any] = []
         if object_type is not None:
@@ -2487,6 +2613,7 @@ class MathStore:
             _require_int("expected_version", expected_version, minimum=0)
         if expected_generation is not None:
             _require_int("expected_generation", expected_generation, minimum=0)
+        self._authorize(WRITE, "mapping", mapping_id)
 
         with self._write(self.mc0_path) as db:
             target = self._object_version_digest_tx(
@@ -2561,7 +2688,7 @@ class MathStore:
                      "object_id": object_id, "previous_version": previous},
             tick=tick,
         )
-        return self.get_mapping(mapping_id)
+        return self.get_mapping(mapping_id, _authorize=False)
 
     def rollback_mapping(self, mapping_id: str, target_version: int, *,
                          expected_version: int | None = None,
@@ -2580,6 +2707,7 @@ class MathStore:
             _require_int("expected_version", expected_version, minimum=0)
         if expected_generation is not None:
             _require_int("expected_generation", expected_generation, minimum=0)
+        self._authorize(WRITE, "mapping", mapping_id)
 
         with self._write(self.mc0_path) as db:
             row = db.execute(
@@ -2629,7 +2757,7 @@ class MathStore:
                      "target_version": target_version},
             tick=tick,
         )
-        return self.get_mapping(mapping_id)
+        return self.get_mapping(mapping_id, _authorize=False)
 
     def rollback(self, mapping_id: str, target_version: int, **kwargs: Any) -> dict[str, Any]:
         """Alias for :meth:`rollback_mapping`."""
@@ -2662,6 +2790,7 @@ class MathStore:
         _require_int("tick", tick)
         if expires_tick is not None:
             _require_int("expires_tick", expires_tick)
+        self._authorize(WRITE, "cache", cache_key)
         result_json = _canonical(result, "preflight result")
         result_digest = sha256_text(result_json)
         with self._write(self.mc0_path) as db:
@@ -2701,17 +2830,22 @@ class MathStore:
         )
         return self.get_preflight_cache(
             cache_key, invalidation_digest=invalidation_digest,
+            _authorize=False,
         )  # type: ignore[return-value]
 
     def get_preflight_cache(self, cache_key: str, *,
                             invalidation_digest: str | None = None,
-                            now_tick: int | None = None) -> dict[str, Any] | None:
+                            now_tick: int | None = None,
+                            _authorize: bool = True
+                            ) -> dict[str, Any] | None:
         """Return a cache hit, or ``None`` for a miss/stale/expired entry."""
         _require_text("cache_key", cache_key, maximum=300)
         if invalidation_digest is not None:
             _require_digest("invalidation_digest", invalidation_digest)
         if now_tick is not None:
             _require_int("now_tick", now_tick)
+        if _authorize:
+            self._authorize(READ, "cache", cache_key)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_preflight_cache WHERE cache_key=?",
@@ -2738,6 +2872,7 @@ class MathStore:
                                    tick: int = 0) -> bool:
         _require_text("cache_key", cache_key, maximum=300)
         _require_int("tick", tick)
+        self._authorize(WRITE, "cache", cache_key)
         with self._write(self.mc0_path) as db:
             cursor = db.execute(
                 "DELETE FROM math_preflight_cache WHERE cache_key=?",
@@ -2857,6 +2992,9 @@ class MathStore:
         _require_text("mapping_id", mapping_id, maximum=300)
         if intent_id is not None:
             _require_text("intent_id", intent_id, maximum=300)
+        self._authorize(
+            WRITE, "commit_intent", intent_id or mapping_id,
+        )
 
         with self._write(self.mc0_path) as db:
             if intent_id is not None:
@@ -2967,6 +3105,7 @@ class MathStore:
         """
         _require_text("intent_id", intent_id, maximum=300)
         _require_int("tick", tick)
+        self._authorize(WRITE, "commit_evidence", intent_id)
         if evidence is None:
             evidence = payload
         if evidence is None:
@@ -3035,6 +3174,7 @@ class MathStore:
 
     def get_commit_intent(self, intent_id: str) -> dict[str, Any]:
         _require_text("intent_id", intent_id, maximum=300)
+        self._authorize(READ, "commit_intent", intent_id)
         with self._connect(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_commit_intent WHERE intent_id=?",
@@ -3053,6 +3193,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "commit_intent", state or "*")
         query = "SELECT * FROM math_commit_intent"
         args: list[Any] = []
         if state is not None:
@@ -3075,6 +3216,7 @@ class MathStore:
 
     def get_commit_evidence(self, intent_id: str) -> dict[str, Any]:
         _require_text("intent_id", intent_id, maximum=300)
+        self._authorize(READ, "commit_evidence", intent_id)
         record = self._load_commit_evidence(intent_id)
         if record is None:
             raise MathReferenceError(
@@ -3095,6 +3237,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "commit_evidence", "*")
         with self._connect(self.bs0_path) as db:
             rows = db.execute(
                 "SELECT * FROM math_commit_evidence "
@@ -3145,6 +3288,7 @@ class MathStore:
         _require_text("intent_id", intent_id, maximum=300)
         if evidence_digest is not None:
             _require_digest("evidence_digest", evidence_digest)
+        self._authorize(READ, "commit_evidence", intent_id)
         intent = self.get_commit_intent(intent_id)
         evidence = self._load_commit_evidence(intent_id)
         if evidence is None:
@@ -3322,6 +3466,7 @@ class MathStore:
         """
         _require_text("intent_id", intent_id, maximum=300)
         _require_int("tick", tick)
+        self._authorize(WRITE, "commit_intent", intent_id)
         record, failure = self._finalize_commit_intent_tx(intent_id, tick)
         if failure is not None:
             raise failure
@@ -3338,6 +3483,7 @@ class MathStore:
         _require_text("intent_id", intent_id, maximum=300)
         _require_text("reason", reason, maximum=512)
         _require_int("tick", tick)
+        self._authorize(WRITE, "commit_intent", intent_id)
         with self._write(self.mc0_path) as db:
             row = db.execute(
                 "SELECT * FROM math_commit_intent WHERE intent_id=?",
@@ -3381,6 +3527,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(WRITE, "commit_intent", "recovery")
         with self._connect(self.mc0_path) as db:
             rows = db.execute(
                 "SELECT intent_id FROM math_commit_intent "
@@ -3442,6 +3589,7 @@ class MathStore:
         Proposals remain non-authoritative; this writes evidence only and never
         creates a candidate, admission, rule, mapping, or execution row.
         """
+        self._authorize(WRITE, "discovery", actor)
         proposals = getattr(result, "proposals", None)
         if not isinstance(proposals, (tuple, list)):
             raise MathStoreError("discovery result must expose a proposal list")
@@ -3479,6 +3627,7 @@ class MathStore:
             _require_int("generation", generation, minimum=0)
         if digest is not None:
             _require_digest("digest", digest)
+        self._authorize(WRITE, object_type, object_id)
         payload_json = _canonical({} if payload is None else payload,
                                   "event payload")
         with self._write(self.bs0_path) as db:
@@ -3512,6 +3661,7 @@ class MathStore:
         _require_int("limit", limit, minimum=1)
         if limit > 65536:
             raise MathStoreError("limit must be <= 65536")
+        self._authorize(READ, "event", event_type or "*")
         query = "SELECT * FROM math_event WHERE 1=1"
         args: list[Any] = []
         if event_type is not None:
@@ -3545,6 +3695,7 @@ class MathStore:
 
     def math_health(self) -> dict[str, Any]:
         """Report store integrity without substituting zero for missing data."""
+        self._authorize(READ, "store", "math_health")
         issues: list[str] = []
         stores: dict[str, str] = {}
         schema_versions: dict[str, int | None] = {}
@@ -3760,5 +3911,6 @@ __all__ = [
     "MATH_SCHEMA_VERSION", "MATH_STORE_SCHEMA", "MathCommitError",
     "MathConflictError", "MathNmpError", "MathNmpTransitionError",
     "MathPayloadError", "MathReferenceError",
-    "MathSchemaError", "MathStore", "MathStoreError", "StaleGenerationError",
+    "MathSchemaError", "MathStore", "MathStoreAuthorizationDenied",
+    "MathStoreAuthorizationError", "MathStoreError", "StaleGenerationError",
 ]
