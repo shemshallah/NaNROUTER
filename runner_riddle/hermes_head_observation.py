@@ -14,6 +14,7 @@ import hashlib
 import json
 import sqlite3
 import time
+from contextlib import contextmanager
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -58,8 +59,26 @@ class HermesHeadObservationJournal:
         self.chart_fence_reader = chart_fence_reader
         Path(self.database).parent.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
-            db.execute("PRAGMA journal_mode=WAL")
-            db.execute("PRAGMA synchronous=FULL")
+            # Setting journal_mode=WAL requires a transient exclusive SQLite
+            # schema lock. Several new router processes can start together;
+            # do not fail admission merely because one peer is migrating.
+            for attempt in range(20):
+                try:
+                    mode = db.execute("PRAGMA journal_mode").fetchone()[0].lower()
+                    if mode != "wal":
+                        mode = db.execute(
+                            "PRAGMA journal_mode=WAL"
+                        ).fetchone()[0].lower()
+                    if mode == "wal":
+                        break
+                except sqlite3.OperationalError as exc:
+                    if "locked" not in str(exc).lower():
+                        raise
+                time.sleep(min(0.02 * (attempt + 1), 0.2))
+            else:
+                raise HermesHeadObservationError(
+                    "cannot enable durable WAL mode under concurrent startup"
+                )
             # Serialize schema upgrades with dispatch writes and with another
             # router starting against the same durable WAL database.
             db.execute("BEGIN IMMEDIATE")
@@ -156,11 +175,23 @@ class HermesHeadObservationJournal:
                 db.execute("ROLLBACK")
                 raise
 
+    @contextmanager
     def _db(self):
+        """Close each WAL connection after committing or rolling back its work.
+
+        SQLite's Connection context manager commits transactions but does NOT
+        close the handle. A durable at-most-once journal must also explicitly
+        enforce FULL sync on every fresh connection, not just at startup.
+        """
         db = sqlite3.connect(self.database, timeout=15, isolation_level=None)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA busy_timeout=15000")
-        return db
+        try:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA busy_timeout=15000")
+            db.execute("PRAGMA synchronous=FULL")
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def _authorize(self, *, request, lease_receipt, network_head, for_execution):
         if not isinstance(request, HeadBankHandoff):
