@@ -221,7 +221,9 @@ class NanLayerGraph:
 
     def master_graph_page(self, *, parent_root_sha256: str,
                           chart_generation: int, offset: int = 0,
-                          limit: int = _MAX_PAGE) -> dict:
+                          limit: int = _MAX_PAGE,
+                          history_offset: int | None = None,
+                          history_limit: int = _MAX_PAGE) -> dict:
         """Bounded read projection; digests cover full state and full history.
 
         A SQLite snapshot transaction ensures the page and all digests refer
@@ -235,10 +237,17 @@ class NanLayerGraph:
                 or type(offset) is not int or offset < 0
                 or type(limit) is not int or not 1 <= limit <= _MAX_PAGE):
             raise NanGraphError("invalid master projection parameters")
+        if history_offset is not None and (
+                type(history_offset) is not int or history_offset < 0
+                or type(history_limit) is not int
+                or not 1 <= history_limit <= _MAX_PAGE):
+            raise NanGraphError("invalid graph history page parameters")
         self.store._authorize(READ, "nan_layer_edge", "projection")
         state_hash = hashlib.sha256(b"nanrouter.nan-layer-state/1\0")
         history_hash = hashlib.sha256(b"nanrouter.nan-layer-history/1\0")
         entries, latest, last = [], {}, {}
+        history_entries = []
+        history_total = 0
         total = candidate_count = retracted_count = 0
         by_layer = [0] * 10
         with self.store._connect(self.store.mc0_path) as db:
@@ -291,6 +300,16 @@ class NanLayerGraph:
                         raw = json.dumps([eid,gen,payload],sort_keys=True,
                                          separators=(",",":")).encode()
                         history_hash.update(len(raw).to_bytes(8,"big") + raw)
+                        # History and state pages are selected from this SAME
+                        # SQLite read transaction and share one commitment.
+                        if (history_offset is not None
+                                and history_offset <= history_total
+                                < history_offset + history_limit):
+                            history_entries.append({
+                                "edge_id": eid, "generation": gen,
+                                "payload": payload,
+                            })
+                        history_total += 1
                         last[eid] = gen
                         if eid not in latest:
                             raise NanGraphError("orphan graph history")
@@ -314,7 +333,7 @@ class NanLayerGraph:
             "state_sha256": state_hash.hexdigest(),
             "history_sha256": history_hash.hexdigest()}
         raw = json.dumps(header,sort_keys=True,separators=(",",":")).encode()
-        return {**header,
+        result = {**header,
                 "graph_commitment_sha256": hashlib.sha256(
                     b"nanrouter.nan-layer-commitment/1\0"+raw).hexdigest(),
                 "offset":offset,
@@ -325,3 +344,15 @@ class NanLayerGraph:
                 "signed_by_router":False,
                 "native_mth_receipt":False,
                 "mathematical_truth_promoted":False}
+        if history_offset is not None:
+            result.update(
+                history_offset=history_offset,
+                history_entries=history_entries,
+                history_total=history_total,
+                history_next_offset=(
+                    history_offset + len(history_entries)
+                    if history_offset + len(history_entries) < history_total
+                    else None
+                ),
+            )
+        return result
