@@ -39,7 +39,7 @@ jobs:
         run: make -s -C nan0s/aarch64/android nan_cli
       - name: Actual guest add/sub execution with invalid-op, epoch and capacity rejection tests
         run: python tools/run_mth_fixtures.py --nan0s-root nan0s --only native_vector_addsub_dispatch
-      - name: Existing canonical :: linker and dot/cosine regression
+      - name: "Existing canonical :: linker and dot/cosine regression"
         run: python tools/run_mth_fixtures.py --nan0s-root nan0s --only native_dispatch
       - name: Hermes native admission ABI metadata and planning coverage
         run: python -m unittest discover -s tests -p 'test_hermes_mth_tools.py' -v
