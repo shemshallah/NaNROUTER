@@ -141,8 +141,8 @@ class Microtable:
             "route": f"HW0:{self.a}" if self.kind == "head" else f"HW0:MP{self.ordinal}",
             "ordinal": self.ordinal,
             "heads": [self.a] if self.kind == "head" else [self.a, self.b],
-            "writable_heads": [h for h in (self.a, self.b)
-                               if h != NANNET_HEAD and (h == self.a or self.a != self.b)],
+            "writable_heads": sorted({h for h in (self.a, self.b)
+                                      if h != NANNET_HEAD}),
             "addresses": [self.forward_address, self.mirror_address],
             "canonical_address": self.canonical_address,
             "canonical_cell": self.canonical_cell,
