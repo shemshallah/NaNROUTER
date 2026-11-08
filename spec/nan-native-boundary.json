@@ -28,7 +28,8 @@
       "native": true,
       "prefixes": [
         "mth.stage0.",
-        "mth.double_endian."
+        "mth.double_endian.",
+        "mth.universe."
       ],
       "host_roles": [
         "allocate descriptor records",

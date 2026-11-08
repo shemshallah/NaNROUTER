@@ -103,7 +103,9 @@ default; a result envelope carries the executor's actual status.
 
 The hard length bound is `MAX_FRAME_WORDS == 262144` (2 MiB / 8 bytes), therefore
 `MAX_PAYLOAD_BYTES == 2097152`. A custom bridge may use a smaller `max_words`
-bound.
+bound. This is a per-frame payload bound, not the guest address space: the
+guest maps the full 8 MiB / 1,048,576-word universe and all 32,896 relation
+points (`docs/MTH_UNIFIED_SYSTEM.md`).
 
 ### Legacy v1 compatibility
 

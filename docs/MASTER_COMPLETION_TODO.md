@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-08
-**Baseline:** 1189 Python tests, 16 skipped, OK; 94 manifest kernels (91 `ci_verified`, 3 local-only); 92 canonical runner fixture paths and 91 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
+**Baseline:** 1217 Python tests, 16 skipped, OK; 95 manifest kernels (91 `ci_verified`, 4 local-only); 93 canonical runner fixture paths and 92 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -12,7 +12,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
 - [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
-- [x] Native 94-kernel manifest (91 CI-verified, 3 local-only), 92 registered runner fixtures, and credential-free canonical native CI workflows.
+- [x] Native 95-kernel manifest (91 CI-verified, 4 local-only), 93 registered runner fixtures, and credential-free canonical native CI workflows.
+- [x] Full 8 MiB guest map and 32,896-point NANNET relation coverage (`runner_riddle/universe_map.py`, `spec/universe-map.json`, `mth.universe.map.u32`); workspace budget remains a separate 2 MiB adjustable policy bound.
+- [x] Unified cross-repo MTH catalog and provider audit (`runner_riddle/mth_unified.py`, `tools/mth_unified.py`, `spec/mth-unified-system.v1.json`).
 - [x] Static NaN-native boundary audit (`spec/nan-native-boundary.json`, `tools/audit_nan_native.py`) covering every registered MTH source, fixture, runner entry, CI workflow, and host numeric import boundary.
 - [x] `math_objects`, `math_store`, `math_registry`, `math_validity`, `math_linker`, NMP, execution bridge, demo.
 - [x] Typed absence algebra, relations/hypergraphs, rule lifecycle, retention/pruning.
@@ -157,9 +159,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B1. Stage 0/1 native substrate
 
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
-- [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 91-entry canonical set; the three 2026-11-08 additions remain local-only pending CI.
+- [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 91-entry canonical set; the four 2026-11-08 additions remain local-only pending CI.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All MTH sources are registered in the 94-entry manifest (91 `ci_verified`, 3 local-only); 92 runner fixture paths are wired to canonical native workflows. The normalize/prefix-sum/PRNG fixtures pass locally, but are not described as CI-verified until canonical CI runs.
+- [x] `B-04` All MTH sources are registered in the 95-entry manifest (91 `ci_verified`, 4 local-only); 93 runner fixture paths are wired to canonical native workflows. The normalize/prefix-sum/PRNG/universe-map fixtures pass locally, but are not described as CI-verified until canonical CI runs.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
@@ -167,6 +169,8 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `B-09` Typed scalar/array descriptor: element type, stride, layout, units, rank, shape, domain, context; optional fields preserve legacy digests; function composition rejects declared descriptor conflicts.
 - [ ] `B-10` Pair codec regressions: byte/face/payload/inverse/missing-member/corruption.
 - [ ] `B-11` Resolve `mth_negate256_f32` registration so `DEEP_PLAN_CONT` ring-wave plan resolves.
+- [x] `B-12` Full 8 MiB guest map over 256 pages and 1,048,576 words; 256 fixed heads, 32,640 mirror pairs, 32,896 canonical relation points; NANNET0 aliases `head 0 = page 255 = ring 255 = HW0:0`. Host map and native `mth.universe.map.u32` fixture pass locally (12,916,386 steps). `spec/universe-map.json` records all page descriptors.
+- [x] `B-13` Unified cross-repo MTH catalog and provider drift audit (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`). It binds 95 kernels to NaN0S execution, HERMES/Android contracts, and the control plane, with worktree-first and fetched `origin/main` fallback. It never fetches or modifies sibling worktrees and never claims CI or a live deployment.
 
 ## B2. Tier 2–3 numeric/array operations
 

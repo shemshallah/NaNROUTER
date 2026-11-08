@@ -101,17 +101,18 @@ The second strongest rule is:
 
 ---
 
-## 2. Current baseline and the 2 MiB update
+## 2. Current baseline, guest budget, and full-universe mapping
 
 ### 2.1 What exists
 
 At the time of writing the checked-in `main` contains:
 
-- **94 manifest kernels** with fixtures: 91 `ci_verified` and 3 local-only (`ci_verified=false`); 92 canonical runner fixture paths and 91 unique manifest fixtures;
-- **92 locally runnable runner fixtures**, including the K256 pair fixture and the new normalize/prefix-sum/PRNG fixtures;
-- static NaN-native boundary audit green over 92 registered MTH sources plus three explicitly excluded HERMES guests;
-- **1189 Python tests** (16 skipped) after the P7–P12 math integration, Koyeb bootstrap, sequence controller, and audit additions;
-- **2 MiB adjustable guest budget** (`runner_riddle/budget.py`; 262,144 words / 64 pages), with 1 MiB legacy profiles;
+- **95 manifest kernels** with fixtures: 91 `ci_verified` and 4 local-only (`ci_verified=false`); 93 canonical runner fixture paths and 92 unique manifest fixtures;
+- **93 locally runnable runner fixtures**, including the K256 pair fixture, the normalize/prefix-sum/PRNG fixtures, and the full 8 MiB universe-map fixture;
+- static NaN-native boundary audit green over 93 registered MTH sources plus three explicitly excluded HERMES guests;
+- **full 8 MiB guest address map** over 256 pages, 1,048,576 words, 256 fixed heads, 32,640 mirror pairs, and 32,896 relation points (`runner_riddle/universe_map.py`, `spec/universe-map.json`, native `mth.universe.map.u32`);
+- **unified cross-repo MTH catalog** binding the 95-kernel manifest to NaN0S, HERMES, Android, NaNLMind, NaNLM, and CLOCKED provider contracts (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`);
+- **2 MiB adjustable workspace budget** (`runner_riddle/budget.py`; 262,144 words), with 1 MiB and 512 KiB compatibility profiles. The workspace budget is separate from the 8 MiB guest address space and is not a page-size limit;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 
 Existing MTH kernels are the **implementation layer**. They are not yet a full mathematical registry: the current `MthKernelDescriptor` has no semantic input/output signature, domain, precondition, postcondition, undefinedness policy, or proof status. That is the gap this plan fills.
@@ -165,6 +166,27 @@ The 2 MiB target changes what is *feasible*; it does not change the rule that th
 - It does not authorize storing a full hypergraph in one flat guest buffer.
 - It does not remove the need for page windows, low-rank representations, or evidence.
 - It does not make a mathematical claim valid. Memory capacity is not validity.
+
+### 2.5 Full 8 MiB guest map is separate from the workspace budget
+
+The guest address space maps the **entire 8 MiB universe**, not the 2 MiB
+workspace budget and not 64 pages:
+
+```text
+256 pages x 32 KiB = 8 MiB = 1,048,576 NaN16 words
+```
+
+- pages `0..254` are real heads `1..255`;
+- page `255` is head `0`, the single NANNET0 point;
+- NANNET0 aliases are `head 0 = page 255 = ring position 255 = HW0:0`;
+- 32,640 mirror pairs occupy 128 two-word slots in words `3840..4095` of each
+  real-head page;
+- all 32,896 fixed-head + mirror-pair relation points resolve through NANNET.
+
+`runner_riddle/universe_map.py` exposes the map, `spec/universe-map.json`
+records it, and the native `mth.universe.map.u32` kernel proves the address law
+in the guest. The map is an addressing contract, not a truth, admission, lease,
+head-bank update, or mathematical proof.
 
 ---
 
@@ -552,7 +574,7 @@ Compatibility constraints:
 - do not change `KERNEL_STATUSES`/`PRECISIONS` for new semantics; use separate enums in the math registry;
 - keep `MthPlan.to_dict()` v1 unchanged; add `to_v2_dict()`/`NmpPlan` for `plan_digest`, typed pins, admission, and peak workspace;
 - keep `WaveStore.SCHEMA_VERSION=1`; add `math_*` tables under a separate `math_schema` row, then a later explicit migration if needed;
-- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 1189-test suite after every change.
+- run `test_mth_registry`, `test_mth_system`, `test_wave_capabilities`, `test_wave_store`, and the full 1217-test suite after every change.
 
 ### 6.3 Initial function catalogue
 
@@ -1683,7 +1705,7 @@ python3 -m unittest tests.test_mth_system tests.test_wave_store   tests.test_poi
 python3 tools/run_mth_fixtures.py
 ```
 
-New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 1189-test suite remains a regression gate; no new layer may weaken or replace it.
+New math tests live in `tests/test_math_objects.py`, `tests/test_math_registry.py`, `tests/test_math_validity.py`, `tests/test_math_linker.py`, `tests/test_nmp.py`, `tests/test_math_store.py`, `tests/test_math_absence.py`, `tests/test_math_relation.py`, `tests/test_math_learning.py`, `tests/test_math_retention.py`, `tests/test_math_execution.py`, `tests/test_math_demo.py`, and `tests/test_math_end_to_end.py`. The existing 1217-test suite remains a regression gate; no new layer may weaken or replace it.
 
 ### 20.1 P0 verification
 

@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, and xorshift64); 1189 Python tests passed (16 skipped). The three new 2026-11-08 kernels have `ci_verified=false`; the 91 earlier manifest kernels retain their recorded CI flags. Last canonical CI run 42405649076 predates the new registrations.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four new 2026-11-08 kernels have `ci_verified=false`; the 91 earlier manifest kernels retain their recorded CI flags. Last canonical CI run 42405649076 predates the new registrations.
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Current workflows also include the remaining-fixture promotion set and the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
@@ -106,12 +106,13 @@
 | 92 | Vector normalize 256 f32 | `mth/tests/mth_vector_normalize256_f32_test.nas` | 118,131 | PASS | local only |
 | 93 | Vector inclusive prefix sum 256 u32 | `mth/tests/mth_vector_prefix_sum256_u32_test.nas` | 49,559 | PASS | local only |
 | 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | local only |
+| 95 | Full 8 MiB universe map | `mth/tests/mth_universe_map_test.nas` | 12,916,386 | PASS | local only |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1189 tests in 200.096s
+Ran 1217 tests in 340.821s
 OK (skipped=16)
 ```
 
@@ -179,15 +180,34 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-92 runner fixture paths registered; 91 unique manifest fixtures
-K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
+93 runner fixture paths registered; 92 unique manifest fixtures
+K256 pair-space, normalize, prefix-sum, xorshift64, and universe-map targeted set: 5/5 PASS
+Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 93/93 PASS
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 94 kernels (91 `ci_verified`, 3 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **94 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 95 kernels (91 `ci_verified`, 4 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **95 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+
+## Unified MTH catalog and full-universe map
+
+- `spec/universe-map.json` contains all 256 page descriptors and resolves 256
+  fixed heads plus 32,640 mirror pairs (32,896 relation points) across the
+  complete 8 MiB / 1,048,576-word guest address space.
+- NANNET0 is one point with explicit aliases `head 0 = page 255 = ring 255 =
+  HW0:0`. Real heads `1..255` map to pages `0..254`.
+- `mth/nan16/mth_universe_map.nas` implements the map in NaN16; its fixture
+  passes locally in 12,916,386 steps with no trap.
+- `runner_riddle/mth_unified.py` builds a 95-kernel unified catalog with 5
+  native-dispatch ABI entries and binds the control plane to the NaN0S,
+  HERMES, Android, NaNLMind, NaNLM, and CLOCKED provider contracts.
+- The provider audit prefers the local worktree and falls back to fetched
+  `origin/main`; it does not fetch, checkout, reset, or modify sibling repos.
+  Local dirty/behind worktrees are recorded as evidence only.
+- `tools/mth_unified.py --check` is green. The catalog records
+  `claims_ci_verified=false` and `claims_live_deployment=false`.
 
 ## What is not yet proven
 
@@ -199,6 +219,7 @@ Run it after any kernel change.
 - R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
 - P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, capacity-vs-SNR measurement, or native numeric executor delivery has been produced.
 - The P12 demo proves control-plane integration only; it does not compute a numeric dot product. Native numeric execution remains the external executor's responsibility.
-- Normalize, inclusive prefix sum, and xorshift64 are local native evidence only (`ci_verified=false`); Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
+- Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are local native evidence only (`ci_verified=false`); Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
+- The unified catalog is a cross-repo source/contract audit, not proof that every provider is deployed, reachable, or executing the same build. It deliberately leaves CI and live claims false.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

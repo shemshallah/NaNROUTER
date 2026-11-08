@@ -73,9 +73,13 @@ declared 32 KiB page size, plus `workspace_budget_words`, so an adjustable
 deployment budget is visible without host-side plan math.
 
 The value is adjustable through the constructor; the 2 MiB default is policy,
-not a hardware measurement. No hardware size is invented by this module. `workspace_word_bytes` defaults
-to `8` because the point-0 framing contract counts 64-bit NaN16 words; a caller
-using a different workspace word width must declare it.
+not a hardware measurement and not the guest's addressable span. The guest
+maps the **entire 8 MiB universe** (256 pages, 1,048,576 words, 32,896
+relation points) through `runner_riddle/universe_map.py`; the workspace budget
+only bounds a plan's live working set. No hardware size is invented by this
+module. `workspace_word_bytes` defaults to `8` because the point-0 framing
+contract counts 64-bit NaN16 words; a caller using a different workspace word
+width must declare it.
 
 The constructor rejects a service that does not wrap the supplied store, so a
 facade cannot accidentally authorize against one store while enqueueing into
@@ -92,9 +96,11 @@ another.
 | `register_capability(admin_token, ...)` | `WaveService.register_capability` |
 | `store_trace(...)` / `store_seal(...)` / `store_signature(...)` | `WaveService` evidence delegates |
 | `ring()` | detached `WaveRingScheduler.snapshot()` |
-| `health()` | merged store, registry, ring, and budget report |
+| `health()` | merged store, registry, ring, universe-map, and budget report |
 | `active_slot()` | point-0 document with current slot and JAHS evidence |
 | `point_zero_route()` | stable point-0 route with current slot evidence |
+| `universe_map()` | full 256-page / 32,896-point coverage report |
+| `universe_route(cell, layer)` | one NANNET route for a relation point |
 
 `lease` also requires the scheduler snapshot's `jahs` handoff seal
 (`"JAHS"`, "Just A Handoff Seal"). A missing seal is a hard slot error; this is
@@ -175,7 +181,10 @@ renumbering clients.
 - `registry`: `MthRegistry.health()`;
 - `ring`: detached scheduler snapshot;
 - `point_zero`: stable route identity;
-- `budgets`: word width, declared guest budget, runner budget, effective budget;
+- `universe_map`: full 8 MiB page/relation-point coverage, NANNET0 aliases,
+  and deterministic page-directory digest;
+- `budgets`: word width, declared workspace budget, runner budget, effective
+  budget, and `page_limit_enforced=false`;
 - `enforce_active_slot`.
 
 No submit, worker, or admin token is stored on `MthSystem`, passed to the

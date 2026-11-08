@@ -19,11 +19,12 @@ class NanNativeAuditTests(unittest.TestCase):
     def test_audit_is_green_and_covers_registered_native_sources(self):
         report = audit()
         self.assertEqual(report["status"], "green", report["errors"])
-        self.assertEqual(report["kernel_count"], 94)
-        self.assertEqual(report["native_source_count"], 92)
-        self.assertEqual(report["unique_fixture_count"], 91)
-        self.assertEqual(report["runner_fixture_count"], 92)
-        self.assertEqual(sum(report["layer_counts"].values()), 94)
+        self.assertEqual(report["kernel_count"], 95)
+        self.assertEqual(report["native_source_count"], 93)
+        self.assertEqual(report["unique_fixture_count"], 92)
+        self.assertEqual(report["runner_fixture_count"], 93)
+        self.assertEqual(sum(report["layer_counts"].values()), 95)
+        self.assertEqual(report["layer_counts"]["L1"], 3)
         self.assertEqual(report["layer_counts"]["L2"], 7)
         self.assertEqual(report["layer_counts"]["L3"], 27)
 
@@ -37,6 +38,9 @@ class NanNativeAuditTests(unittest.TestCase):
         )
         self.assertEqual(
             _layer_for("mth.prng.xorshift64.u64", spec["layers"]), "L2"
+        )
+        self.assertEqual(
+            _layer_for("mth.universe.map.u32", spec["layers"]), "L1"
         )
 
     def test_all_declared_workflows_are_scanned(self):

@@ -199,7 +199,7 @@ Production now uses the verified single-issuer Koyeb cutover recorded in
 ## Runtime activation and staging image
 
 The router Docker image builds two actual NaN16 guest images and the shared
-C execution core from pinned NaN0S commit `7f250a11bdb7845eae06ffb50df202187543ea5e`.
+C execution core from pinned NaN0S commit `fe636177027a1ede3f19939f7627e660e7bef5f3`.
 On startup, `RIDDLE_HERMES_NATIVE_ENABLED=1` enables runtime only if
 `RIDDLE_HERMES_DELEGATION_TOKEN`, `RIDDLE_HERMES_RECEIPT_HMAC_KEY`,
 `RIDDLE_N16T_SUBMIT_TOKEN`, and standard router intake/worker/feedback

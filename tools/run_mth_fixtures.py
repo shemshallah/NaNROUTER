@@ -121,8 +121,9 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("vector_normalize256_f32", "mth/tests/mth_vector_normalize256_f32_test.nas", 200_000, "MTH VECTOR NORMALIZE256 F32 PASS", "native_verified"),
     Fixture("vector_prefix_sum256_u32", "mth/tests/mth_vector_prefix_sum256_u32_test.nas", 100_000, "MTH VECTOR PREFIX SUM256 U32 PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
+    Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical
-    # pinned commit (7f250a1) so the registry exposes nmr_contract_put and the
+    # pinned commit (fe63617) so the registry exposes nmr_contract_put and the
     # route linker sources.
     Fixture("preflight_typed", "mth/tests/mth_preflight_test.nas", 2_000_000, "MTH TYPED PREFLIGHT PASS", "native_verified", requires_nan0s_sources=True),
     Fixture("native_dispatch", "mth/tests/mth_linker_preflight_test.nas", 3_000_000, "MTH NATIVE DISPATCH PASS", "native_verified", requires_nan0s_sources=True),

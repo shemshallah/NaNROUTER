@@ -1,0 +1,196 @@
+{
+  "schema": "nanrouter.mth-unified-system.v1",
+  "version": 1,
+  "canonical_language": "NaN16",
+  "canonical_word": {
+    "bits": 64,
+    "bytes": 8,
+    "heads": ["far-big-endian", "near-little-endian"],
+    "legal_classes": 16
+  },
+  "universe": {
+    "pages": 256,
+    "page_bytes": 32768,
+    "bytes": 8388608,
+    "words": 1048576,
+    "fixed_heads": 256,
+    "real_heads": 255,
+    "mirror_pairs": 32640,
+    "relation_points": 32896,
+    "nannet0": {
+      "head": 0,
+      "page": 255,
+      "ring_position": 255,
+      "aliases": ["HW0:0", "page:255", "ring:255"]
+    },
+    "address_space": "one guest-addressable 8 MiB window; workspace budget is separate"
+  },
+  "control_plane": {
+    "owner": "NaNROUTER",
+    "point_zero": "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0",
+    "admission": "NMP preflight + capability + lease + JAHS",
+    "ring": {
+      "slots": 6,
+      "active_slots": 1,
+      "active_ceiling_bytes": 7516192768,
+      "cycle": "BS0:0",
+      "nannet0_is_not_a_lane": true
+    }
+  },
+  "routes": {
+    "kernel_function": "math://GM0:SC0:MC0:BS0:0/function/{kernel_id}@v{version}",
+    "head": "{point_zero}::HW0:{head}",
+    "mirror_pair": "{point_zero}::HW0:MP{ordinal}",
+    "relation_layer": "{point_zero}::HW0:{point}::L{layer}",
+    "nannet0": "{point_zero}::HW0:0"
+  },
+  "providers": [
+    {
+      "id": "nanrouter.control",
+      "repo": "NaNROUTER",
+      "role": "control plane, NMP, point 0, six-slot ring, native MTH catalog, universe map",
+      "local_path": "~/NaNROUTER",
+      "required": true,
+      "required_artifacts": [
+        "spec/wave-capabilities.json",
+        "spec/universe-map.json",
+        "runner_riddle/mth_system.py",
+        "runner_riddle/universe_map.py",
+        "tools/run_mth_fixtures.py"
+      ],
+      "contracts": [
+        {
+          "file": "spec/wave-capabilities.json",
+          "contains": "\"schema\": \"nanrouter.wave-capabilities.v1\""
+        },
+        {
+          "file": "spec/universe-map.json",
+          "contains": "\"schema\": \"nanrouter.universe-map.v1\""
+        }
+      ]
+    },
+    {
+      "id": "nan0s.vm",
+      "repo": "nan0s",
+      "role": "native NaN16 VM, head bank, N16PACK, N16T transport",
+      "local_path": "~/nan0s",
+      "required": true,
+      "required_artifacts": [
+        "aarch64/android/core/nan16.h",
+        "src/nannet/n16_head_store.nas",
+        "src/nannet/n16_head_runtime.nas",
+        "src/nannet/n16_head_worker.nas",
+        "aarch64/android/docs/N16T_GUEST_ABI.md"
+      ],
+      "contracts": [
+        {
+          "file": "src/nannet/n16_head_store.nas",
+          "contains": ".equ NH_WORDS 67838"
+        },
+        {
+          "file": "aarch64/android/core/nan16.h",
+          "contains": "nan_write_words_raw"
+        }
+      ]
+    },
+    {
+      "id": "hermes.runtime",
+      "repo": "NaNLMind_HERMES",
+      "role": "N16ROOT1, N16SNAP1, native head bank transport, L0-L9 relation layers",
+      "local_path": "~/NaNLMind_HERMES",
+      "required": true,
+      "required_artifacts": [
+        "nanlmind_hermes/universe_root.py",
+        "nanlmind_hermes/head_bank_transport.py",
+        "nanlmind_hermes/native_head_fence.py",
+        "nanlmind_hermes/mth_layers.py"
+      ],
+      "contracts": [
+        {
+          "file": "nanlmind_hermes/universe_root.py",
+          "contains": "ROOT_MAGIC = b\"N16ROOT1\""
+        },
+        {
+          "file": "nanlmind_hermes/head_bank_transport.py",
+          "contains": "BANK_WORDS = 67838"
+        },
+        {
+          "file": "nanlmind_hermes/head_bank_transport.py",
+          "contains": "BANK_HEADS = 255"
+        }
+      ]
+    },
+    {
+      "id": "nanlmind.android",
+      "repo": "NaNLMind_android",
+      "role": "N16T client, native NMP receipt path, Android NaN16 VM",
+      "local_path": "~/NaNLMind_android",
+      "required": false,
+      "required_artifacts": [
+        "aarch64/android/docs/N16T_GUEST_ABI.md",
+        "src/training/n16_math_receipt_emit.nas",
+        "src/training/n16_nmp_kernel_guest.nas"
+      ],
+      "contracts": [
+        {
+          "file": "aarch64/android/docs/N16T_GUEST_ABI.md",
+          "contains": "N16T frames have a 32-byte header"
+        },
+        {
+          "file": "src/training/n16_math_receipt_emit.nas",
+          "contains": "n16_math_emit_receipt"
+        }
+      ]
+    },
+    {
+      "id": "nanlmind.core",
+      "repo": "NaNLMind",
+      "role": "universe identity and ring integration reference",
+      "local_path": "~/NaNLMind",
+      "required": false,
+      "required_artifacts": ["README.md"],
+      "contracts": [
+        {
+          "file": "README.md",
+          "contains": "NaN"
+        }
+      ]
+    },
+    {
+      "id": "nanlm.experiment",
+      "repo": "NaNLM",
+      "role": "LM mixer experiment only; never a production MTH authority",
+      "local_path": "~/NaNLM",
+      "required": false,
+      "required_artifacts": ["src/nanlm_mixer.c"],
+      "contracts": []
+    },
+    {
+      "id": "nanlmind.clocked",
+      "repo": "NaNLMind_CLOCKED",
+      "role": "CLOCKED/HW3 demonstration service; not a second universe",
+      "local_path": "~/NaNLMind_CLOCKED",
+      "required": false,
+      "required_artifacts": ["README.md"],
+      "contracts": []
+    }
+  ],
+  "authority": {
+    "native_math_owner": "NaN16 kernels in the NaNROUTER manifest",
+    "executor_provider": "nan0s.vm",
+    "catalog_owner": "NaNROUTER",
+    "route_owner": "NaNROUTER point 0",
+    "state_owner": "existing BS0DB/MC0DB",
+    "forbidden": [
+      "host numerical evaluation on the production path",
+      "a second universe, ring, store, or mathematical authority",
+      "claiming a relation is true because an address maps",
+      "claiming a provider is live because its source checkout exists"
+    ]
+  },
+  "evidence_policy": {
+    "local": "record commit SHA, dirty state, artifact digests, and fixture results",
+    "ci": "only canonical GitHub Actions results are CI-verified",
+    "live": "requires a real deployment transcript and mounted volumes; never inferred"
+  }
+}

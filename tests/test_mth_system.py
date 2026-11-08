@@ -584,6 +584,10 @@ class MthSystemTests(unittest.TestCase):
         self.assertEqual(health["ring"]["schema"],
                          "nanrouter.wave-ring-scheduler.v1")
         self.assertEqual(health["point_zero"]["route"], POINT_ZERO_ADDRESS)
+        self.assertEqual(health["universe_map"]["pages"], 256)
+        self.assertEqual(health["universe_map"]["universe_words"], 1_048_576)
+        self.assertEqual(health["universe_map"]["relation_points"], 32_896)
+        self.assertEqual(health["universe_map"]["coverage"], 1.0)
         self.assertEqual(
             health["budgets"]["runner_budget_bytes"],
             self.scheduler.max_active_memory_bytes,

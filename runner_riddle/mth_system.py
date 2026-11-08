@@ -19,6 +19,8 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping
 
 from .mth_registry import MthPlan, MthRegistry
+from .universe_map import route as universe_route
+from .universe_map import status as universe_map_status
 from .wave_ring_scheduler import JAHS_SEAL, WaveRingScheduler, resolve_slot
 from .wave_service import WaveService
 from .wave_store import WaveStore
@@ -461,6 +463,14 @@ class MthSystem:
         """Return the stable public route; the active slot is evidence only."""
         return self._point_zero_document(self.scheduler.snapshot())
 
+    def universe_map(self) -> dict[str, Any]:
+        """Return the full 8 MiB universe/relation-point coverage report."""
+        return universe_map_status()
+
+    def universe_route(self, canonical_cell: int, layer: int | None = None) -> str:
+        """Resolve one relation point through the canonical NANNET route."""
+        return universe_route(canonical_cell, layer)
+
     def _point_zero_document(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         return {
             "schema": POINT_ZERO_SCHEMA,
@@ -519,6 +529,7 @@ class MthSystem:
                 "point_zero": POINT_ZERO_IDENTITY,
                 "wire": POINT_ZERO_WIRE,
             },
+            "universe_map": universe_map_status(),
             "budgets": {
                 "workspace_word_bytes": self.workspace_word_bytes,
                 "page_bytes": DEFAULT_PAGE_BYTES,
