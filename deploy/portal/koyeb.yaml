@@ -1,0 +1,22 @@
+# Staging only: do not change the live nannet-portal source until parity and
+# mounted-volume migration checks pass. Koyeb configuration/credentials stay private.
+name: nanrouter-nannet-portal-staging
+type: web
+ports:
+  - port: 8080
+    protocol: http
+build:
+  docker:
+    dockerfile: deploy/portal/Dockerfile
+env:
+  - key: NANLM_MERGE_ROOT
+    value: /data
+  - key: NANLM_MERGE_TOKEN
+    secret: true
+  - key: NANNET_AUTHORITY_MASTER_KEY
+    secret: true
+  - key: NANNET_AUTHORITY_DB
+    value: /data/nannet-authority.sqlite
+volumes:
+  - mount_path: /data
+    size_gb: 2
