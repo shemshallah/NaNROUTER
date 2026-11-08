@@ -53,11 +53,16 @@ class HermesHeadObservationJournal:
             raise TypeError("live HermesLeaseRegistry.resolve is required")
         if not callable(ring_epoch_reader) or not callable(chart_fence_reader):
             raise TypeError("router epoch and chart fence authorities are required")
-        self.database = str(database)
+        # Pin one physical SQLite home for this journal's entire lifetime.
+        # A relative path or symlinked parent may be re-targeted after boot;
+        # reopening a different database would defeat durable dispatch IDs
+        # and let an already-executed native guest run again.
+        db_path = Path(database).expanduser()
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.database = str(db_path.resolve())
         self.lease_registry = lease_registry
         self.ring_epoch_reader = ring_epoch_reader
         self.chart_fence_reader = chart_fence_reader
-        Path(self.database).parent.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
             # Setting journal_mode=WAL requires a transient exclusive SQLite
             # schema lock. Several new router processes can start together;
