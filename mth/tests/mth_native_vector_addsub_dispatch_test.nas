@@ -115,6 +115,7 @@ mth_dispatch_fill:
 
 ; Returns only the already allowlisted native MTH status in r1.
 mth_dispatch_call:
+  ST r15,r0,@mth_dispatch_saved_return
   MOVI r1,@mth_dispatch_candidate
   MOVI r2,@mth_dispatch_rule
   MOVI r3,@mth_dispatch_left
@@ -124,6 +125,7 @@ mth_dispatch_call:
   MOVI r7,@mth_dispatch_output
   MOVI r12,@mth_dispatch_scratch
   CALL @mth_execute
+  LD r15,r0,@mth_dispatch_saved_return
   RET
 
 ; r4 holds the expected raw binary32 value; r1=0 means 256 exact matches.
@@ -192,4 +194,6 @@ mth_dispatch_out:
 .word 0
 .org 44000
 mth_dispatch_scratch:
+.word 0
+mth_dispatch_saved_return:
 .word 0
