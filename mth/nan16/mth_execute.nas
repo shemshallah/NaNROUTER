@@ -59,6 +59,7 @@ mth_execute_check_cosine:
   MOVI r10,78
   CMP r11,r10
   JMP[NE] @mth_execute_unsupported
+  JMP @mth_execute_supported
 
 mth_execute_check_add:
   MOVI r10,79
