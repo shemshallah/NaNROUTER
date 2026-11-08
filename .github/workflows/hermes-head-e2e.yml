@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: shemshallah/NaNLMind_HERMES
-          ref: 75c44c3704c3ff35c9548bb74f97e8645bcb79d8
+          ref: a0dc245a64dc49ee5b218e74b7610785dd15c163
           path: hermes
       - uses: actions/setup-python@v5
         with:
