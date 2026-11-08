@@ -4,8 +4,9 @@ Status: **native NaN16DE lease and route consistency gates and
 separate router-side durable HTTP lease delegation are implemented on this
 branch.** Existing NANNET portal-side delegation is proposed in
 [NaNLMind PR #32](https://github.com/shemshallah/NaNLMind/pull/32).
-**Issuer migration, native guest activation from an authenticated receipt,
-Koyeb cutover and live end-to-end deployment are NOT implemented.**
+**Native guest activation and N16T dispatch are now implemented and verified
+in CI when pinned NaN0S and N16T assets are configured. Issuer migration,
+Koyeb cutover and live production deployment are NOT performed.**
 Fail closed when no authoritative route/lease context is supplied.
 
 ## Authority topology
@@ -181,10 +182,37 @@ and mismatched generation/owner/point. Multiple HERMES universes MAY share
 node point 3 without sharing a guest topology; node point alone is not a
 unique universe identity.
 
-The current host-side `resolve` only grants a validated **route admission**;
-it does **not** yet call native `nhl_open` / `nhl_nannet_route` on the
-actual VM, transport N16T frames, or commit canonical NaNLMind learning.
-Do not label this end-to-end *execution*. The offline three-repo HTTP
+The host router now optionally loads a SHA-256-pinned NaN0S guest image,
+reconstructs per-installation native lease registries from authoritative
+SQLite, calls actual `nhl_open`/`nhl_renew` and `nhl_nannet_route`, and
+verifies VM output registers. It can dispatch opaque N16T work frames via
+the existing N16T guest pool and journal at-most-once results. ACKs are
+bound to signed live lease identity, head and response digest.
+**This is real native guest route/protocol execution, not a canonical
+NaNLMind model-training or knowledge-state commit.** The offline three-repo HTTP
 handshake is exercised by `NaNLMind/integration/hermes_cross_repo_smoke.py`.
 Production requires separate private runtime configuration and verified
 single-issuer Koyeb migration.
+
+## Runtime activation and staging image
+
+The router Docker image builds two actual NaN16 guest images and the shared
+C execution core from pinned NaN0S commit `7f250a11bdb7845eae06ffb50df202187543ea5e`.
+On startup, `RIDDLE_HERMES_NATIVE_ENABLED=1` enables runtime only if
+`RIDDLE_HERMES_DELEGATION_TOKEN`, `RIDDLE_HERMES_RECEIPT_HMAC_KEY`,
+`RIDDLE_N16T_SUBMIT_TOKEN`, and standard router intake/worker/feedback
+secrets are present. Read-only guest files and their build-time checksums
+are checked before any lease is admitted. Staging service example:
+`deploy/koyeb-hermes-staging.yaml`. The private portal must use the same
+bearer as `NANNET_HERMES_DELEGATION_TOKEN` and a verified router **HTTPS**
+origin in `NANNET_HERMES_ROUTER_URL`. Do not publish an unaudited public
+HERMES router endpoint. Native restore rejects stale signed receipts and
+rebuilds only live lease slots from the router SQLite ledger.
+
+CI: `.github/workflows/hermes-native-runtime.yml` tests pinned native
+lease activation, guest-owned N16T frame exchange, durable ACK, replay,
+revocation, generation reuse and restart. `.github/workflows/hermes-deployment-image.yml`
+checks that the deployable container actually includes native artifacts.
+
+No change to NANNET's original public pairing issuer, DNS, external Koyeb
+service or private storage has been made as part of this branch.
