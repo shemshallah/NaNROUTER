@@ -90,7 +90,9 @@ class NanLayerGraphTests(unittest.TestCase):
                 self.proposal(expected_generation=1,**invalid)
         for invalid in (dict(source_head=10),dict(tick=7)):
             with self.subTest(invalid=invalid),self.assertRaises(NanGraphError):
-                self.graph.retract(edge_id="e1",expected_generation=1,**invalid)
+                args=dict(edge_id="e1",expected_generation=1,source_head=7)
+                args.update(invalid)
+                self.graph.retract(**args)
 
     def test_master_commitment_stable_between_pages_and_parent_bound(self):
         parent="a"*64
