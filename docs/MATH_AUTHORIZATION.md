@@ -25,6 +25,16 @@ constructing a `Principal`.
 - `require()` raises `AuthorizationDenied`; `authorize()` returns a typed
   `AuthorizationDecision` for normal denials.
 
+## Class C policy transitions
+
+`ClassCPolicyTransition` is a separate signed record for checker, schema,
+ACL-root, control-head, and validity-semantics changes. It requires distinct
+proposer and approver principals, the `policy_authority` role, and the
+`math.policy` capability. It records old/new policy digests and a detached
+signature digest, and explicitly reports `signature_verified=False`; this module
+does not perform cryptographic verification. The transition is not yet wired
+into every policy mutation.
+
 ## Non-claims
 
 - This module does not validate bearer tokens, issue sessions, or store

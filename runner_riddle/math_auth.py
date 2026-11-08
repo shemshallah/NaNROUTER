@@ -32,10 +32,11 @@ LINK = "math.link"
 READ = "math.read"
 WRITE = "math.write"
 GRANT = "math.grant"
+POLICY_CHANGE = "math.policy"
 
 ACTIONS = frozenset({
     PROPOSE, VALIDATE, TEST, APPROVE, COMMIT, ACTIVATE, PROMOTE, PRUNE,
-    EXECUTE, LINK, READ, WRITE, GRANT,
+    EXECUTE, LINK, READ, WRITE, GRANT, POLICY_CHANGE,
 })
 
 ROLE_ACTIONS: dict[str, frozenset[str]] = {
@@ -49,6 +50,7 @@ ROLE_ACTIONS: dict[str, frozenset[str]] = {
     "pruner": frozenset({PRUNE, READ}),
     "executor": frozenset({EXECUTE, READ, LINK}),
     "store_writer": frozenset({WRITE, READ}),
+    "policy_authority": frozenset({POLICY_CHANGE, READ}),
     "admin": frozenset(ACTIONS),
     "supervisor": frozenset({READ, LINK, EXECUTE, PRUNE}),
 }
@@ -61,6 +63,7 @@ CAPABILITY_ACTIONS = {
     PRUNE: "rule.prune",
     PROMOTE: "rule.promote",
     GRANT: "math.grant",
+    POLICY_CHANGE: "math.policy",
 }
 
 
@@ -187,6 +190,97 @@ class AuthorizationDecision:
         }
 
 
+CLASS_C_CHANGE_KINDS = frozenset({
+    "checker", "schema", "acl_root", "control_head", "validity_semantics",
+})
+
+
+@dataclass(frozen=True)
+class ClassCPolicyTransition:
+    """A separate signed policy transition (Class C self-modification).
+
+    The digest fields bind the old/new policy and the detached signature. This
+    module validates structure and separation of duty; it does not verify the
+    signature cryptographically.
+    """
+
+    transition_id: str
+    change_kind: str
+    old_policy_digest: str
+    new_policy_digest: str
+    proposed_by: str
+    approved_by: str
+    signature_digest: str
+    tick: int = 0
+    version: int = 1
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "transition_id", _text(self.transition_id, "transition_id")
+        )
+        kind = str(self.change_kind).strip().lower()
+        if kind not in CLASS_C_CHANGE_KINDS:
+            raise MathAuthorizationError(
+                f"unknown Class C change kind: {kind!r}"
+            )
+        object.__setattr__(self, "change_kind", kind)
+        for name in (
+            "old_policy_digest", "new_policy_digest", "signature_digest",
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, str) or len(value) != 64 or any(
+                ch not in "0123456789abcdef" for ch in value
+            ):
+                raise MathAuthorizationError(
+                    f"{name} must be lowercase SHA-256 hex"
+                )
+        if self.old_policy_digest == self.new_policy_digest:
+            raise MathAuthorizationError("Class C transition must change policy")
+        object.__setattr__(
+            self, "proposed_by", _text(self.proposed_by, "proposed_by")
+        )
+        object.__setattr__(
+            self, "approved_by", _text(self.approved_by, "approved_by")
+        )
+        if self.proposed_by == self.approved_by:
+            raise MathAuthorizationError(
+                "Class C transition requires distinct proposer and approver"
+            )
+        if not _is_int(self.tick) or self.tick < 0:
+            raise MathAuthorizationError("tick must be an integer >= 0")
+        if not _is_int(self.version) or self.version < 1:
+            raise MathAuthorizationError("version must be an integer >= 1")
+
+    def digest(self) -> str:
+        return _digest({
+            "transition_id": self.transition_id,
+            "change_kind": self.change_kind,
+            "old_policy_digest": self.old_policy_digest,
+            "new_policy_digest": self.new_policy_digest,
+            "proposed_by": self.proposed_by,
+            "approved_by": self.approved_by,
+            "signature_digest": self.signature_digest,
+            "tick": self.tick,
+            "version": self.version,
+        })
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "nanrouter.math-class-c-transition.v1",
+            "transition_id": self.transition_id,
+            "change_kind": self.change_kind,
+            "old_policy_digest": self.old_policy_digest,
+            "new_policy_digest": self.new_policy_digest,
+            "proposed_by": self.proposed_by,
+            "approved_by": self.approved_by,
+            "signature_digest": self.signature_digest,
+            "tick": self.tick,
+            "version": self.version,
+            "digest": self.digest(),
+            "signature_verified": False,
+        }
+
+
 class MathAuthorizer:
     """Pure, deterministic authorization policy."""
 
@@ -268,6 +362,61 @@ class MathAuthorizer:
             principal, action, allowed=True, context=context,
         )
 
+    def authorize_class_c(
+        self,
+        transition: ClassCPolicyTransition,
+        proposer: Principal,
+        approver: Principal,
+    ) -> AuthorizationDecision:
+        """Authorize a separate signed Class C policy transition."""
+        if not isinstance(transition, ClassCPolicyTransition):
+            raise MathAuthorizationError(
+                "transition must be a ClassCPolicyTransition"
+            )
+        if proposer.principal_id == approver.principal_id:
+            return self._decision(
+                approver, POLICY_CHANGE, allowed=False,
+                reason="SEPARATION_OF_DUTY_VIOLATION",
+                context=transition.to_dict(),
+            )
+        if transition.proposed_by != proposer.principal_id:
+            return self._decision(
+                proposer, POLICY_CHANGE, allowed=False,
+                reason="PROPOSER_IDENTITY_MISMATCH",
+                context=transition.to_dict(),
+            )
+        if transition.approved_by != approver.principal_id:
+            return self._decision(
+                approver, POLICY_CHANGE, allowed=False,
+                reason="APPROVER_IDENTITY_MISMATCH",
+                context=transition.to_dict(),
+            )
+        for principal in (proposer, approver):
+            decision = self.authorize(
+                principal, POLICY_CHANGE, context=transition.to_dict(),
+            )
+            if not decision.allowed:
+                return decision
+        return self._decision(
+            approver, POLICY_CHANGE, allowed=True,
+            context=transition.to_dict(),
+        )
+
+    def require_class_c(
+        self,
+        transition: ClassCPolicyTransition,
+        proposer: Principal,
+        approver: Principal,
+    ) -> AuthorizationDecision:
+        decision = self.authorize_class_c(transition, proposer, approver)
+        if not decision.allowed:
+            raise AuthorizationDenied(
+                decision.reason,
+                principal_id=decision.principal_id,
+                action=decision.action,
+            )
+        return decision
+
     def require(
         self,
         principal: Principal,
@@ -287,8 +436,9 @@ class MathAuthorizer:
 
 __all__ = [
     "ACTIONS", "APPROVE", "ACTIVATE", "AuthorizationDecision",
-    "AuthorizationDenied", "COMMIT", "CAPABILITY_ACTIONS", "EXECUTE",
-    "GRANT", "LINK", "MathAuthorizationError", "MathAuthorizer", "PROPOSE",
-    "PROMOTE", "PRUNE", "Principal", "READ", "ROLE_ACTIONS", "SCHEMA",
-    "SEPARATION_ACTIONS", "TEST", "VALIDATE", "WRITE",
+    "AuthorizationDenied", "CLASS_C_CHANGE_KINDS", "COMMIT",
+    "CAPABILITY_ACTIONS", "ClassCPolicyTransition", "EXECUTE", "GRANT",
+    "LINK", "MathAuthorizationError", "MathAuthorizer", "POLICY_CHANGE",
+    "PROPOSE", "PROMOTE", "PRUNE", "Principal", "READ", "ROLE_ACTIONS",
+    "SCHEMA", "SEPARATION_ACTIONS", "TEST", "VALIDATE", "WRITE",
 ]
