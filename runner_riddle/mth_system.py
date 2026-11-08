@@ -29,7 +29,7 @@ POINT_ZERO_SCHEMA = "nanrouter.mth-point-zero.v1"
 
 # The canonical public ingress from spec/address-grammar.md.  It is stable and
 # intentionally contains no runner-slot identity.
-POINT_ZERO_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+POINT_ZERO_ADDRESS = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
 POINT_ZERO_ROUTE = POINT_ZERO_ADDRESS
 POINT_ZERO_IDENTITY = "BS0:0"
 POINT_ZERO_WIRE = "BSR0"

@@ -100,9 +100,9 @@ bsr_wire = 5
 
 [network_gateway]
 nannet_port = "BS0:0"
-nannet_port_address = "nan://GM0:SC0:MC0:BS0:0"
-attached_hardware_root = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
-canonical_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+nannet_port_address = "nan://GM0:0::SC0:0::MC0:0::BS0:0"
+attached_hardware_root = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
+canonical_address = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
 bootstrap_service_class = 0
 bootstrap_node = 0
 hosting = "Koyeb"
@@ -112,11 +112,11 @@ owns_master_route_cache = false
 port_is_hardware_node = false
 
 [macrocluster]
-canonical_address = "nan://GM0:SC0:MC0:0"
+canonical_address = "nan://GM0:0::SC0:0::MC0:0"
 macrocluster_class = 0
 macrocluster_id = 0
 runner_units = 6
 runner_wire_bsr = [0, 1, 2, 3, 4, 5]
 control = "BS0:0 shared runner-ring port"
-network_gateway_address = "nan://GM0:SC0:MC0:BS0:0"
-hardware_root_address = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+network_gateway_address = "nan://GM0:0::SC0:0::MC0:0::BS0:0"
+hardware_root_address = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"

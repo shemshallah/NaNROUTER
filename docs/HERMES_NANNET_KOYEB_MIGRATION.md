@@ -1,13 +1,15 @@
 # NANNET portal ingress → NaNROUTER-owned HERMES lease universes
 
-Status: **native NaN16DE lease and route consistency gates and
-separate router-side durable HTTP lease delegation are implemented on this
-branch.** Existing NANNET portal-side delegation is proposed in
-[NaNLMind PR #32](https://github.com/shemshallah/NaNLMind/pull/32).
-**Native guest activation and N16T dispatch are now implemented and verified
-in CI when pinned NaN0S and N16T assets are configured. Issuer migration,
-Koyeb cutover and live production deployment are NOT performed.**
-Fail closed when no authoritative route/lease context is supplied.
+Status: **native NaN16DE lease and route consistency gates, router-side
+durable HTTP lease delegation, and the live Koyeb source cutover are
+implemented.** The production Koyeb service now builds from
+`github.com/shemshallah/NaNROUTER` (`deploy/portal/Dockerfile`) while keeping
+the same `/data` volume, issuer database, secrets and public hostname; see
+`docs/KOYEB_CUTOVER_EVIDENCE.md`. The pre-cutover NaNLMind-sourced deployment
+remains available for rollback.
+**Native guest activation and N16T dispatch are implemented and verified in
+CI when pinned NaN0S and N16T assets are configured.** Fail closed when no
+authoritative route/lease context is supplied.
 
 ## Authority topology
 
@@ -19,7 +21,7 @@ HERMES plugin (local NaN16DE universe)
   ↔ NaNLMind ring and six ephemeral workers (canonical learner)
 ```
 
-**Global endpoint** `nan://GM0:SC0:MC0:BS0:HW2` is the legacy HERMES
+**Global endpoint** `nan://GM0:0::SC0:0::MC0:0::BS0:0::HW2:0` is the legacy HERMES
 installation identity. It maps to the per-bootstrap node point **3**; the
 number 3 is NOT a local head. A *distinct* per-lease universe identifier
 resolves the leased universe, inside which head IDs 0–254 are addressable.
@@ -31,7 +33,7 @@ Canonical router object roots use **the versioned grammar** in
 `spec/address-grammar.md`, for example:
 
 ```text
-nan://GM0:SC0:MC0:BS0:0:HW0:0::HW2:24::vector1337
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW2:24:vector#1337
 ```
 
 A textual route is a *requested path* only. It does not grant ownership.
@@ -122,7 +124,7 @@ and runs the same NaN16 code with the canonical NaN0S VM.
    validated evidence/candidate deltas. The six CPU workers and canonical
    NaNLMind ring retain exclusive commit authority to their own topology.
 
-## Staged Koyeb ownership migration (NOT performed by this PR)
+## Koyeb ownership migration (performed 2026-11-08)
 
 **Source deployment files to inventory and port:**
 - `NaNLMind/deploy/training_merge/{Dockerfile,start_portal.sh,koyeb.yaml}`
@@ -191,8 +193,8 @@ bound to signed live lease identity, head and response digest.
 **This is real native guest route/protocol execution, not a canonical
 NaNLMind model-training or knowledge-state commit.** The offline three-repo HTTP
 handshake is exercised by `NaNLMind/integration/hermes_cross_repo_smoke.py`.
-Production requires separate private runtime configuration and verified
-single-issuer Koyeb migration.
+Production now uses the verified single-issuer Koyeb cutover recorded in
+`docs/KOYEB_CUTOVER_EVIDENCE.md`; private runtime secrets remain in Koyeb.
 
 ## Runtime activation and staging image
 

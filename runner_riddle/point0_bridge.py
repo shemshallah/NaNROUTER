@@ -57,9 +57,12 @@ from typing import Any
 
 from .wave_ring_scheduler import SLOT_COUNT, WaveRingScheduler
 
-# Stable point-0 identity.  BSR0 is the zero-based wire coordinate used by the
-# existing bridge protocol; the human/display label for point 0 is BSR1.
-POINT_ZERO_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+# Stable point-0 identity in the apex-layered v2 grammar.  BSR0 is the
+# zero-based wire coordinate used by the existing bridge protocol; the
+# human/display label for point 0 is BSR1.  The pre-v2 spelling is accepted
+# only as a migration alias and is never emitted.
+POINT_ZERO_ADDRESS = "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
+POINT_ZERO_LEGACY_ADDRESS = "nan://GM0:SC0:MC0:BS0:0:HW0:0"
 POINT_ZERO_IDENTITY = "BS0:0"
 POINT_ZERO_WIRE = "BSR0"
 POINT_ZERO_LABEL = "point-0"
@@ -195,7 +198,11 @@ def _canonical_route(route: Any) -> str:
     route = route.strip()
     if not route:
         return POINT_ZERO_ADDRESS
-    if route in (POINT_ZERO_ADDRESS, POINT_ZERO_WIRE):
+    if route in (
+        POINT_ZERO_ADDRESS,
+        POINT_ZERO_LEGACY_ADDRESS,
+        POINT_ZERO_WIRE,
+    ):
         return POINT_ZERO_ADDRESS
     if any(marker in route for marker in _FORBIDDEN_ROUTE_MARKERS):
         raise FrameError("route must not address a runner slot directly")
@@ -1309,6 +1316,7 @@ __all__ = [
     "POINT_ZERO_ADDRESS",
     "POINT_ZERO_IDENTITY",
     "POINT_ZERO_LABEL",
+    "POINT_ZERO_LEGACY_ADDRESS",
     "POINT_ZERO_WIRE",
     "Point0Bridge",
     "Point0BridgeError",

@@ -53,7 +53,7 @@ class ServiceTests(unittest.TestCase):
     def test_health_identifies_bs0_gateway_and_queue(self):
         status, body = self.request("/healthz")
         self.assertEqual(status, 200)
-        self.assertEqual(body["address"], "nan://GM0:SC0:MC0:BS0:0:HW0:0")
+        self.assertEqual(body["address"], "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0")
         self.assertFalse(body["live_route_commit"])
 
     def test_health_reports_unconfigured_volume_registry_as_unknown(self):
@@ -221,6 +221,69 @@ class ServiceTests(unittest.TestCase):
         )
         self.assertEqual(result["packet"]["schema"], "nanrouter.micro-route.v1")
         self.assertFalse(result["live_route_commit"])
+
+    def test_point_fabric_health_and_authenticated_multi_point_route(self):
+        status, health = self.request("/healthz")
+        self.assertEqual(status, 200)
+        self.assertTrue(health["point_fabric"]["enabled"])
+        self.assertEqual(health["point_fabric"]["schema"],
+                         "nanrouter.zero-point-fabric.v1")
+
+        word = "7ff112345678f8ff"
+        frame = {
+            "request_id": 11,
+            "source_hw": 5,
+            "destination_hw": 2,
+            "nanclock_tick": 9,
+            "kind": "hermes.nan",
+            "acl_digest": "a" * 64,
+            "word_hex": word,
+        }
+        self.request("/v1/fabric/points/5/register", {}, "w" * 40)
+        self.request("/v1/fabric/points/2/register", {"status": "active"}, "w" * 40)
+        status, receipt = self.request("/v1/fabric/intake", frame, "w" * 40)
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt["central_status"], "delivered")
+        self.assertEqual(receipt["destination"], "HW2:0")
+
+        status, drained = self.request(
+            "/v1/fabric/points/2/drain", {"limit": 4}, "w" * 40
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(drained["count"], 1)
+        self.assertEqual(drained["frames"][0]["destination_hw"], 2)
+        self.assertEqual(drained["frames"][0]["word"]["raw_hex"], word)
+
+    def test_point_fabric_unregistered_destination_is_pending(self):
+        self.request("/v1/fabric/points/2/register", {"status": "active"}, "w" * 40)
+        frame = {
+            "request_id": 12, "source_hw": 2, "destination_hw": 9,
+            "nanclock_tick": 10, "kind": "hermes.out",
+            "acl_digest": "b" * 64, "word_hex": "7ff100000000f8ff",
+        }
+        status, receipt = self.request("/v1/fabric/intake", frame, "w" * 40)
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt["central_status"], "pending")
+        status, points = self.request("/v1/fabric/points", None, "w" * 40)
+        self.assertEqual(status, 200)
+        self.assertEqual(points["pending"], 1)
+        status, registered = self.request(
+            "/v1/fabric/points/9/register", {}, "w" * 40
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(registered["pending_delivered"], 1)
+
+    def test_point_fabric_requires_authorization(self):
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/fabric/intake", {
+                "request_id": 1, "source_hw": 2, "destination_hw": 0,
+                "nanclock_tick": 1, "kind": "hermes.out",
+                "acl_digest": "c" * 64, "word_hex": "7ff100000000f8ff",
+            })
+        self.assertEqual(err.exception.code, 401)
+        with self.assertRaises(HTTPError) as err:
+            self.request("/v1/fabric/points", None)
+        self.assertEqual(err.exception.code, 401)
 
     def test_intake_returns_429_when_pending_queue_is_full(self):
         self.service.inbox.max_pending_events = 1

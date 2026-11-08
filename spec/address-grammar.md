@@ -1,76 +1,136 @@
-# NaN hierarchical address grammar
+# NaN hierarchical address grammar (v2, apex-layered)
 
-## Canonical network root
+## Apex stack
 
-The persistent Bootstrap network gateway is:
+The address is an apex-ordered stack. Every layer is
+`TYPE<namespace>:<instance>` and every layer boundary is `::`:
 
-    nan://GM0:SC0:MC0:BS0:0:HW0:0
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0
+      │      │      │      │      └── HW0:0  Bootstrap hardware-node / network port
+      │      │      │      └───────── BS0:0  Bootstrap service class 0, node 0
+      │      │      └──────────────── MC0:0  macrocluster 0, instance 0
+      │      └─────────────────────── SC0:0  supercluster 0, instance 0
+      └────────────────────────────── GM0:0  global mesh 0 (apex)
+```
 
-GM0 is global mesh 0; SC0 is supercluster 0; MC0 is macrocluster 0; BS0:0 is Bootstrap service class 0, node 0; HW0:0 is hardware/head namespace 0, local head 0.
+`GM0:0` is the global-mesh apex. It is not optional and it is not the same
+coordinate as `MC0:0` or `SC0:0`.
 
-Koyeb hosts BS0:0 as the always-on ingress/egress node. The six-unit runner-controlled macrocluster is MC0:0. Its six BSR runner identities remain distinct members (wire BSR0–BSR5). Koyeb provides the persistent network socket and durable bridge; it does not own the runner heads or their learned map.
+## Runner-ring heads and leaf objects
 
-## Point 0 runner-ring ingress
+The Bootstrap port `HW0:0` is followed by the local runner-ring head block
+`HW0:1-255`. A leaf object is introduced by a single `:` after the head
+block. Object identity uses `#`; an optional child relation uses
+`:subrelation(...)`:
 
-The six-slot runner ring is addressed through **point 0** (`BS0:0` / `BSR0`). Clients do not address `R0..R5` directly. Point 0:
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255:vector#1337
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1:vector#1337:subrelation(42)
+```
 
-1. accepts a NaN16 frame;
-2. translates it to a binary transport envelope;
-3. routes it to whichever single runner slot is currently active;
-4. receives the binary result;
-5. translates it back to NaN16.
+A head selector accepts a comma list, a contiguous range, or a combination:
 
-The active slot is internal and can rotate without changing the client address. Stale slot/epoch envelopes are rejected. Point 0 is an ingress/translation endpoint, not a head, a runner slot, or a second math owner.
+```text
+HW0:1,2,3
+HW0:1-255
+HW0:1-8,16-24,255
+```
 
-## Grammar (v1)
+Head selectors are local computational head indices. They are **not** global
+hardware-node numbers, BSR runner-slot numbers, node points, or object IDs.
+The six BSR members of macrocluster `MC0:0` remain internal wire identities;
+they do not reserve `HW4`..`HW8`.
 
-    address       = "nan://" context ":" bootstrap ":" head-path
-    context       = gm ":" sc ":" mc
-    gm            = "GM" uint
-    sc            = "SC" uint
-    mc            = "MC" uint
-    bootstrap     = "BS" uint ":" uint
-    head-path     = head [selector]
-    head          = "HW" uint ":" uint
-    selector      = "::" selector-item { "::" selector-item }
-    selector-item = head-list | object-ref
-    head-list     = "HW" uint ":" uint { "," uint }
-    object-ref    = object-kind uint
-    object-kind   = "vector" | "hyperedge" | "rule" | "route" | "bin" | "temporal"
-    uint          = digit { digit }
+## Canonical Bootstrap coordinates
 
-The grammar is structural. Commas are allowed only inside a head-list selector. The root and each selector are typed segments. Double-colon is a traversal boundary, not punctuation to discard. Every selector resolves through the committed route cache and ACL. An object identifier is a symbolic key, never a raw byte offset.
+| Coordinate | Meaning |
+|---|---|
+| `GM0:0` | global mesh 0, instance 0 (apex) |
+| `SC0:0` | supercluster 0, instance 0 |
+| `MC0:0` | macrocluster 0, instance 0 (six-runner ring) |
+| `BS0:0` | Bootstrap service class 0, node 0 — the persistent network port |
+| `HW0:0` | Bootstrap hardware node 0 / attached network root |
+| `HW0:1-255` | local runner-ring heads inside the `HW0` topology |
 
-## Examples
+Koyeb hosts `BS0:0`. The public ingress is the apex stack
 
-Bootstrap's persistent network node and head 0:
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0
+```
 
-    nan://GM0:SC0:MC0:BS0:0:HW0:0
+The Bootstrap service port and the attached hardware root are separate
+coordinates. `BS0:0` identifies the port; `HW0:0` identifies the hardware
+node reached through it.
 
-From Bootstrap network head 0, select heads 1, 2, and 3 in hardware namespace 0. These remain separate permanent head records:
+## Fixed BS0 hardware-node roles
 
-    nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1,2,3
+| HW node | Role | Public allocation |
+|---|---|---|
+| `HW0:0` | Bootstrap hardware root / network port | no |
+| `HW1:0` | Android endpoint | paired device only |
+| `HW2:0` | HERMES endpoint | paired device only |
+| `HW3:0` | CLOCKED endpoint | paired device only |
+| `HW4:0` | WordNet universe | never |
+| `HW5:0`..`HW255:0` | general registered hardware nodes | yes (251 slots) |
 
-Traverse through head 1 and resolve vector object 1337 using its address-association table:
+The `:0` suffix is the zero point of each hardware instance. A translation
+module may run at each zero point and relay NaN frames to the central
+Bootstrap fabric. Zero points are hardware-node coordinates, not heads.
 
-    nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1::vector1337
+## Legacy spelling
 
-Traverse through head 2 and resolve hyperedge object 1337 using its member/head/bin associations:
+The pre-v2 Bootstrap spelling
 
-    nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:2::hyperedge1337
+```text
+nan://GM0:SC0:MC0:BS0:0:HW0:0
+nan://GM0:SC0:MC0:BS0:0:HW0:0::HW0:1,2,3::vector1337
+```
 
-## BSR compatibility
-
-Existing bridge route URIs encode BSR0–BSR5 as a final wire coordinate. Keep that wire representation stable. The new BS0:0 node address and MC0:0 six-unit runner cluster are higher-level routing context; they do not reinterpret the six-byte route frame. A translation table maps each runner's legacy BSR wire identity to its permanent MC0:0 member record.
+is accepted only while persisted records and older peers are migrated. It is
+normalized to the apex-layered form on parse. A legacy spelling does not
+create a second authority, and new code must emit only v2.
 
 ## Resolution rules
 
-1. Parse and type-check every segment before route lookup.
-2. Resolve the root Bootstrap node through the master network cache.
-3. Resolve each HW selector to a permanent head record; comma lists expand to multiple explicit head refs.
-4. Resolve vectorN, hyperedgeN, and other object refs through typed association tables.
-5. Verify route generation, target generation, permanence, lease, and ACL.
-6. Reject stale, ambiguous, unregistered, or unauthorized paths. Never fall back to raw address interpretation.
-7. Return a micro-routing definition packet containing the exact resolved path and provenance.
+1. Parse and type-check every layer and selector before any lookup.
+2. Normalize a legacy root to the v2 canonical root; never retain the legacy
+   spelling as an identity.
+3. Resolve `GM0:0` through the global mesh map, then `SC0:0`, `MC0:0`,
+   `BS0:0`, and finally the `HW` root.
+4. Expand head ranges to explicit local head references. Reject duplicate,
+   descending, or out-of-range heads.
+5. Resolve `kind#id` and `subrelation(...)` through the typed association
+   tables for the selected head.
+6. Verify route generation, target generation, permanence, lease, and ACL.
+7. Reject stale, ambiguous, unregistered, or unauthorized paths. Never fall
+   back to raw byte offsets or silently reinterpret a layer.
+8. Return a micro-routing packet containing the normalized path and
+   provenance.
 
-A node point, local head index, BSR runner identity, and memory-object identifier are four different namespaces. Never store them in one untyped integer field.
+## Examples
+
+Bootstrap network port:
+
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0
+```
+
+All runner-ring heads under the Bootstrap hardware root:
+
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255
+```
+
+Vector 1337 on head 1:
+
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1:vector#1337
+```
+
+Child relation 42 of that vector:
+
+```text
+nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1:vector#1337:subrelation(42)
+```

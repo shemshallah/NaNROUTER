@@ -37,6 +37,7 @@ from .point0_bridge import (
     MAX_FRAME_WORDS,
     MAX_PAYLOAD_BYTES,
     POINT_ZERO_ADDRESS,
+    POINT_ZERO_LEGACY_ADDRESS,
     POINT_ZERO_WIRE,
 )
 from .volume_registry import VolumeRegistry, VolumeRegistryError
@@ -502,13 +503,17 @@ def _validate_route(value: Any) -> str | None:
     text = value.strip()
     if text == POINT_ZERO_WIRE:
         return None
-    if text != POINT_ZERO_ADDRESS:
-        return f"route must be {POINT_ZERO_ADDRESS!r} (or wire {POINT_ZERO_WIRE!r})"
+    if text not in (POINT_ZERO_ADDRESS, POINT_ZERO_LEGACY_ADDRESS):
+        return (
+            f"route must be {POINT_ZERO_ADDRESS!r} "
+            f"(legacy alias {POINT_ZERO_LEGACY_ADDRESS!r}, "
+            f"or wire {POINT_ZERO_WIRE!r})"
+        )
     try:
         parsed = parse_address(text)
     except AddressError:
         return "route is not a valid NaN address"
-    if parsed.root != POINT_ZERO_ADDRESS or text != parsed.root:
+    if parsed.root != POINT_ZERO_ADDRESS:
         return "route must be the canonical point-0 root without selectors"
     return None
 

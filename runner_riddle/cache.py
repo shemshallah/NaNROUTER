@@ -287,8 +287,12 @@ class MasterRouteCache:
                        for item in self.document["object_associations"]
                        if item.get("state") == "committed"}
         root = parsed.root
-        route = next((r for r in self.document["routes"]
-                      if r.get("canonical_address") == root and r.get("state") == "committed"), None)
+        route = next((
+            r for r in self.document["routes"]
+            if r.get("state") == "committed"
+            and isinstance(r.get("canonical_address"), str)
+            and parse_address(r["canonical_address"]).root == root
+        ), None)
         if route is None:
             raise RouteError("root route is not committed in the master cache")
         resolved_heads: list[dict[str, Any]] = []
