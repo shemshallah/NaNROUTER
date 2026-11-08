@@ -53,7 +53,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `A-19` Revalidate the complete admission object at lease/complete (current rule-snapshot and lease checks are not a full `require_admission`).
 - [ ] `A-20` Add an end-to-end rejection test for a rule/capability/auth change between submit and complete.
 - [x] `A-21` Make math admission binding mandatory for direct `MthSystem.submit_plan` in math mode (`require_math_admission=True`); default remains off for legacy wave jobs.
-- [ ] `A-22` Add typed result fields beyond digest: runner/kernel identity, residual/error bound, saturation/iterations/status.
+- [x] `A-22` Typed execution evidence beyond a digest: kernel/runner identity, residual/error bounds, saturation/iterations, guest pins, lease/JAHS/ring binding, numerical policy, and bounded provenance (`ExecutionEvidence`, 5 tests).
 - [ ] `A-23` **PARTIAL:** native NaN16 dispatch is implemented for canonical program/operator pairs 900/77 and 901/78 (`mth_execute.nas`), and N16T worker execution evidence is integrated with NMP pre-lease/completion pins. Native admission-receipt production remains external.
 - [ ] `A-24` Make the demo use the real native executor when the NaN0S toolchain is available, while retaining the evidence-digest fallback.
 
