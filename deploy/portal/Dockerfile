@@ -3,7 +3,7 @@
 FROM debian:bookworm-slim AS native
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-ARG NANLMIND_COMMIT=431e0775cdb79b4cd59038a4ebe0df5434a17c92
+ARG NANLMIND_COMMIT=cb8e87da9d69a14b4098f9ffd5e3f950eb2159be
 RUN mkdir -p /src && git -C /src init \
  && git -C /src remote add origin https://github.com/shemshallah/NaNLMind.git \
  && git -C /src fetch --depth 1 origin "$NANLMIND_COMMIT" \
