@@ -38,12 +38,12 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.vector.span_add.checked.u32", ids)
         self.assertIn("mth.preflight.typed.u32", ids)
         self.assertIn("mth.execute.native_dispatch.f32", ids)
-        self.assertEqual(len(ids), 83)
+        self.assertEqual(len(ids), 85)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 83)
+        self.assertEqual(len(rows), 85)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
@@ -54,7 +54,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 83)
+            self.assertEqual(len(rows), 85)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],

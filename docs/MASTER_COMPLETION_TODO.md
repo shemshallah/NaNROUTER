@@ -170,7 +170,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B2. Tier 2–3 numeric/array operations
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
-- [ ] `B-21` Float vector add/sub/broadcast/mean/squared norm/normalize/distance.
+- [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/abs/relu are implemented and locally verified; broadcast, squared norm beyond existing norm kernel, distance, and normalization remain open.
 - [ ] `B-22` Argmin/argmax/masks/permutation/prefix sums.
 - [ ] `B-23` Matrix transpose/reshape/multiply/elementwise/axis reductions/diagonal/identity/zero/normalization.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.

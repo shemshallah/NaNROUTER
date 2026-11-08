@@ -1194,6 +1194,34 @@
       ],
       "status": "native_verified",
       "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.graph.laplacian.csr.q16.16",
+      "source": "mth/nan16/mth_graph_laplacian_csr.nas",
+      "fixture": "mth/tests/mth_graph_laplacian_csr_test.nas",
+      "marker": "MTH GRAPH LAPLACIAN CSR PASS",
+      "steps": 197118,
+      "precision": "q16.16",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.rss.contract.u32",
+      "source": "mth/nan16/mth_rss_contract.nas",
+      "fixture": "mth/tests/mth_rss_contract_test.nas",
+      "marker": "MTH RSS CONTRACT PASS",
+      "steps": 6504,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

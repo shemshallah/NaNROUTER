@@ -43,6 +43,8 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("graph_degree", "mth/tests/mth_graph_degree_test.nas", 1_000_000, "MTH GRAPH DEGREE 256 PASS", "native_verified"),
     Fixture("graph_pattern", "mth/tests/mth_graph_pattern_test.nas", 1_000_000, "MTH GRAPH PATTERN 256 PASS", "native_verified"),
     Fixture("graph_filter", "mth/tests/mth_graph_filter_test.nas", 2_000_000, "MTH GRAPH FILTER Q16.16 PASS", "native_verified"),
+    Fixture("graph_laplacian_csr", "mth/tests/mth_graph_laplacian_csr_test.nas", 1_000_000, "MTH GRAPH LAPLACIAN CSR PASS", "native_verified"),
+    Fixture("rss_contract", "mth/tests/mth_rss_contract_test.nas", 100_000, "MTH RSS CONTRACT PASS", "native_verified"),
     Fixture("fold", "mth/tests/mth_graph_fold_test.nas", 4_000_000, "MTH GRAPH FOLD VECTOR PASS", "native_verified"),
     Fixture("dot256", "mth/tests/mth_dot256_test.nas", 4_000_000, "MTH DOT256 PASS", "native_verified"),
     Fixture("norm256", "mth/tests/mth_norm256_test.nas", 4_000_000, "MTH NORM256 PASS", "native_verified"),
