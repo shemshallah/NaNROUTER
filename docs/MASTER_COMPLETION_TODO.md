@@ -32,8 +32,8 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] `A-01` Freeze authority, validity, truth, proof, lifecycle, capability, and utility as separate axes. Keep production validity capped at V2.
 - [x] `A-02` Explicit blocked P13 ledger (`spec/p13-gates.json`, `docs/P13_GATES.md`).
-- [ ] `A-03` Enumerate A01–A20 formally in the plan/TODO (currently proposed from phase exits; tests exist for A01–A16/A20, A17–A19 remain partial).
-- [ ] `A-04` Enumerate T01–T20 oracle expectations in one table and mark each test ID done/partial/missing.
+- [x] `A-03` Enumerate A01–A20 formally in `docs/MASTER_COMPLETION_TODO.md` and `docs/VERIFICATION_MATRIX.md`; tests cover A01–A16/A18–A20 and A17 restart/commit.
+- [x] `A-04` Enumerate T01–T20 oracle expectations in `docs/VERIFICATION_MATRIX.md` and mark each test ID done/partial/missing.
 - [ ] `A-05` Resolve T12 vocabulary: unknown function currently yields `UNSUPPORTED` before NMP maps it to `REJECTED`; freeze whether the preflight verdict is `UNSUPPORTED` and gate failure is `REJECTED`.
 - [x] `A-06` Freeze the void/potential formula: canonical `α/(r²+ε²)` implemented by `mth_graph_void.nas`; plan prose corrected.
 - [ ] `A-07` Decide/defer the MOA 65,536-cell bit layout and XFSC365 function-reference resolver.
