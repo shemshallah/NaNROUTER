@@ -2,9 +2,10 @@
 
 This implementation indexes **all 91 entries** of the existing
 `spec/wave-capabilities.json` with the HERMES portal. Source and fixture files
-are hashed on load. As of this round **64 kernels** have CI-verification
-claims and are eligible for plan admission; **27** are inspectable but
-CI-unverified and cannot be included in an admitted plan. The single source
+are hashed on load. All **91 kernels** now have CI-verification
+claims backed by the pinned NaN0S fixture workflow; they are eligible for
+bounded plan composition. Fixture PASS evidence is not a universal dynamic
+execution ABI or a mathematical proof certificate. The single source
 of truth is `MthRegistry`; no Python mirror of the NaN16 math kernels exists.
 
 ## Available in this round
