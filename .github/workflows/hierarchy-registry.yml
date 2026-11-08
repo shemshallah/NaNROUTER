@@ -1,0 +1,16 @@
+name: BS0 keypair hardware allocation and future-tier DB
+on:
+  push:
+    paths: ["runner_riddle/hierarchy_registry.py", "tests/test_hierarchy_registry.py", ".github/workflows/hierarchy-registry.yml"]
+  pull_request:
+    paths: ["runner_riddle/hierarchy_registry.py", "tests/test_hierarchy_registry.py", ".github/workflows/hierarchy-registry.yml"]
+permissions:
+  contents: read
+jobs:
+  hardware-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify BS0 HW0-4 and HW5-255 keypair mapping, SC0/GM0 SQLite roots
+        run: python -m unittest discover -s tests -p 'test_hierarchy_registry.py' -v
