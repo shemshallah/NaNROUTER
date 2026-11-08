@@ -5,8 +5,8 @@ and never executes them. This is the `B-37` output/sampling implementation
 slice in `docs/MASTER_COMPLETION_TODO.md`; it is not native kernel evidence and
 does not close the native sampling work.
 
-**Module:** `runner_riddle/sampling_controller.py`  
-**Tests:** `tests/test_sampling_controller.py`  
+**Module:** `runner_riddle/sampling_controller.py`
+**Tests:** `tests/test_sampling_controller.py`
 **Scope:** `docs/GAME_PLAN_MTH.md` §4, "Output and sampling operations":
 logit scaling, temperature, explicit penalties, top-k, top-p, stable
 normalization, seeded categorical sampling, greedy argmax, and deterministic
