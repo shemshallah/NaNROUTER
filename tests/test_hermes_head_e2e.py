@@ -91,7 +91,8 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             labels_path=str(labels), labels_sha256=sha(labels.read_bytes()),
         )
 
-    def request(self, *, dispatch_id, raw, generation, feature, increment):
+    def request(self, *, dispatch_id, raw, generation, feature, increment,
+                head_index=1):
         return HeadBankHandoff(
             universe_id="hermes-universe-" + str(self.universe_id),
             installation_id=self.installation,
@@ -99,7 +100,7 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             lease_id=self.receipt["lease_id"],
             lease_generation=self.receipt["generation"],
             ring_epoch=self.epoch,
-            head_index=1, feature_index=feature, increment=increment,
+            head_index=head_index, feature_index=feature, increment=increment,
             parent_root_sha256=self.parent,
             bank_before_sha256=sha(raw), chart_generation=generation,
             observation_sha256=sha(dispatch_id.encode("ascii") + raw[:8]),
@@ -130,6 +131,71 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             published["chart_generation"],
         )
         return published
+
+    def test_real_native_head255_routes_and_survives_single_chart_restore(self):
+        """Network 254 maps to real NaN16 HW0:255 with durable bank bytes."""
+        from nanlmind_hermes.native_head_checkpoint import (
+            NativeHeadCheckpointCoordinator,
+        )
+        from nanlmind_hermes.universe_chart import (
+            Chart8MiB, restore_local_chart,
+        )
+        from nanlmind_hermes.head_bank_transport import export_guest_bank_bytes
+        from runner_riddle.hermes_head_observation import (
+            HermesHeadObservationConflict,
+        )
+        raw = bytes(BANK_BYTES)
+        source = self.fence(self.universe_id)
+        request = self.request(
+            dispatch_id="native-head-hw255-e2e-001", raw=raw,
+            generation=source["chart_generation"], feature=127,
+            increment=2, head_index=255,
+        )
+        # Invalid network index must not admit this head or run the guest.
+        with self.assertRaises(HermesHeadObservationConflict):
+            self.journal.inspect(
+                request=request, lease_receipt=self.receipt,
+                network_head=253,
+            )
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 1)
+        result = self.journal.execute(
+            request=request, lease_receipt=self.receipt,
+            network_head=254, raw_bank=raw, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        self.assertTrue(result["native_guest_invoked_locally"])
+        self.assertTrue(result["source_snapshot_bound"])
+        self.assertEqual(result["source_chart_sha256"], source["chart_sha256"])
+        self.assertEqual(result["source_root_block_sha256"], source["root_block_sha256"])
+        self.assertEqual(result["receipt"]["head_generation_before"], 0)
+        self.assertEqual(result["receipt"]["head_generation_after"], 1)
+        self.assertNotEqual(result["bank_after_sha256"], sha(raw))
+        coordinator = NativeHeadCheckpointCoordinator(
+            fence=self.fence, journal=self.journal,
+        )
+        published = self.runner.commit_native_head_observation(
+            coordinator=coordinator, request=request,
+            lease_receipt=self.receipt, network_head=254,
+        )
+        self.assertTrue(published["head_bank_rebased"])
+        self.assertTrue(published["single_chart_object_preserved"])
+        self.assertEqual(published["chart_generation"], 2)
+        self.assertEqual(
+            self.fence(self.universe_id)["bank_sha256"],
+            result["bank_after_sha256"],
+        )
+        restored = Chart8MiB.genesis()
+        self.assertEqual(restore_local_chart(restored, self.state), 2)
+        self.assertEqual(export_guest_bank_bytes(restored), result["raw_bank"])
+        self.assertFalse(published["canonical_training_committed"])
+        self.assertFalse(published["nannet_merge_issued"])
+        repeat = self.journal.execute(
+            request=request, lease_receipt=self.receipt,
+            network_head=254, raw_bank=raw, native_guest=self.guest,
+            allow_genesis_format=True,
+        )
+        self.assertTrue(repeat["replayed_from_journal"])
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
 
     def test_two_authenticated_guest_results_from_same_page_only_one_commits(self):
         """Competing genuine native revisions cannot double-publish a chart."""
