@@ -126,12 +126,33 @@ class HermesHeadObservationJournal:
                 raise HermesHeadObservationConflict("stale or unavailable ring epoch")
         return resolved
 
+    @staticmethod
+    def _verified_fence(state):
+        # An arbitrary dictionary containing a matching bank SHA is NOT an
+        # authenticated N16SNAP1 chart. The configured trusted HERMES reader
+        # must report that it validated both the whole chart and N16ROOT1.
+        if (not isinstance(state, Mapping)
+                or state.get("schema") != "nanlm.native-head-checkpoint-fence/1"
+                or state.get("snapshot_verified") is not True
+                or state.get("canonical_training_committed") is not False):
+            raise HermesHeadObservationError(
+                "mounted SHA-verified N16SNAP1 chart authority required"
+            )
+        for field in ("root_block_sha256", "chart_sha256"):
+            value = state.get(field)
+            if (type(value) is not str or len(value) != 64
+                    or any(c not in "0123456789abcdef" for c in value)):
+                raise HermesHeadObservationError(
+                    "chart authority has no valid " + field
+                )
+        return state
+
     def _fence(self, request, resolved):
-        # A storage reader is mandatory; digest alone cannot attest the chart
-        # generation or parent. The reader must be backed by HERMES storage.
-        state = self.chart_fence_reader(resolved["universe_id"])
-        if not isinstance(state, Mapping):
-            raise HermesHeadObservationError("chart snapshot authority unavailable")
+        # Native observations require a real SHA-verified binary root and
+        # 8 MiB chart. Digest labels alone are never sufficient authority.
+        state = self._verified_fence(
+            self.chart_fence_reader(resolved["universe_id"])
+        )
         for field, expected in (
             ("parent_root_sha256", request.parent_root_sha256),
             ("chart_generation", request.chart_generation),
@@ -360,9 +381,9 @@ class HermesHeadObservationJournal:
             if row["checkpointed_at"] is not None:
                 return self._checkpointed_result(row, request)
             staged = self._verified_output(row, request)
-            snapshot = self.chart_fence_reader(resolved["universe_id"])
-            if not isinstance(snapshot, Mapping) or snapshot.get("snapshot_verified") is not True:
-                raise HermesHeadObservationError("trusted durable chart read required")
+            snapshot = self._verified_fence(
+                self.chart_fence_reader(resolved["universe_id"])
+            )
             for field, expected in (
                 ("parent_root_sha256", request.parent_root_sha256),
                 ("chart_generation", request.chart_generation + 1),
