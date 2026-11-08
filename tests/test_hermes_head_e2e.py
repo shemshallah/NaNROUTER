@@ -132,6 +132,93 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         )
         return published
 
+    def test_native_all_16_near_far_faces_survive_head_revisions(self):
+        """NaN16 guest owns checksums and preserves every class pairing."""
+        from runner_riddle.head_bank_handoff import BANK_WORDS
+        from runner_riddle.native_head_guest import (
+            BANK_BASE, STAGING_BASE, READBACK_BASE,
+        )
+        from runner_riddle.n16t_guest import _NaN16GuestVM
+
+        # Each raw word has independent far/near members of the four
+        # sign x quiet classes. Only the test fixture constructs a word;
+        # the real NaN16 nh_put / nhr_observe guest does all state math.
+        heads = (0x7FF1, 0xFFF1, 0x7FF8, 0xFFF8)
+
+        def word(payload, klass):
+            return (
+                heads[klass & 3].to_bytes(2, "big")
+                + payload.to_bytes(4, "little")
+                + heads[(klass >> 2) & 3].to_bytes(2, "little")
+            )
+
+        classes = bytes().join(word(1, i % 16) for i in range(128))
+        vm = _NaN16GuestVM(
+            self.guest.library, self.guest.image, self.guest.labels,
+            required_labels=("nh_format", "nh_put", "nhr_attach", "nhr_read"),
+        )
+        try:
+            vm.call("nh_format", {1: BANK_BASE})
+            self.assertEqual(vm.reg(5), 0)
+            vm.write_raw_words(STAGING_BASE, classes)
+            # The native guest computes slot checksum and commit marker.
+            vm.call("nh_put", {1: BANK_BASE, 2: 1, 3: STAGING_BASE})
+            self.assertEqual(vm.reg(5), 0)
+            self.assertEqual(vm.reg(4), 1)
+            seeded = vm.read_raw_words(BANK_BASE, BANK_WORDS)
+        finally:
+            vm.close()
+
+        request = self.request(
+            dispatch_id="native-16-class-faces-e2e-001", raw=seeded,
+            generation=1, feature=7, increment=3,
+        )
+        # A completely fresh VM reimports the actual native 8-byte words.
+        observed = self.guest.observe(request=request, raw_bank=seeded)
+        self.assertEqual(observed["receipt"]["head_generation_before"], 1)
+        self.assertEqual(observed["receipt"]["head_generation_after"], 2)
+        self.assertFalse(observed["canonical_training_committed"])
+
+        readback = _NaN16GuestVM(
+            self.guest.library, self.guest.image, self.guest.labels,
+            required_labels=("nhr_attach", "nhr_read"),
+        )
+        try:
+            readback.write_raw_words(BANK_BASE, observed["raw_bank"])
+            readback.call("nhr_attach", {1: BANK_BASE})
+            self.assertEqual(readback.reg(5), 0)
+            readback.call("nhr_read", {1: 1, 2: READBACK_BASE})
+            self.assertEqual(readback.reg(5), 0)
+            self.assertEqual(readback.reg(6), 2)
+            committed = readback.read_raw_words(READBACK_BASE, 128)
+        finally:
+            readback.close()
+
+        self.assertEqual(len(committed), 1024)
+        for feature in range(128):
+            old = classes[feature*8:(feature+1)*8]
+            new = committed[feature*8:(feature+1)*8]
+            self.assertEqual(new[:2], old[:2])
+            self.assertEqual(new[6:], old[6:])
+            self.assertEqual(new[2:6], (4 if feature == 7 else 1).to_bytes(4, "little"))
+        # Corrupt ONLY one class face in the latest slot while retaining
+        # the original SHA-valid 8-byte transport length. Native nh_valid
+        # must reject generation 2's class-sensitive checksum and fall back
+        # to immutable generation 1; no host checksum implementation.
+        damaged = bytearray(observed["raw_bank"])
+        slot1_feature7_word = 8 + 133 + 5 + 7
+        damaged[slot1_feature7_word*8 + 6] ^= 0x80
+        damaged = bytes(damaged)
+        fallback = self.guest.observe(
+            request=self.request(
+                dispatch_id="native-16-class-faces-e2e-002", raw=damaged,
+                generation=1, feature=7, increment=2,
+            ),
+            raw_bank=damaged,
+        )
+        self.assertEqual(fallback["receipt"]["head_generation_before"], 1)
+        self.assertEqual(fallback["receipt"]["head_generation_after"], 2)
+
     def test_real_head1_and_head255_share_one_chart_without_slot_aliasing(self):
         """The native bank retains disjoint HW0:1 and HW0:255 revisions."""
         from nanlmind_hermes.head_bank_transport import (
