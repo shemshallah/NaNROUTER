@@ -6,10 +6,10 @@ set -eu
 # sign the registry before accepting runner heartbeats.
 for tier in BS0 MC0 SC0 GM0; do
     case "$tier" in
-        BS0) default_root="/0x7FF14E1100E8F17F" ;;
-        MC0) default_root="/0x7FF14E1200D7F17F" ;;
-        SC0) default_root="/0x7FF14E1300C2F17F" ;;
-        GM0) default_root="/0x7FF14E1400A9F17F" ;;
+        BS0) default_root="/data/0x7FF14E1100E8F17F" ;;
+        MC0) default_root="/data/0x7FF14E1200D7F17F" ;;
+        SC0) default_root="/data/0x7FF14E1300C2F17F" ;;
+        GM0) default_root="/data/0x7FF14E1400A9F17F" ;;
     esac
     eval "configured_root=\${KOYEB_MOUNT_ROOT_${tier}:-}"
     root="${configured_root:-$default_root}"
@@ -33,6 +33,15 @@ with sqlite3.connect(sys.argv[1]) as connection:
 PY
     fi
 done
+
+# Ensure the registry sees the same writable mounts as the bootstrap script,
+# including when Koyeb runs the image without dedicated tier mounts.
+: "${KOYEB_MOUNT_ROOT_BS0:=/data/0x7FF14E1100E8F17F}"
+: "${KOYEB_MOUNT_ROOT_MC0:=/data/0x7FF14E1200D7F17F}"
+: "${KOYEB_MOUNT_ROOT_SC0:=/data/0x7FF14E1300C2F17F}"
+: "${KOYEB_MOUNT_ROOT_GM0:=/data/0x7FF14E1400A9F17F}"
+export KOYEB_MOUNT_ROOT_BS0 KOYEB_MOUNT_ROOT_MC0
+export KOYEB_MOUNT_ROOT_SC0 KOYEB_MOUNT_ROOT_GM0
 
 # Opt-in verified native execution is activated only with explicit private
 # portal delegation and receipt keys. The executable C core and NaN16 guests
