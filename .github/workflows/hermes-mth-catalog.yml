@@ -1,0 +1,39 @@
+name: HERMES MTH complete tool catalog
+
+on:
+  pull_request:
+    paths:
+      - "runner_riddle/hermes_mth_tools.py"
+      - "runner_riddle/http_service.py"
+      - "runner_riddle/mth_registry.py"
+      - "spec/wave-capabilities.json"
+      - "Dockerfile"
+      - "tests/test_hermes_mth_tools.py"
+      - ".github/workflows/hermes-mth-catalog.yml"
+  push:
+    branches: [main]
+    paths:
+      - "runner_riddle/hermes_mth_tools.py"
+      - "runner_riddle/http_service.py"
+      - "runner_riddle/mth_registry.py"
+      - "spec/wave-capabilities.json"
+      - "Dockerfile"
+      - "tests/test_hermes_mth_tools.py"
+      - ".github/workflows/hermes-mth-catalog.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-and-plans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate manifest hashes and every Hermes MTH tool
+        run: python -m unittest discover -s tests -p 'test_hermes_mth_tools.py' -v
+      - name: Check Python syntax
+        run: python -m py_compile runner_riddle/hermes_mth_tools.py runner_riddle/http_service.py
