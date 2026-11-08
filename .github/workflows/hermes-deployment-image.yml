@@ -21,5 +21,13 @@ jobs:
           from runner_riddle.hermes_native import HermesNativeLeaseRuntime
           from runner_riddle.hermes_dispatch import HermesDispatchJournal
           assert all((Path('/app/native') / name).is_file() for name in ('libnan16.so','hermes.nan','hermes.labels','n16t.nan','n16t.labels','hermes.sha256','libnan16.sha256'))
-          print('NANROUTER HERMES SEALED IMAGE PASS')
+          from nanlmind_nannet.pairing import PairingAuthority
+          from runner.hermes_router_delegate import delegate_hermes_lease
+          from runner_riddle.portal_loopback import PortalLoopbackProxy
+          assert Path('/app/portal/training_merge.py').is_file()
+          assert Path('/app/portal/nanlm-universal').is_file()
+          assert Path('/app/portal/state/hermes-universe.nmg').is_file()
+          assert callable(delegate_hermes_lease)
+          assert callable(PortalLoopbackProxy)
+          print('NANROUTER HERMES + PRIVATE NANNET SEALED IMAGE PASS')
           "
