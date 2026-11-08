@@ -34,7 +34,9 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
     def setUp(self):
         # Import here so regular router-only test discovery does not require
         # the HERMES Python package, which comes from a pinned CI checkout.
-        from nanlmind_hermes.universe_chart import Chart8MiB
+        from nanlmind_hermes.universe_chart import (
+            Chart8MiB, LocalRunner, TemporalRegister,
+        )
         from nanlmind_hermes.universe_root import attach_universe_root
         from nanlmind_hermes.chart_storage import save_chart_snapshot
         from nanlmind_hermes.native_head_fence import SnapshotHeadBankFence
@@ -46,9 +48,16 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.chart = Chart8MiB.genesis()
         attach_universe_root(self.chart)
         self.parent = self.chart.root_hash
+        class TestContext:
+            def get_config(inner, key, default=None):
+                return str(self.state) if key == "state_dir" else default
+        self.runner = LocalRunner(
+            self.chart, TemporalRegister.open(TestContext(), self.chart),
+        )
         self.chart.snapshot_generation = self.save(
             self.state, self.parent, self.chart.bytes, 0,
         )
+        self.chart._dirty = False
         self.installation = "installation-head-e2e-001"
         self.registry = HermesLeaseRegistry(
             self.base / "leases.sqlite",
@@ -99,22 +108,25 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
 
     def journal_checkpoint(self, request, *, expected_after_sha256):
         from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
-        from nanlmind_hermes.universe_chart import restore_local_chart
         committer = NativeHeadCheckpointCoordinator(
             fence=self.fence, journal=self.journal
         )
-        published = committer.commit(
-            request=request, lease_receipt=self.receipt, network_head=0
+        identity = id(self.runner.chart)
+        published = self.runner.commit_native_head_observation(
+            coordinator=committer, request=request,
+            lease_receipt=self.receipt, network_head=0,
         )
         self.assertTrue(published["local_checkpoint_verified"])
-        self.assertTrue(published["authenticated_router_journal_checked"])
+        self.assertTrue(published["single_chart_object_preserved"])
+        self.assertTrue(published["head_bank_rebased"])
+        self.assertEqual(id(self.runner.chart), identity)
+        self.assertIs(self.runner.register.chart, self.runner.chart)
+        self.assertIs(self.runner.heads.chart, self.runner.chart)
         self.assertFalse(published["canonical_training_committed"])
         self.assertFalse(published["nannet_merge_issued"])
-        self.assertEqual(published["bank_after_sha256"], expected_after_sha256)
-        # HERMES retains a single chart: synchronize its in-process view
-        # with the independently committed SHA-verified N16SNAP1 overlay.
+        self.assertEqual(published["native_bank_sha256"], expected_after_sha256)
         self.assertEqual(
-            restore_local_chart(self.chart, self.state),
+            self.fence(self.universe_id)["chart_generation"],
             published["chart_generation"],
         )
         return published
@@ -176,6 +188,18 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertTrue(repeat["replayed_from_journal"])
         self.assertNotIn("raw_bank", repeat)
         self.assertEqual(repeat["bank_after_sha256"], first["bank_after_sha256"])
+        # The live chart is the very same object: replay must not allocate
+        # another 8 MiB chart, mutate its bank, or advance its generation.
+        from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
+        again = self.runner.commit_native_head_observation(
+            coordinator=NativeHeadCheckpointCoordinator(
+                fence=self.fence, journal=self.journal,
+            ),
+            request=first_request, lease_receipt=self.receipt,
+            network_head=0,
+        )
+        self.assertFalse(again["head_bank_rebased"])
+        self.assertEqual(self.runner.chart.snapshot_generation, 2)
 
         second_request = self.request(
             dispatch_id="native-head-e2e-dispatch-002",
