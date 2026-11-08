@@ -377,6 +377,64 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertTrue(repeat["replayed_from_journal"])
         self.assertEqual(self.fence(self.universe_id)["chart_generation"], 2)
 
+    def test_checksum_valid_immutable_forgery_is_denied_before_native_guest(self):
+        """Independent real-router entry point cannot reserve or run for forged mapping."""
+        from unittest.mock import patch
+        from nanlmind_hermes.chart_storage import HEADER, MAGIC, SLOT_NAMES
+        from nanlmind_hermes.native_head_fence import NativeHeadFenceError
+        from nanlmind_hermes.universe_chart import (
+            OFF_CANON, OFF_INDEX, OFF_PAIR_TABLE,
+        )
+        raw_bank = bytes(BANK_BYTES)
+        folder = self.state / "language" / "chart-checkpoints"
+        slot0 = folder / SLOT_NAMES[0]
+        original = slot0.read_bytes()
+        before = self.fence(self.universe_id)
+        self.assertEqual(before["chart_generation"], 1)
+        for name, offset in (
+            ("header-genome", 12), ("address-index", OFF_INDEX),
+            ("canonical-address", OFF_CANON), ("mirror-pair", OFF_PAIR_TABLE),
+        ):
+            with self.subTest(section=name):
+                forged = bytearray(self.chart.bytes)
+                forged[offset] ^= 0x01
+                # Every forged page is a legitimate-size chart, with a
+                # recomputed SHA-valid N16SNAP1 envelope and mounted root.
+                slot0.write_bytes(
+                    HEADER.pack(
+                        MAGIC, 1, bytes.fromhex(self.parent),
+                        hashlib.sha256(forged).digest(),
+                    ) + forged
+                )
+                request = self.request(
+                    dispatch_id="native-immutable-fence-" + name,
+                    raw=raw_bank, generation=1, feature=17, increment=1,
+                )
+                try:
+                    with patch.object(
+                        self.guest, "observe",
+                        side_effect=AssertionError("native VM must not run"),
+                    ) as observation:
+                        with self.assertRaisesRegex(
+                            NativeHeadFenceError, "immutable reconstruction"
+                        ):
+                            self.journal.execute(
+                                request=request, lease_receipt=self.receipt,
+                                network_head=0, raw_bank=raw_bank,
+                                native_guest=self.guest, allow_genesis_format=True,
+                            )
+                        observation.assert_not_called()
+                    with sqlite3.connect(self.base / "dispatch.sqlite") as db:
+                        self.assertEqual(
+                            db.execute(
+                                "SELECT COUNT(*) FROM hermes_head_observation"
+                            ).fetchone()[0], 0,
+                        )
+                finally:
+                    slot0.write_bytes(original)
+        self.assertEqual(self.fence(self.universe_id)["chart_sha256"],
+                         before["chart_sha256"])
+
     def test_two_distinct_valid_pages_at_one_generation_never_reach_native_vm(self):
         """Ambiguous durable chart history must not create a router reservation."""
         from nanlmind_hermes.chart_storage import HEADER, MAGIC, SLOT_NAMES
