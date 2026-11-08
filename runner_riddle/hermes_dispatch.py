@@ -197,6 +197,8 @@ class HermesDispatchJournal:
                 (installation_id, dispatch_id)).fetchone()
             if entry is None or entry["response"] is None:
                 raise HermesDispatchConflict("dispatch is not completed")
+            if hashlib.sha256(bytes(entry["response"])).hexdigest() != entry["response_sha256"]:
+                raise HermesDispatchError("durable N16T response digest mismatch")
             if (entry["lease_id"] != row["lease_id"]
                     or entry["universe_id"] != row["universe_id"]
                     or entry["generation"] != row["generation"]
