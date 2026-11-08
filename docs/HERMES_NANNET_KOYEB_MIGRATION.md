@@ -1,8 +1,12 @@
 # NANNET portal ingress → NaNROUTER-owned HERMES lease universes
 
-Status: **native NaN16DE lease and route consistency gates implemented; HTTP
-delegation, issuer migration, and Koyeb cutover NOT implemented.** Fail closed
-when no authoritative route/lease context is supplied.
+Status: **native NaN16DE lease and route consistency gates and
+separate router-side durable HTTP lease delegation are implemented on this
+branch.** Existing NANNET portal-side delegation is proposed in
+[NaNLMind PR #32](https://github.com/shemshallah/NaNLMind/pull/32).
+**Issuer migration, native guest activation from an authenticated receipt,
+Koyeb cutover and live end-to-end deployment are NOT implemented.**
+Fail closed when no authoritative route/lease context is supplied.
 
 ## Authority topology
 
@@ -158,3 +162,29 @@ issuer cryptography, and Koyeb volume setup remain non-guest infrastructure.
 
 Secrets and Koyeb API credentials MUST be injected using private Koyeb secret
 configuration, never source files, CI job logs or GitHub issues.
+
+## Current code-level cross-repository handshake
+
+The dedicated NaNROUTER POST `/v1/hermes/leases/open|resolve|renew|release`
+endpoints are optional (disabled until both
+`RIDDLE_HERMES_DELEGATION_TOKEN` and `RIDDLE_HERMES_RECEIPT_HMAC_KEY`
+are supplied, each 32+ bytes). The delegated NANNET portal applies the separate
+`hermes:lease` paired identity scope, Ed25519 method/path/body/timestamp/nonce
+verification and private upstream secret before forwarding. The portal
+sets HERMES's fixed HW2 node point 3 from server-owned routing context.
+
+The SQLite authority persists per-installation 16-slot native generation
+high-watermarks, independently random lease/universe IDs, recipient-bound
+HMAC-signed receipts and revisions. The router rejects stale/altered/revoked
+or expired receipts; the native guest separately rejects local head255
+and mismatched generation/owner/point. Multiple HERMES universes MAY share
+node point 3 without sharing a guest topology; node point alone is not a
+unique universe identity.
+
+The current host-side `resolve` only grants a validated **route admission**;
+it does **not** yet call native `nhl_open` / `nhl_nannet_route` on the
+actual VM, transport N16T frames, or commit canonical NaNLMind learning.
+Do not label this end-to-end *execution*. The offline three-repo HTTP
+handshake is exercised by `NaNLMind/integration/hermes_cross_repo_smoke.py`.
+Production requires separate private runtime configuration and verified
+single-issuer Koyeb migration.
