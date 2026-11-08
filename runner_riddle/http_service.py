@@ -85,7 +85,20 @@ class RiddleService:
             if len(self.n16t_token) < 32:
                 raise ServiceConfigError("RIDDLE_N16T_SUBMIT_TOKEN must be 32+ characters")
             try:
-                self.n16t_guest_pool = N16TGuestPool.from_env(max_sessions=8)
+                # HERMES uses a shared N16T guest pool. Restoring its exact
+                # accepted-frame replay cursor is compulsory on router
+                # restart; process-local VM sessions would permit replay.
+                # The independent HERMES dispatch journal protects semantic
+                # at-most-once reservations even if no response was stored.
+                durable_n16t = None
+                if self.hermes_native is not None:
+                    durable_n16t = (
+                        os.environ.get("RIDDLE_N16T_SESSION_STORE")
+                        or os.environ.get("N16T_SESSION_STORE")
+                        or str(data_dir / "hermes-n16t-sessions.sqlite")
+                    )
+                self.n16t_guest_pool = N16TGuestPool.from_env(
+                    max_sessions=8, store=durable_n16t)
             except Exception as exc:
                 raise ServiceConfigError("N16T guest runtime configuration is incomplete or invalid") from exc
 
@@ -307,7 +320,7 @@ def make_handler(service: RiddleService):
                 try:
                     body = self._body()
                     action = self.path.removeprefix("/v1/hermes/leases/")
-                    if action not in ("open", "renew", "resolve", "release", "dispatch", "ack"):
+                    if action not in ("open", "renew", "resolve", "release", "dispatch", "ack", "inspect"):
                         self._json(404, {"error": "not found"})
                         return
                     with service.hermes_lock:
@@ -348,16 +361,18 @@ def make_handler(service: RiddleService):
                             result = service.hermes_leases.release(
                                 installation_id=identity, receipt=body["receipt"])
                             self._json(200, result)
-                        elif action in ("dispatch", "ack"):
-                            if service.hermes_native is None or service.n16t_guest_pool is None:
+                        elif action in ("dispatch", "ack", "inspect"):
+                            if action != "inspect" and (service.hermes_native is None or service.n16t_guest_pool is None):
                                 self._json(503, {"error": "pinned native HERMES and N16T guest runtimes are required"})
                                 return
                             resolved = service.hermes_leases.resolve(
                                 installation_id=identity, receipt=body["receipt"],
                                 head_index=body["head_index"])
-                            native = service.hermes_native.admit(
-                                service.hermes_leases, installation_id=identity,
-                                receipt=body["receipt"], head_index=body["head_index"])
+                            native = {}
+                            if action != "inspect":
+                                native = service.hermes_native.admit(
+                                    service.hermes_leases, installation_id=identity,
+                                    receipt=body["receipt"], head_index=body["head_index"])
                             with service.hermes_leases._connect() as db:
                                 row = service.hermes_leases._live(
                                     db, body["receipt"], identity, int(time.time()))
@@ -379,12 +394,21 @@ def make_handler(service: RiddleService):
                                                "universe_id": resolved["universe_id"],
                                                "head_index": resolved["head_index"]})
                                 self._json(200, result)
-                            else:
+                            elif action == "ack":
                                 result = service.hermes_dispatches.acknowledge(
                                     row=row, installation_id=identity,
                                     head_index=body["head_index"],
                                     dispatch_id=body["dispatch_id"],
                                     response_sha256=body["response_sha256"])
+                                self._json(200, result)
+                            else:
+                                result = service.hermes_dispatches.inspect(
+                                    row=row, installation_id=identity,
+                                    head_index=body["head_index"],
+                                    dispatch_id=body["dispatch_id"])
+                                result.update({"lease_id": resolved["lease_id"],
+                                               "universe_id": resolved["universe_id"],
+                                               "head_index": resolved["head_index"]})
                                 self._json(200, result)
                 except HermesDispatchConflict as exc:
                     self._json(409, {"error": str(exc)})
