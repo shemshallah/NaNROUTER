@@ -107,7 +107,7 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
             native_image_sha256=self.image_sha256,
         )
 
-    def journal_checkpoint(self, request, *, expected_after_sha256):
+    def journal_checkpoint(self, request, *, expected_after_sha256, network_head=0):
         from nanlmind_hermes.native_head_checkpoint import NativeHeadCheckpointCoordinator
         committer = NativeHeadCheckpointCoordinator(
             fence=self.fence, journal=self.journal
@@ -115,7 +115,7 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         identity = id(self.runner.chart)
         published = self.runner.commit_native_head_observation(
             coordinator=committer, request=request,
-            lease_receipt=self.receipt, network_head=0,
+            lease_receipt=self.receipt, network_head=network_head,
         )
         self.assertTrue(published["local_checkpoint_verified"])
         self.assertTrue(published["single_chart_object_preserved"])
@@ -206,6 +206,7 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertEqual(
             self.journal_checkpoint(
                 req255, expected_after_sha256=native255["bank_after_sha256"],
+                network_head=254,
             )["chart_generation"], 3,
         )
         self.assertIs(self.runner.register.chart, self.runner.chart)
