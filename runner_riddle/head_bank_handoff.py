@@ -22,7 +22,7 @@ BANK_OFFSET = 0x640000
 BANK_END = BANK_OFFSET + BANK_BYTES
 BANK_GUEST_WORD_OFFSET = BANK_OFFSET // 8
 SCHEMA = "nanrouter.native-head-handoff/1"
-SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
+SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class HeadBankHandoffError(ValueError):
