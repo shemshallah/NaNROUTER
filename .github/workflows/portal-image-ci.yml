@@ -25,6 +25,6 @@ jobs:
             test -s /app/state/hermes-universe.nmg
             test -x /app/nanlm-universal
             python -c "import nannet_router.http_service, nannet_clocked.gateway, nanlmind_nannet"
-            python -c "from runner.portal_ring import PortalRingNode; print('PORTAL_RING_IMPORT_PASS')"
+            python -c "from runner.portal_ring import PortalRingNode; print(123)"
             echo PORTAL_PINNED_RUNTIME_PARITY_PASS
           '
