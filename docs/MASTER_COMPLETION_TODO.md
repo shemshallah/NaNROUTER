@@ -227,9 +227,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 # D. `GRAPH_SPECTRAL_MTH_PLAN.md` completion
 
-- [ ] `D-01` Register missing graph core modules: `mth_rss_contract`, `mth_graph_degree`, `mth_graph_laplacian`.
+- [ ] `D-01` **PARTIAL:** `mth_graph_degree.nas` is implemented and locally verified; `mth_rss_contract` and `mth_graph_laplacian` remain missing.
 - [ ] `D-02` Implement `mth_graph_filter` Chebyshev/polynomial g(H).
-- [ ] `D-03` Implement `mth_graph_pattern` degree/shell/motif/neighborhood/delta signatures.
+- [ ] `D-03` **PARTIAL:** `mth_graph_pattern.nas` implements degree/shell/neighborhood signatures; motifs, components, deltas, spectral signatures, and confidence metadata remain open.
 - [ ] `D-04` Implement RSS verb controller: ENCODE/QUERY/MATCH/FILTER/DRIVE/PROPAGATE/FOLD/DECODE.
 - [ ] `D-05` K256 degree/all-ones/sum-zero/spectrum oracle tests.
 - [ ] `D-06` Explicit small-Kronecker oracle tests.
@@ -260,11 +260,11 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 # F. `R5_CAPACITY_SNR_PLAN.md` completion
 
-- [ ] `F-01` Define SNR/seed manifest and sweep configuration.
-- [ ] `F-02` Build deterministic synthetic frozen-model stub harness.
-- [ ] `F-03` Implement matched control, coupled candidate, zero/random coupling, shuffled memory, matched-variance noise.
-- [ ] `F-04` Implement capacity-at-SNR, paired delta CI, false-match rate, steps/memory metrics.
-- [ ] `F-05` Enforce all six `supported` gate conditions.
+- [x] `F-01` Define SNR/seed manifest and sweep configuration.
+- [x] `F-02` Build deterministic synthetic frozen-model stub harness.
+- [x] `F-03` Implement matched control, coupled candidate, zero/random coupling, shuffled memory, matched-variance noise.
+- [x] `F-04` Implement capacity-at-SNR, paired delta CI, false-match rate, steps/memory metrics.
+- [x] `F-05` Enforce all six `supported` gate conditions; report remains synthetic-only and non-promotable.
 - [ ] `F-06` Real frozen-model/data measurement — **BLOCKED** until model/data available.
 - [ ] `F-07` Live Koyeb/NANNET0 — **BLOCKED**.
 - [ ] `F-08` Signed volume registry — **BLOCKED**.

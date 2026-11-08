@@ -161,6 +161,34 @@
       "ci_verified": true
     },
     {
+      "kernel_id": "mth.graph.degree.256.u32",
+      "source": "mth/nan16/mth_graph_degree.nas",
+      "fixture": "mth/tests/mth_graph_degree_test.nas",
+      "marker": "MTH GRAPH DEGREE 256 PASS",
+      "steps": 48117,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.graph.pattern.256.u32",
+      "source": "mth/nan16/mth_graph_pattern.nas",
+      "fixture": "mth/tests/mth_graph_pattern_test.nas",
+      "marker": "MTH GRAPH PATTERN 256 PASS",
+      "steps": 56063,
+      "precision": "u32",
+      "workspace_words": 512,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.graph.fold.f32",
       "source": "mth/nan16/mth_graph_fold.nas",
       "fixture": "mth/tests/mth_graph_fold_test.nas",

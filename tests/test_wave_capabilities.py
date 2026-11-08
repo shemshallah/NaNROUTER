@@ -26,6 +26,8 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.graph.couple128.f32", ids)
         self.assertIn("mth.graph.pair.tile16.f32", ids)
         self.assertIn("mth.graph.pair.full.128.f32", ids)
+        self.assertIn("mth.graph.degree.256.u32", ids)
+        self.assertIn("mth.graph.pattern.256.u32", ids)
         self.assertIn("mth.jahs.gate.u64", ids)
         self.assertIn("mth.matvec256.full.f32", ids)
         self.assertIn("mth.svd.top2.256.f32", ids)
@@ -35,12 +37,12 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.vector.span_add.checked.u32", ids)
         self.assertIn("mth.preflight.typed.u32", ids)
         self.assertIn("mth.execute.native_dispatch.f32", ids)
-        self.assertEqual(len(ids), 75)
+        self.assertEqual(len(ids), 77)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 75)
+        self.assertEqual(len(rows), 77)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
@@ -51,7 +53,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 75)
+            self.assertEqual(len(rows), 77)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],
@@ -200,6 +202,19 @@ class WaveCapabilityTests(unittest.TestCase):
     def test_manifest_json_is_valid(self):
         document = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(document["schema"], "nanrouter.wave-capabilities.v1")
+
+    def test_graph_core_kernels_are_native_verified_locally_only(self):
+        manifest = load_manifest(DEFAULT_MANIFEST)
+        by_id = {kernel["kernel_id"]: kernel for kernel in manifest["kernels"]}
+        for kernel_id in (
+            "mth.graph.degree.256.u32",
+            "mth.graph.pattern.256.u32",
+        ):
+            with self.subTest(kernel_id=kernel_id):
+                kernel = by_id[kernel_id]
+                self.assertEqual(kernel["status"], "native_verified")
+                self.assertFalse(kernel["ci_verified"])
+                self.assertLessEqual(kernel["workspace_words"], WORDS_PER_MIB * 2)
 
 
 if __name__ == "__main__":
