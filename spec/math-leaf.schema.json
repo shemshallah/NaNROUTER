@@ -5,12 +5,58 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "leaf_id", "version", "kind", "type", "content", "status"],
+  "$defs": {
+    "elementType": {
+      "type": "string",
+      "pattern": "^(any|\\*|[A-Za-z][A-Za-z0-9_.:+-]{0,63})$"
+    },
+    "stride": {
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "array", "items": {"type": "integer", "minimum": 0}}
+      ]
+    },
+    "layout": {
+      "type": "string",
+      "pattern": "^(any|\\*|[a-z][a-z0-9_.:-]{0,63})$"
+    },
+    "units": {
+      "type": "string",
+      "pattern": "^(any|\\*|1|[A-Za-z%°µ][A-Za-z0-9%°µ_]*(\\^[-+]?\\d+)?([*/][A-Za-z%°µ][A-Za-z0-9%°µ_]*(\\^[-+]?\\d+)?)*)$"
+    },
+    "rank": {"type": "integer", "minimum": 0},
+    "shape": {
+      "oneOf": [
+        {"enum": ["any", "*"]},
+        {"type": "array", "items": {"type": "integer", "minimum": 0}}
+      ]
+    },
+    "domain": {"type": "string", "minLength": 1, "maxLength": 64},
+    "context": {"type": "object"}
+  },
   "properties": {
     "schema": {"const": "nanrouter.math-leaf.v1"},
     "leaf_id": {"type": "string", "pattern": "^nml:[A-Za-z0-9_.:-]{1,180}$"},
     "version": {"type": "integer", "minimum": 1},
     "kind": {"enum": ["scalar", "vector", "matrix", "tensor", "function", "relation", "rule", "result", "null", "void", "undefined", "unknown", "error", "hypergraph", "basis", "operator", "mask", "index", "proof", "certificate"]},
-    "type": {"type": "object"},
+    "type": {
+      "type": "object",
+      "properties": {
+        "element_type": {"$ref": "#/$defs/elementType"},
+        "element": {"$ref": "#/$defs/elementType"},
+        "dtype": {"$ref": "#/$defs/elementType"},
+        "stride": {"$ref": "#/$defs/stride"},
+        "strides": {"$ref": "#/$defs/stride"},
+        "layout": {"$ref": "#/$defs/layout"},
+        "units": {"$ref": "#/$defs/units"},
+        "unit": {"$ref": "#/$defs/units"},
+        "rank": {"$ref": "#/$defs/rank"},
+        "shape": {"$ref": "#/$defs/shape"},
+        "domain": {"$ref": "#/$defs/domain"},
+        "context": {"$ref": "#/$defs/context"}
+      },
+      "additionalProperties": true
+    },
     "content": {
       "type": ["object", "null"],
       "properties": {

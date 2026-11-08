@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 import unittest
 
 from runner_riddle.math_objects import (
@@ -12,11 +14,16 @@ from runner_riddle.math_objects import (
     MathLeaf,
     MathObjectError,
     MathRule,
+    MathTypeDescriptor,
     admission_id_for,
     candidate_id_for,
     canonical_json,
     digest_object,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LEAF_SCHEMA_PATH = REPO_ROOT / "spec" / "math-leaf.schema.json"
+FUNCTION_SCHEMA_PATH = REPO_ROOT / "spec" / "math-function.schema.json"
 
 
 def vector_leaf(leaf_id="nml:U0:vector:123", version=1, digest="a" * 64):
@@ -108,6 +115,298 @@ class MathObjectTests(unittest.TestCase):
         self.assertEqual(len(function.digest()), 64)
         with self.assertRaises(Exception):
             MathFunction(function_id="mth.vector.dot256.f32", signature={"x": 1})
+
+
+class SemanticTypeDescriptorTests(unittest.TestCase):
+    def test_absent_descriptor_keeps_legacy_serialization_and_digest(self):
+        leaf = MathLeaf(
+            leaf_id="nml:U0:vector:legacy-free",
+            kind="vector",
+            type={"name": "legacy-vector"},
+            content={"digest": "a" * 64, "word_count": 256},
+        )
+        document = leaf.to_dict()
+        self.assertNotIn("element_type", document["type"])
+        self.assertNotIn("stride", document["type"])
+        self.assertNotIn("units", document["type"])
+        self.assertEqual(leaf.type_descriptor.declared(), frozenset())
+        self.assertEqual(leaf.digest(), digest_object(document))
+
+        function_document = {
+            "function_id": "math.vector.dot",
+            "version": 1,
+            "signature": {
+                "inputs": [{"name": "a", "type": "vector"},
+                           {"name": "b", "type": "vector"}],
+                "output": {"type": "scalar"},
+            },
+            "semantics": {"definition": "dot"},
+            "proof_status": "stated",
+            "status": "active",
+        }
+        function = MathFunction(**function_document)
+        self.assertEqual(
+            function.to_dict()["signature"],
+            function_document["signature"],
+        )
+        self.assertEqual(
+            MathTypeDescriptor.from_mapping({}).to_dict(),
+            {},
+        )
+
+    def test_leaf_descriptor_declared_roundtrip(self):
+        type_document = {
+            "kind": "vector",
+            "element_type": "float32",
+            "stride": [1],
+            "layout": "row_major",
+            "units": "m/s",
+            "rank": 1,
+            "shape": [256],
+            "domain": "real",
+            "context": {"frame": "world", "axes": ["x"]},
+        }
+        leaf = MathLeaf(
+            leaf_id="nml:U0:vector:semantic",
+            kind="vector",
+            type=type_document,
+            content={"digest": "a" * 64, "word_count": 256},
+        )
+        self.assertEqual(leaf.to_dict()["type"], type_document)
+        descriptor = leaf.type_descriptor
+        self.assertEqual(descriptor.element_type, "float32")
+        self.assertEqual(descriptor.stride, (1,))
+        self.assertEqual(descriptor.layout, "row_major")
+        self.assertEqual(descriptor.units, "m/s")
+        self.assertEqual(descriptor.rank, 1)
+        self.assertEqual(descriptor.shape, (256,))
+        self.assertEqual(descriptor.domain, "real")
+        self.assertEqual(descriptor.context["frame"], "world")
+        self.assertEqual(
+            descriptor.declared(),
+            frozenset({
+                "element_type", "stride", "layout", "units", "rank",
+                "shape", "domain", "context",
+            }),
+        )
+        self.assertEqual(
+            descriptor.to_dict()["stride"], [1],
+        )
+        self.assertEqual(descriptor.digest(), digest_object(descriptor.to_dict()))
+        self.assertEqual(leaf.digest(), leaf.digest())
+        self.assertNotEqual(leaf.digest(), vector_leaf().digest())
+        versioned = leaf.next_version(content={"digest": "b" * 64})
+        self.assertEqual(versioned.to_dict()["type"], type_document)
+
+    def test_leaf_descriptor_aliases_and_conflicts(self):
+        descriptor = MathTypeDescriptor.from_mapping({
+            "element": "float32",
+            "dtype": "float32",
+            "stride": [1],
+            "strides": [1],
+            "unit": "m",
+            "units": "m",
+        })
+        self.assertEqual(descriptor.element_type, "float32")
+        self.assertEqual(descriptor.stride, (1,))
+        self.assertEqual(descriptor.units, "m")
+        self.assertEqual(
+            descriptor.to_dict(),
+            {
+                "element_type": "float32",
+                "stride": [1],
+                "units": "m",
+            },
+        )
+        conflicts = (
+            {"element": "float32", "dtype": "float64"},
+            {"unit": "m", "units": "s"},
+            {"stride": [1], "strides": [2]},
+        )
+        for document in conflicts:
+            with self.subTest(document=document):
+                with self.assertRaises(MathObjectError):
+                    MathTypeDescriptor.from_mapping(document)
+
+    def test_invalid_units_rejected(self):
+        valid = ("1", "m", "m/s", "m/s^2", "kg*m/s^2", "any", "*")
+        for units in valid:
+            with self.subTest(units=units):
+                self.assertEqual(
+                    MathTypeDescriptor.from_mapping({"units": units}).units,
+                    units,
+                )
+        invalid = ("m//s", "metres per second", "m/", "", "kg m", 3, ["m"])
+        for units in invalid:
+            with self.subTest(units=units):
+                with self.assertRaises(MathObjectError):
+                    MathLeaf(
+                        leaf_id="nml:U0:vector:units",
+                        kind="vector",
+                        type={"units": units},
+                    )
+                with self.assertRaises(MathObjectError):
+                    MathFunction(
+                        function_id="math.vector.dot",
+                        signature={
+                            "inputs": [{"type": "vector", "units": units}],
+                            "output": {"type": "scalar"},
+                        },
+                    )
+
+    def test_invalid_stride_rank_and_shape_rank_mismatch_rejected(self):
+        invalid_strides = (-1, True, [1, -2], [1.5], "1", [True])
+        for stride in invalid_strides:
+            with self.subTest(stride=stride):
+                with self.assertRaises(MathObjectError):
+                    MathLeaf(
+                        leaf_id="nml:U0:vector:stride",
+                        kind="vector",
+                        type={"stride": stride},
+                    )
+        for rank in (-1, True, "1"):
+            with self.subTest(rank=rank):
+                with self.assertRaises(MathObjectError):
+                    MathLeaf(
+                        leaf_id="nml:U0:vector:rank",
+                        kind="vector",
+                        type={"rank": rank},
+                    )
+        with self.assertRaises(MathObjectError):
+            MathLeaf(
+                leaf_id="nml:U0:vector:rank-shape",
+                kind="vector",
+                type={"rank": 2, "shape": [256]},
+            )
+
+    def test_function_endpoint_descriptor_roundtrip_and_validation(self):
+        input_endpoint = {
+            "name": "a",
+            "type": "vector",
+            "domain": "real",
+            "shape": [256],
+            "precision": "float32",
+            "element_type": "float32",
+            "stride": [1],
+            "layout": "row_major",
+            "units": "m",
+            "rank": 1,
+            "context": {"frame": "world"},
+        }
+        output_endpoint = {
+            "type": "scalar",
+            "domain": "real",
+            "shape": [],
+            "precision": "float32",
+            "element_type": "float32",
+            "stride": 0,
+            "layout": "row_major",
+            "units": "1",
+            "rank": 0,
+            "context": {"frame": "world"},
+        }
+        function = MathFunction(
+            function_id="math.vector.dot",
+            version=1,
+            signature={
+                "inputs": [input_endpoint, dict(input_endpoint, name="b")],
+                "output": output_endpoint,
+            },
+            proof_status="stated",
+        )
+        document = function.to_dict()
+        self.assertEqual(document["signature"]["inputs"][0], input_endpoint)
+        self.assertEqual(document["signature"]["output"], output_endpoint)
+        for field, value in (
+            ("units", "m//s"), ("stride", -1), ("layout", "Row Major"),
+        ):
+            with self.subTest(field=field):
+                with self.assertRaises(MathObjectError):
+                    MathFunction(
+                        function_id="math.vector.dot",
+                        signature={
+                            "inputs": [{"type": "vector", field: value}],
+                            "output": {"type": "scalar"},
+                        },
+                    )
+
+    def test_descriptor_compatibility_helper(self):
+        producer = MathTypeDescriptor.from_mapping({
+            "element_type": "float32",
+            "stride": 1,
+            "layout": "row_major",
+            "units": "m/s",
+            "rank": 1,
+        })
+        compatible = MathTypeDescriptor.from_mapping({
+            "dtype": "Float32",
+            "strides": [1],
+            "layout": "row_major",
+            "units": "m/s",
+            "rank": 1,
+        })
+        self.assertEqual(producer.compatibility_issues(compatible), ())
+        wildcard = MathTypeDescriptor.from_mapping({
+            "element_type": "any",
+            "layout": "*",
+            "units": "any",
+        })
+        self.assertEqual(producer.compatibility_issues(wildcard), ())
+        self.assertEqual(
+            MathTypeDescriptor.from_mapping({}).compatibility_issues(compatible),
+            (),
+        )
+        self.assertEqual(
+            producer.compatibility_issues(MathTypeDescriptor.from_mapping({})),
+            (),
+        )
+        mismatches = (
+            ({"element_type": "float64"}, "element_type"),
+            ({"stride": [2]}, "stride"),
+            ({"layout": "column_major"}, "layout"),
+            ({"units": "s"}, "units"),
+            ({"rank": 2}, "rank"),
+        )
+        for fields, expected in mismatches:
+            with self.subTest(field=expected):
+                required = MathTypeDescriptor.from_mapping(fields)
+                issues = producer.compatibility_issues(required)
+                self.assertEqual(len(issues), 1)
+                self.assertIn(expected, issues[0])
+
+    def test_schemas_cover_semantic_descriptor_fields(self):
+        leaf_schema = json.loads(LEAF_SCHEMA_PATH.read_text(encoding="utf-8"))
+        function_schema = json.loads(
+            FUNCTION_SCHEMA_PATH.read_text(encoding="utf-8")
+        )
+        descriptor_fields = {
+            "element_type", "element", "dtype", "stride", "strides",
+            "layout", "units", "unit", "rank", "shape", "domain", "context",
+        }
+        self.assertTrue(
+            descriptor_fields.issubset(
+                set(leaf_schema["properties"]["type"]["properties"])
+            )
+        )
+        endpoint = function_schema["$defs"]["endpoint"]["properties"]
+        self.assertTrue(descriptor_fields.issubset(set(endpoint)))
+        signature = function_schema["properties"]["signature"]["properties"]
+        self.assertEqual(
+            signature["inputs"]["items"]["$ref"], "#/$defs/endpoint",
+        )
+        self.assertEqual(
+            signature["output"]["$ref"], "#/$defs/endpoint",
+        )
+        for schema in (leaf_schema, function_schema):
+            self.assertEqual(
+                schema["$schema"],
+                "https://json-schema.org/draft/2020-12/schema",
+            )
+            for definition in (
+                "elementType", "stride", "layout", "units", "rank", "shape",
+                "domain", "context",
+            ):
+                self.assertIn(definition, schema["$defs"])
 
 
 class DeepImmutabilityTests(unittest.TestCase):

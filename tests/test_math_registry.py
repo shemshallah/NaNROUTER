@@ -115,7 +115,7 @@ class MathFunctionRegistryTests(unittest.TestCase):
 
     def test_default_load_uses_sibling_manifest(self):
         loaded = MathFunctionRegistry.load(CATALOG)
-        self.assertEqual(len(loaded.implementation_registry), 77)
+        self.assertEqual(len(loaded.implementation_registry), 78)
         self.assertEqual(
             loaded.require("math.vector.dot").contract_digest,
             self.registry.require("math.vector.dot").contract_digest,
@@ -126,9 +126,9 @@ class MathFunctionRegistryTests(unittest.TestCase):
         MathFunctionRegistry.load(CATALOG)
         after = MANIFEST.read_bytes()
         self.assertEqual(before, after)
-        self.assertEqual(len(self.mth), 77)
+        self.assertEqual(len(self.mth), 78)
         self.assertEqual(
-            self.registry.health()["mth_kernels"], 77,
+            self.registry.health()["mth_kernels"], 78,
         )
 
     def test_unknown_function_lookup_and_require(self):
@@ -309,7 +309,7 @@ class MathFunctionRegistryTests(unittest.TestCase):
         self.assertEqual(health["implementations"], 8)
         self.assertEqual(health["native_verified_ci"], 8)
         self.assertEqual(health["implementation_kernels"], 8)
-        self.assertEqual(health["mth_kernels"], 77)
+        self.assertEqual(health["mth_kernels"], 78)
         self.assertEqual(health["status"], {"active": 7, "proposed": 12})
         self.assertEqual(health["proof_status"], {"stated": 12, "verified": 7})
 
@@ -379,6 +379,130 @@ class MathFunctionRegistryTests(unittest.TestCase):
             self.registry.compose(["math.vector.not_a_function"])
         with self.assertRaises(MathCompositionError):
             self.registry.compose([])
+
+    def test_catalog_endpoint_descriptor_roundtrip(self):
+        document = _catalog_document()
+        fields = {
+            "element_type": "float32",
+            "stride": [1],
+            "layout": "row_major",
+            "units": "1",
+            "rank": 1,
+        }
+        _function(document, "math.vector.axpy")["signature"]["output"].update(
+            fields,
+        )
+        _function(document, "math.vector.norm")["signature"]["inputs"][0].update(
+            fields,
+        )
+        registry = self._load_document(document)
+        axpy = registry.require("math.vector.axpy")
+        norm = registry.require("math.vector.norm")
+        self.assertEqual(axpy.signature["output"]["element_type"], "float32")
+        self.assertEqual(axpy.signature["output"]["stride"], [1])
+        self.assertEqual(norm.signature["inputs"][0]["units"], "1")
+        self.assertEqual(norm.signature["inputs"][0]["rank"], 1)
+        self.assertEqual(axpy.contract_digest, axpy.digest())
+        self.assertNotEqual(
+            axpy.contract_digest,
+            self.registry.require("math.vector.axpy").contract_digest,
+        )
+        roundtrip = {
+            item["function_id"]: item
+            for item in registry.to_dict()["functions"]
+        }
+        self.assertEqual(
+            roundtrip["math.vector.axpy"]["signature"]["output"]["stride"],
+            [1],
+        )
+        self.assertEqual(
+            roundtrip["math.vector.norm"]["signature"]["inputs"][0]["layout"],
+            "row_major",
+        )
+
+    def test_compatible_endpoint_descriptor_handoff(self):
+        document = _catalog_document()
+        fields = {
+            "element_type": "float32",
+            "stride": [1],
+            "layout": "row_major",
+            "units": "1",
+            "rank": 1,
+            "context": {"frame": "world"},
+        }
+        _function(document, "math.vector.axpy")["signature"]["output"].update(
+            fields,
+        )
+        _function(document, "math.vector.norm")["signature"]["inputs"][0].update(
+            fields,
+        )
+        _function(document, "math.vector.norm")["signature"]["output"].update({
+            "element_type": "float32",
+            "stride": 0,
+            "layout": "row_major",
+            "units": "1",
+            "rank": 0,
+            "context": {"frame": "world"},
+        })
+        registry = self._load_document(document)
+        composed = registry.compose("math.vector.axpy", "math.vector.norm")
+        self.assertEqual(composed.signature["output"]["units"], "1")
+        self.assertEqual(
+            composed.signature["output"]["context"], {"frame": "world"},
+        )
+        self.assertEqual(composed.contract_digest, composed.digest())
+
+    def test_incompatible_endpoint_descriptor_handoff(self):
+        cases = (
+            ("element_type", "float32", "float64"),
+            ("stride", [1], [2]),
+            ("layout", "row_major", "column_major"),
+            ("units", "1", "m"),
+        )
+        for field, producer_value, consumer_value in cases:
+            with self.subTest(field=field):
+                document = _catalog_document()
+                _function(
+                    document, "math.vector.axpy",
+                )["signature"]["output"][field] = producer_value
+                _function(
+                    document, "math.vector.norm",
+                )["signature"]["inputs"][0][field] = consumer_value
+                registry = self._load_document(document)
+                with self.assertRaises(MathCompositionError) as caught:
+                    registry.compose(
+                        "math.vector.axpy", "math.vector.norm",
+                    )
+                self.assertIn(field, str(caught.exception))
+                self.assertIn("cannot compose", str(caught.exception))
+
+    def test_one_sided_endpoint_descriptor_handoff_is_compatible(self):
+        descriptors = {
+            "element_type": "float32",
+            "stride": [1],
+            "layout": "row_major",
+            "units": "1",
+            "rank": 1,
+        }
+        for producer_declares, consumer_declares in ((True, False), (False, True)):
+            with self.subTest(
+                    producer=producer_declares, consumer=consumer_declares):
+                document = _catalog_document()
+                if producer_declares:
+                    _function(
+                        document, "math.vector.axpy",
+                    )["signature"]["output"].update(descriptors)
+                if consumer_declares:
+                    _function(
+                        document, "math.vector.norm",
+                    )["signature"]["inputs"][0].update(descriptors)
+                registry = self._load_document(document)
+                composed = registry.compose(
+                    "math.vector.axpy", "math.vector.norm",
+                )
+                self.assertTrue(
+                    composed.function_id.startswith("math.composition.")
+                )
 
     def test_compatibility_index_is_deterministic(self):
         first = self.registry.compatibility_index()

@@ -5,13 +5,83 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "function_id", "version", "signature", "status"],
+  "$defs": {
+    "elementType": {
+      "type": "string",
+      "pattern": "^(any|\\*|[A-Za-z][A-Za-z0-9_.:+-]{0,63})$"
+    },
+    "stride": {
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "array", "items": {"type": "integer", "minimum": 0}}
+      ]
+    },
+    "layout": {
+      "type": "string",
+      "pattern": "^(any|\\*|[a-z][a-z0-9_.:-]{0,63})$"
+    },
+    "units": {
+      "type": "string",
+      "pattern": "^(any|\\*|1|[A-Za-z%°µ][A-Za-z0-9%°µ_]*(\\^[-+]?\\d+)?([*/][A-Za-z%°µ][A-Za-z0-9%°µ_]*(\\^[-+]?\\d+)?)*)$"
+    },
+    "rank": {"type": "integer", "minimum": 0},
+    "shape": {
+      "oneOf": [
+        {"enum": ["any", "*"]},
+        {"type": "array", "items": {"type": "integer", "minimum": 0}}
+      ]
+    },
+    "domain": {"type": "string", "minLength": 1, "maxLength": 64},
+    "context": {"type": "object"},
+    "endpoint": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 128},
+        "type": {"type": "string", "pattern": "^[a-z][a-z0-9_.:*+-]{0,63}$"},
+        "domain": {"$ref": "#/$defs/domain"},
+        "shape": {"$ref": "#/$defs/shape"},
+        "precision": {"type": "string"},
+        "layout": {"$ref": "#/$defs/layout"},
+        "element_type": {"$ref": "#/$defs/elementType"},
+        "element": {"$ref": "#/$defs/elementType"},
+        "dtype": {"$ref": "#/$defs/elementType"},
+        "stride": {"$ref": "#/$defs/stride"},
+        "strides": {"$ref": "#/$defs/stride"},
+        "units": {"$ref": "#/$defs/units"},
+        "unit": {"$ref": "#/$defs/units"},
+        "rank": {"$ref": "#/$defs/rank"},
+        "context": {"$ref": "#/$defs/context"},
+        "invariants": {"type": "array", "items": {"type": "string"}},
+        "requires": {"type": "array", "items": {"type": "string"}},
+        "guarantees": {"type": "array", "items": {"type": "string"}},
+        "role": {"type": "string"},
+        "description": {"type": "string"}
+      }
+    }
+  },
   "properties": {
     "schema": {"const": "nanrouter.math-function.v1"},
     "function_id": {"type": "string", "pattern": "^math\\.[a-z0-9][a-z0-9_.-]{0,120}$"},
     "version": {"type": "integer", "minimum": 1},
     "family": {"type": "string"},
     "title": {"type": "string"},
-    "signature": {"type": "object"},
+    "signature": {
+      "type": "object",
+      "required": ["inputs", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/endpoint"}
+        },
+        "output": {"$ref": "#/$defs/endpoint"},
+        "name": {"type": "string"},
+        "description": {"type": "string"}
+      }
+    },
     "semantics": {"type": "object"},
     "preconditions": {"type": "array", "items": {"type": "object"}},
     "postconditions": {"type": "array", "items": {"type": "object"}},

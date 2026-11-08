@@ -28,6 +28,7 @@ from .math_objects import (
     PROOF_STATUSES,
     MathFunction,
     MathObjectError,
+    MathTypeDescriptor,
     canonical_json,
     digest_object,
     sha256_text,
@@ -73,7 +74,8 @@ _IMPLEMENTATION_KEYS = frozenset({
 _SIGNATURE_KEYS = frozenset({"inputs", "output", "name", "description"})
 _ENDPOINT_KEYS = frozenset({
     "name", "type", "domain", "shape", "precision", "invariants", "requires",
-    "guarantees", "role", "unit", "layout", "dtype", "element", "description",
+    "guarantees", "role", "unit", "units", "layout", "dtype", "element",
+    "element_type", "stride", "strides", "rank", "context", "description",
 })
 _POLICY_KEYS = frozenset({
     "precision", "rounding", "reduction_order", "fma", "nan_propagation",
@@ -225,6 +227,9 @@ def _validate_endpoint(value: Any, name: str, *, require_name: bool,
             endpoint[field] = _require_string_list(
                 endpoint[field], f"{name}.{field}", error_cls=error_cls,
             )
+    MathTypeDescriptor.from_mapping(
+        endpoint, name, error_cls=error_cls, include_nested_type=True,
+    )
     return endpoint
 
 
@@ -608,6 +613,11 @@ def _contract_key(contract: Mapping[str, Any]) -> dict[str, Any]:
         key["shape"] = contract["shape"]
     if "precision" in contract:
         key["precision"] = contract["precision"]
+    invariant_fields = {"type", "domain", "shape", "precision"}
+    descriptor = MathTypeDescriptor.from_mapping(contract)
+    for name, value in descriptor.to_dict().items():
+        if name not in invariant_fields:
+            key[name] = value
     invariants = contract.get("invariants") or contract.get("guarantees")
     if invariants:
         key["invariants"] = sorted(invariants)
@@ -651,6 +661,12 @@ def _contract_satisfies(output: Mapping[str, Any],
                 f"precision {output_precision!r} does not satisfy "
                 f"{required_precision!r}",
             )
+
+    output_descriptor = MathTypeDescriptor.from_mapping(output)
+    required_descriptor = MathTypeDescriptor.from_mapping(required)
+    issues = output_descriptor.compatibility_issues(required_descriptor)
+    if issues:
+        return False, issues[0]
 
     required_invariants = required.get("invariants") or required.get("requires") or []
     output_invariants = set(

@@ -41,6 +41,27 @@ _RESULT_PROVENANCE_KEYS = frozenset({
     "linker_id", "runner_id", "output_leaf_id",
 })
 
+# Optional semantic type descriptors.  They live inside an existing
+# ``MathLeaf.type`` object or a function signature endpoint, so records that do
+# not declare them serialize and digest exactly as before.
+TYPE_DESCRIPTOR_FIELDS = (
+    "element_type", "stride", "layout", "units", "rank", "shape", "domain",
+    "context",
+)
+TYPE_DESCRIPTOR_ALIASES = {
+    "element_type": ("element_type", "element", "dtype"),
+    "stride": ("stride", "strides"),
+    "units": ("units", "unit"),
+}
+_DESCRIPTOR_WILDCARDS = frozenset({"any", "*"})
+_ELEMENT_TYPE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.:+-]{0,63}$")
+_LAYOUT_RE = re.compile(r"^[a-z][a-z0-9_.:-]{0,63}$")
+_UNIT_ATOM = r"[A-Za-z%°µ][A-Za-z0-9%°µ_]*"
+_UNIT_RE = re.compile(
+    rf"^(?:1|{_UNIT_ATOM}(?:\^[-+]?\d+)?"
+    rf"(?:[*/]{_UNIT_ATOM}(?:\^[-+]?\d+)?)*)$"
+)
+
 
 class MathObjectError(ValueError):
     """Invalid mathematical record or canonical serialization."""
@@ -180,6 +201,297 @@ def _tuple_of_dicts(value: Any, name: str) -> tuple[dict[str, Any], ...]:
     return tuple(result)
 
 
+def _alias_value(source: Mapping[str, Any], aliases: Iterable[str], name: str,
+                 error_cls: type[MathObjectError]) -> Any:
+    """Return one alias value, rejecting conflicting declarations."""
+    found = [
+        (key, source[key]) for key in aliases
+        if key in source and source[key] is not None
+    ]
+    if not found:
+        return None
+    _, first_value = found[0]
+    for key, value in found[1:]:
+        if canonical_json(value) != canonical_json(first_value):
+            declared = ", ".join(item[0] for item in found)
+            raise error_cls(
+                f"{name} aliases disagree ({declared}); use one declaration"
+            )
+    return first_value
+
+
+def _normalize_descriptor_shape(value: Any, name: str,
+                                error_cls: type[MathObjectError]
+                                ) -> tuple[int, ...] | str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        if value in _DESCRIPTOR_WILDCARDS:
+            return "any"
+        raise error_cls(f"{name} must be a list of dimensions or 'any'")
+    if isinstance(value, bool) or not isinstance(value, (list, tuple)):
+        raise error_cls(f"{name} must be a list of dimensions or 'any'")
+    dimensions: list[int] = []
+    for dimension in value:
+        if (isinstance(dimension, bool) or not isinstance(dimension, int)
+                or dimension < 0):
+            raise error_cls(f"{name} dimensions must be integers >= 0")
+        dimensions.append(dimension)
+    return tuple(dimensions)
+
+
+def _normalize_descriptor_stride(value: Any, name: str,
+                                 error_cls: type[MathObjectError]
+                                 ) -> int | tuple[int, ...] | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise error_cls(f"{name} must be an integer >= 0 or a list of them")
+    if isinstance(value, int):
+        if value < 0:
+            raise error_cls(f"{name} must be an integer >= 0 or a list of them")
+        return value
+    if not isinstance(value, (list, tuple)):
+        raise error_cls(f"{name} must be an integer >= 0 or a list of them")
+    strides: list[int] = []
+    for stride in value:
+        if isinstance(stride, bool) or not isinstance(stride, int) or stride < 0:
+            raise error_cls(f"{name} strides must be integers >= 0")
+        strides.append(stride)
+    return tuple(strides)
+
+
+def _normalize_descriptor_element(value: Any, name: str,
+                                  error_cls: type[MathObjectError]) -> str | None:
+    if value is None:
+        return None
+    if (not isinstance(value, str) or not value
+            or value not in _DESCRIPTOR_WILDCARDS
+            and not _ELEMENT_TYPE_RE.fullmatch(value)):
+        raise error_cls(
+            f"{name} must be an element type token <= 64 characters"
+        )
+    return value
+
+
+def _normalize_descriptor_layout(value: Any, name: str,
+                                 error_cls: type[MathObjectError]) -> str | None:
+    if value is None:
+        return None
+    if (not isinstance(value, str) or not value
+            or value not in _DESCRIPTOR_WILDCARDS
+            and not _LAYOUT_RE.fullmatch(value)):
+        raise error_cls(f"{name} must be a lowercase layout token")
+    return value
+
+
+def _normalize_descriptor_units(value: Any, name: str,
+                                error_cls: type[MathObjectError]) -> str | None:
+    if value is None:
+        return None
+    if (not isinstance(value, str) or not value
+            or value not in _DESCRIPTOR_WILDCARDS
+            and not _UNIT_RE.fullmatch(value)):
+        raise error_cls(
+            f"{name} must be a unit expression such as 'm/s^2' or 'any'"
+        )
+    return value
+
+
+def _normalize_descriptor_domain(value: Any, name: str,
+                                 error_cls: type[MathObjectError]) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value or len(value) > 64:
+        raise error_cls(f"{name} must be a non-empty string <= 64 characters")
+    return value
+
+
+def _descriptor_token(value: str) -> str:
+    return value.strip().lower()
+
+
+def _descriptor_stride_key(value: int | tuple[int, ...]) -> tuple[int, ...]:
+    return (value,) if isinstance(value, int) else tuple(value)
+
+
+@dataclass(frozen=True)
+class MathTypeDescriptor:
+    """Optional semantic type metadata shared by leaves and signature endpoints.
+
+    The descriptor is a *view* over fields already present in ``MathLeaf.type``
+    or a function endpoint.  Leaf serialization keeps the original spelling
+    (for example ``element`` rather than ``element_type``); canonical aliases
+    are only used by :meth:`to_dict`, :meth:`digest`, and compatibility checks.
+    """
+
+    element_type: str | None = None
+    stride: int | tuple[int, ...] | None = None
+    layout: str | None = None
+    units: str | None = None
+    rank: int | None = None
+    shape: tuple[int, ...] | str | None = None
+    domain: str | None = None
+    context: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        element_type = _normalize_descriptor_element(
+            self.element_type, "element_type", MathObjectError,
+        )
+        stride = _normalize_descriptor_stride(
+            self.stride, "stride", MathObjectError,
+        )
+        layout = _normalize_descriptor_layout(
+            self.layout, "layout", MathObjectError,
+        )
+        units = _normalize_descriptor_units(self.units, "units", MathObjectError)
+        rank = self.rank
+        if rank is not None:
+            if isinstance(rank, bool) or not isinstance(rank, int) or rank < 0:
+                raise MathObjectError("rank must be an integer >= 0")
+        shape = _normalize_descriptor_shape(self.shape, "shape", MathObjectError)
+        domain = _normalize_descriptor_domain(
+            self.domain, "domain", MathObjectError,
+        )
+        if not isinstance(self.context, Mapping):
+            raise MathObjectError("context must be an object")
+        if (rank is not None and shape not in (None, "any")
+                and len(shape) != rank):
+            raise MathObjectError(
+                f"rank {rank} does not match shape rank {len(shape)}"
+            )
+        object.__setattr__(self, "element_type", element_type)
+        object.__setattr__(self, "stride", stride)
+        object.__setattr__(self, "layout", layout)
+        object.__setattr__(self, "units", units)
+        object.__setattr__(self, "shape", shape)
+        object.__setattr__(self, "domain", domain)
+        object.__setattr__(self, "context", _freeze_json(dict(self.context)))
+
+    @classmethod
+    def from_mapping(cls, value: Any, name: str = "type descriptor", *,
+                     error_cls: type[MathObjectError] = MathObjectError,
+                     include_nested_type: bool = True
+                     ) -> "MathTypeDescriptor":
+        """Validate descriptor fields in a leaf type or signature endpoint.
+
+        With ``include_nested_type`` (the signature-endpoint form), descriptor
+        fields inside a nested ``type`` object are considered as well; the
+        top-level endpoint fields take precedence.
+        """
+        if not isinstance(value, Mapping):
+            raise error_cls(f"{name} must be an object")
+        source = dict(value)
+        if include_nested_type:
+            nested = source.get("type")
+            if isinstance(nested, Mapping):
+                merged = dict(nested)
+                merged.update({
+                    key: item for key, item in source.items() if key != "type"
+                })
+                source = merged
+        context_value = source.get("context")
+        try:
+            return cls(
+                element_type=_alias_value(
+                    source, TYPE_DESCRIPTOR_ALIASES["element_type"],
+                    f"{name}.element_type", error_cls,
+                ),
+                stride=_alias_value(
+                    source, TYPE_DESCRIPTOR_ALIASES["stride"],
+                    f"{name}.stride", error_cls,
+                ),
+                layout=source.get("layout"),
+                units=_alias_value(
+                    source, TYPE_DESCRIPTOR_ALIASES["units"],
+                    f"{name}.units", error_cls,
+                ),
+                rank=source.get("rank"),
+                shape=source.get("shape"),
+                domain=source.get("domain"),
+                context={} if context_value is None else context_value,
+            )
+        except MathObjectError as exc:
+            if error_cls is MathObjectError:
+                raise
+            raise error_cls(str(exc)) from exc
+
+    def declared(self) -> frozenset[str]:
+        """Return the canonical names of fields that were declared."""
+        fields: set[str] = set()
+        for name in TYPE_DESCRIPTOR_FIELDS:
+            value = getattr(self, name)
+            if name == "context":
+                if value:
+                    fields.add(name)
+            elif value is not None:
+                fields.add(name)
+        return frozenset(fields)
+
+    def to_dict(self) -> dict[str, Any]:
+        document: dict[str, Any] = {}
+        for name in TYPE_DESCRIPTOR_FIELDS:
+            value = getattr(self, name)
+            if name == "context":
+                if value:
+                    document[name] = _thaw_json(value)
+                continue
+            if value is None:
+                continue
+            document[name] = (
+                list(value) if isinstance(value, tuple) else value
+            )
+        return document
+
+    def digest(self) -> str:
+        return digest_object(self.to_dict())
+
+    def compatibility_issues(
+        self, required: "MathTypeDescriptor",
+    ) -> tuple[str, ...]:
+        """Return first-class mismatches against a consumer requirement.
+
+        Only fields declared by *both* descriptors are compared.  Wildcards
+        (``any``/``*``) match anything.  Units are compared textually; no
+        dimensional analysis or unit conversion is performed.
+        """
+        if not isinstance(required, MathTypeDescriptor):
+            raise MathObjectError("required must be a MathTypeDescriptor")
+        issues: list[str] = []
+        for field in ("element_type", "layout", "units"):
+            produced = getattr(self, field)
+            needed = getattr(required, field)
+            if produced is None or needed is None:
+                continue
+            if (produced in _DESCRIPTOR_WILDCARDS
+                    or needed in _DESCRIPTOR_WILDCARDS):
+                continue
+            produced_key = (
+                _descriptor_token(produced) if field != "units" else produced
+            )
+            needed_key = (
+                _descriptor_token(needed) if field != "units" else needed
+            )
+            if produced_key != needed_key:
+                issues.append(
+                    f"{field} {produced!r} does not satisfy {needed!r}"
+                )
+        if self.stride is not None and required.stride is not None:
+            produced_stride = _descriptor_stride_key(self.stride)
+            needed_stride = _descriptor_stride_key(required.stride)
+            if produced_stride != needed_stride:
+                issues.append(
+                    f"stride {list(produced_stride)!r} does not satisfy "
+                    f"{list(needed_stride)!r}"
+                )
+        if (self.rank is not None and required.rank is not None
+                and self.rank != required.rank):
+            issues.append(
+                f"rank {self.rank!r} does not satisfy {required.rank!r}"
+            )
+        return tuple(issues)
+
+
 @dataclass(frozen=True)
 class MathLeaf:
     """Immutable typed mathematical packet."""
@@ -205,6 +517,9 @@ class MathLeaf:
         _require_int(self.version, "version", minimum=1)
         if not isinstance(self.type, Mapping):
             raise MathObjectError("type must be an object")
+        MathTypeDescriptor.from_mapping(
+            self.type, "type", include_nested_type=False,
+        )
         if self.status not in LEAF_STATUSES:
             raise MathObjectError(f"unknown leaf status: {self.status!r}")
         if self.content is not None and not isinstance(self.content, Mapping):
@@ -244,6 +559,13 @@ class MathLeaf:
                     "result leaf provenance requires a producer/candidate/job "
                     "identity"
                 )
+
+    @property
+    def type_descriptor(self) -> MathTypeDescriptor:
+        """Optional semantic descriptor declared inside ``type``."""
+        return MathTypeDescriptor.from_mapping(
+            self.type, "type", include_nested_type=False,
+        )
 
     @property
     def content_digest(self) -> str | None:
@@ -324,6 +646,19 @@ class MathFunction:
         _require_int(self.version, "version", minimum=1)
         if not isinstance(self.signature, Mapping) or not self.signature:
             raise MathObjectError("signature must be a non-empty object")
+        raw_inputs = self.signature.get("inputs")
+        if isinstance(raw_inputs, (list, tuple)):
+            for index, endpoint in enumerate(raw_inputs):
+                if isinstance(endpoint, Mapping):
+                    MathTypeDescriptor.from_mapping(
+                        endpoint, f"signature.inputs[{index}]",
+                        include_nested_type=True,
+                    )
+        output = self.signature.get("output")
+        if isinstance(output, Mapping):
+            MathTypeDescriptor.from_mapping(
+                output, "signature.output", include_nested_type=True,
+            )
         if self.proof_status not in PROOF_STATUSES:
             raise MathObjectError(f"unknown proof_status: {self.proof_status!r}")
         if self.status not in {"proposed", "active", "deprecated", "revoked"}:
@@ -505,8 +840,9 @@ __all__ = [
     "ADMISSION_SCHEMA", "CANDIDATE_SCHEMA", "FUNCTION_SCHEMA", "LEAF_SCHEMA",
     "LEAF_KINDS", "LEAF_STATUSES", "MathAdmission", "MathCandidate",
     "MathFunction", "MathImmutabilityError", "MathLeaf", "MathObjectError",
-    "MathRule",
+    "MathRule", "MathTypeDescriptor",
     "PROOF_STATUSES", "RULE_LEVELS", "RULE_STATUSES", "RULE_SCHEMA",
+    "TYPE_DESCRIPTOR_ALIASES", "TYPE_DESCRIPTOR_FIELDS",
     "VERDICTS", "admission_id_for", "candidate_id_for", "canonical_json",
     "digest_object", "sha256_text",
 ]

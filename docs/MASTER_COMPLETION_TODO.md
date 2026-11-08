@@ -163,7 +163,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
 - [ ] `B-08` Rational/gcd/lcm/exact-root/finite-field/fixed-point scalar layer.
-- [ ] `B-09` Typed scalar/array descriptor: element type, stride, layout, units, rank, shape, domain, context.
+- [x] `B-09` Typed scalar/array descriptor: element type, stride, layout, units, rank, shape, domain, context; optional fields preserve legacy digests; function composition rejects declared descriptor conflicts.
 - [ ] `B-10` Pair codec regressions: byte/face/payload/inverse/missing-member/corruption.
 - [ ] `B-11` Resolve `mth_negate256_f32` registration so `DEEP_PLAN_CONT` ring-wave plan resolves.
 
