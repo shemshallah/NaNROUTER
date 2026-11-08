@@ -1,15 +1,16 @@
 # MTH graph core kernels
 
-Status: the two kernels below are **native_verified locally** (2026-11-07) by
+Status: the three kernels below are **native_verified locally** (2026-11-07) by
 the canonical NaN16 assembler and `nan_cli` execution harness. They are
 registered with `status: native_verified` and `ci_verified: false` in
 `spec/wave-capabilities.json`; canonical CI has not executed this revision.
-This document does **not** claim D-01, D-02, D-03, D-04, or any RSS
-controller/filter completion.
+The filter is a bounded degree-2 polynomial prototype only. This document does
+**not** claim D-01, D-02, D-03, D-04, or any RSS controller/filter-completion
+gate.
 
 ## 1. Shared CSR descriptor
 
-Both kernels consume the same bounded canonical CSR view already used by the
+All three kernels consume the same bounded canonical CSR view already used by the
 sparse graph Laplacian and connected-component kernels:
 
 - `row_offsets`: 257 U32 words; `offsets[0] = 0`,
@@ -155,19 +156,138 @@ The fixture passes locally under `nan_cli` with marker
 4. source `256` rejects before changing the output page;
 5. nonzero `offsets[0]` rejects before changing the output page.
 
-## 4. Evidence boundary and open graph work
+## 4. `mth_graph_filter.nas`
+
+Source: `mth/nan16/mth_graph_filter.nas`
+Entry point: `mth_graph_filter_poly2_q16_16`
+Fixture: `mth/tests/mth_graph_filter_test.nas`
+Manifest id: `mth.graph.filter.poly2.q16.16`
+Workspace: 528 caller-owned words = 4,224 bytes (256-word `Lx` scratch +
+256-word `L^2x` scratch + 16-word control frame), far below the 2 MiB ceiling.
+
+### Operator
+
+For each vertex `i`:
+
+```
+y_i = c0*x_i + c1*(Lx)_i + c2*(L^2 x)_i
+```
+
+`L` is the exact unweighted symmetric simple-graph Laplacian from the shared
+canonical CSR descriptor. CSR was chosen over a precomputed `L`/`Lx` page
+because the kernel can derive and bound both `Lx` and `L^2x` locally from the
+same validated descriptor; a precomputed operator page would enlarge the ABI
+and move the decisive validation to the caller. The filter is a declared
+degree-2 polynomial in `L`; it does not form the 65,536 x 65,536
+Kronecker/pair-space matrix and does not take a dense Laplacian. The `Lx` and
+`L^2x` vectors are 256 words each. No Chebyshev recurrence, adjacency-only
+polynomial, adaptive coefficient generation, or RSS `FILTER` verb controller
+is implemented here.
+
+### ABI
+
+| Register | Meaning |
+|---|---|
+| `r1` | `row_offsets`, 257 U32 words |
+| `r2` | `neighbors`, `edge_count` U32 words |
+| `r3` | `x`, 256 signed I32 Q16.16 words, each in `[-4096,+4096]` |
+| `r4` | coefficients, 3 signed I32 Q16.16 words, each in `[-65536,+65536]` |
+| `r5` | `output`, 256 signed I32 Q16.16 words |
+| `r6` | caller-owned `scratch_lx`, 256 signed I32 words |
+| `r7` | caller-owned `scratch_l2x`, 256 signed I32 words |
+| `r8` | `edge_count`, `0..65,280` |
+| `r9` | caller-owned 16-word U32 control scratch frame |
+| `r13` | constant `1` |
+| return | `r1 = 1` success; `r1 = 0` invalid count/state/coefficient; `r1 = 2` invalid offsets/degree; `r1 = 3` invalid endpoint/order/self-loop |
+
+Clobbers `r1-r12` and `r14`; preserves `r13`. The kernel uses two internal
+`CALL` helpers and no static scratch. Input, output, and all scratch spans must
+not overlap.
+
+### Numeric contract
+
+- `x` is Q16.16 in `[-4096,+4096]` (real `[-1/16,+1/16]`).
+- Each row has at most 255 neighbors, so the exact signed-I32 bounds are:
+
+  ```
+  |(Lx)_i|   <= 255 * 2^13 = 2,088,960
+  |(L^2x)_i| <= 255 * 2 * 2,088,960 = 255^2 * 2^14
+             = 1,065,369,600 < 2^31
+  ```
+
+- Coefficients are Q16.16 in `[-1,+1]` (raw `[-65536,+65536]`).
+- Each `c_k * v_k` product is formed exactly as a signed 64-bit
+  two's-complement integer by a 17-step shift-and-add loop. The three Q32.32
+  products sum to less than `2^48`.
+- The 64-bit sum is shifted right by 16 with arithmetic truncation toward
+  negative infinity and stored as I32 Q16.16. The declared bounds prove the
+  final magnitude is at most `1,067,462,656 < 2^31`, so there is no rounding
+  beyond that one truncation, no saturation, and no wrap.
+
+### Validation and fail-closed behavior
+
+The kernel validates the edge count, `offsets[0] = 0`, monotone offsets, final
+offset equal to `edge_count`, row degree `<=255`, endpoint range, strictly
+sorted unique neighbors, no self-loops, all 256 `x` words, and all three
+coefficients. All validation finishes before the first vector-scratch or
+output write. A rejected descriptor therefore leaves `output`, `scratch_lx`,
+and `scratch_l2x` unchanged. The 16-word control frame is written first and may
+be clobbered on rejection. Symmetry and reciprocal entries remain bound by the
+caller/runner graph digest; the kernel itself does not prove symmetry.
+
+### Fixture evidence
+
+The fixture passes locally under `nan_cli` with marker
+`MTH GRAPH FILTER Q16.16 PASS` after 621,536 guest steps. The graph is the path
+`0--1--2--3` plus isolated vertices `4..255`, with
+`x = [0,4096,2048,-4096,0,...]`. Exact hand-checkable vectors are:
+
+```
+Lx   = [ -4096,  6144, 4096, -6144, 0, ...]
+L^2x = [-10240, 12288, 8192, -10240, 0, ...]
+```
+
+The fixture checks:
+
+1. `c=[+1,+1/2,-1/4]` -> `y=[512,4096,2048,-4608,0,...]`;
+2. `c=[+1,0,0]` -> `y=x`;
+3. `c=[0,+1,0]` -> `y=Lx`;
+4. `x[0]=4097` rejects with `r1=0` and leaves output plus both scratch
+   vectors unchanged;
+5. coefficient `65537` rejects with `r1=0` and output unchanged;
+6. decreasing CSR offsets reject with `r1=2` and output unchanged;
+7. a duplicate endpoint rejects with `r1=3` and output unchanged;
+8. `edge_count=65281` rejects with `r1=0` and output unchanged.
+
+An additional local randomized graph/coefficient cross-check against an
+independent Python reference passed, but it is not part of the committed
+fixture or CI evidence.
+
+**Evidence boundary:** this is local `nan_cli` evidence only. The manifest row
+keeps `ci_verified: false` until the canonical workflow executes this revision.
+It verifies only the bounded unweighted Q16.16 degree-2 polynomial above. It
+does not verify Chebyshev coefficients, adjacency polynomials, fractional edge
+weights, dense/operator-free eigensystem filtering, coefficient generation, or
+the RSS controller.
+
+## 5. Evidence boundary and open graph work
 
 - Local evidence is the exact command family in `tools/run_mth_fixtures.py`
   using the canonical `nan0s/tools/nmk.awk` assembler and
-  `nan0s/aarch64/android/nan_cli`. It is not CI evidence. Both manifest rows
-  keep `ci_verified: false` until the canonical workflow runs this revision.
-- Native verification covers U32 degree/weighted-degree and the single-word
-  degree/shell/neighborhood signature only. It does not verify fractional
-  weights, directed motifs, connected components through this kernel,
-  spectral signatures, epoch deltas, or confidence metadata.
+  `nan0s/aarch64/android/nan_cli`. It is not CI evidence. All three manifest
+  rows keep `ci_verified: false` until the canonical workflow runs this
+  revision.
+- Native verification covers U32 degree/weighted-degree, the single-word
+  degree/shell/neighborhood signature, and the bounded degree-2 polynomial
+  filter. It does not verify fractional weights, directed motifs, connected
+  components through these kernels, spectral signatures, epoch deltas,
+  confidence metadata, Chebyshev recurrence, or adjacency filtering.
 - `mth_rss_contract` and `mth_graph_laplacian` remain missing from the D-01
-  registration set. `mth_graph_filter` (D-02) and the RSS verb controller
-  (D-04) remain unimplemented. No filter or RSS controller completion is
-  claimed here.
+  registration set. `mth_graph_filter` now exists as the bounded polynomial
+  prototype above, but D-02 remains incomplete because the Chebyshev/general
+  polynomial contract and the RSS `FILTER` integration are not implemented.
+  The RSS verb controller (D-04) remains unimplemented. No filter-completion
+  or RSS-controller-completion claim is made here.
 - The 2 MiB workspace ceiling is respected: degree uses no static workspace,
-  and pattern declares 512 words (4,096 bytes).
+  pattern declares 512 words (4,096 bytes), and filter declares 528 words
+  (4,224 bytes).

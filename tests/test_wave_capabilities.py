@@ -28,6 +28,7 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.graph.pair.full.128.f32", ids)
         self.assertIn("mth.graph.degree.256.u32", ids)
         self.assertIn("mth.graph.pattern.256.u32", ids)
+        self.assertIn("mth.graph.filter.poly2.q16.16", ids)
         self.assertIn("mth.jahs.gate.u64", ids)
         self.assertIn("mth.matvec256.full.f32", ids)
         self.assertIn("mth.svd.top2.256.f32", ids)
@@ -37,12 +38,12 @@ class WaveCapabilityTests(unittest.TestCase):
         self.assertIn("mth.vector.span_add.checked.u32", ids)
         self.assertIn("mth.preflight.typed.u32", ids)
         self.assertIn("mth.execute.native_dispatch.f32", ids)
-        self.assertEqual(len(ids), 77)
+        self.assertEqual(len(ids), 78)
 
     def test_dry_run_does_not_need_a_store(self):
         manifest = load_manifest(DEFAULT_MANIFEST)
         rows = register_manifest(None, manifest, runner_id="MC0:0/R0", dry_run=True)
-        self.assertEqual(len(rows), 77)
+        self.assertEqual(len(rows), 78)
         self.assertTrue(all(len(row["source_digest"]) == 64 for row in rows))
 
     def test_register_manifest_into_mc0db(self):
@@ -53,7 +54,7 @@ class WaveCapabilityTests(unittest.TestCase):
             rows = register_manifest(
                 store, manifest, runner_id="MC0:0/R0", epoch=1, nanclock_tick=7
             )
-            self.assertEqual(len(rows), 77)
+            self.assertEqual(len(rows), 78)
             for row in rows:
                 capability = store.dispatchable_capabilities(
                     workspace=row["workspace_words"],
@@ -209,12 +210,19 @@ class WaveCapabilityTests(unittest.TestCase):
         for kernel_id in (
             "mth.graph.degree.256.u32",
             "mth.graph.pattern.256.u32",
+            "mth.graph.filter.poly2.q16.16",
         ):
             with self.subTest(kernel_id=kernel_id):
                 kernel = by_id[kernel_id]
                 self.assertEqual(kernel["status"], "native_verified")
                 self.assertFalse(kernel["ci_verified"])
                 self.assertLessEqual(kernel["workspace_words"], WORDS_PER_MIB * 2)
+        self.assertEqual(
+            by_id["mth.graph.filter.poly2.q16.16"]["workspace_words"], 528
+        )
+        self.assertEqual(
+            by_id["mth.graph.filter.poly2.q16.16"]["precision"], "q16.16"
+        )
 
 
 if __name__ == "__main__":

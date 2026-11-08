@@ -189,6 +189,20 @@
       "ci_verified": false
     },
     {
+      "kernel_id": "mth.graph.filter.poly2.q16.16",
+      "source": "mth/nan16/mth_graph_filter.nas",
+      "fixture": "mth/tests/mth_graph_filter_test.nas",
+      "marker": "MTH GRAPH FILTER Q16.16 PASS",
+      "steps": 621536,
+      "precision": "q16.16",
+      "workspace_words": 528,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
       "kernel_id": "mth.graph.fold.f32",
       "source": "mth/nan16/mth_graph_fold.nas",
       "fixture": "mth/tests/mth_graph_fold_test.nas",

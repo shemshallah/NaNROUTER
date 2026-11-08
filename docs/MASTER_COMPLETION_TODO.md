@@ -228,7 +228,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 # D. `GRAPH_SPECTRAL_MTH_PLAN.md` completion
 
 - [ ] `D-01` **PARTIAL:** `mth_graph_degree.nas` is implemented and locally verified; `mth_rss_contract` and `mth_graph_laplacian` remain missing.
-- [ ] `D-02` Implement `mth_graph_filter` Chebyshev/polynomial g(H).
+- [ ] `D-02` **PARTIAL:** bounded degree-2 Q16.16 graph filter `y=c0*x+c1*Lx+c2*L²x` over canonical CSR is locally verified; Chebyshev recurrence, adaptive coefficients, and dense/eigensystem filtering remain open.
 - [ ] `D-03` **PARTIAL:** `mth_graph_pattern.nas` implements degree/shell/neighborhood signatures; motifs, components, deltas, spectral signatures, and confidence metadata remain open.
 - [ ] `D-04` Implement RSS verb controller: ENCODE/QUERY/MATCH/FILTER/DRIVE/PROPAGATE/FOLD/DECODE.
 - [ ] `D-05` K256 degree/all-ones/sum-zero/spectrum oracle tests.
