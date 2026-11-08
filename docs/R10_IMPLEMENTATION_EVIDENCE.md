@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** 66/66 locally runnable fixtures passed; 61/61 CI fixtures plus 6 local-only kernels; canonical CI run 42405649076 passed 132 steps (plus the dedicated preflight workflow); 909 Python tests passed (8 skipped).
+**Result:** 5 newly registered native fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch); 66/66 prior local baseline; last canonical CI run 42405649076 predates the new registrations and passed 132 steps for 61 fixtures; 937 Python tests passed (8 skipped).
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. GLT-enforced page-limit verification remains a separate pending gate.
 
 ## Native fixtures
@@ -82,12 +82,17 @@
 | 68 | Wide multiply | `mth/tests/mth_multiply_test.nas` | 1,578 | PASS | local only |
 | 69 | Divide/mod | `mth/tests/mth_divide_test.nas` | 2,062 | PASS | local only |
 | 70 | Negate 256 (composite) | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | yes |
+| 71 | Stage 0 word layout | `mth/tests/mth_stage0_test.nas` | 1,161 | PASS | local only |
+| 72 | Double-endian pair codec | `mth/tests/mth_double_endian_test.nas` | 545 | PASS | local only |
+| 73 | Vector span add | `mth/tests/mth_vector_test.nas` | 381 | PASS | local only |
+| 74 | Typed preflight | `mth/tests/mth_preflight_test.nas` | 2,780 | PASS | local only |
+| 75 | Native dispatch | `mth/tests/mth_linker_preflight_test.nas` | 16,047 | PASS | local only |
 
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 909 tests in 130.651s
+Ran 937 tests in 130.651s
 OK (skipped=1)
 ```
 
@@ -147,14 +152,14 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-60/60 local fixtures passed; 61/61 total
+71 local fixtures registered; 5 newly registered fixtures passed locally
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 70 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **70 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 75 kernels, source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **75 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## What is not yet proven
 
