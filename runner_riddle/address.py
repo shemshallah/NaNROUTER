@@ -7,6 +7,7 @@ Canonical v2 grammar (apex first, every layer separated by ``::``)::
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1-255:vector#1337
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:1:vector#1337:subrelation(42)
     nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:MP123
+    nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0::HW0:MP123::L4
 
 ``GM0:0`` is the global-mesh apex layer.  ``SC0:0``, ``MC0:0`` and ``BS0:0``
 are the supercluster, macrocluster and bootstrap-service layers.  ``HW0:0``
@@ -50,6 +51,8 @@ _ROOT_V1 = re.compile(
 # HW0:MP0..32639 is the mirror-pair namespace, not 32640 new heads.
 # Ranges remain symbolic; no 32K-entry selector expansion.
 _MP = re.compile(r"^HW(?P<namespace>\d+):MP(?P<start>\d+)(?:-(?P<end>\d+))?$")
+# Conceptual L0..L9 is a bounded semantic-resolution selector, not a new VM head.
+_LAYER = re.compile(r"^L(?P<layer>[0-9])$")
 _HEAD = re.compile(r"^HW(?P<namespace>\d+):(?P<headspec>\d+(?:[-,]\d+)*)$")
 _OBJECT = re.compile(
     r"^(?P<kind>vector|hyperedge|rule|route|bin|temporal)#"
@@ -118,6 +121,12 @@ class MirrorPairSelector:
 
 
 @dataclass(frozen=True)
+class LayerSelector:
+    """One conceptual resolution L0..L9, with no implicit proof privilege."""
+    level: int
+
+
+@dataclass(frozen=True)
 class ObjectSelector:
     kind: str
     object_id: str
@@ -133,7 +142,7 @@ class NanAddress:
     bs_node: int
     root_namespace: int
     root_head: int
-    selectors: tuple[HeadSelector | MirrorPairSelector | ObjectSelector, ...]
+    selectors: tuple[HeadSelector | MirrorPairSelector | LayerSelector | ObjectSelector, ...]
     gm_instance: int = 0
     sc_instance: int = 0
     mc_instance: int = 0
@@ -175,6 +184,10 @@ class NanAddress:
                      if isinstance(item, MirrorPairSelector))
 
     @property
+    def layer_selectors(self) -> tuple[LayerSelector, ...]:
+        return tuple(item for item in self.selectors if isinstance(item, LayerSelector))
+
+    @property
     def object_selectors(self) -> tuple[ObjectSelector, ...]:
         return tuple(
             item for item in self.selectors if isinstance(item, ObjectSelector)
@@ -191,6 +204,9 @@ class NanAddress:
                 rendered += f"::HW{selector.namespace}:MP{selector.start}"
                 if selector.is_range:
                     rendered += f"-{selector.end}"
+                continue
+            if isinstance(selector, LayerSelector):
+                rendered += f"::L{selector.level}"
                 continue
             rendered += f":{selector.kind}#{selector.object_id}"
             if selector.subrelation is not None:
@@ -237,7 +253,10 @@ def _expand_heads(spec: str) -> tuple[int, ...]:
     return tuple(heads)
 
 
-def _parse_selector(token: str) -> HeadSelector | MirrorPairSelector | ObjectSelector:
+def _parse_selector(token: str) -> HeadSelector | MirrorPairSelector | LayerSelector | ObjectSelector:
+    layer = _LAYER.fullmatch(token)
+    if layer:
+        return LayerSelector(int(layer.group("layer")))
     mp = _MP.fullmatch(token)
     if mp:
         namespace = _check_coordinate("MP namespace", int(mp.group("namespace")), 255)
@@ -273,12 +292,12 @@ def _parse_selector(token: str) -> HeadSelector | MirrorPairSelector | ObjectSel
     raise AddressError(f"unsupported selector: {token}")
 
 
-def _parse_selectors(raw: str) -> tuple[HeadSelector | MirrorPairSelector | ObjectSelector, ...]:
+def _parse_selectors(raw: str) -> tuple[HeadSelector | MirrorPairSelector | LayerSelector | ObjectSelector, ...]:
     if not raw:
         return ()
     # ``::`` separates layers/selectors; a single ``:`` introduces a leaf.
     if raw.startswith("::"):
-        result: list[HeadSelector | MirrorPairSelector | ObjectSelector] = []
+        result: list[HeadSelector | MirrorPairSelector | LayerSelector | ObjectSelector] = []
         for chunk in raw[2:].split("::"):
             if not chunk:
                 raise AddressError("empty address selector")
@@ -347,6 +366,16 @@ def parse_address(value: str) -> NanAddress:
         _check_coordinate(name, number, _MAX_COORDINATE)
     _check_coordinate("root HW namespace", values["root_ns"], 255)
     _check_coordinate("root HW head", values["root_head"], 255)
+    parsed_selectors = _parse_selectors(groups["selectors"])
+    # Exactly one layer selector after an actual head/MP coordinate.
+    # A math:// leaf is never inferred from Lx alone.
+    layers = [i for i, v in enumerate(parsed_selectors)
+              if isinstance(v, LayerSelector)]
+    if layers:
+        if len(layers) != 1 or layers[0] == 0 or (
+                not isinstance(parsed_selectors[layers[0] - 1],
+                               (HeadSelector, MirrorPairSelector))):
+            raise AddressError("L0..L9 must follow one HW head or MP selector")
     return NanAddress(
         values["gm"],
         values["sc"],
@@ -355,7 +384,7 @@ def parse_address(value: str) -> NanAddress:
         values["bs_node"],
         values["root_ns"],
         values["root_head"],
-        _parse_selectors(groups["selectors"]),
+        parsed_selectors,
         gm_instance,
         sc_instance,
         mc_instance,
