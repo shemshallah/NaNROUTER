@@ -54,6 +54,24 @@ class HermesMthToolsTests(unittest.TestCase):
         self.assertEqual(sum(result["execution_modes"].values()), len(self.tools.registry))
         self.assertEqual(result["execution_modes"].get("admission_gated_native_abi"), 2)
 
+    def test_head_directed_kernel_and_family_resolution(self):
+        family = self.tools.invoke("mth.route", {
+            "address": "HW0:23::vector", "head_index": 23})
+        self.assertTrue(family["result"]["kernels"])
+        self.assertTrue(all(
+            k["kernel_id"].startswith("mth.vector.")
+            for k in family["result"]["kernels"]))
+        kernel = self.tools.invoke("mth.route", {
+            "address": "HW0:23::mth.vector.dot256.f32", "head_index": 23})
+        self.assertEqual(kernel["result"]["kernel"]["kernel_id"],
+                         "mth.vector.dot256.f32")
+        with self.assertRaises(HermesMthToolError):
+            self.tools.invoke("mth.route", {
+                "address": "HW0:24::vector", "head_index": 23})
+        with self.assertRaises(HermesMthToolError):
+            self.tools.invoke("mth.route", {
+                "address": "HW0:255::vector", "head_index": 255})
+
     def test_bounded_composition_and_native_dispatch_is_not_faked(self):
         result = self.tools.invoke("mth.compose", {"plan": {
             "plan_id": "probe",
