@@ -107,6 +107,31 @@ class LaneWorkTests(unittest.TestCase):
         self.assertEqual(stats["active_packets"], 5)
         self.assertNotIn("255", stats["nonempty_lanes"])
 
+    def test_explicit_critical_flag_is_never_stolen(self):
+        queues = LaneWorkQueues()
+        queues.enqueue(item("nmp:1", lane=1, critical=True))
+        self.assertIsNone(
+            queues.steal(2, capabilities=("vector.dot",), capability_epoch=0)
+        )
+        with self.assertRaises(NotStealable):
+            queues.steal_item("nmp:1", 2)
+
+    def test_can_steal_is_side_effect_free_and_finish_accepts_failure_alias(self):
+        queues = LaneWorkQueues()
+        queues.enqueue(item("nmp:1", lane=1, capabilities=("vector.dot",)))
+        self.assertTrue(
+            queues.can_steal(
+                "nmp:1", 2, capabilities=("vector.dot",), capability_epoch=0,
+            )
+        )
+        self.assertEqual(queues.get("nmp:1").lane_id, 1)
+        stolen = queues.steal_item(
+            "nmp:1", 2, capabilities=("vector.dot",), capability_epoch=0,
+        )
+        self.assertEqual(stolen.lane_id, 2)
+        queues.begin("nmp:1")
+        self.assertEqual(queues.finish("nmp:1", state="failed").state, "rejected")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -98,7 +98,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-73` Work queues/stealing contract.
 - [x] `A-74` Ring epoch export/restore.
 - [x] `A-75` Wire NMP durable ledger into bridge transitions (submit/lease/complete/commit/cancel/fail).
-- [ ] `A-76` Wire lane work queues/stealing into the bridge/scheduler (currently contract-only).
+- [x] `A-76` Lane work queues/stealing integrated as an optional projection adapter; authoritative bridge/WaveStore leases remain the only ledger, and queue operations never invoke an executor.
 - [ ] `A-77` Implement durable ring incarnation/epoch recovery in the bridge path.
 - [ ] `A-78` Add remote worker/peer protocol with selected-step-only payloads, quotas, timeouts.
 - [x] `A-79` NMP packet/input/history/evidence total size bounds (64 inputs, 4,096 history entries, 1 MiB evidence, 2 MiB packet fields).
