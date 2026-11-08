@@ -10,6 +10,16 @@ from pathlib import Path
 from runner_riddle.mth_registry import (
     KERNEL_STATUSES,
     MANIFEST_SCHEMA,
+    PLAN_REASON_ALIAS_MISMATCH,
+    PLAN_REASON_ALIAS_UNKNOWN,
+    PLAN_REASON_CANCEL,
+    PLAN_REASON_DESCRIPTOR_COUNT,
+    PLAN_REASON_FUEL,
+    PLAN_REASON_HANDOFF_DOMAIN,
+    PLAN_REASON_HANDOFF_LAYOUT,
+    PLAN_REASON_HANDOFF_PRECISION,
+    PLAN_REASON_HANDOFF_SHAPE,
+    PLAN_REASON_VALUE_DESCRIPTOR,
     PLAN_SCHEMA,
     PLAN_SPEC_SCHEMA,
     PRECISIONS,
@@ -21,6 +31,7 @@ from runner_riddle.mth_registry import (
     MthPlanStep,
     MthRegistry,
     MthRegistryError,
+    MthValueDescriptor,
     sha256_file,
 )
 
@@ -404,6 +415,250 @@ class MthPlanTests(unittest.TestCase):
         })
         self.assertEqual(plan.workspace_words, 32)
 
+    def test_legacy_plan_serialization_has_no_extension_fields(self):
+        plan = self.registry.compose({
+            "plan_id": "legacy",
+            "steps": [{
+                "name": "dot",
+                "kernel_id": "mth.vector.dot256.f32",
+                "inputs": ["f32[256].a", "f32[256].b"],
+                "outputs": ["f32.dot"],
+                "depends_on": [],
+            }],
+        })
+        document = plan.to_dict()
+        self.assertEqual(set(document), {
+            "schema", "version", "plan_id", "steps", "kernel_ids", "inputs",
+            "outputs", "workspace_words", "deterministic",
+        })
+        self.assertEqual(set(document["steps"][0]), {
+            "name", "kernel_id", "inputs", "outputs", "depends_on",
+        })
+        self.assertIsNone(plan.fuel)
+        self.assertIsNone(plan.cancel_after)
+
+    @staticmethod
+    def _handoff_specs(**overrides):
+        spec = {
+            "precision": "float32",
+            "shape": [256],
+            "layout": "dense",
+            "domain": "real",
+        }
+        spec.update(overrides)
+        return spec
+
+    def _handoff_spec(self, *, producer=None, consumer=None, extra=None):
+        spec = {
+            "plan_id": "handoff",
+            "steps": [
+                {
+                    "name": "producer",
+                    "kernel_id": "mth.vector.dot256.f32",
+                    "inputs": ["f32[256].a", "f32[256].b"],
+                    "outputs": ["f32[256].x"],
+                    "depends_on": [],
+                    "output_specs": [producer or self._handoff_specs()],
+                },
+                {
+                    "name": "consumer",
+                    "kernel_id": "mth.vector.norm256.f32",
+                    "inputs": ["f32[256].x"],
+                    "outputs": ["f32.norm"],
+                    "depends_on": ["producer"],
+                    "input_specs": [consumer or self._handoff_specs()],
+                },
+            ],
+        }
+        if extra is not None:
+            spec.update(extra)
+        return spec
+
+    def test_validate_plan_accepts_compatible_declared_handoff(self):
+        plan = self.registry.compose(self._handoff_spec())
+        producer, consumer = plan.steps
+        self.assertEqual(
+            producer.output_specs,
+            (MthValueDescriptor(
+                precision="float32",
+                shape=(256,),
+                layout="dense",
+                domain="real",
+            ),),
+        )
+        self.assertEqual(producer.output_specs, consumer.input_specs)
+        document = plan.to_dict()
+        self.assertEqual(
+            document["steps"][0]["output_specs"],
+            [self._handoff_specs()],
+        )
+        self.assertEqual(
+            document["steps"][1]["input_specs"],
+            [self._handoff_specs()],
+        )
+        json.dumps(document)
+
+        # A field declared on only one side is not enough metadata to check.
+        partial = self.registry.compose(self._handoff_spec(
+            producer={"shape": [256]},
+            consumer={"precision": "float32"},
+        ))
+        self.assertEqual(
+            partial.steps[0].output_specs,
+            (MthValueDescriptor(shape=(256,)),),
+        )
+        self.assertEqual(
+            partial.steps[1].input_specs,
+            (MthValueDescriptor(precision="float32"),),
+        )
+
+    def test_validate_plan_rejects_declared_handoff_mismatch(self):
+        cases = {
+            "precision": (
+                dict(precision="q16.16"), PLAN_REASON_HANDOFF_PRECISION
+            ),
+            "shape": (dict(shape=[128]), PLAN_REASON_HANDOFF_SHAPE),
+            "layout": (dict(layout="blocked"), PLAN_REASON_HANDOFF_LAYOUT),
+            "domain": (dict(domain="complex"), PLAN_REASON_HANDOFF_DOMAIN),
+        }
+        for field, (change, reason) in cases.items():
+            with self.subTest(field=field):
+                with self.assertRaises(MthPlanError) as caught:
+                    self.registry.compose(self._handoff_spec(
+                        consumer=self._handoff_specs(**change)
+                    ))
+                self.assertEqual(caught.exception.reason, reason)
+
+    def test_validate_plan_rejects_unknown_or_invalid_value_descriptors(self):
+        cases = {
+            "unknown_field": (
+                {"surprise": True}, PLAN_REASON_VALUE_DESCRIPTOR
+            ),
+            "precision": (
+                {"precision": "int8"}, PLAN_REASON_VALUE_DESCRIPTOR
+            ),
+            "shape_zero": ({"shape": [0]}, PLAN_REASON_VALUE_DESCRIPTOR),
+            "shape_type": ({"shape": "256"}, PLAN_REASON_VALUE_DESCRIPTOR),
+            "layout": (
+                {"layout": "Row Major"}, PLAN_REASON_VALUE_DESCRIPTOR
+            ),
+            "domain": ({"domain": "REAL"}, PLAN_REASON_VALUE_DESCRIPTOR),
+            "alias_syntax": (
+                {"alias_of": "9not-a-value"}, PLAN_REASON_VALUE_DESCRIPTOR
+            ),
+        }
+        for label, (change, reason) in cases.items():
+            with self.subTest(label=label):
+                with self.assertRaises(MthPlanError) as caught:
+                    self.registry.compose(self._handoff_spec(
+                        producer=self._handoff_specs(**change)
+                    ))
+                self.assertEqual(caught.exception.reason, reason)
+
+        with self.assertRaises(MthPlanError) as caught:
+            self.registry.compose(self._handoff_spec(producer="not-a-list"))
+        self.assertEqual(
+            caught.exception.reason, PLAN_REASON_VALUE_DESCRIPTOR
+        )
+
+        count_mismatch = {
+            "plan_id": "descriptor-count",
+            "steps": [{
+                "name": "producer",
+                "kernel_id": "mth.vector.dot256.f32",
+                "inputs": ["f32[256].a", "f32[256].b"],
+                "outputs": ["f32[256].x"],
+                "output_specs": [
+                    self._handoff_specs(), self._handoff_specs()
+                ],
+            }],
+        }
+        with self.assertRaises(MthPlanError) as caught:
+            self.registry.compose(count_mismatch)
+        self.assertEqual(
+            caught.exception.reason, PLAN_REASON_DESCRIPTOR_COUNT
+        )
+
+    def test_validate_plan_rejects_bad_fuel_and_cancel_bounds(self):
+        base = {
+            "plan_id": "bounded",
+            "steps": [{
+                "name": "dot",
+                "kernel_id": "mth.vector.dot256.f32",
+                "inputs": ["f32[256].a", "f32[256].b"],
+                "outputs": ["f32.dot"],
+                "depends_on": [],
+            }],
+        }
+        for fuel in (0, -1, True):
+            with self.subTest(fuel=fuel):
+                with self.assertRaises(MthPlanError) as caught:
+                    self.registry.compose({**base, "fuel": fuel})
+                self.assertEqual(caught.exception.reason, PLAN_REASON_FUEL)
+        for cancel_after in (0, -1):
+            with self.subTest(cancel_after=cancel_after):
+                with self.assertRaises(MthPlanError) as caught:
+                    self.registry.compose(
+                        {**base, "cancel_after": cancel_after}
+                    )
+                self.assertEqual(caught.exception.reason, PLAN_REASON_CANCEL)
+
+        plan = self.registry.compose(
+            {**base, "fuel": 1024, "cancel_after": 10}
+        )
+        self.assertEqual(plan.fuel, 1024)
+        self.assertEqual(plan.cancel_after, 10)
+        document = plan.to_dict()
+        self.assertEqual(document["fuel"], 1024)
+        self.assertEqual(document["cancel_after"], 10)
+
+    def test_validate_plan_checks_alias_targets_and_metadata(self):
+        producer = self._handoff_specs()
+        alias = self._handoff_specs(alias_of="f32[256].x")
+        plan = self.registry.compose({
+            "plan_id": "alias",
+            "steps": [{
+                "name": "produce",
+                "kernel_id": "mth.vector.dot256.f32",
+                "inputs": ["f32[256].a", "f32[256].b"],
+                "outputs": ["f32[256].x", "f32[256].y"],
+                "output_specs": [producer, alias],
+            }],
+        })
+        self.assertEqual(
+            plan.steps[0].output_specs[1].alias_of, "f32[256].x"
+        )
+
+        unknown = self._handoff_specs(alias_of="f32[256].missing")
+        with self.assertRaises(MthPlanError) as caught:
+            self.registry.compose({
+                "plan_id": "alias-unknown",
+                "steps": [{
+                    "name": "produce",
+                    "kernel_id": "mth.vector.dot256.f32",
+                    "inputs": ["f32[256].a", "f32[256].b"],
+                    "outputs": ["f32[256].x", "f32[256].y"],
+                    "output_specs": [producer, unknown],
+                }],
+            })
+        self.assertEqual(caught.exception.reason, PLAN_REASON_ALIAS_UNKNOWN)
+
+        domain_mismatch = self._handoff_specs(
+            alias_of="f32[256].x", domain="complex"
+        )
+        with self.assertRaises(MthPlanError) as caught:
+            self.registry.compose({
+                "plan_id": "alias-domain",
+                "steps": [{
+                    "name": "produce",
+                    "kernel_id": "mth.vector.dot256.f32",
+                    "inputs": ["f32[256].a", "f32[256].b"],
+                    "outputs": ["f32[256].x", "f32[256].y"],
+                    "output_specs": [producer, domain_mismatch],
+                }],
+            })
+        self.assertEqual(caught.exception.reason, PLAN_REASON_ALIAS_MISMATCH)
+
     def test_compose_rejects_invalid_specs(self):
         dot = {
             "name": "dot",
@@ -629,7 +884,7 @@ class SchemaDocumentTests(unittest.TestCase):
         )
         definitions = document["$defs"]
         for name in (
-            "kernelDescriptor", "planStep", "planSpec",
+            "kernelDescriptor", "valueDescriptor", "planStep", "planSpec",
             "registryDocument", "planDocument",
         ):
             self.assertIn(name, definitions)
@@ -645,6 +900,15 @@ class SchemaDocumentTests(unittest.TestCase):
         self.assertEqual(step_required, {
             "name", "kernel_id", "inputs", "outputs", "depends_on",
         })
+        self.assertTrue({
+            "input_specs", "output_specs",
+        }.issubset(definitions["planStep"]["properties"]))
+        self.assertTrue({
+            "fuel", "cancel_after",
+        }.issubset(definitions["planDocument"]["properties"]))
+        self.assertTrue({
+            "fuel", "cancel_after",
+        }.issubset(definitions["planSpec"]["properties"]))
         plan_required = set(definitions["planDocument"]["required"])
         self.assertTrue({
             "schema", "version", "plan_id", "steps", "kernel_ids",

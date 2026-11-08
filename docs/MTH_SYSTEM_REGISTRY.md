@@ -80,15 +80,48 @@ precision:<normalized>    status:<status>        workspace:zero|workspace:bounde
 
 `MthPlanStep` contains `name`, `kernel_id`, typed `inputs`, typed `outputs`, and `depends_on`. Typed names are opaque strings such as `f32[256].a`, `q16.16[256]`, or `f32.score`.
 
-`MthPlan` contains an ordered tuple of steps, a total workspace bound, `deterministic=True`, and a version. `kernel_ids`, `inputs`, and `outputs` are derived properties:
+Two optional extension fields may be added per step:
+
+| Field | Meaning |
+|---|---|
+| `input_specs` | positional descriptors for `inputs` |
+| `output_specs` | positional descriptors for `outputs` |
+
+`MthPlan` contains an ordered tuple of steps, a total workspace bound, `deterministic=True`, and a version. Optional extension fields are `fuel` and `cancel_after`, both positive integers when declared. `kernel_ids`, `inputs`, and `outputs` are derived properties:
 
 - `inputs` are values consumed by a step but not produced anywhere in the plan (external inputs);
 - `outputs` are unique produced names in first-definition order;
 - `workspace_words` is a conservative sum over the workspace of every step occurrence.
 
-Typed values are opaque names, not a type checker. Reusing an output name across steps is allowed so a plan can express an in-place state update; the plan-level output list still contains each name once.
+Typed values are opaque names unless the plan opts into `MthValueDescriptor` metadata. Reusing an output name across steps is allowed so a plan can express an in-place state update; the plan-level output list still contains each name once.
 
-## 6. Composition
+### 5.1 Value descriptors
+
+`MthValueDescriptor` is immutable and declarative only; it carries no numeric payload and performs no conversion:
+
+```
+precision   optional PRECISIONS token (float32, q16.16, ...)
+shape       optional list of positive dimensions; [] means scalar
+layout      optional lowercase layout token (dense, blocked, ...)
+domain      optional lowercase domain token (real, complex, ...)
+alias_of    optional name of another plan value sharing the same storage
+```
+
+Every field is optional. `to_dict()` emits only fields that are set.
+
+## 6. Compatible plan v1 serialization
+
+Old plans and documents are unchanged:
+
+- `input_specs`/`output_specs` are emitted only when non-empty;
+- `fuel`/`cancel_after` are emitted only when declared;
+- the schema string stays `nanrouter.mth-plan.v1`;
+- no manifest entry or kernel descriptor gains a required field;
+- `MthPlan.to_dict()` for a plan without extensions has the same keys and values as before.
+
+The extension is a plan-level opt-in. It does not change `spec/wave-capabilities.json`, does not add kernel contract fields, and does not claim numerical verification.
+
+## 7. Composition
 
 A small plan specification looks like this:
 
@@ -134,11 +167,72 @@ Validation rejects:
 - dependencies that do not precede their consumer in a manually constructed plan;
 - kernels whose status is not `native_verified` or whose manifest CI claim is false;
 - a workspace bound below the sum required by the steps;
-- invalid typed names, plan identifiers, or unknown spec fields.
+- invalid typed names, plan identifiers, or unknown spec fields;
+- declared handoff, alias, fuel, or cancellation metadata that is invalid or inconsistent.
 
 No numerical result is produced or checked. A structurally valid plan is a contract candidate, not evidence that a kernel is correct.
 
-## 7. Health
+## 8. Typed handoff, alias, and bounds validation
+
+Handoff validation runs only over metadata the plan actually declares. For each
+value produced by an earlier step and consumed by a later step, `precision`,
+`shape`, `layout`, and `domain` are compared when both the producer
+`output_specs` entry and the consumer `input_specs` entry declare that field.
+If one side omits a field, that field is not checked; this is what keeps old
+untyped plans valid. A conflicting field fails closed with `MthPlanError`.
+
+The same rule applies when a step redefines an output name in place: two
+declared metadata versions of the same value must agree. An undeclared
+redefinition leaves the previous declared metadata in force.
+
+`alias_of` names another value in the same plan. The target must exist as a
+plan input or output. The alias metadata must agree with every declared
+descriptor for the target. Aliasing does not create a value, perform a copy,
+or bypass handoff checks.
+
+`fuel` and `cancel_after` are positive integer bounds when declared. Zero,
+negative, boolean, or non-integer values are rejected. They are plan bounds;
+the executor still owns enforcement and cancellation state.
+
+Stable `MthPlanError.reason` codes:
+
+| Reason | Meaning |
+|---|---|
+| `invalid_plan` | Generic structural failure (backward-compatible default) |
+| `invalid_value_descriptor` | Unknown field, bad precision/shape/layout/domain/alias token |
+| `value_descriptor_count_mismatch` | `input_specs`/`output_specs` length differs from inputs/outputs |
+| `handoff_precision_mismatch` | Producer and consumer precision disagree |
+| `handoff_shape_mismatch` | Producer and consumer shape disagree |
+| `handoff_layout_mismatch` | Producer and consumer layout disagree |
+| `handoff_domain_mismatch` | Producer and consumer domain disagree |
+| `alias_unknown` | `alias_of` does not name a plan value |
+| `alias_mismatch` | Alias metadata conflicts with the target's declared metadata |
+| `fuel_out_of_bounds` | `fuel` is not a positive integer |
+| `cancel_out_of_bounds` | `cancel_after` is not a positive integer |
+
+Example declared handoff:
+
+```json
+{
+  "name": "score",
+  "kernel_id": "mth.vector.cosine256.f32",
+  "inputs": ["f32[256].a", "f32[256].b"],
+  "outputs": ["f32.score"],
+  "depends_on": [],
+  "input_specs": [
+    {"precision": "float32", "shape": [256], "layout": "dense", "domain": "real"},
+    {"precision": "float32", "shape": [256], "layout": "dense", "domain": "real"}
+  ],
+  "output_specs": [
+    {"precision": "float32", "shape": [], "domain": "real"}
+  ]
+}
+```
+
+This validates declarations only. It does not prove that a kernel honours them
+and does not perform numeric range or precision conversion checks.
+
+## 9. Health
 
 `health()` returns a token-free, deterministic summary:
 
@@ -157,7 +251,7 @@ No numerical result is produced or checked. A structurally valid plan is a contr
 
 The counts above illustrate the shape; actual values come from the loaded manifest. `native_verified_ci` counts entries that satisfy both conditions required by a plan step.
 
-## 8. Safety limits
+## 10. Safety limits and deferred items
 
 - The CI flag is a manifest declaration. This module does not re-run CI or native fixtures.
 - Digests detect local byte changes; they are not signatures and do not establish provenance.
@@ -165,11 +259,17 @@ The counts above illustrate the shape; actual values come from the loaded manife
 - Manifest paths are constrained to the manifest root. Absolute paths and `..` escapes are rejected.
 - The registry is loaded eagerly and is not hot-reloaded when files change.
 - Plan composition is pure ordering and validation. It never assembles, executes, or benchmarks a kernel.
+- Handoff metadata is declarative. It does not prove kernel conformance, infer conversions, or perform numeric range/error analysis.
+- Deferred: descriptor-level input/output port signatures and the `MathFunctionRegistry` semantic contract (`docs/GAME_PLAN_::.md` §6); per-step fuel accounting; runtime enforcement of `fuel`/`cancel_after` in the executor; stride/offset and actual storage-alias analysis.
 
-## 9. Evidence
+## 11. Evidence
 
 ```
-python3 -m unittest tests.test_mth_registry -v
-Ran 26 tests
+python3 -m unittest tests.test_mth_registry -q
+Ran 35 tests
+OK
+
+python3 -m unittest tests.test_mth_registry tests.test_mth_system -q
+Ran 54 tests
 OK
 ```

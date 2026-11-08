@@ -27,6 +27,21 @@ PLAN_SCHEMA = "nanrouter.mth-plan.v1"
 PLAN_SPEC_SCHEMA = "nanrouter.mth-plan-spec.v1"
 REGISTRY_VERSION = 1
 
+# Stable reason codes carried by MthPlanError.  They let callers distinguish a
+# typed handoff failure from generic structural plan errors without parsing
+# prose.  Existing raise sites keep the default ``invalid_plan`` reason.
+PLAN_REASON_INVALID = "invalid_plan"
+PLAN_REASON_VALUE_DESCRIPTOR = "invalid_value_descriptor"
+PLAN_REASON_DESCRIPTOR_COUNT = "value_descriptor_count_mismatch"
+PLAN_REASON_HANDOFF_SHAPE = "handoff_shape_mismatch"
+PLAN_REASON_HANDOFF_PRECISION = "handoff_precision_mismatch"
+PLAN_REASON_HANDOFF_LAYOUT = "handoff_layout_mismatch"
+PLAN_REASON_HANDOFF_DOMAIN = "handoff_domain_mismatch"
+PLAN_REASON_ALIAS_UNKNOWN = "alias_unknown"
+PLAN_REASON_ALIAS_MISMATCH = "alias_mismatch"
+PLAN_REASON_FUEL = "fuel_out_of_bounds"
+PLAN_REASON_CANCEL = "cancel_out_of_bounds"
+
 KERNEL_STATUSES = (
     "declared",
     "source_written",
@@ -45,8 +60,24 @@ _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_.:>-]{0,63}$")
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _TYPE_RE = re.compile(r"^[A-Za-z].{0,127}$")
 
-_PLAN_SPEC_KEYS = frozenset({"schema", "version", "plan_id", "steps", "workspace_words"})
-_PLAN_STEP_KEYS = frozenset({"kernel_id", "name", "inputs", "outputs", "depends_on"})
+_PLAN_SPEC_KEYS = frozenset({
+    "schema", "version", "plan_id", "steps", "workspace_words",
+    "fuel", "cancel_after",
+})
+_PLAN_STEP_KEYS = frozenset({
+    "kernel_id", "name", "inputs", "outputs", "depends_on",
+    "input_specs", "output_specs",
+})
+_VALUE_DESCRIPTOR_KEYS = frozenset({
+    "precision", "shape", "layout", "domain", "alias_of",
+})
+_HANDOFF_FIELDS = ("precision", "shape", "layout", "domain")
+_HANDOFF_REASONS = {
+    "precision": PLAN_REASON_HANDOFF_PRECISION,
+    "shape": PLAN_REASON_HANDOFF_SHAPE,
+    "layout": PLAN_REASON_HANDOFF_LAYOUT,
+    "domain": PLAN_REASON_HANDOFF_DOMAIN,
+}
 
 
 class MthRegistryError(ValueError):
@@ -58,7 +89,15 @@ class MthManifestError(MthRegistryError):
 
 
 class MthPlanError(MthRegistryError):
-    """Raised when a plan specification or plan document is invalid."""
+    """Raised when a plan specification or plan document is invalid.
+
+    ``reason`` is a stable code from ``PLAN_REASON_*``.  It defaults to
+    ``invalid_plan`` so existing raise sites and callers stay compatible.
+    """
+
+    def __init__(self, message: str, *, reason: str = PLAN_REASON_INVALID) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 def _is_int(value: Any) -> bool:
@@ -210,6 +249,256 @@ def _plan_dataflow(steps: tuple["MthPlanStep", ...]) -> tuple[tuple[str, ...], t
     return tuple(external), tuple(outputs)
 
 
+def _handoff_mismatch(left: "MthValueDescriptor",
+                      right: "MthValueDescriptor") -> tuple[str, Any, Any] | None:
+    """Return the first declared field that conflicts between two descriptors.
+
+    Only fields declared on both sides participate.  Missing metadata is not
+    treated as a match; it means the plan did not declare enough information
+    for that check, which keeps old untyped plans valid.
+    """
+    for field in _HANDOFF_FIELDS:
+        left_value = getattr(left, field)
+        right_value = getattr(right, field)
+        if field == "shape":
+            if left_value is not None:
+                left_value = tuple(left_value)
+            if right_value is not None:
+                right_value = tuple(right_value)
+        if left_value is None or right_value is None:
+            continue
+        if left_value != right_value:
+            return field, left_value, right_value
+    return None
+
+
+def _validate_plan_handoff(steps: tuple["MthPlanStep", ...]) -> None:
+    """Validate declared value handoffs and aliases across ordered steps."""
+    declared_values = {
+        value
+        for step in steps
+        for value in (*step.inputs, *step.outputs)
+    }
+    produced: dict[str, MthValueDescriptor | None] = {}
+    producer_steps: dict[str, str] = {}
+    value_specs: dict[str, list[MthValueDescriptor]] = {}
+
+    for step in steps:
+        input_specs = tuple(step.input_specs)
+        output_specs = tuple(step.output_specs)
+        for index, value in enumerate(step.inputs):
+            spec = input_specs[index] if input_specs else None
+            if spec is None:
+                continue
+            value_specs.setdefault(value, []).append(spec)
+            if value not in produced:
+                continue
+            producer = produced[value]
+            if producer is None:
+                continue
+            mismatch = _handoff_mismatch(producer, spec)
+            if mismatch is not None:
+                field, producer_value, consumer_value = mismatch
+                raise MthPlanError(
+                    f"handoff for {value!r}: {field} mismatch from step "
+                    f"{producer_steps[value]!r} to step {step.name!r}: "
+                    f"{producer_value!r} != {consumer_value!r}",
+                    reason=_HANDOFF_REASONS[field],
+                )
+        for index, value in enumerate(step.outputs):
+            spec = output_specs[index] if output_specs else None
+            if spec is not None:
+                value_specs.setdefault(value, []).append(spec)
+            if value in produced:
+                previous = produced[value]
+                if spec is not None and previous is not None:
+                    mismatch = _handoff_mismatch(previous, spec)
+                    if mismatch is not None:
+                        field, previous_value, next_value = mismatch
+                        raise MthPlanError(
+                            f"redefined output {value!r}: {field} mismatch from "
+                            f"step {producer_steps[value]!r} to step "
+                            f"{step.name!r}: {previous_value!r} != {next_value!r}",
+                            reason=_HANDOFF_REASONS[field],
+                        )
+                if spec is not None:
+                    produced[value] = spec
+                    producer_steps[value] = step.name
+            else:
+                produced[value] = spec
+                producer_steps[value] = step.name
+
+    for value in sorted(value_specs):
+        for spec in value_specs[value]:
+            alias = spec.alias_of
+            if alias is None:
+                continue
+            if alias not in declared_values:
+                raise MthPlanError(
+                    f"alias for {value!r} names unknown plan value {alias!r}",
+                    reason=PLAN_REASON_ALIAS_UNKNOWN,
+                )
+            for target in value_specs.get(alias, ()):
+                mismatch = _handoff_mismatch(target, spec)
+                if mismatch is not None:
+                    field, target_value, alias_value = mismatch
+                    raise MthPlanError(
+                        f"alias {value!r} -> {alias!r}: {field} mismatch: "
+                        f"{target_value!r} != {alias_value!r}",
+                        reason=PLAN_REASON_ALIAS_MISMATCH,
+                    )
+
+
+@dataclass(frozen=True)
+class MthValueDescriptor:
+    """Optional declarative metadata for one plan input or output value.
+
+    The descriptor carries no numeric payload.  It only names precision,
+    shape, layout, and domain, plus an optional alias to another plan value.
+    Every field is optional so plans that do not opt in keep the v1 contract.
+    """
+
+    precision: str | None = None
+    shape: tuple[int, ...] | None = None
+    layout: str | None = None
+    domain: str | None = None
+    alias_of: str | None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.shape, list):
+            object.__setattr__(self, "shape", tuple(self.shape))
+
+    def validate(self) -> None:
+        if self.precision is not None:
+            if not isinstance(self.precision, str) or self.precision not in PRECISIONS:
+                raise MthPlanError(
+                    f"unsupported value precision: {self.precision!r}",
+                    reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                )
+        if self.shape is not None:
+            if not isinstance(self.shape, (tuple, list)):
+                raise MthPlanError(
+                    "value shape must be a list of positive dimensions",
+                    reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                )
+            for dimension in self.shape:
+                if not _is_int(dimension) or dimension < 1:
+                    raise MthPlanError(
+                        "value shape dimensions must be positive integers",
+                        reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                    )
+        for field in ("layout", "domain"):
+            value = getattr(self, field)
+            if value is None:
+                continue
+            if not isinstance(value, str) or not _TAG_RE.fullmatch(value):
+                raise MthPlanError(
+                    f"value {field} must be a lowercase token: {value!r}",
+                    reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                )
+        if self.alias_of is not None:
+            if (
+                not isinstance(self.alias_of, str)
+                or not self.alias_of
+                or len(self.alias_of) > 128
+                or not _TYPE_RE.fullmatch(self.alias_of)
+            ):
+                raise MthPlanError(
+                    f"value alias_of is not a typed plan value: {self.alias_of!r}",
+                    reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                )
+
+    def to_dict(self) -> dict[str, Any]:
+        self.validate()
+        document: dict[str, Any] = {}
+        if self.precision is not None:
+            document["precision"] = self.precision
+        if self.shape is not None:
+            document["shape"] = list(self.shape)
+        if self.layout is not None:
+            document["layout"] = self.layout
+        if self.domain is not None:
+            document["domain"] = self.domain
+        if self.alias_of is not None:
+            document["alias_of"] = self.alias_of
+        return document
+
+
+def _require_value_descriptor_list(
+    value: Any, name: str, *, expected: int,
+) -> tuple[MthValueDescriptor, ...]:
+    if not isinstance(value, (tuple, list)):
+        raise MthPlanError(
+            f"{name} must be a list of value descriptors",
+            reason=PLAN_REASON_VALUE_DESCRIPTOR,
+        )
+    descriptors: list[MthValueDescriptor] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, MthValueDescriptor):
+            raise MthPlanError(
+                f"{name} entry {index} must be an MthValueDescriptor",
+                reason=PLAN_REASON_VALUE_DESCRIPTOR,
+            )
+        item.validate()
+        descriptors.append(item)
+    result = tuple(descriptors)
+    if result and len(result) != expected:
+        raise MthPlanError(
+            f"{name} declares {len(result)} descriptors for {expected} values",
+            reason=PLAN_REASON_DESCRIPTOR_COUNT,
+        )
+    return result
+
+
+def _parse_value_descriptors(
+    value: Any, name: str,
+) -> tuple[MthValueDescriptor, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, (tuple, list)):
+        raise MthPlanError(
+            f"{name} must be a list of value descriptors",
+            reason=PLAN_REASON_VALUE_DESCRIPTOR,
+        )
+    descriptors: list[MthValueDescriptor] = []
+    for index, raw in enumerate(value):
+        if isinstance(raw, MthValueDescriptor):
+            descriptor = raw
+        elif isinstance(raw, Mapping):
+            unknown = set(raw) - _VALUE_DESCRIPTOR_KEYS
+            if unknown:
+                raise MthPlanError(
+                    f"{name} entry {index} has unknown fields: "
+                    f"{', '.join(sorted(unknown))}",
+                    reason=PLAN_REASON_VALUE_DESCRIPTOR,
+                )
+            descriptor = MthValueDescriptor(
+                precision=raw.get("precision"),
+                shape=raw.get("shape"),
+                layout=raw.get("layout"),
+                domain=raw.get("domain"),
+                alias_of=raw.get("alias_of"),
+            )
+        else:
+            raise MthPlanError(
+                f"{name} entry {index} must be a value descriptor object",
+                reason=PLAN_REASON_VALUE_DESCRIPTOR,
+            )
+        descriptor.validate()
+        descriptors.append(descriptor)
+    return tuple(descriptors)
+
+
+def _require_plan_bound(value: Any, name: str, reason: str) -> None:
+    if value is None:
+        return
+    if not _is_int(value) or value < 1:
+        raise MthPlanError(
+            f"{name} must be a positive integer when declared",
+            reason=reason,
+        )
+
+
 @dataclass(frozen=True)
 class MthKernelDescriptor:
     """Validated description of one native MTH kernel."""
@@ -286,13 +575,20 @@ class MthKernelDescriptor:
 
 @dataclass(frozen=True)
 class MthPlanStep:
-    """One ordered step in an MTH plan; it names inputs and outputs only."""
+    """One ordered step in an MTH plan; it names inputs and outputs only.
+
+    ``input_specs`` and ``output_specs`` are optional positional metadata for
+    the corresponding names.  They are emitted only when declared, so a step
+    that does not use them serializes exactly as MTH plan v1 did.
+    """
 
     name: str
     kernel_id: str
     inputs: tuple[str, ...] = ()
     outputs: tuple[str, ...] = ()
     depends_on: tuple[str, ...] = ()
+    input_specs: tuple[MthValueDescriptor, ...] = ()
+    output_specs: tuple[MthValueDescriptor, ...] = ()
 
     def validate(self) -> None:
         _require_name(self.name, "step name", error_cls=MthPlanError)
@@ -302,29 +598,53 @@ class MthPlanStep:
         _require_name_list(
             self.depends_on, f"{self.name}: depends_on", error_cls=MthPlanError
         )
+        _require_value_descriptor_list(
+            self.input_specs, f"{self.name}: input_specs",
+            expected=len(self.inputs),
+        )
+        _require_value_descriptor_list(
+            self.output_specs, f"{self.name}: output_specs",
+            expected=len(self.outputs),
+        )
         if self.name in self.depends_on:
             raise MthPlanError(f"step {self.name!r} must not depend on itself")
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
-        return {
+        document: dict[str, Any] = {
             "name": self.name,
             "kernel_id": self.kernel_id,
             "inputs": list(self.inputs),
             "outputs": list(self.outputs),
             "depends_on": list(self.depends_on),
         }
+        if self.input_specs:
+            document["input_specs"] = [
+                descriptor.to_dict() for descriptor in self.input_specs
+            ]
+        if self.output_specs:
+            document["output_specs"] = [
+                descriptor.to_dict() for descriptor in self.output_specs
+            ]
+        return document
 
 
 @dataclass(frozen=True)
 class MthPlan:
-    """Deterministic, typed execution plan produced by :meth:`compose`."""
+    """Deterministic, typed execution plan produced by :meth:`compose`.
+
+    ``fuel`` and ``cancel_after`` are optional positive execution bounds.  They
+    are serialized only when declared, preserving the v1 plan document for old
+    plans.
+    """
 
     plan_id: str
     steps: tuple[MthPlanStep, ...]
     workspace_words: int = 0
     deterministic: bool = True
     version: int = 1
+    fuel: int | None = None
+    cancel_after: int | None = None
 
     @property
     def kernel_ids(self) -> tuple[str, ...]:
@@ -339,7 +659,7 @@ class MthPlan:
         return _plan_dataflow(self.steps)[1]
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        document = {
             "schema": PLAN_SCHEMA,
             "version": self.version,
             "plan_id": self.plan_id,
@@ -350,6 +670,11 @@ class MthPlan:
             "workspace_words": self.workspace_words,
             "deterministic": self.deterministic,
         }
+        if self.fuel is not None:
+            document["fuel"] = self.fuel
+        if self.cancel_after is not None:
+            document["cancel_after"] = self.cancel_after
+        return document
 
 
 class MthRegistry:
@@ -581,6 +906,10 @@ class MthRegistry:
             raise MthPlanError("plan must be an MthPlan")
         _require_name(plan.plan_id, "plan_id", error_cls=MthPlanError)
         _require_int(plan.version, "plan version", minimum=1, error_cls=MthPlanError)
+        _require_plan_bound(plan.fuel, "fuel", PLAN_REASON_FUEL)
+        _require_plan_bound(
+            plan.cancel_after, "cancel_after", PLAN_REASON_CANCEL
+        )
         if plan.deterministic is not True:
             raise MthPlanError("plan must be deterministic")
         if not isinstance(plan.steps, (tuple, list)) or not plan.steps:
@@ -622,6 +951,7 @@ class MthRegistry:
             error_cls=MthPlanError,
         )
         _plan_dataflow(tuple(plan.steps))
+        _validate_plan_handoff(tuple(plan.steps))
         # A plan that declares dependencies also declares the liveness
         # boundary of each producer buffer.  Admit it by peak live workspace;
         # a plan with no dependency edges retains the conservative v1 sum.
@@ -733,6 +1063,14 @@ class MthRegistry:
                     raw_step.get("depends_on", []), f"plan step {name}: depends_on",
                     error_cls=MthPlanError,
                 ),
+                "input_specs": _parse_value_descriptors(
+                    raw_step.get("input_specs"),
+                    f"plan step {name}: input_specs",
+                ),
+                "output_specs": _parse_value_descriptors(
+                    raw_step.get("output_specs"),
+                    f"plan step {name}: output_specs",
+                ),
             })
 
         ordered_indices = self._topological_order(parsed, names)
@@ -743,6 +1081,8 @@ class MthRegistry:
                 inputs=parsed[index]["inputs"],
                 outputs=parsed[index]["outputs"],
                 depends_on=parsed[index]["depends_on"],
+                input_specs=parsed[index]["input_specs"],
+                output_specs=parsed[index]["output_specs"],
             )
             for index in ordered_indices
         )
@@ -769,6 +1109,8 @@ class MthRegistry:
             workspace_words=workspace_words,
             deterministic=True,
             version=version,
+            fuel=plan_spec.get("fuel"),
+            cancel_after=plan_spec.get("cancel_after"),
         )
         return self.validate_plan(plan)
 
@@ -869,6 +1211,18 @@ __all__ = [
     "MthPlanStep",
     "MthRegistry",
     "MthRegistryError",
+    "MthValueDescriptor",
+    "PLAN_REASON_ALIAS_MISMATCH",
+    "PLAN_REASON_ALIAS_UNKNOWN",
+    "PLAN_REASON_CANCEL",
+    "PLAN_REASON_DESCRIPTOR_COUNT",
+    "PLAN_REASON_FUEL",
+    "PLAN_REASON_HANDOFF_DOMAIN",
+    "PLAN_REASON_HANDOFF_LAYOUT",
+    "PLAN_REASON_HANDOFF_PRECISION",
+    "PLAN_REASON_HANDOFF_SHAPE",
+    "PLAN_REASON_INVALID",
+    "PLAN_REASON_VALUE_DESCRIPTOR",
     "PLAN_SCHEMA",
     "PLAN_SPEC_SCHEMA",
     "PRECISIONS",
