@@ -123,6 +123,44 @@ class HeadObservationJournalTests(unittest.TestCase):
             network_head=kwargs.pop("network_head", 0), **kwargs,
         )
 
+    def test_retargeted_directory_alias_cannot_replay_native_dispatch(self):
+        """An already-live journal must never follow a retargeted DB alias."""
+        first_home = self.path.parent / "router-state-physical"
+        second_home = self.path.parent / "router-state-foreign"
+        first_home.mkdir()
+        second_home.mkdir()
+        alias = self.path.parent / "router-state-alias"
+        alias.symlink_to(first_home, target_is_directory=True)
+        journal = HermesHeadObservationJournal(
+            alias / "native.sqlite", lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.journal.chart_fence_reader,
+        )
+        pinned_path = str(first_home / "native.sqlite")
+        self.assertEqual(journal.database, pinned_path)
+        guest = self.guest()
+        result = journal.execute(
+            request=self.request, lease_receipt=self.lease,
+            network_head=0, raw_bank=self.raw, native_guest=guest,
+        )
+        self.assertFalse(result["replayed_from_journal"])
+        self.assertEqual(self.calls, 1)
+        alias.unlink()
+        alias.symlink_to(second_home, target_is_directory=True)
+        replay = journal.execute(
+            request=self.request, lease_receipt=self.lease,
+            network_head=0, raw_bank=self.raw, native_guest=guest,
+        )
+        self.assertTrue(replay["replayed_from_journal"])
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(replay["bank_after_sha256"], result["bank_after_sha256"])
+        self.assertEqual(journal.database, pinned_path)
+        self.assertFalse((second_home / "native.sqlite").exists())
+        with sqlite3.connect(pinned_path) as db:
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM hermes_head_observation"
+            ).fetchone()[0], 1)
+
     def test_journal_connections_close_and_enforce_full_sync(self):
         """Every read/write connection is FULL synchronous and closed."""
         with self.journal._db() as db:
