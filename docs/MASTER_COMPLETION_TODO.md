@@ -143,7 +143,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `A-132` NMP native execution evidence: pre-lease gate and completion bound to trusted guest binary pins.
 - [x] `A-133` Durable N16T session/replay checkpointing (`N16TSessionStore`) with restart restore, duplicate replay rejection, session ownership checks, bounded journals, TTL cleanup, and no-store legacy behavior. Checkpoints are replay journals, not raw VM snapshots.
 - [ ] `A-134` **PARTIAL:** `WorkerIdentityBinder` provides token-digest-to-owner binding and an NMP HTTP verifier callback without raw-token storage; deployment still must supply the trusted token source and bind handle IDs to callers.
-- [ ] `A-135` Guest-built native admission receipt production and output-digest verification in the normal worker path.
+- [x] `A-135` Guest-backed native admission receipt builder/validator integrated with N16T execution metadata; content-binding evidence, not cryptographic attestation.
 - [ ] `A-136` N16T message types beyond HELLO/CAPABILITIES/CLOSE; corpus/training/candidate/merge capabilities remain unimplemented.
 - [ ] `A-137` Durable prepared-handle/idempotence registry for `/v1/math/execute` (currently process-local).
 - [ ] `A-138` Bind opaque execution handle IDs to authenticated callers in deployment.

@@ -20,6 +20,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from .math_objects import digest_object
+from .nmp import (
+    NATIVE_ADMISSION_RECEIPT_SCHEMA,
+    NmpPacket,
+    NmpValidationError,
+    _input_identity,
+    _normalise_capability_set,
+    normalize_digest,
+    validate_native_admission_receipt as _validate_nmp_native_admission_receipt,
+)
+
 MIN_FRAME_BYTES = 36
 MAX_FRAME_BYTES = 65_572
 
@@ -31,6 +42,9 @@ SESSION_BASE = 0x0013_1000
 
 NAN_BUDGET = 0
 NAN_HALTED = 3
+
+NATIVE_EXECUTION_EVIDENCE_SCHEMA = "nanrouter.native-kernel-execution.v1"
+NATIVE_RECEIPT_PRODUCER = "nan16_guest"
 
 
 class N16TGuestRuntimeError(RuntimeError):
@@ -51,6 +65,602 @@ class N16TReplayError(N16TSessionStoreError):
 
 class N16TStoreCapacityError(N16TSessionStoreError):
     """The durable session store cannot admit another session or replay frame."""
+
+
+class N16TNativeAdmissionReceiptError(N16TGuestRuntimeError):
+    """Guest execution metadata cannot produce a packet-bound native receipt."""
+
+
+# Compatibility spelling for callers that name the failure by its role.
+N16TNativeAdmissionError = N16TNativeAdmissionReceiptError
+
+_MISSING = object()
+
+
+def _receipt_text(value: Any, name: str, *, maximum: int = 512) -> str:
+    if not isinstance(value, str) or not value or len(value) > maximum:
+        raise N16TNativeAdmissionReceiptError(f"{name} must be non-empty text")
+    return value
+
+
+def _receipt_digest(value: Any, name: str) -> str:
+    try:
+        return normalize_digest(value, name)
+    except NmpValidationError:
+        raise N16TNativeAdmissionReceiptError(
+            f"{name} must be a SHA-256 digest"
+        ) from None
+
+
+def _receipt_integer(value: Any, name: str, *, minimum: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise N16TNativeAdmissionReceiptError(
+            f"{name} must be an integer >= {minimum}"
+        )
+    return value
+
+
+def _first_present(value: Mapping[str, Any], *names: str) -> Any:
+    for name in names:
+        if name in value and value[name] is not None:
+            return value[name]
+    return _MISSING
+
+
+def _rule_digest_from_words(words: Any) -> str:
+    if (
+        not isinstance(words, (tuple, list))
+        or len(words) != 8
+        or any(
+            isinstance(word, bool)
+            or not isinstance(word, int)
+            or not -(1 << 31) <= word <= 0xFFFFFFFF
+            for word in words
+        )
+    ):
+        raise N16TNativeAdmissionReceiptError(
+            "rule_digest_words must contain eight u32 words"
+        )
+    return "".join(f"{word & 0xFFFFFFFF:08x}" for word in words)
+
+
+def _output_descriptor_digest(words: Any) -> str:
+    if not isinstance(words, (tuple, list)) or not words:
+        raise N16TNativeAdmissionReceiptError(
+            "output_descriptor must be a non-empty word sequence"
+        )
+    normalized: list[int] = []
+    for word in words:
+        if isinstance(word, bool) or not isinstance(word, int):
+            raise N16TNativeAdmissionReceiptError(
+                "output_descriptor words must be integers"
+            )
+        normalized.append(word & 0xFFFFFFFF)
+    return digest_object(normalized)
+
+
+@dataclass(frozen=True)
+class N16TGuestExecutionMetadata:
+    """Normalized guest-side admission metadata for one NMP packet.
+
+    Every field is either a content digest derived from the exact packet or a
+    guest-owned value. ``guest_status`` is the guest admission status; only the
+    zero (ALLOW) status may produce a receipt. No numerical output is stored
+    here: an admission receipt does not prove or replace the execution result.
+    """
+
+    packet_id: str
+    candidate_digest: str
+    snapshot_id: str
+    ruleset_snapshot_id: str
+    rule_epoch: int
+    rule_digest: str
+    preflight_digest: str
+    input_digest: str
+    capability_digest: str
+    generation: int
+    program_id: int
+    guest_status: int = 0
+    producer: str = NATIVE_RECEIPT_PRODUCER
+    output_generation: int | None = None
+    output_descriptor_digest: str | None = None
+    guest_source_digest: str | None = None
+    guest_image_digest: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("packet_id", "snapshot_id", "ruleset_snapshot_id"):
+            object.__setattr__(
+                self, name, _receipt_text(getattr(self, name), name)
+            )
+        for name in (
+            "candidate_digest",
+            "rule_digest",
+            "preflight_digest",
+            "input_digest",
+            "capability_digest",
+        ):
+            object.__setattr__(
+                self, name, _receipt_digest(getattr(self, name), name)
+            )
+        object.__setattr__(
+            self, "rule_epoch",
+            _receipt_integer(self.rule_epoch, "rule_epoch", minimum=1),
+        )
+        object.__setattr__(
+            self, "generation", _receipt_integer(self.generation, "generation")
+        )
+        object.__setattr__(
+            self, "program_id",
+            _receipt_integer(self.program_id, "program_id", minimum=1),
+        )
+        object.__setattr__(
+            self, "guest_status",
+            _receipt_integer(self.guest_status, "guest_status"),
+        )
+        if self.guest_status != 0:
+            raise N16TNativeAdmissionReceiptError(
+                "guest admission status does not record ALLOW"
+            )
+        producer = _receipt_text(self.producer, "producer", maximum=64)
+        if producer != NATIVE_RECEIPT_PRODUCER:
+            raise N16TNativeAdmissionReceiptError(
+                "native admission receipt producer must be nan16_guest"
+            )
+        object.__setattr__(self, "producer", producer)
+        if self.output_generation is not None:
+            object.__setattr__(
+                self, "output_generation",
+                _receipt_integer(self.output_generation, "output_generation"),
+            )
+            if self.output_generation != self.generation + 1:
+                raise N16TNativeAdmissionReceiptError(
+                    "output_generation must be generation + 1"
+                )
+        for name in (
+            "output_descriptor_digest",
+            "guest_source_digest",
+            "guest_image_digest",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                object.__setattr__(self, name, _receipt_digest(value, name))
+
+    @classmethod
+    def from_mapping(cls, value: Any) -> "N16TGuestExecutionMetadata":
+        """Build typed metadata from guest evidence without copying secrets.
+
+        Only allowlisted admission fields are read. Bearer tokens, lease
+        tokens, authorization headers, and arbitrary transport fields are
+        ignored rather than echoed into the receipt.
+        """
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise N16TNativeAdmissionReceiptError(
+                "guest execution metadata must be an object"
+            )
+
+        def required(*names: str) -> Any:
+            found = _first_present(value, *names)
+            if found is _MISSING:
+                raise N16TNativeAdmissionReceiptError(
+                    f"guest execution metadata is missing {names[0]}"
+                )
+            return found
+
+        packet_id = required("packet_id")
+        snapshot_id = required("snapshot_id")
+        ruleset_snapshot_id = required("ruleset_snapshot_id")
+
+        candidate_digest = _first_present(
+            value, "candidate_digest", "candidate_hash"
+        )
+        if candidate_digest is _MISSING:
+            candidate_id = _first_present(value, "candidate_id")
+            function_id = _first_present(value, "function_id")
+            function_version = _first_present(value, "function_version")
+            if (
+                candidate_id is _MISSING
+                or function_id is _MISSING
+                or function_version is _MISSING
+            ):
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution metadata is missing candidate_digest"
+                )
+            candidate_digest = digest_object({
+                "candidate_id": candidate_id,
+                "function_id": function_id,
+                "function_version": function_version,
+            })
+
+        input_digest = _first_present(value, "input_digest", "inputs_digest")
+        if input_digest is _MISSING:
+            inputs = _first_present(value, "inputs", "operands")
+            if inputs is _MISSING:
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution metadata is missing input_digest"
+                )
+            try:
+                input_digest = digest_object([
+                    _input_identity(dict(item)) for item in inputs
+                ])
+            except (TypeError, ValueError):
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution inputs are malformed"
+                ) from None
+
+        capability_digest = _first_present(
+            value, "capability_digest", "capability_set_digest"
+        )
+        if capability_digest is _MISSING:
+            capability_set = _first_present(
+                value, "capability_set", "capabilities"
+            )
+            if capability_set is _MISSING:
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution metadata is missing capability_digest"
+                )
+            try:
+                capability_digest = digest_object(
+                    list(_normalise_capability_set(capability_set))
+                )
+            except NmpValidationError:
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution capability set is malformed"
+                ) from None
+
+        rule_digest = _first_present(value, "rule_digest", "ruleset_digest")
+        if rule_digest is _MISSING:
+            words = _first_present(value, "rule_digest_words")
+            if words is _MISSING:
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution metadata is missing rule_digest"
+                )
+            rule_digest = _rule_digest_from_words(words)
+
+        preflight_digest = _first_present(value, "preflight_digest")
+        if preflight_digest is _MISSING:
+            preflight = _first_present(value, "preflight")
+            if isinstance(preflight, Mapping):
+                preflight_digest = preflight.get("digest")
+            elif isinstance(preflight, str):
+                preflight_digest = preflight
+            if preflight_digest in (None, _MISSING):
+                raise N16TNativeAdmissionReceiptError(
+                    "guest execution metadata is missing preflight_digest"
+                )
+
+        guest_status = _first_present(value, "guest_status", "status")
+        allowed = _first_present(value, "guest_allow")
+        if allowed is not _MISSING:
+            if not isinstance(allowed, bool):
+                raise N16TNativeAdmissionReceiptError(
+                    "guest_allow must be a boolean"
+                )
+            allowed_status = 0 if allowed else 1
+            if guest_status is _MISSING:
+                guest_status = allowed_status
+            elif guest_status != allowed_status:
+                raise N16TNativeAdmissionReceiptError(
+                    "guest_allow conflicts with guest_status and does not "
+                    "record guest ALLOW"
+                )
+        if guest_status is _MISSING:
+            raise N16TNativeAdmissionReceiptError(
+                "guest execution metadata is missing guest_status"
+            )
+
+        producer = _first_present(value, "producer")
+        if producer is _MISSING:
+            producer = NATIVE_RECEIPT_PRODUCER
+
+        output_descriptor_digest = _first_present(
+            value, "output_descriptor_digest"
+        )
+        if output_descriptor_digest is _MISSING:
+            descriptor = _first_present(value, "output_descriptor")
+            if descriptor is not _MISSING:
+                output_descriptor_digest = _output_descriptor_digest(descriptor)
+
+        return cls(
+            packet_id=packet_id,
+            candidate_digest=candidate_digest,
+            snapshot_id=snapshot_id,
+            ruleset_snapshot_id=ruleset_snapshot_id,
+            rule_epoch=required("rule_epoch", "epoch"),
+            rule_digest=rule_digest,
+            preflight_digest=preflight_digest,
+            input_digest=input_digest,
+            capability_digest=capability_digest,
+            generation=required("generation", "input_generation"),
+            program_id=required("program_id", "program"),
+            guest_status=guest_status,
+            producer=producer,
+            output_generation=_optional_or_none(
+                _first_present(value, "output_generation")
+            ),
+            output_descriptor_digest=_optional_or_none(
+                output_descriptor_digest
+            ),
+            guest_source_digest=_optional_or_none(
+                _first_present(value, "guest_source_digest")
+            ),
+            guest_image_digest=_optional_or_none(
+                _first_present(value, "guest_image_digest")
+            ),
+        )
+
+    def payload(self) -> dict[str, Any]:
+        """Return the canonical receipt body without ``receipt_digest``."""
+        body: dict[str, Any] = {
+            "schema": NATIVE_ADMISSION_RECEIPT_SCHEMA,
+            "packet_id": self.packet_id,
+            "candidate_digest": self.candidate_digest,
+            "snapshot_id": self.snapshot_id,
+            "ruleset_snapshot_id": self.ruleset_snapshot_id,
+            "rule_epoch": self.rule_epoch,
+            "rule_digest": self.rule_digest,
+            "input_digest": self.input_digest,
+            "capability_digest": self.capability_digest,
+            "preflight_digest": self.preflight_digest,
+            "generation": self.generation,
+            "program_id": self.program_id,
+            "guest_status": self.guest_status,
+            "producer": self.producer,
+        }
+        for name in (
+            "output_generation",
+            "output_descriptor_digest",
+            "guest_source_digest",
+            "guest_image_digest",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                body[name] = value
+        return body
+
+
+def _optional_or_none(value: Any) -> Any:
+    return None if value is _MISSING else value
+
+
+def _packet_value(packet: Any, name: str) -> Any:
+    if isinstance(packet, Mapping):
+        return packet.get(name)
+    return getattr(packet, name, None)
+
+
+def _packet_native_bindings(packet: Any) -> dict[str, Any]:
+    packet_id = _receipt_text(_packet_value(packet, "packet_id"), "packet.packet_id")
+    snapshot_id = _receipt_text(
+        _packet_value(packet, "snapshot_id"), "packet.snapshot_id"
+    )
+    ruleset_snapshot_id = _receipt_text(
+        _packet_value(packet, "ruleset_snapshot_id"),
+        "packet.ruleset_snapshot_id",
+    )
+    preflight_digest = _receipt_digest(
+        _packet_value(packet, "preflight_digest"), "packet.preflight_digest"
+    )
+    capability_digest = _receipt_digest(
+        _packet_value(packet, "capability_set_digest"),
+        "packet.capability_set_digest",
+    )
+    candidate_id = _receipt_text(
+        _packet_value(packet, "candidate_id"), "packet.candidate_id"
+    )
+    function_id = _receipt_text(
+        _packet_value(packet, "function_id"), "packet.function_id"
+    )
+    function_version = _receipt_integer(
+        _packet_value(packet, "function_version"),
+        "packet.function_version",
+        minimum=1,
+    )
+    generation = _receipt_integer(
+        _packet_value(packet, "generation"), "packet.generation"
+    )
+    inputs = _packet_value(packet, "inputs") or ()
+    try:
+        input_digest = digest_object([
+            _input_identity(dict(item)) for item in inputs
+        ])
+    except (TypeError, ValueError):
+        raise N16TNativeAdmissionReceiptError(
+            "packet inputs are malformed"
+        ) from None
+    return {
+        "packet_id": packet_id,
+        "candidate_digest": digest_object({
+            "candidate_id": candidate_id,
+            "function_id": function_id,
+            "function_version": function_version,
+        }),
+        "snapshot_id": snapshot_id,
+        "ruleset_snapshot_id": ruleset_snapshot_id,
+        "preflight_digest": preflight_digest,
+        "input_digest": input_digest,
+        "capability_digest": capability_digest,
+        "generation": generation,
+    }
+
+
+def _verify_execution_evidence(
+    evidence: Any,
+    *,
+    metadata: N16TGuestExecutionMetadata,
+    function_id: str,
+    result_digest: str | None,
+) -> None:
+    if not isinstance(evidence, Mapping):
+        raise N16TNativeAdmissionReceiptError(
+            "native execution evidence must be an object"
+        )
+    if evidence.get("schema") != NATIVE_EXECUTION_EVIDENCE_SCHEMA:
+        raise N16TNativeAdmissionReceiptError(
+            "native execution evidence schema is invalid"
+        )
+    if evidence.get("packet_id") != metadata.packet_id:
+        raise N16TNativeAdmissionReceiptError(
+            "native execution evidence is bound to another packet"
+        )
+    observed_function = _packet_value(evidence, "function_id")
+    if not isinstance(observed_function, str) or not observed_function:
+        raise N16TNativeAdmissionReceiptError(
+            "native execution evidence function_id is missing"
+        )
+    if observed_function != function_id:
+        raise N16TNativeAdmissionReceiptError(
+            "native execution evidence function_id does not match the packet"
+        )
+    program_id = evidence.get("program_id")
+    _receipt_integer(program_id, "native execution program_id", minimum=1)
+    if program_id != metadata.program_id:
+        raise N16TNativeAdmissionReceiptError(
+            "native execution program_id does not match the receipt metadata"
+        )
+    if "guest_status" in evidence:
+        guest_status = _receipt_integer(
+            evidence["guest_status"], "native execution guest_status"
+        )
+        if guest_status != 0:
+            raise N16TNativeAdmissionReceiptError(
+                "native execution evidence does not record guest ALLOW"
+            )
+    if result_digest is not None:
+        expected = _receipt_digest(result_digest, "result_digest")
+        output_digest = _receipt_digest(
+            evidence.get("output_digest"), "native execution output_digest"
+        )
+        if output_digest != expected:
+            raise N16TNativeAdmissionReceiptError(
+                "native execution output digest does not match result_digest"
+            )
+    for name in ("guest_source_digest", "guest_image_digest"):
+        supplied = getattr(metadata, name)
+        if supplied is None:
+            continue
+        observed = evidence.get(name)
+        if observed is None:
+            continue
+        if _receipt_digest(observed, f"native execution {name}") != supplied:
+            raise N16TNativeAdmissionReceiptError(
+                f"native execution {name} does not match the receipt metadata"
+            )
+
+
+def validate_guest_native_admission_receipt(
+    receipt: Any,
+    packet: Any = None,
+    *,
+    expected_program_id: int | None = None,
+) -> dict[str, Any]:
+    """Validate an NMP native receipt and optionally a server-owned program ID."""
+    try:
+        packet_obj = (
+            NmpPacket.from_dict(packet) if isinstance(packet, Mapping) else packet
+        )
+        data = _validate_nmp_native_admission_receipt(receipt, packet_obj)
+    except NmpValidationError as exc:
+        raise N16TNativeAdmissionReceiptError(str(exc)) from None
+    if expected_program_id is not None:
+        expected = _receipt_integer(
+            expected_program_id, "expected_program_id", minimum=1
+        )
+        if data["program_id"] != expected:
+            raise N16TNativeAdmissionReceiptError(
+                "native admission receipt program_id does not match the "
+                "server-owned expected program"
+            )
+    return data
+
+
+def build_native_admission_receipt(
+    packet: Any,
+    metadata: N16TGuestExecutionMetadata | Mapping[str, Any],
+    *,
+    expected_program_id: int | None = None,
+    execution_evidence: Mapping[str, Any] | None = None,
+    result_digest: str | None = None,
+) -> dict[str, Any]:
+    """Build the NMP native admission receipt for one packet.
+
+    ``metadata`` must come from the guest admission/execution evidence. The
+    builder never invents a digest, epoch, program ID, or result. Every packet-
+    owned binding is recomputed from ``packet`` and compared; any missing or
+    mismatched binding fails closed. When ``execution_evidence`` is supplied it
+    must describe the same packet and program, and an optional ``result_digest``
+    must equal the evidence output digest.
+    """
+    typed = N16TGuestExecutionMetadata.from_mapping(metadata)
+    expected = _packet_native_bindings(packet)
+    for name, value in expected.items():
+        if getattr(typed, name) != value:
+            raise N16TNativeAdmissionReceiptError(
+                f"guest execution metadata {name} does not match the packet"
+            )
+    if expected_program_id is not None:
+        expected_program = _receipt_integer(
+            expected_program_id, "expected_program_id", minimum=1
+        )
+        if typed.program_id != expected_program:
+            raise N16TNativeAdmissionReceiptError(
+                "guest execution program_id does not match the server-owned "
+                "expected program"
+            )
+    if execution_evidence is not None:
+        _verify_execution_evidence(
+            execution_evidence,
+            metadata=typed,
+            function_id=_receipt_text(
+                _packet_value(packet, "function_id"), "packet.function_id"
+            ),
+            result_digest=result_digest,
+        )
+    elif result_digest is not None:
+        raise N16TNativeAdmissionReceiptError(
+            "result_digest requires native execution evidence"
+        )
+    body = typed.payload()
+    receipt = {**body, "receipt_digest": digest_object(body)}
+    return validate_guest_native_admission_receipt(
+        receipt, packet, expected_program_id=expected_program_id
+    )
+
+
+class N16TNativeAdmissionReceipt:
+    """Typed entry point for guest-backed NMP native receipt production."""
+
+    SCHEMA = NATIVE_ADMISSION_RECEIPT_SCHEMA
+    PRODUCER = NATIVE_RECEIPT_PRODUCER
+
+    @classmethod
+    def from_guest_execution(
+        cls,
+        packet: Any,
+        metadata: N16TGuestExecutionMetadata | Mapping[str, Any],
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        return build_native_admission_receipt(packet, metadata, **kwargs)
+
+    from_execution = from_guest_execution
+    build = from_guest_execution
+
+    @staticmethod
+    def validate(
+        receipt: Any,
+        packet: Any = None,
+        *,
+        expected_program_id: int | None = None,
+    ) -> dict[str, Any]:
+        return validate_guest_native_admission_receipt(
+            receipt, packet, expected_program_id=expected_program_id
+        )
+
+
+# Short aliases for callers that already distinguish guest receipts by role.
+build_guest_native_admission_receipt = build_native_admission_receipt
+validate_native_admission_receipt = validate_guest_native_admission_receipt
 
 
 _STATE_MAGIC = b"N16S"
@@ -813,6 +1423,28 @@ class N16TGuestPool:
         """The configured durable store, or None for process-local sessions."""
         return self._store
 
+    def build_native_admission_receipt(
+        self,
+        packet: Any,
+        metadata: N16TGuestExecutionMetadata | Mapping[str, Any],
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Produce a receipt from guest execution metadata through this pool.
+
+        The pool is the N16T worker boundary; it refuses receipt production
+        after shutdown. The method performs no execution and creates no second
+        worker path: it binds metadata that the existing guest execution path
+        already produced to the caller's canonical NMP packet.
+        """
+        with self._lock:
+            if self._closed:
+                raise N16TGuestRuntimeError(
+                    "NaN16 N16T guest pool is closed"
+                )
+        return build_native_admission_receipt(packet, metadata, **kwargs)
+
+    native_admission_receipt = build_native_admission_receipt
+
     @classmethod
     def from_env(
         cls, *, max_sessions: int = 8, store: Any = None
@@ -1006,12 +1638,20 @@ class N16TGuestPool:
 
 
 __all__ = [
+    "N16TGuestExecutionMetadata",
     "N16TGuestPool",
     "N16TGuestRuntimeError",
+    "N16TNativeAdmissionError",
+    "N16TNativeAdmissionReceipt",
+    "N16TNativeAdmissionReceiptError",
     "N16TReplayError",
     "N16TSessionCheckpoint",
     "N16TSessionOwnershipError",
     "N16TSessionStore",
     "N16TSessionStoreError",
     "N16TStoreCapacityError",
+    "build_guest_native_admission_receipt",
+    "build_native_admission_receipt",
+    "validate_guest_native_admission_receipt",
+    "validate_native_admission_receipt",
 ]

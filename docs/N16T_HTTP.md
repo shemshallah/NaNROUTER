@@ -160,6 +160,78 @@ bearer tokens or other credentials in N16T payloads, and protect the database
 file with normal filesystem permissions. If no store is configured, none of
 these files or behaviors are introduced.
 
+## Guest-backed native admission receipts
+
+N16T/native execution can produce the metadata needed for the NMP native
+admission receipt, but the host must not invent the remaining bindings. The
+typed producer in `runner_riddle.n16t_guest` accepts only normalized guest
+execution metadata and binds it to the caller's canonical `NmpPacket`:
+
+```python
+from runner_riddle.n16t_guest import (
+    N16TNativeAdmissionReceiptError,
+    build_native_admission_receipt,
+)
+
+try:
+    receipt = guest_pool.build_native_admission_receipt(
+        packet,
+        guest_execution_metadata,
+        expected_program_id=server_program_id,
+        execution_evidence=native_execution_evidence,
+        result_digest=result_digest,
+    )
+except N16TNativeAdmissionReceiptError:
+    # Missing or mismatched guest evidence fails closed. Do not retry with a
+    # host-fabricated digest, epoch, program number, result, or proof.
+    raise
+
+packet = packet.mark_preflight(
+    result="VALID",
+    digest=packet.preflight_digest,
+    admission_receipt=receipt,
+)
+```
+
+`guest_execution_metadata` must carry the guest-owned admission values:
+
+| Field | Meaning |
+|---|---|
+| `packet_id` | canonical packet the guest admitted |
+| `candidate_digest` | candidate/function/version binding |
+| `snapshot_id`, `ruleset_snapshot_id` | exact packet snapshots |
+| `rule_epoch`, `rule_digest` | live ruleset epoch and digest |
+| `preflight_digest` | packet preflight digest |
+| `input_digest` | canonical input-operand identity |
+| `capability_digest` | canonical capability-set digest |
+| `generation` | input generation |
+| `program_id` | guest-selected NaN16 program |
+| `guest_status` | must be `0` (guest ALLOW) |
+
+`producer` is fixed to `nan16_guest`; `receipt_digest` is computed from the
+canonical receipt body. Optional output-generation, output-descriptor, guest
+source, and guest image digests are copied only when the guest metadata already
+contains them. Bearer tokens, lease tokens, authorization headers, and other
+transport fields are ignored and never enter the receipt. Error messages name
+only the missing or mismatched binding.
+
+The builder recomputes the packet, candidate, snapshot, ruleset-snapshot,
+preflight, input, capability, and generation bindings from the packet and
+requires exact equality. `expected_program_id` must be the server-owned worker
+registry value, not a worker claim. When `execution_evidence` is supplied it
+must be `nanrouter.native-kernel-execution.v1` for the same packet, function,
+and program; an optional `result_digest` must equal its output digest. A guest
+status other than ALLOW cannot produce a receipt. The existing NMP HTTP
+completion path remains the authority for native output-digest verification;
+this builder adds no second execution path and stores no numerical result or
+proof.
+
+`validate_guest_native_admission_receipt(receipt, packet, expected_program_id=...)`
+re-runs the NMP receipt validator and, when supplied, the server-owned program
+check. `N16TNativeAdmissionReceipt.from_guest_execution(...)` is the typed
+entry point; the module-level `build_native_admission_receipt(...)` returns the
+plain mapping consumed by `NmpPacket.mark_preflight`.
+
 ## Runtime artifacts
 
 Configure the runtime artifacts with:
