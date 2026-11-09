@@ -1,0 +1,44 @@
+name: Native phase-system integration
+
+on:
+  pull_request:
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/mth_phase_system_test.nas"
+      - ".github/workflows/phase-system-integration.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/mth_phase_system_test.nas"
+      - ".github/workflows/phase-system-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase-system:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build pinned NaN0S native CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble the native phase-system fixture
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_phase_system_test.nas > phase_system.nan
+      - name: Execute the native phase-system fixture
+        run: |
+          set -euo pipefail
+          output=$(nan0s/aarch64/android/nan_cli \
+            --img phase_system.nan --steps 10000000 --serial)
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" | grep -q "MTH PHASE SYSTEM PASS"
