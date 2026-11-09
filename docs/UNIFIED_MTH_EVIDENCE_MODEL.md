@@ -228,7 +228,7 @@ At baseline commit `12980a3`:
 - The recorded local suite is **1,282+ local Python tests** (baseline record:
   `Ran 1282 tests`, `OK (skipped=29)`).
 - The full universe-map fixture passes locally in **12,916,386 guest steps**;
-  it is one fixture, not all 112 kernels.
+  it is one fixture, not all 125 kernels.
 
 The excluded `mth/nan16/mth_graph_path_witness.nas` is a separate candidate
 witness with its own gate and is not an authorized numerical MTH kernel. The
@@ -277,9 +277,9 @@ counts may be retained only as historical evidence.
   assertions and PASS marker passed.
 - “Local PASS is CI-verified.”
 - “Local PASS means the service is live.”
-- “110 runner fixtures means 112 kernels were executed.” The counts measure
+- “119 runner fixtures means 121 kernels were executed.” The counts measure
   different things and one fixture can serve multiple kernel entries.
-- “All 112 kernels ran in every local invocation.”
+- “All 121 kernels ran in every local invocation.”
 - “An untracked kernel is catalogued.”
 - “A route or address mapping proves a mathematical relation.”
 - “The runner independently verifies numerical results.” The runner checks a
@@ -324,7 +324,7 @@ not evidence.
 
 | Workflow | Coverage scope |
 |---|---|
-| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 110 runner entries |
+| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 119 runner entries |
 | `.github/workflows/mth-remaining-fixtures.yml` | The 31-fixture remaining promotion set, pinned NaN0S `fe63617` |
 | `.github/workflows/mth-native-addsub-dispatch.yml` | Add/sub dispatch and linker regression fixtures plus `test_hermes_mth_tools.py`, pinned NaN0S `fe63617` |
 | `.github/workflows/native-graph-claim-probe.yml` | The separately gated claim-probe fixture, pinned NaN0S `7f250a11` |
@@ -332,7 +332,7 @@ not evidence.
 | `.github/workflows/manifest-contract.yml` | Full Python test discovery and manifest contract checks |
 | `.github/workflows/koyeb-container-smoke.yml` | Credential-free container build and `/healthz` contract; no Koyeb credentials and no live deployment |
 
-Therefore, one green workflow does not imply all 112 kernels, all 110 runner
+Therefore, one green workflow does not imply all 125 kernels, all 119 runner
 fixtures, or a live service.
 
 ### 4.4 Baseline CI records

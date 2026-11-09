@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping
 
 from .mth_registry import MthPlan, MthRegistry
+from .mirror_memory import status as mirror_memory_status
 from .universe_map import route as universe_route
 from .universe_map import status as universe_map_status
 from .wave_ring_scheduler import JAHS_SEAL, WaveRingScheduler, resolve_slot
@@ -529,6 +530,7 @@ class MthSystem:
                 "point_zero": POINT_ZERO_IDENTITY,
                 "wire": POINT_ZERO_WIRE,
             },
+            "mirror_memory": mirror_memory_status(),
             "universe_map": universe_map_status(),
             "budgets": {
                 "workspace_word_bytes": self.workspace_word_bytes,

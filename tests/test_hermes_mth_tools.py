@@ -54,10 +54,24 @@ class HermesMthToolsTests(unittest.TestCase):
 
     def test_catalogue_ci_claims_match_local_promotion_state(self):
         kernels = self.tools.registry.kernels
-        self.assertEqual(len(kernels), 112)
+        self.assertEqual(len(kernels), 125)
         self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
         self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 112)
-        local_only = set()
+        local_only = {
+            "mth.mirror.pair_map.u32",
+            "mth.mirror.cycle_flux.f32",
+            "mth.mirror.root_step.f32",
+            "mth.hyperedge.strength_step.f32",
+            "mth.hyperedge.strength_batch.f32",
+            "mth.mirror.bounds_check.u32",
+            "mth.mirror.gauge_check.f32",
+            "mth.relation.operator_apply.f32",
+            "mth.wordnet.concept_map.u32",
+            "mth.mirror.block_checksum.u32",
+            "mth.hyperedge.incidence_walk.u32",
+            "mth.mirror.head_record_io.u32",
+            "mth.hyperedge.path_score.f32",
+        }
         self.assertEqual(
             {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},
             local_only,

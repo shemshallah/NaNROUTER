@@ -73,6 +73,19 @@ jobs:
           --only sequence_step_u32 \
           --only vector_sigmoid256_f32 \
           --only vector_tanh256_f32 \
+          --only mirror_pair_map \
+          --only mirror_cycle_flux \
+          --only mirror_root_step \
+          --only hyperedge_strength_step \
+          --only hyperedge_strength_batch \
+          --only mirror_bounds_check \
+          --only mirror_gauge_check \
+          --only relation_operator_apply \
+          --only wordnet_concept_map \
+          --only mirror_block_checksum \
+          --only hyperedge_incidence_walk \
+          --only mirror_head_record_io \
+          --only hyperedge_path_score \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

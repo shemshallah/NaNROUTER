@@ -1,0 +1,662 @@
+{
+  "coverage": {
+    "byte_coverage": "exact",
+    "field_coverage": "exact",
+    "pair_id_roundtrip": "exact",
+    "record_coverage": "exact"
+  },
+  "heads": {
+    "count": 256,
+    "fields": [
+      {
+        "encoding": "u32",
+        "name": "first_hyperedge",
+        "offset_bytes": 0,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "name": "state",
+        "offset_bytes": 4,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "name": "score",
+        "offset_bytes": 8,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "name": "generation",
+        "offset_bytes": 12,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "bytes",
+        "name": "identity",
+        "offset_bytes": 16,
+        "reserved": true,
+        "size_bytes": 112
+      }
+    ],
+    "nannet0_head": 0,
+    "offset_rule": "head * 128",
+    "real_heads": {
+      "count": 255,
+      "first": 1,
+      "last": 255
+    },
+    "record_bytes": 128
+  },
+  "layout_sha256": "79485ca5234b5f27588c0afa75935fc2f28dc3344f85dc90aeaac2f917fb49a3",
+  "non_claims": [
+    "This is a physical byte-layout profile over the existing one 8 MiB universe.",
+    "The spec/universe-map.json route view is a different virtual view, not a second universe or allocation.",
+    "No residual slot is evaluated and no host numerical math library is used.",
+    "No chart is read or written and no native MTH execution occurs here.",
+    "A pair record is evidence of addressable structure, never a claim of mathematical truth."
+  ],
+  "pairs": {
+    "count": 32640,
+    "id": {
+      "first": 1,
+      "formula": "1 + a*(511-a)/2 + (b-a-1) for 0 <= a < b <= 255",
+      "last": 32640,
+      "order": "a < b",
+      "void_sentinel": 0
+    },
+    "lane_0_fields": [
+      {
+        "encoding": "f32",
+        "index": 0,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 0,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 1,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 4,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 2,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 8,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 3,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 12,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 4,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 16,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 5,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 20,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 6,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 24,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 7,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 28,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 8,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 32,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 9,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 36,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 10,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 40,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 11,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 44,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 12,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 48,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 13,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 52,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 14,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 56,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 15,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 60,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 16,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 64,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 17,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 68,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 18,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 72,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 19,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 76,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 20,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 80,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 21,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 84,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 22,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 88,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 23,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 92,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 24,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 96,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 25,
+        "lane": 0,
+        "name": "residual",
+        "offset_bytes": 100,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "lane": 0,
+        "name": "relation_type",
+        "offset_bytes": 104,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "lane": 0,
+        "name": "confidence",
+        "offset_bytes": 108,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "lane": 0,
+        "name": "hyperedge_head",
+        "offset_bytes": 112,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "lane": 0,
+        "name": "cycle_flux",
+        "offset_bytes": 116,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "lane": 0,
+        "name": "generation",
+        "offset_bytes": 120,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "u32",
+        "lane": 0,
+        "name": "flags",
+        "offset_bytes": 124,
+        "reserved": false,
+        "size_bytes": 4
+      }
+    ],
+    "lane_1_fields": [
+      {
+        "encoding": "f32",
+        "index": 0,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 128,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 1,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 132,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 2,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 136,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 3,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 140,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 4,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 144,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 5,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 148,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 6,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 152,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 7,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 156,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 8,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 160,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 9,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 164,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 10,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 168,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 11,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 172,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 12,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 176,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 13,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 180,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 14,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 184,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 15,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 188,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 16,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 192,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 17,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 196,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 18,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 200,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 19,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 204,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 20,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 208,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 21,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 212,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 22,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 216,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 23,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 220,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 24,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 224,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "f32",
+        "index": 25,
+        "lane": 1,
+        "name": "residual",
+        "offset_bytes": 228,
+        "reserved": false,
+        "size_bytes": 4
+      },
+      {
+        "encoding": "bytes",
+        "lane": 1,
+        "name": "reserved",
+        "offset_bytes": 232,
+        "reserved": true,
+        "size_bytes": 24
+      }
+    ],
+    "lanes": [
+      {
+        "lane": 0,
+        "offset_bytes": 0,
+        "size_bytes": 128
+      },
+      {
+        "lane": 1,
+        "offset_bytes": 128,
+        "size_bytes": 128
+      }
+    ],
+    "record_bytes": 256,
+    "record_offset_rule": "32768 + (pair_id - 1) * 256"
+  },
+  "profile": "physical-8mib",
+  "regions": [
+    {
+      "end_offset": 32768,
+      "name": "heads",
+      "offset_bytes": 0,
+      "record_bytes": 128,
+      "record_count": 256,
+      "size_bytes": 32768
+    },
+    {
+      "end_offset": 8388608,
+      "name": "pairs",
+      "offset_bytes": 32768,
+      "record_bytes": 256,
+      "record_count": 32640,
+      "size_bytes": 8355840
+    }
+  ],
+  "schema": "nanrouter.mirror-memory.v1",
+  "status": "green",
+  "universe": {
+    "bytes": 8388608,
+    "one_universe": true,
+    "physical_profile": true
+  },
+  "views": {
+    "physical": {
+      "heads": "contiguous at 0..32768",
+      "pairs": "contiguous at 32768..8388608",
+      "profile": "physical-8mib",
+      "universe_bytes": 8388608
+    },
+    "route_view": {
+      "copy": false,
+      "description": "255 real-head pages plus one NANNET0 page",
+      "head_page_rule": "route page p (0..254) is physical head p+1; route page 255 is physical head 0 (NANNET0)",
+      "page_bytes": 32768,
+      "pages": 256,
+      "pair_rule": "route view scatters the same pair records into 128 two-word slots per real-head page; the physical profile stores them contiguously at 32768..8388608",
+      "same_universe": true,
+      "second_allocation": false,
+      "second_universe": false,
+      "spec": "spec/universe-map.json"
+    }
+  }
+}

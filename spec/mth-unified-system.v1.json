@@ -30,7 +30,19 @@
         "ring:255"
       ]
     },
-    "address_space": "one guest-addressable 8 MiB window; workspace budget is separate"
+    "address_space": "one guest-addressable 8 MiB window; workspace budget is separate",
+    "layouts": [
+      {
+        "id": "route-view-v1",
+        "spec": "spec/universe-map.json",
+        "role": "virtual NANNET relation-point addressing over the one 8 MiB universe"
+      },
+      {
+        "id": "mirror-memory-v1",
+        "spec": "spec/mirror-memory.v1.json",
+        "role": "physical 32 KiB head region + 8,160 KiB mirror-pair region over the same 8 MiB universe"
+      }
+    ]
   },
   "control_plane": {
     "owner": "NaNROUTER",
@@ -49,7 +61,9 @@
     "head": "{point_zero}::HW0:{head}",
     "mirror_pair": "{point_zero}::HW0:MP{ordinal}",
     "relation_layer": "{point_zero}::HW0:{point}::L{layer}",
-    "nannet0": "{point_zero}::HW0:0"
+    "nannet0": "{point_zero}::HW0:0",
+    "wordnet_hw4": "{point_zero}::HW4:0",
+    "mirror_pair_record": "pair_id 1..32640; record byte 32768 + (pair_id-1)*256"
   },
   "providers": [
     {
@@ -223,7 +237,8 @@
       "host numerical evaluation on the production path",
       "a second universe, ring, store, or mathematical authority",
       "claiming a relation is true because an address maps",
-      "claiming a provider is live because its source checkout exists"
+      "claiming a provider is live because its source checkout exists",
+      "treating the route view and physical mirror layout as two universes or two allocations"
     ]
   },
   "evidence_policy": {

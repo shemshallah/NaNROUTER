@@ -76,6 +76,30 @@ nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0
 The route is an address, not a truth claim. It does not execute a kernel,
 authorize a merge, or prove a relation.
 
+## 3.1 Physical mirror-memory profile
+
+The same 8 MiB universe also has a physical mirror profile:
+`spec/mirror-memory.v1.json`.
+
+```text
+bytes 0..32767      256 head records x 128 B (head 0 = NANNET0)
+bytes 32768..8388607 32,640 pair records x 256 B
+pair id 1..32640    1 + a*(511-a)/2 + (b-a-1), a < b
+lane 0 +0          26 f32 residuals + typed fields
+lane 1 +128        mirror residual lane
+```
+
+This is not a second universe and not a second allocation. The route view in
+`spec/universe-map.json` and the physical mirror profile are two projections of
+the same 8 MiB object. Round 023/026/027 use the physical profile; NANNET point
+addressing uses the route view. A deployment must select one physical writer
+profile and never overlay both writers simultaneously.
+
+See `docs/MIRROR_MEMORY_LAYOUT.md` and
+`docs/ROUNDS_023_027_INTEGRATION.md`. Round 028’s external shared-composition
+experiment is recorded separately in `docs/ROUND_028_SEMANTIC_LEARNING.md`; it
+is not a native production kernel.
+
 ## 4. Native kernel
 
 `mth/nan16/mth_universe_map.nas` implements the address law in NaN16:
@@ -193,7 +217,7 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 112 kernels, 112 CI-verified, 0 local-only, 110 sources, 109 fixtures |
+| Unified catalog | 125 kernels, 112 CI-verified, 13 local-only, 123 sources, 122 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,282 tests, 29 skipped, OK |
 | Canonical native runner | 110/110 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |

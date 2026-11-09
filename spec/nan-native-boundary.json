@@ -29,7 +29,8 @@
       "prefixes": [
         "mth.stage0.",
         "mth.double_endian.",
-        "mth.universe."
+        "mth.universe.",
+        "mth.mirror.pair_map."
       ],
       "host_roles": [
         "allocate descriptor records",
@@ -77,7 +78,9 @@
       "name": "Numerical, probability, graph, and spectral functions",
       "native": true,
       "prefixes": [
-        "mth."
+        "mth.",
+        "mth.mirror.",
+        "mth.hyperedge."
       ],
       "host_roles": [
         "plan composition only"

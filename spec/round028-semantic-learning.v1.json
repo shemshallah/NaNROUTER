@@ -1,0 +1,89 @@
+{
+  "schema": "nanrouter.round028-semantic-learning.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-neural-experiment",
+  "source_archive": {
+    "name": "nan_recursive_round028.zip",
+    "sha256": "c4372934651ee5b7673ac7939df2b289cbf72b68e8e1517f78bee11b9a0288bd"
+  },
+  "task": {
+    "name": "WordNet two-hop hypernym plausibility",
+    "data": "WordNet 3.1 glosses derived from the Round 025 corpus",
+    "seed_count": 3,
+    "seeds": [28, 29, 30],
+    "trainable_parameters": {
+      "lexical": 9729,
+      "wide_lexical": 14441,
+      "composed": 14386,
+      "native_composed_network": 14386
+    },
+    "split": {
+      "children_per_seed": 3400,
+      "train": 2380,
+      "validation": 510,
+      "test": 510,
+      "child_disjoint": true,
+      "candidate_and_middle_may_recur": true
+    },
+    "features": {
+      "vocab_size": 8500,
+      "svd_dimensions": 48,
+      "svd_fit": "unsupervised on all selected glosses, including held-out glosses",
+      "transductive": true
+    },
+    "training": {
+      "epochs": 130,
+      "selection": "best validation epoch; test evaluated once"
+    }
+  },
+  "models": {
+    "lexical": {
+      "accuracy_mean": 0.7421533333333333,
+      "roc_auc_mean": 0.8191033333333333,
+      "binary_cross_entropy_mean": 0.5267333333333333
+    },
+    "wide_lexical_matched": {
+      "accuracy_mean": 0.7457533333333334,
+      "roc_auc_mean": 0.8274333333333334,
+      "binary_cross_entropy_mean": 0.52276
+    },
+    "shared_composition": {
+      "accuracy_mean": 0.7493466666666666,
+      "roc_auc_mean": 0.82775,
+      "binary_cross_entropy_mean": 0.51457,
+      "operator_shape": "two learned 48x48 ordered relation transforms with intermediate conditioning",
+      "without_composition_seed28": {
+        "roc_auc": 0.79513,
+        "trained_model_roc_auc": 0.82671
+      }
+    },
+    "native_composition": {
+      "accuracy_mean": 0.7493466666666666,
+      "roc_auc_mean": 0.8277266666666666,
+      "binary_cross_entropy_mean": 0.5145833333333334,
+      "native_hyperedge_strength_mean_abs_train": 0.007003,
+      "native_hyperedge_strength_mean_abs_held_out": 0.0,
+      "native_strength_contribution": "not observed on held-out predictions"
+    }
+  },
+  "measured_non_claims": [
+    "This is two-hop link-plausibility classification, not autonomous language generation.",
+    "The SVD feature learner is transductive; this is not a strictly inductive benchmark.",
+    "Child synsets are disjoint, but candidate and middle synsets may recur across splits.",
+    "The native hyperedge strengths learn training records but held-out strengths remain exactly zero.",
+    "The native strength residual does not improve held-out AUC or cross-entropy in this experiment.",
+    "Hash collisions are possible in the 32,640-pair native address mapping.",
+    "The 256 NaN class labels and 32,385-cycle projection are not used as learned geometric features.",
+    "The native snapshot format is experimental, same-platform, and not crash-safe.",
+    "No competitive transformer, GNN, or retrieval baseline is included.",
+    "The inference score 0.8712 for the unfamiliar-definition example is a plausibility score, not a fact."
+  ],
+  "integration": {
+    "production_authority": false,
+    "host_language_math": "experiment only; never on the production MTH path",
+    "native_contract": "future shared typed operators must be implemented in NaN16 and return UNAVAILABLE until native evidence exists",
+    "related_planned_module": "runner_riddle/mirror_relation_ops.py",
+    "related_layout": "spec/mirror-memory.v1.json",
+    "next_gate": "strictly inductive held-out definitions plus native operator composition inside the mirror layout"
+  }
+}
