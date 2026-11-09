@@ -142,7 +142,10 @@ second authority:
 | `nanlmind.clocked` | CLOCKED/HW3 demonstration service, not a second universe |
 
 `runner_riddle/mth_unified.py` builds one catalog over the 96-kernel manifest
-and the universe map. Each kernel has:
+and the universe map. The catalogued graph-claim probe is a bounded candidate
+query kernel; the separate multihop path-witness guest is intentionally outside
+the numerical MTH ledger and keeps its own native CI gate. Each catalogued
+kernel has:
 
 ```text
 kernel_id, family, status, ci_verified
@@ -166,6 +169,10 @@ python3 tools/mth_unified.py --check
 python3 tools/mth_unified.py --check --scan-repositories
 python3 tools/mth_unified.py --write build/mth/unified-catalog.json --scan-repositories
 ```
+
+The `.github/workflows/mth-unified-audit.yml` workflow runs the universe-map
+check, the unified-catalog check, and the two focused test modules on every
+change to those contracts.
 
 The generated catalog explicitly records:
 

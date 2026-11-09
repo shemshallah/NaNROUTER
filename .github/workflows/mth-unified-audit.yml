@@ -1,0 +1,53 @@
+name: mth-unified-audit
+
+on:
+  pull_request:
+    paths:
+      - "spec/universe-map.json"
+      - "spec/mth-unified-system.v1.json"
+      - "spec/wave-capabilities.json"
+      - "runner_riddle/universe_map.py"
+      - "runner_riddle/mth_unified.py"
+      - "runner_riddle/mth_system.py"
+      - "tools/gen_universe_map.py"
+      - "tools/mth_unified.py"
+      - "tests/test_universe_map.py"
+      - "tests/test_mth_unified.py"
+      - ".github/workflows/mth-unified-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "spec/universe-map.json"
+      - "spec/mth-unified-system.v1.json"
+      - "spec/wave-capabilities.json"
+      - "runner_riddle/universe_map.py"
+      - "runner_riddle/mth_unified.py"
+      - "runner_riddle/mth_system.py"
+      - "tools/gen_universe_map.py"
+      - "tools/mth_unified.py"
+      - "tests/test_universe_map.py"
+      - "tests/test_mth_unified.py"
+      - ".github/workflows/mth-unified-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify generated universe map is current
+        run: python3 tools/gen_universe_map.py --check
+      - name: Verify unified catalog and provider contracts
+        run: python3 tools/mth_unified.py --check
+      - name: Run universe-map and unified-catalog tests
+        run: |
+          python3 -m unittest \
+            tests.test_universe_map \
+            tests.test_mth_unified -v
