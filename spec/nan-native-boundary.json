@@ -225,7 +225,8 @@
   "excluded_native_sources": {
     "mth/nan16/hermes_lease.nas": "HERMES lease guest, not an MTH mathematical kernel",
     "mth/nan16/hermes_nannet_route.nas": "HERMES NANNET route guest, not an MTH mathematical kernel",
-    "mth/nan16/hermes_native_runtime.nas": "HERMES native runtime guest, not an MTH mathematical kernel"
+    "mth/nan16/hermes_native_runtime.nas": "HERMES native runtime guest, not an MTH mathematical kernel",
+    "mth/nan16/mth_graph_claim_probe.nas": "Read-only graph-claim probe guest, not a registered MTH math kernel; its native CI is hermes-native-head-three-repo-e2e"
   },
   "runner_only_fixtures": {
     "mth/tests/mth_native_vector_addsub_dispatch_test.nas": "end-to-end dispatch fixture over already-registered vector kernels"
