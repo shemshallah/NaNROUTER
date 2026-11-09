@@ -116,6 +116,7 @@ jobs:
           --only field_mix255x16 \
           --only field_mix255x16_backward \
           --only field_gate255 \
+          --only field_train_step \
           --only assoc3_reserve \
           --only byte_memory_mix \
           --only graph_laplacian_csr \

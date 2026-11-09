@@ -131,7 +131,8 @@
       "straight-through or score-function learning for discrete hyperedges",
       "mth.field.mix255x16_backward.f32",
       "mth.field.gate255.f32",
-      "mth.field.gate255_backward.f32"
+      "mth.field.gate255_backward.f32",
+      "mth.field.train_step255x16.f32"
     ],
     "open": "internal attention-head Q/K/V reverse and a full joint field-training loop are not implemented; field-mixture and 255-head gate reverse passes are implemented"
   },

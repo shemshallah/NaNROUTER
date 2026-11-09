@@ -162,8 +162,19 @@ Current native mechanisms:
 - analytic derivative for affine projection and rotation;
 - straight-through or score-function updates for discrete hyperedge choices.
 
+A native in-place field-training step, `mth.field.train_step255x16_f32`, now
+applies the mixture gradients:
+
+```text
+weight[h]   -= lr * d_weight[h]
+value[h][c] -= lr * d_value[h][c]
+```
+
+for all 255 heads. It is one SGD step, not a full model optimizer.
+
 Still open: internal attention-head Q/K/V reverse and a full joint field-training
-loop. The field mixture and 255-head gate reverse passes are implemented.
+loop. The field mixture, 255-head gate reverse, and one field SGD step are
+implemented.
 
 PyTorch-style autograd is an external research tool, not a runtime authority.
 A full native backward pass for the 255-head field remains open.

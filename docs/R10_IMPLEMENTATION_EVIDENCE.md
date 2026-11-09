@@ -171,6 +171,7 @@
 | 157 | Field mixture reverse | `mth/tests/mth_field_mix255x16_backward_test.nas` | 935,271 | PASS | yes (42678421624) |
 | 158 | 255-head gate | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
 | 159 | 255-head gate reverse | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
+| 160 | Field training step | `mth/tests/mth_field_train_step255x16_test.nas` | 780,097 | PASS | local only |
 
 ## Local phase-system integration fixture
 
@@ -269,7 +270,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 153 kernels (153 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **159 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 153 kernels (153 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **160 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

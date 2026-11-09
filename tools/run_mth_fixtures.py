@@ -180,6 +180,7 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("field_mix255x16", "mth/tests/mth_field_mix255x16_test.nas", 2_000_000, "MTH FIELD MIX255X16 PASS", "native_verified"),
     Fixture("field_mix255x16_backward", "mth/tests/mth_field_mix255x16_backward_test.nas", 5_000_000, "MTH FIELD MIX BACKWARD PASS", "native_verified"),
     Fixture("field_gate255", "mth/tests/mth_field_gate255_test.nas", 2_000_000, "MTH FIELD GATE255 PASS", "native_verified"),
+    Fixture("field_train_step", "mth/tests/mth_field_train_step255x16_test.nas", 2_000_000, "MTH FIELD TRAIN STEP PASS", "native_verified"),
     Fixture("assoc3_reserve", "mth/tests/mth_byte_assoc3_reserve_test.nas", 2_000_000, "MTH ASSOC3 RESERVE PASS", "native_verified"),
     Fixture("byte_memory_mix", "mth/tests/mth_byte_memory_mix256_test.nas", 1_000_000, "MTH BYTE MEMORY MIX PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
