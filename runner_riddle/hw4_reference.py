@@ -150,6 +150,8 @@ def _build(source, stage, source_hash, generation):
                 pending.append((synset,dst,rel,source_target,h))
             head_counts[h] += 1
             rows += 1
+        if rows == 0:
+            raise ValueError("empty WordNet noun source; no reference generation")
         connection.commit()
         known = {r[0]:r[1] for r in connection.execute("SELECT synset,head FROM synsets")}
         signed = Counter()
