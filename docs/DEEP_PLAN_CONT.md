@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-There are **139 manifest kernels with fixtures**: 135 carry `ci_verified=true` and 4 are local-only; 136 runner fixture paths are registered. The 2 MiB text-loader execution is CI-verified; no page-size limit is enforced, and the guest address space maps the full 8 MiB universe (256 pages, 1,048,576 words, 32,896 relation points). There is also a working BS0DB/MC0DB control/evidence plane, a green static NaN-native boundary audit, a unified cross-repo MTH catalog, and the full local Python suite green (see R10).
+There are **139 manifest kernels with fixtures**: all 139 carry `ci_verified=true`; 136 runner fixture paths are registered. The 2 MiB text-loader execution is CI-verified; no page-size limit is enforced, and the guest address space maps the full 8 MiB universe (256 pages, 1,048,576 words, 32,896 relation points). There is also a working BS0DB/MC0DB control/evidence plane, a green static NaN-native boundary audit, a unified cross-repo MTH catalog, and the full local Python suite green (see R10).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -974,7 +974,7 @@ The shortest correct sentence is:
 
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 139 kernels (135 CI-verified, 4 local-only); canonical CI runs 42405649076 and 42539617226 passed the expanded promotion sets. No page-size limit is enforced; the 2 MiB guest budget is adjustable.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 139 kernels (139 CI-verified); canonical CI runs 42405649076 and 42539617226 passed the expanded promotion sets. No page-size limit is enforced; the 2 MiB guest budget is adjustable.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|

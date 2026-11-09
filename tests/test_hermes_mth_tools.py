@@ -56,13 +56,8 @@ class HermesMthToolsTests(unittest.TestCase):
         kernels = self.tools.registry.kernels
         self.assertEqual(len(kernels), 139)
         self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
-        self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 135)
-        local_only = {
-            "mth.trig.sincos.f32",
-            "mth.trig.rotate.f32",
-            "mth.mirror.cycle.train_step.f32",
-            "mth.mirror.cycle.predict16.f32",
-        }
+        self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 139)
+        local_only = set()
         self.assertEqual(
             {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},
             local_only,

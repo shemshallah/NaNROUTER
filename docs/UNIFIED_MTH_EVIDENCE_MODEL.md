@@ -13,7 +13,7 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 | Item | Count |
 |---|---:|
 | Catalogued MTH kernels in `spec/wave-capabilities.json` | 139 |
-| Kernels with `ci_verified=true` in the manifest | 135 |
+| Kernels with `ci_verified=true` in the manifest | 139 |
 | Unique native sources | 137 |
 | Unique manifest fixture files | 135 |
 | Fixture entries in the canonical runner | 136 |
@@ -223,7 +223,7 @@ At baseline commit `12980a3`:
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **135/139 `ci_verified=true`**, with 4 newly integrated local-only kernels awaiting promotion. That is a ledger field,
+- The manifest declares **139/139 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,424+ local Python tests** (baseline record:
   `Ran 1424 tests`, `OK (skipped=30)`).
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 135/139 `ci_verified` declaration in the manifest is supported by these
+The 139/139 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules

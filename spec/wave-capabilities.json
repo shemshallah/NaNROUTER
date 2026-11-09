@@ -1942,7 +1942,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.trig.rotate.f32",
@@ -1956,7 +1956,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.mirror.cycle.train_step.f32",
@@ -1971,7 +1971,7 @@
         16
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.mirror.cycle.predict16.f32",
@@ -1985,7 +1985,7 @@
         16
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }

@@ -147,10 +147,10 @@
 | 133 | Gauge triangle recover | `mth/tests/mth_gauge_triangle_recover_test.nas` | 9,665 | PASS | yes (42563503457) |
 | 134 | Round 037 mirror slot map | `mth/tests/mth_mirror_slot_map_test.nas` | 21,192,654 | PASS | yes (42565707985) |
 | 135 | Relation writer class codec | `mth/tests/mth_relation_writer_class_test.nas` | 481 | PASS | yes (42565707985) |
-| 136 | Trig sine/cosine | `mth/tests/mth_trig_sincos_test.nas` | 2,020 | PASS | local only |
-| 137 | Trig plane rotation | `mth/tests/mth_trig_rotate_test.nas` | 1,246 | PASS | local only |
-| 138 | Content-dependent cycle train step | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | local only |
-| 139 | Cycle readout 16×16 | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | local only |
+| 136 | Trig sine/cosine | `mth/tests/mth_trig_sincos_test.nas` | 2,020 | PASS | yes (42569728986) |
+| 137 | Trig plane rotation | `mth/tests/mth_trig_rotate_test.nas` | 1,246 | PASS | yes (42569728986) |
+| 138 | Content-dependent cycle train step | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | yes (42569728986) |
+| 139 | Cycle readout 16×16 | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | yes (42569728986) |
 
 ## Python tests
 
@@ -238,7 +238,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 139 kernels (135 `ci_verified`, 4 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **139 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 139 kernels (139 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **139 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
