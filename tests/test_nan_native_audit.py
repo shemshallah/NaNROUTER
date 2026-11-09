@@ -27,7 +27,8 @@ class NanNativeAuditTests(unittest.TestCase):
         self.assertEqual(report["layer_counts"]["L1"], 3)
         self.assertEqual(report["layer_counts"]["L2"], 7)
         self.assertEqual(report["layer_counts"]["L3"], 36)
-        self.assertEqual(report["layer_counts"]["L4"], 45)
+        self.assertEqual(report["layer_counts"]["L4"], 44)
+        self.assertEqual(report["layer_counts"]["L5"], 10)
 
     def test_graph_claim_probe_is_catalogued_but_separately_gated(self):
         """A tracked candidate query is not a math proof or native promotion."""
