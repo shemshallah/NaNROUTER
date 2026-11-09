@@ -20,7 +20,7 @@ class NanNativeAuditTests(unittest.TestCase):
         report = audit()
         self.assertEqual(report["status"], "green", report["errors"])
         self.assertEqual(report["kernel_count"], 96)
-        self.assertEqual(report["native_source_count"], 93)
+        self.assertEqual(report["native_source_count"], 94)
         self.assertEqual(report["unique_fixture_count"], 93)
         self.assertEqual(report["runner_fixture_count"], 94)
         self.assertEqual(sum(report["layer_counts"].values()), 96)
