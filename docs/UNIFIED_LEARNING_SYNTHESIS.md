@@ -31,6 +31,7 @@ conventional memory on natural prose.
 | 038 | 2,048-subword free sampling; memory-ablation effect | Superseded repeated-definition windowing |
 | 039 | Corrected paired audit; native gradient writes; gauge invariance | Dense control wins perplexity; malformed samples |
 | 042 | Joint writer → native two-lane memory → differentiable propagation → decoder; causal deletion; four-state dialogue | Conventional memory ties clean inputs; restricted vocabulary; language-only collapses to abstention |
+| 043 | Frozen byte LM + native 3-byte associative cache; 5.67% lower loss; post-gauge online writes | Flat cache ties; generated text still incoherent; not end-to-end or multi-hop |
 
 ## 3. The failure pattern
 
@@ -190,6 +191,10 @@ The first batch is now implemented and locally verified:
 | `mth.mirror.evidence.cycle_state.f32` | implemented: two-lane support/refute → unknown/support/refute/both |
 | `mth.vector.logsoftmax256.f32` | implemented: stable native log-softmax |
 | `mth.lm.cross_entropy256.f32` | implemented: native 256-way language loss |
+| `mth.byte.assoc3_reserve.u32` | implemented: 3-byte context → 128 reserved rows |
+| `mth.byte.memory_mix256.f32` | implemented: base/memory probability interpolation |
+| `mth.attention.project16.f32` | implemented: one affine 16→16 Q/K/V-style projection; full attention block still open |
+| `mth.mirror.pair.knockout.f32` | implemented: metadata-local causal pair deletion/restoration |
 | `mth.ring.angular_map.u32` | implemented: 255 real lanes, NANNET0 fixed at 255 |
 | `mth.attention.project.f32` | not implemented: full Q/K/V projection remains open |
 | `mth.mirror.cycle.contradiction` phase closure | not implemented: numeric conflict pair exists; loop phase closure is still proposed |
@@ -209,6 +214,18 @@ adjacency ties clean-input accuracy. Language-token loss alone collapses to
 abstention (90/180), while joint supervision succeeds. The native additions
 here are log-softmax, 256-way cross-entropy, and two-lane evidence state
 classification; full open-domain fluency remains unproven.
+
+## 9c. Round 043 addendum
+
+A frozen SO(72) byte model plus a native 3-byte associative cache lowered mean
+held-out loss from **1.744586** to **1.645717** nats/byte (5.67%) across three
+seeds, with post-gauge writes/deletion/restoration and a previously unseen
+3-byte online context moving from probability 0 to 0.953869. The flat
+conventional cache ties numerically; generated samples remain incoherent; the
+cache is not the multi-hop graph reasoner. The native seam added here is
+reserved-row hashing plus base/memory probability interpolation. The next gate
+is a shared next-token loss connecting the trained relation memory to the
+free-running decoder, trained end-to-end and compared on natural prose.
 
 ## 10. Guardrails
 
