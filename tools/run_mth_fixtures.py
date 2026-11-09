@@ -150,6 +150,8 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("hyperedge_incidence_walk", "mth/tests/mth_hyperedge_incidence_walk_test.nas", 20_000, "MTH HYPEREDGE INCIDENCE WALK PASS", "native_verified"),
     Fixture("mirror_head_record_io", "mth/tests/mth_mirror_head_record_io_test.nas", 500_000, "MTH MIRROR HEAD RECORD IO PASS", "native_verified"),
     Fixture("hyperedge_path_score", "mth/tests/mth_hyperedge_path_score_test.nas", 50_000, "MTH HYPEREDGE PATH SCORE PASS", "native_verified"),
+    Fixture("mirror_hodge_projection", "mth/tests/mth_mirror_hodge_projection_test.nas", 25_000_000, "MTH MIRROR HODGE PROJECTION PASS", "native_verified"),
+    Fixture("mirror_pair_lane_io", "mth/tests/mth_mirror_pair_lane_io_test.nas", 1_000_000, "MTH MIRROR PAIR LANE IO PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical

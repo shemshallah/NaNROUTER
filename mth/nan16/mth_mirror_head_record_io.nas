@@ -24,7 +24,9 @@
 ; This leaf performs storage I/O only: it does not interpret head role,
 ; hyperedge ids, state bits, generations, or the score as a number. The
 ; score field is read and written as its exact 32-bit binary32 payload; no
-; finiteness, ranking, or other numeric policy is applied here.
+; finiteness, ranking, or other numeric policy is applied here. Score
+; finiteness and generation monotonicity are schema invariants owned by
+; callers, not by this byte transport.
 ;
 ; Field selectors
 ; ---------------
@@ -120,18 +122,21 @@ mth_mirror_head_record_get:
   SHL r7,r7,24
   BOOL.14 r10,r10,r7
 
+  ADD r2,r10,r0
   MOVI r1,1
   MOVI r9,0
   RET
 
 mth_mirror_head_record_get_bad_head:
   MOVI r1,0
+  MOVI r2,0
   MOVI r9,1
   MOVI r10,0
   RET
 
 mth_mirror_head_record_get_bad_field:
   MOVI r1,0
+  MOVI r2,0
   MOVI r9,2
   MOVI r10,0
   RET

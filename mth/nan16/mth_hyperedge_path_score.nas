@@ -72,10 +72,12 @@
 ;
 ;   |approx_sigmoid(s) - sigmoid(s)| <= 2^-20 = 9.5367e-7
 ;
-; for every finite s in [-8, +8]. The two-edge product therefore also has
-; absolute error below 2^-20 (the observed worst case is below 6e-7).
-; This is a bounded local guarantee on [-8, +8] only; it is not an expf or
-; general sigmoid claim outside that interval.
+; for every finite s in [-8, +8]. A conservative product bound is the sum of
+; the two component bounds plus one final FMUL rounding, below
+; 2^-19 = 1.9073e-6; the observed worst case over a dense sweep of the
+; clamped domain is below 6e-7. This is a bounded local guarantee on
+; [-8, +8] only; it is not an expf or general sigmoid claim outside that
+; interval.
 ;
 ; IMPLEMENTATION NOTES
 ; --------------------

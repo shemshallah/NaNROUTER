@@ -9,7 +9,9 @@
 ;   1. every one of the 256 heads is initialized with a per-head, per-word
 ;      reserved sentinel pattern and read back through the getter before any
 ;      field write;
-;   2. all four fields of all 256 heads are set and read back exactly;
+;   2. all four fields of all 256 heads are set and read back exactly, and
+;      each still-pristine record is checked in full before its own field
+;      writes so no write may leak into a later head;
 ;   3. the canonical byte offsets 0, 4, 8, and 12 are verified independently
 ;      with LDB, and every reserved byte (record bytes 16..127) is checked
 ;      against its sentinel for all 256 heads;
@@ -138,6 +140,8 @@ mth_hdr_test_get_expect:
   LD r4,r0,@mth_hdr_test_get_value
   CMP r10,r4
   JMP[NE] @mth_hdr_test_fail
+  CMP r2,r4
+  JMP[NE] @mth_hdr_test_fail
 
   LD r15,r0,@mth_hdr_test_get_ret
   MOVI r1,1
@@ -187,6 +191,30 @@ mth_hdr_test_bytes_loop:
   MOVI r9,4
   CMP r7,r9
   JMP[LT] @mth_hdr_test_bytes_loop
+  MOVI r1,1
+  RET
+
+; Verify that all 32 payload words of head r1 are still the fill sentinel.
+; Before a head is legitimately initialized, this detects any write that
+; leaked forward into a later record.
+mth_hdr_test_pristine:
+  SHL r5,r1,5
+  ADD r5,r12,r5
+  SHL r6,r1,8
+  MOVI r7,0
+  MOVHI r7,0xA500
+  ADD r6,r6,r7
+  MOVI r7,0
+mth_hdr_test_pristine_loop:
+  LD r8,r5,0
+  ADD r9,r6,r7
+  CMP r8,r9
+  JMP[NE] @mth_hdr_test_fail
+  ADD r5,r5,r13
+  ADD r7,r7,r13
+  MOVI r9,32
+  CMP r7,r9
+  JMP[LT] @mth_hdr_test_pristine_loop
   MOVI r1,1
   RET
 
@@ -262,6 +290,8 @@ mth_hdr_test_set_all:
   ST r15,r0,@mth_hdr_test_set_all_ret
   MOVI r14,0
 mth_hdr_test_set_all_loop:
+  ADD r1,r14,r0
+  CALL @mth_hdr_test_pristine
   CALL @mth_hdr_test_set_all_one
   ADD r14,r14,r13
   MOVI r5,256
@@ -432,6 +462,8 @@ mth_hdr_test_named_get_expect_done:
   JMP[NE] @mth_hdr_test_fail
   LD r4,r0,@mth_hdr_test_named_get_wrap_value
   CMP r10,r4
+  JMP[NE] @mth_hdr_test_fail
+  CMP r2,r4
   JMP[NE] @mth_hdr_test_fail
 
   LD r15,r0,@mth_hdr_test_named_get_wrap_ret
@@ -839,6 +871,10 @@ mth_hdr_test_nannet0:
   ADDI r3,r3,1
   CALL @mth_hdr_test_get_expect
 
+  ; Head 0 must not have touched head 1's reserved bytes either.
+  MOVI r1,1
+  CALL @mth_hdr_test_reserved
+
   LD r15,r0,@mth_hdr_test_nannet0_ret
   MOVI r1,1
   RET
@@ -1005,6 +1041,8 @@ mth_hdr_test_reject_get:
   JMP[NE] @mth_hdr_test_fail
   CMP r10,r0
   JMP[NE] @mth_hdr_test_fail
+  CMP r2,r0
+  JMP[NE] @mth_hdr_test_fail
   LD r4,r0,@mth_hdr_test_reject_get_cause
   CMP r9,r4
   JMP[NE] @mth_hdr_test_fail
@@ -1049,6 +1087,8 @@ mth_hdr_test_named_get_reject:
   CMP r1,r0
   JMP[NE] @mth_hdr_test_fail
   CMP r10,r0
+  JMP[NE] @mth_hdr_test_fail
+  CMP r2,r0
   JMP[NE] @mth_hdr_test_fail
   LD r4,r0,@mth_hdr_test_named_get_cause
   CMP r9,r4
@@ -1188,6 +1228,14 @@ mth_hdr_test_invalid:
   MOVI r4,2
   CALL @mth_hdr_test_reject_set
 
+  ; Field 32 would begin exactly at the byte after head 255's record.
+  MOVI r1,255
+  MOVI r2,32
+  MOVI r3,0xFFFF
+  MOVHI r3,0xFFFF
+  MOVI r4,2
+  CALL @mth_hdr_test_reject_set
+
   MOVI r1,7
   MOVI r2,0xFFFF
   MOVHI r2,0xFFFF
@@ -1214,9 +1262,15 @@ mth_hdr_test_invalid:
   MOVI r3,1
   CALL @mth_hdr_test_named_set_reject
 
-  ; All rejected calls must leave head 7 byte-for-byte unchanged.
+  ; All rejected calls must leave the target records byte-for-byte
+  ; unchanged. Head 8 is the would-be spill target of head 7 + field 32.
   MOVI r14,7
   CALL @mth_hdr_test_check_all_one
+  MOVI r14,8
+  CALL @mth_hdr_test_check_all_one
+
+  ; Field 32 on head 255 must not touch the guard after the arena.
+  CALL @mth_hdr_test_guards
 
   LD r15,r0,@mth_hdr_test_invalid_ret
   MOVI r1,1

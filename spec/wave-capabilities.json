@@ -1789,6 +1789,34 @@
       ],
       "status": "native_verified",
       "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.hodge_projection.f32",
+      "source": "mth/nan16/mth_mirror_hodge_projection.nas",
+      "fixture": "mth/tests/mth_mirror_hodge_projection_test.nas",
+      "marker": "MTH MIRROR HODGE PROJECTION PASS",
+      "steps": 19142426,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.pair_lane_io.f32",
+      "source": "mth/nan16/mth_mirror_pair_lane_io.nas",
+      "fixture": "mth/tests/mth_mirror_pair_lane_io_test.nas",
+      "marker": "MTH MIRROR PAIR LANE IO PASS",
+      "steps": 509737,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        26
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

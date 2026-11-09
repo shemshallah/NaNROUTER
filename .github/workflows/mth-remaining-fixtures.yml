@@ -86,6 +86,8 @@ jobs:
           --only hyperedge_incidence_walk \
           --only mirror_head_record_io \
           --only hyperedge_path_score \
+          --only mirror_hodge_projection \
+          --only mirror_pair_lane_io \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

@@ -54,7 +54,7 @@ class HermesMthToolsTests(unittest.TestCase):
 
     def test_catalogue_ci_claims_match_local_promotion_state(self):
         kernels = self.tools.registry.kernels
-        self.assertEqual(len(kernels), 125)
+        self.assertEqual(len(kernels), 127)
         self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
         self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 112)
         local_only = {
@@ -71,6 +71,8 @@ class HermesMthToolsTests(unittest.TestCase):
             "mth.hyperedge.incidence_walk.u32",
             "mth.mirror.head_record_io.u32",
             "mth.hyperedge.path_score.f32",
+            "mth.mirror.hodge_projection.f32",
+            "mth.mirror.pair_lane_io.f32",
         }
         self.assertEqual(
             {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},

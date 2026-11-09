@@ -355,8 +355,10 @@ def map_concept(term: Any) -> dict[str, Any]:
         "text": normalized,
         "identity": identity,
         "head": head,
-        "mirror_head": mirror,
+        "head_fnv": head,
+        "head_sha256": int(digest[:2], 16),
         "sha256_head": int(digest[:2], 16),
+        "mirror_head": mirror,
         "palindromic_head": head == mirror,
         "reference_head": REFERENCE_HEAD,
         "head_pair_id": head_pair,
@@ -463,6 +465,10 @@ def _normalize_source_digest(value: Any) -> str:
     return value.lower()
 
 
+def _default_source(value: Any) -> str | None:
+    return None if value is None else _normalize_source_digest(value)
+
+
 # ---------------------------------------------------------------------------
 # Provenance and record construction
 # ---------------------------------------------------------------------------
@@ -485,8 +491,11 @@ def _row_identity(item: Mapping[str, Any], *, text: str,
     return identity
 
 
-def _source_digest(item: Mapping[str, Any], identity: Mapping[str, Any]) -> tuple[str, bool]:
+def _source_digest(item: Mapping[str, Any], identity: Mapping[str, Any],
+                   default: str | None = None) -> tuple[str, bool]:
     raw = item.get("source_digest")
+    if raw is None:
+        raw = default
     if raw is not None:
         return _normalize_source_digest(raw), False
     return _digest(SOURCE_DOMAIN, {"identity": identity}), True
@@ -535,6 +544,9 @@ def _concept_fields(term: str) -> dict[str, Any]:
         "concept_alias": mapped["concept_alias"],
         "leaf_id": mapped["concept_alias"],
         "head": mapped["head"],
+        "head_fnv": mapped["head_fnv"],
+        "head_sha256": mapped["head_sha256"],
+        "sha256_head": mapped["sha256_head"],
         "mirror_head": mapped["mirror_head"],
         "head_pair_id": mapped["head_pair_id"],
         "mirror_pair_id": mapped["mirror_pair_id"],
@@ -690,6 +702,12 @@ def _relation_record(item: Mapping[str, Any], *, subject: str, predicate: str,
         "pair_id": subject_object["pair_id"] if subject_object else None,
         "pair_heads": subject_object["heads"] if subject_object else None,
         "pair_status": "canonical" if subject_object else "same_head",
+        "subject_object_pair_id": (subject_object["pair_id"]
+                                   if subject_object else None),
+        "subject_predicate_pair_id": (subject_predicate["pair_id"]
+                                      if subject_predicate else None),
+        "predicate_object_pair_id": (predicate_object["pair_id"]
+                                     if predicate_object else None),
         "pairs": pairs,
         "pair_ids": pair_ids,
         "source_digest": source_digest,
@@ -889,8 +907,8 @@ def _absorb(existing: dict[str, Any], incoming: Mapping[str, Any]) -> None:
                 existing[key] = incoming[key]
 
 
-def _prepare_row(item: Any, *, line: int,
-                 max_text_chars: int) -> list[dict[str, Any]]:
+def _prepare_row(item: Any, *, line: int, max_text_chars: int,
+                 default_source_digest: str | None = None) -> list[dict[str, Any]]:
     if not isinstance(item, Mapping):
         raise CorpusRowError(f"row {line} must be a JSON object")
     raw_text = item.get("text")
@@ -931,7 +949,8 @@ def _prepare_row(item: Any, *, line: int,
     polarity, polarity_value = _parse_polarity(item.get("polarity"))
     identity = _row_identity(item, text=text, parts=parts,
                              synset=synset, lexfile=lexfile)
-    source_digest, derived = _source_digest(item, identity)
+    source_digest, derived = _source_digest(
+        item, identity, default=default_source_digest)
     provenance = _provenance(
         item, line=line, source_digest=source_digest, derived=derived,
         split=split, synset=synset, lexfile=lexfile,
@@ -998,6 +1017,7 @@ def _prepare_row(item: Any, *, line: int,
 def _prepare_records_from_pairs(
     pairs: Iterable[tuple[int, Any]], *, max_rows: int,
     max_text_chars: int, cycle_candidates: bool,
+    default_source_digest: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     limit = _bounded_int("max_rows", max_rows, MAX_ROWS, MAX_ROWS)
     text_limit = _bounded_int(
@@ -1008,7 +1028,9 @@ def _prepare_records_from_pairs(
         count += 1
         if count > limit:
             raise CorpusBoundError(f"JSONL row count exceeds {limit}")
-        prepared = _prepare_row(row, line=line, max_text_chars=text_limit)
+        prepared = _prepare_row(
+            row, line=line, max_text_chars=text_limit,
+            default_source_digest=default_source_digest)
         if cycle_candidates:
             relation = next((record for record in prepared
                              if record.get("type") == "relation"), None)
@@ -1051,13 +1073,17 @@ def _as_rows(rows: Any) -> Iterable[Any]:
 def prepare_records(rows: Any, *, max_rows: int = MAX_ROWS,
                     max_text_chars: int = MAX_TEXT_CHARS,
                     cycle_candidates: bool = False,
-                    include_cycles: bool | None = None) -> list[dict[str, Any]]:
+                    include_cycles: bool | None = None,
+                    source_digest: str | None = None
+                    ) -> list[dict[str, Any]]:
     """Prepare records from bounded in-memory rows; pure and idempotent."""
     cycle_candidates = _cycle_choice(cycle_candidates, include_cycles)
+    default_source = _default_source(source_digest)
     pairs = ((index, row) for index, row in enumerate(_as_rows(rows), 1))
     records, _count = _prepare_records_from_pairs(
         pairs, max_rows=max_rows, max_text_chars=max_text_chars,
         cycle_candidates=cycle_candidates,
+        default_source_digest=default_source,
     )
     return records
 
@@ -1128,13 +1154,16 @@ def _batch_from_records(records: list[dict[str, Any]], count: int) -> dict[str, 
 def prepare_batch(rows: Any, *, max_rows: int = MAX_ROWS,
                   max_text_chars: int = MAX_TEXT_CHARS,
                   cycle_candidates: bool = False,
-                  include_cycles: bool | None = None) -> dict[str, Any]:
+                  include_cycles: bool | None = None,
+                  source_digest: str | None = None) -> dict[str, Any]:
     """Prepare one bounded batch plus compact counts and checksum."""
     cycle_candidates = _cycle_choice(cycle_candidates, include_cycles)
+    default_source = _default_source(source_digest)
     pairs = ((index, row) for index, row in enumerate(_as_rows(rows), 1))
     records, count = _prepare_records_from_pairs(
         pairs, max_rows=max_rows, max_text_chars=max_text_chars,
         cycle_candidates=cycle_candidates,
+        default_source_digest=default_source,
     )
     return _batch_from_records(records, count)
 
@@ -1242,14 +1271,17 @@ def prepare_jsonl(source: Any, *, max_rows: int = MAX_ROWS,
                   max_line_bytes: int = MAX_LINE_BYTES,
                   max_text_chars: int = MAX_TEXT_CHARS,
                   cycle_candidates: bool = False,
-                  include_cycles: bool | None = None) -> dict[str, Any]:
+                  include_cycles: bool | None = None,
+                  source_digest: str | None = None) -> dict[str, Any]:
     """Read a bounded JSONL source and prepare one mapping batch."""
     cycle_candidates = _cycle_choice(cycle_candidates, include_cycles)
+    default_source = _default_source(source_digest)
     pairs = _iter_jsonl_with_lines(
         source, max_rows=max_rows, max_line_bytes=max_line_bytes)
     records, count = _prepare_records_from_pairs(
         pairs, max_rows=max_rows, max_text_chars=max_text_chars,
         cycle_candidates=cycle_candidates,
+        default_source_digest=default_source,
     )
     return _batch_from_records(records, count)
 
@@ -1258,16 +1290,19 @@ def map_rows(rows: Any, *, max_rows: int = MAX_ROWS,
              max_text_chars: int = MAX_TEXT_CHARS,
              max_line_bytes: int = MAX_LINE_BYTES,
              cycle_candidates: bool = False,
-             include_cycles: bool | None = None) -> dict[str, Any]:
+             include_cycles: bool | None = None,
+             source_digest: str | None = None) -> dict[str, Any]:
     """Map in-memory rows or a JSONL path/stream to one batch."""
     if isinstance(rows, (str, os.PathLike, Path)) or hasattr(rows, "read"):
         return prepare_jsonl(
             rows, max_rows=max_rows, max_line_bytes=max_line_bytes,
             max_text_chars=max_text_chars,
-            cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+            cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+            source_digest=source_digest)
     return prepare_batch(
         rows, max_rows=max_rows, max_text_chars=max_text_chars,
-        cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+        cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+        source_digest=source_digest)
 
 
 map_corpus = map_rows
@@ -1289,24 +1324,31 @@ class CorpusMirrorMapper:
 
     def prepare_records(self, rows: Any, *,
                         cycle_candidates: bool = False,
-                        include_cycles: bool | None = None) -> list[dict[str, Any]]:
+                        include_cycles: bool | None = None,
+                        source_digest: str | None = None
+                        ) -> list[dict[str, Any]]:
         return prepare_records(
             rows, max_rows=self.max_rows, max_text_chars=self.max_text_chars,
-            cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+            cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+            source_digest=source_digest)
 
     def prepare(self, rows: Any, *, cycle_candidates: bool = False,
-                include_cycles: bool | None = None) -> dict[str, Any]:
+                include_cycles: bool | None = None,
+                source_digest: str | None = None) -> dict[str, Any]:
         return prepare_batch(
             rows, max_rows=self.max_rows, max_text_chars=self.max_text_chars,
-            cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+            cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+            source_digest=source_digest)
 
     def map_rows(self, rows: Any, *, cycle_candidates: bool = False,
-                 include_cycles: bool | None = None) -> dict[str, Any]:
+                 include_cycles: bool | None = None,
+                 source_digest: str | None = None) -> dict[str, Any]:
         return map_rows(
             rows, max_rows=self.max_rows,
             max_line_bytes=self.max_line_bytes,
             max_text_chars=self.max_text_chars,
-            cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+            cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+            source_digest=source_digest)
 
     map = map_rows
 
@@ -1316,12 +1358,14 @@ class CorpusMirrorMapper:
 
     def prepare_jsonl(self, source: Any, *,
                       cycle_candidates: bool = False,
-                      include_cycles: bool | None = None) -> dict[str, Any]:
+                      include_cycles: bool | None = None,
+                      source_digest: str | None = None) -> dict[str, Any]:
         return prepare_jsonl(
             source, max_rows=self.max_rows,
             max_line_bytes=self.max_line_bytes,
             max_text_chars=self.max_text_chars,
-            cycle_candidates=cycle_candidates, include_cycles=include_cycles)
+            cycle_candidates=cycle_candidates, include_cycles=include_cycles,
+            source_digest=source_digest)
 
     map_jsonl = prepare_jsonl
 

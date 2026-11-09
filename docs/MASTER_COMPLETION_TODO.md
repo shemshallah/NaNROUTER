@@ -161,7 +161,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
 - [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 95-entry canonical set; the four 2026-11-08 additions are CI-verified in run `42539617226`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All MTH sources are registered in the 125-entry manifest (112 `ci_verified`, 13 local-only); 123 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
+- [x] `B-04` All MTH sources are registered in the 127-entry manifest (112 `ci_verified`, 15 local-only); 125 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
