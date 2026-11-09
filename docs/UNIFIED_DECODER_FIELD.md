@@ -153,11 +153,17 @@ For each head path, the derivative flows through:
 
 Current native mechanisms:
 
+- `mth.field.mix255x16_backward.f32` — full field-mixture reverse:
+  `d_weight[h]` and `d_value[h][c]` for every one of the 255 heads;
+- `mth.field.gate255.f32` / `mth.field.gate255_backward.f32` — 255-head softmax
+  gate forward and full softmax Jacobian reverse;
 - `mth.mirror.cycle.train_step.f32` — gated delta write;
 - `mth.mirror.cycle.retain.f32` — consolidation;
 - analytic derivative for affine projection and rotation;
-- straight-through or score-function updates for discrete hyperedge choices;
-- no full native reverse-mode autodiff yet.
+- straight-through or score-function updates for discrete hyperedge choices.
+
+Still open: internal attention-head Q/K/V reverse and a full joint field-training
+loop. The field mixture and 255-head gate reverse passes are implemented.
 
 PyTorch-style autograd is an external research tool, not a runtime authority.
 A full native backward pass for the 255-head field remains open.

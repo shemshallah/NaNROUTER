@@ -128,9 +128,12 @@
       "cycle.train_step delta rule",
       "retain/consolidation",
       "analytic projection/gate derivatives",
-      "straight-through or score-function learning for discrete hyperedges"
+      "straight-through or score-function learning for discrete hyperedges",
+      "mth.field.mix255x16_backward.f32",
+      "mth.field.gate255.f32",
+      "mth.field.gate255_backward.f32"
     ],
-    "open": "a full native backward pass for the 255-head decoder field is not implemented"
+    "open": "internal attention-head Q/K/V reverse and a full joint field-training loop are not implemented; field-mixture and 255-head gate reverse passes are implemented"
   },
   "native_integration": {
     "production_authority": false,
