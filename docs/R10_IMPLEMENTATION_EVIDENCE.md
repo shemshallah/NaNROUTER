@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; all 95 manifest kernels are CI-verified.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; all 96 manifest kernels are CI-verified.
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Canonical run `42539617226` then passed the 31-fixture remaining promotion set, including normalize, prefix sum, xorshift64, and the full 8 MiB universe map. Current workflows also include the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
@@ -107,6 +107,7 @@
 | 93 | Vector inclusive prefix sum 256 u32 | `mth/tests/mth_vector_prefix_sum256_u32_test.nas` | 49,559 | PASS | yes (42539617226) |
 | 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | yes (42539617226) |
 | 95 | Full 8 MiB universe map | `mth/tests/mth_universe_map_test.nas` | 12,916,386 | PASS | yes (42539617226) |
+| 96 | Contradiction-aware graph claim probe | `mth/tests/mth_graph_claim_probe_test.nas` | 1,605 | PASS | yes (native-graph-claim-probe.yml) |
 
 ## Python tests
 
@@ -185,16 +186,16 @@ Covered:
 
 ```
 python3 tools/run_mth_fixtures.py
-93 runner fixture paths registered; 92 unique manifest fixtures
+94 runner fixture paths registered; 93 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, xorshift64, and universe-map targeted set: 5/5 PASS
-Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 93/93 PASS
+Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 94/94 PASS
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 95 kernels (95 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **95 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 96 kernels (96 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **96 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
@@ -205,7 +206,7 @@ Run it after any kernel change.
   HW0:0`. Real heads `1..255` map to pages `0..254`.
 - `mth/nan16/mth_universe_map.nas` implements the map in NaN16; its fixture
   passes locally in 12,916,386 steps with no trap.
-- `runner_riddle/mth_unified.py` builds a 95-kernel unified catalog with 5
+- `runner_riddle/mth_unified.py` builds a 96-kernel unified catalog with 5
   native-dispatch ABI entries and binds the control plane to the NaN0S,
   HERMES, Android, NaNLMind, NaNLM, and CLOCKED provider contracts.
 - The provider audit prefers the local worktree and falls back to fetched

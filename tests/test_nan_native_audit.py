@@ -29,23 +29,31 @@ class NanNativeAuditTests(unittest.TestCase):
         self.assertEqual(report["layer_counts"]["L3"], 27)
         self.assertEqual(report["layer_counts"]["L4"], 44)
 
-    def test_graph_claim_probe_has_separate_native_ci_not_math_kernel_authority(self):
+    def test_graph_claim_probe_is_catalogued_but_separately_gated(self):
+        """A tracked candidate query is not a math proof or native promotion."""
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         name = "mth/nan16/mth_graph_claim_probe.nas"
-        self.assertIn(name, spec["excluded_native_sources"])
-        self.assertIn("not an authorized numerical MTH kernel",
-                      spec["excluded_native_sources"][name])
-        self.assertTrue((REPO_ROOT / name).is_file())
-        self.assertTrue(
-            (REPO_ROOT / "mth/tests/mth_graph_claim_probe_test.nas").is_file()
+        manifest = json.loads(
+            (REPO_ROOT / spec["manifest"]).read_text(encoding="utf-8")
         )
+        candidates = [
+            k for k in manifest["kernels"]
+            if k.get("source") == name
+        ]
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["kernel_id"], "mth.graph.claim_probe.u32")
+        self.assertEqual(
+            candidates[0]["fixture"], "mth/tests/mth_graph_claim_probe_test.nas"
+        )
+        self.assertNotIn(name, spec["excluded_native_sources"])
+        self.assertTrue((REPO_ROOT / name).is_file())
         workflow = (
             REPO_ROOT / ".github/workflows/native-graph-claim-probe.yml"
         ).read_text(encoding="utf-8")
         self.assertIn("mth_graph_claim_probe_test.nas", workflow)
         self.assertEqual(audit()["status"], "green")
 
-    def test_graph_path_witness_has_separate_native_ci_not_math_kernel_authority(self):
+    def test_unregistered_graph_path_witness_has_independent_ci_not_math_authority(self):
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         name = "mth/nan16/mth_graph_path_witness.nas"
         self.assertIn(name, spec["excluded_native_sources"])
