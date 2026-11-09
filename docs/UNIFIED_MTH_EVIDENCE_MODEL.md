@@ -228,7 +228,7 @@ At baseline commit `12980a3`:
 - The recorded local suite is **1,282+ local Python tests** (baseline record:
   `Ran 1282 tests`, `OK (skipped=29)`).
 - The full universe-map fixture passes locally in **12,916,386 guest steps**;
-  it is one fixture, not all 131 kernels.
+  it is one fixture, not all 133 kernels.
 
 The excluded `mth/nan16/mth_graph_path_witness.nas` is a separate candidate
 witness with its own gate and is not an authorized numerical MTH kernel. The
@@ -332,7 +332,7 @@ not evidence.
 | `.github/workflows/manifest-contract.yml` | Full Python test discovery and manifest contract checks |
 | `.github/workflows/koyeb-container-smoke.yml` | Credential-free container build and `/healthz` contract; no Koyeb credentials and no live deployment |
 
-Therefore, one green workflow does not imply all 131 kernels, all 125 runner
+Therefore, one green workflow does not imply all 133 kernels, all 125 runner
 fixtures, or a live service.
 
 ### 4.4 Baseline CI records

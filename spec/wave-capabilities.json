@@ -1830,7 +1830,7 @@
         12
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.byte.fallback_argmax.f32",
@@ -1844,14 +1844,42 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.byte.copy24.u32",
       "source": "mth/nan16/mth_byte_copy24.nas",
       "fixture": "mth/tests/mth_byte_copy24_test.nas",
       "marker": "MTH BYTE COPY24 PASS",
-      "steps": 14630,
+      "steps": 15808,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        24
+      ],
+      "status": "native_verified",
+      "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.copy_gate.f32",
+      "source": "mth/nan16/mth_copy_gate.nas",
+      "fixture": "mth/tests/mth_copy_gate_test.nas",
+      "marker": "MTH COPY GATE PASS",
+      "steps": 2823,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.definition.slot_io.u32",
+      "source": "mth/nan16/mth_definition_slot_io.nas",
+      "fixture": "mth/tests/mth_definition_slot_io_test.nas",
+      "marker": "MTH DEFINITION SLOT IO PASS",
+      "steps": 547060,
       "precision": "u32",
       "workspace_words": 0,
       "shape": [
@@ -1861,11 +1889,11 @@
       "ci_verified": false
     },
     {
-      "kernel_id": "mth.copy_gate.f32",
-      "source": "mth/nan16/mth_copy_gate.nas",
-      "fixture": "mth/tests/mth_copy_gate_test.nas",
-      "marker": "MTH COPY GATE PASS",
-      "steps": 2823,
+      "kernel_id": "mth.gauge.triangle_recover.f32",
+      "source": "mth/nan16/mth_gauge_triangle_recover.nas",
+      "fixture": "mth/tests/mth_gauge_triangle_recover_test.nas",
+      "marker": "MTH GAUGE TRIANGLE RECOVER PASS",
+      "steps": 9665,
       "precision": "float32",
       "workspace_words": 0,
       "shape": [

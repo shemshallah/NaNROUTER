@@ -92,6 +92,8 @@ jobs:
           --only byte_fallback_argmax \
           --only byte_copy24 \
           --only copy_gate \
+          --only definition_slot_io \
+          --only gauge_triangle_recover \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \
