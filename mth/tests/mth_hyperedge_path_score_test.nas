@@ -19,6 +19,10 @@
 ; positive finite score, with a 64-ULP window against the expected word.
 ; Exact checks use CMP on the raw integer payload. All expected words are
 ; compile-time fixture constants; the guest computes every actual score.
+; The anchor words are f32 regression anchors for this bounded
+; implementation (each is within the documented 2^-19 product bound of the
+; real-valued sigmoid product); the 64-ULP window is a tighter regression
+; check, not a re-derivation of the real-valued tolerance.
 ;
 ; The destination sits between two guard words, so a success may change only
 ; the one destination word and a rejection may change nothing.

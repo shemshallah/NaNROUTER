@@ -26,8 +26,8 @@
 ; and are never read or written as fields. Lane 0 has no reserved bytes in
 ; the field block: its 32 four-byte words tile [0,128) exactly.
 ;
-; The physical profile is byte-addressed through NaN16 LDB/STB byte space.
-; A field is one four-byte guest payload word: byte address
+; The physical profile is byte-addressed through NaN16 LDB byte space, and
+; a field is one four-byte guest payload word: byte address
 ;
 ;   addr = 32768 + (id-1)*256 + lane*128 + field*4
 ;
@@ -86,10 +86,16 @@
 ;
 ; Register contract
 ; -----------------
-; Both entry points set r0 = 0 and leave it at 0. They clobber r1, r2,
-; r5-r10 and flags. They preserve r3, r4, r11-r15. No floating-point
-; instruction, no static scratch, no self-modification, and no host
-; arithmetic are used.
+; Both entry points set r0 = 0 and leave it at 0, clobber flags, and preserve
+; r3, r4, and r11-r15. get additionally clobbers r1, r2, and r5-r10; set
+; additionally clobbers r1 and r5-r10 while leaving its r2/r3/r4 inputs
+; intact. No floating-point instruction, no static scratch, no
+; self-modification, and no host arithmetic are used.
+;
+; This is a storage layer only. It does not enforce the initialized-pair
+; mirror invariant lane1.residual[j] == -lane0.residual[j], does not validate
+; external hyperedge-arena ids, and does not advance generations. Those are
+; caller/training policies over the exact payloads this ABI transports.
 
 .equ MTH_PAIR_LANE_RESIDUAL_FIRST 0
 .equ MTH_PAIR_LANE_RESIDUAL_LAST  25
