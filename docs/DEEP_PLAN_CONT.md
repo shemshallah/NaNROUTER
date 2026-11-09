@@ -17,7 +17,7 @@ This document is not a claim that the system is finished. It catalogues what is 
 
 ## 0. Executive synthesis
 
-There are **96 manifest kernels with fixtures**: all 96 carry `ci_verified=true`, including the four 2026-11-08 additions; 104 runner fixture paths are registered. The 2 MiB text-loader execution is CI-verified; no page-size limit is enforced, and the guest address space maps the full 8 MiB universe (256 pages, 1,048,576 words, 32,896 relation points). There is also a working BS0DB/MC0DB control/evidence plane, a green static NaN-native boundary audit, a unified cross-repo MTH catalog, and the full local Python suite green (see R10).
+There are **106 manifest kernels with fixtures**: all 106 carry `ci_verified=true`, including the four 2026-11-08 additions; 104 runner fixture paths are registered. The 2 MiB text-loader execution is CI-verified; no page-size limit is enforced, and the guest address space maps the full 8 MiB universe (256 pages, 1,048,576 words, 32,896 relation points). There is also a working BS0DB/MC0DB control/evidence plane, a green static NaN-native boundary audit, a unified cross-repo MTH catalog, and the full local Python suite green (see R10).
 
 What exists is a strong **mathematical kernel collection**. What does not yet exist is a complete **MTH system**: one registry that names every operator, one planner that composes them, one executor contract that routes them through the single-active runner ring, one paged-memory model that lets 256×256 and 255×255 operators live across durable pages without pretending they are one flat array, and one end-to-end evidence path from a plan to a result to a promotion decision.
 
@@ -76,7 +76,7 @@ The 255 + 1 rule remains:
 | `runner_riddle/wave_aperture.py` | aperture role/decomposition descriptor; 9 tests |
 | `runner_riddle/wave_adapter.py` | R9 adapter contract; 7 tests |
 | `tools/register_wave_capabilities.py` | registers 106 kernels into MC0DB |
-| `spec/wave-capabilities.json` | 96-kernel capability manifest |
+| `spec/wave-capabilities.json` | 106-kernel capability manifest |
 | `spec/ring-255.json` | C255 CSR, port policy, 255+1 page map |
 | `.github/workflows/mth-native-contract.yml` | 132 steps, 61 fixtures; canonical CI PASS (no page-size limit) |
 
@@ -84,7 +84,7 @@ The 255 + 1 rule remains:
 
 ```
 104 runner fixture paths registered; targeted new set 5/5 PASS including the universe map (full sweep not rerun)
-104 runner fixture paths registered; full 94/94 canonical runner PASS and 31/31 remaining-fixture CI PASS (`42539617226`); the full local Python suite passes (see R10 for the exact count).
+104 runner fixture paths registered; full 104/104 canonical runner PASS and 31/31 remaining-fixture CI PASS (`42539617226`); the full local Python suite passes (see R10 for the exact count).
 No page-size limit is enforced; the 2 MiB guest budget is adjustable
 ```
 
@@ -974,7 +974,7 @@ The shortest correct sentence is:
 
 ## Appendix A — Current native kernel catalog
 
-Machine-readable source: `spec/wave-capabilities.json`. The catalog has 106 kernels (96 CI-verified, 10 local-only); canonical CI runs 42405649076 and 42539617226 passed the expanded promotion sets. No page-size limit is enforced; the 2 MiB guest budget is adjustable.
+Machine-readable source: `spec/wave-capabilities.json`. The catalog has 106 kernels (106 CI-verified); canonical CI runs 42405649076 and 42539617226 passed the expanded promotion sets. No page-size limit is enforced; the 2 MiB guest budget is adjustable.
 
 | Kernel | Precision | Fixture steps | CI |
 |---|---|---:|---|

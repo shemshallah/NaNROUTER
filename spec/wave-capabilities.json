@@ -1,7 +1,7 @@
 {
   "schema": "nanrouter.wave-capabilities.v1",
   "generated_by": "manual R10 promotion ledger",
-  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. 96 MTH kernels are CI-verified; seven 2026-11-09 vector additions await canonical CI. The standalone multihop graph path witness has its own native guest gate and is not an authorized numerical MTH kernel.",
+  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 106 current MTH kernels are CI-verified in canonical NaNROUTER workflow runs (run 42546293200 executed the ten 2026-11-09 additions). The standalone multihop graph path witness has its own native guest gate and is not an authorized numerical MTH kernel.",
   "kernels": [
     {
       "kernel_id": "mth.k256.laplacian.u16",
@@ -1394,7 +1394,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.weighted_sum256.f32",
@@ -1408,7 +1408,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.softmax256.f32",
@@ -1422,7 +1422,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.sum256.f32",
@@ -1436,7 +1436,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.max256.f32",
@@ -1450,7 +1450,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.min256.f32",
@@ -1464,7 +1464,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.head_concat256.f32",
@@ -1478,7 +1478,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.graph.pair.full_grid.driver.f32",
@@ -1493,7 +1493,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.sqrt256.f32",
@@ -1507,7 +1507,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.rsqrt256.f32",
@@ -1521,7 +1521,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }

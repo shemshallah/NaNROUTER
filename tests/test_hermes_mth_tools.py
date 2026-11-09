@@ -56,19 +56,8 @@ class HermesMthToolsTests(unittest.TestCase):
         kernels = self.tools.registry.kernels
         self.assertEqual(len(kernels), 106)
         self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
-        self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 96)
-        local_only = {
-            "mth.vector.mask256.f32",
-            "mth.vector.weighted_sum256.f32",
-            "mth.vector.softmax256.f32",
-            "mth.vector.sum256.f32",
-            "mth.vector.max256.f32",
-            "mth.vector.min256.f32",
-            "mth.vector.head_concat256.f32",
-            "mth.graph.pair.full_grid.driver.f32",
-            "mth.vector.sqrt256.f32",
-            "mth.vector.rsqrt256.f32",
-        }
+        self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 106)
+        local_only = set()
         self.assertEqual(
             {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},
             local_only,
