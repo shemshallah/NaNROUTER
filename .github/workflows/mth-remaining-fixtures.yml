@@ -105,6 +105,9 @@ jobs:
           --only cycle_retain \
           --only cycle_contradiction \
           --only attention_mix16 \
+          --only logsoftmax256 \
+          --only cross_entropy256 \
+          --only evidence_cycle_state \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

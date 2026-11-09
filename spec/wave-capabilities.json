@@ -2073,6 +2073,48 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.vector.logsoftmax256.f32",
+      "source": "mth/nan16/mth_vector_logsoftmax256_f32.nas",
+      "fixture": "mth/tests/mth_vector_logsoftmax256_f32_test.nas",
+      "marker": "MTH LOGSOFTMAX256 PASS",
+      "steps": 62379,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.lm.cross_entropy256.f32",
+      "source": "mth/nan16/mth_lm_cross_entropy256_f32.nas",
+      "fixture": "mth/tests/mth_lm_cross_entropy256_f32_test.nas",
+      "marker": "MTH CROSS ENTROPY256 PASS",
+      "steps": 62098,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.evidence.cycle_state.f32",
+      "source": "mth/nan16/mth_mirror_evidence_cycle_state.nas",
+      "fixture": "mth/tests/mth_mirror_evidence_cycle_state_test.nas",
+      "marker": "MTH EVIDENCE CYCLE STATE PASS",
+      "steps": 1413,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        4
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

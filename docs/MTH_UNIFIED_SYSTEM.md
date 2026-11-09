@@ -129,6 +129,13 @@ the resident byte LM loses bits per byte to the dense 16×16 control. These
 rounds establish gauge invariance and native training mechanics, not a general
 language advantage.
 
+Round 042 is recorded in `docs/ROUND_042_JOINT_DIALOGUE.md`: a learned
+relation writer, native two-lane support/refutation memory, differentiable
+propagation, and an autoregressive decoder form a joint dialogue path without a
+supplied proof-status token. The conventional memory ties clean-input accuracy,
+the language-only run collapses to abstention, and the restricted vocabulary
+remains the boundary.
+
 Rounds 038–039 are recorded in `docs/ROUNDS_038_039_FREE_GENERATION.md`:
 the model samples a learned 2,048-subword vocabulary with about 464k
 parameters and a native 16×16 triangle-circulation adapter. In the corrected
@@ -264,10 +271,10 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 145 kernels, 145 CI-verified, no local-only, 143 sources, 141 fixtures |
+| Unified catalog | 148 kernels, 145 CI-verified, 3 local-only, 146 sources, 144 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,442 tests, 30 skipped, OK |
-| Canonical native runner | 142/142 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+| Canonical native runner | 145/145 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
 | Unified audit workflow | green in run `42542831186` |
 
 The 29 local skips include the upstream Ed25519 attestation class because the

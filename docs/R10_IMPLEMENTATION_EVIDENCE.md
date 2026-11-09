@@ -157,6 +157,9 @@
 | 143 | Gated cycle retention | `mth/tests/mth_mirror_cycle_retain_test.nas` | 104,103 | PASS | yes (42575195573) |
 | 144 | Contradiction pair | `mth/tests/mth_mirror_cycle_contradiction_test.nas` | 785 | PASS | yes (42575195573) |
 | 145 | Attention/value mix16 | `mth/tests/mth_attention_mix16_test.nas` | 34,231 | PASS | yes (42575195573) |
+| 146 | Log-softmax 256 | `mth/tests/mth_vector_logsoftmax256_f32_test.nas` | 62,379 | PASS | local only |
+| 147 | Cross-entropy 256 | `mth/tests/mth_lm_cross_entropy256_f32_test.nas` | 62,098 | PASS | local only |
+| 148 | Two-lane evidence state | `mth/tests/mth_mirror_evidence_cycle_state_test.nas` | 1,413 | PASS | local only |
 
 ## Local phase-system integration fixture
 
@@ -248,14 +251,14 @@ Covered:
 python3 tools/run_mth_fixtures.py
 104 runner fixture paths registered; 103 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, xorshift64, and universe-map targeted set: 5/5 PASS
-Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 142/142 PASS
+Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 145/145 PASS
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 145 kernels (145 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **145 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 148 kernels (145 `ci_verified`, 3 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **148 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

@@ -1,0 +1,153 @@
+{
+  "schema": "nanrouter.round042-joint-dialogue.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiment",
+  "source_archive": {
+    "release_name": "nan_recursive_round042-1.zip",
+    "release_sha256": "d2480eaf68233da41a5952251cc82c962c137914403171d1f373ba5e0d4ffe28",
+    "full_history_archive": "nan_recursive_round042.zip",
+    "full_history_sha256": "76eb9e0d2ac9f7e0f89f76b4c4332a36597356486b01382bb87ae983a66fa449",
+    "release_files": 61
+  },
+  "task": "restricted-domain neural conceptual dialogue with a native 8 MiB mirror-pair writer/reader, differentiable propagation, and autoregressive response generation without a supplied proof-status token",
+  "setup": {
+    "seeds": [
+      17,
+      29,
+      43
+    ],
+    "steps": 650,
+    "batch": 20,
+    "hidden": 80,
+    "test_examples_per_seed": 180,
+    "split_size": {
+      "train": 4959,
+      "validation": 317,
+      "test": 323
+    },
+    "entity_boundaries_supplied": true,
+    "wordnet_child_split": true,
+    "response_vocabulary": "54 function/role tokens plus copied concept names",
+    "language_only_steps": 1000
+  },
+  "architecture": {
+    "vertices": 256,
+    "anchor_position": 0,
+    "named_heads": 255,
+    "unordered_pair_cells": 32640,
+    "direct_nonzero_head_pairs": 32385,
+    "cycle_dimension": 32385,
+    "support_lane": 0,
+    "refute_lane": 1,
+    "native_root_bytes": 8388608,
+    "differentiable_bridge": "analytical straight-through identity Jacobian for exact write/read, with float32 deviation",
+    "primary_losses": [
+      "language cross entropy",
+      "relation-direction supervision",
+      "proof/reachability supervision"
+    ],
+    "native_optimizer_note": "native bridge exposes gradients; PyTorch optimizer updates the differentiable interface"
+  },
+  "results": {
+    "two_to_four_hop": {
+      "correct": 540,
+      "total": 540
+    },
+    "after_gauge": {
+      "correct": 540,
+      "total": 540
+    },
+    "five_hop": {
+      "correct": 525,
+      "total": 540,
+      "failures": "broken-chain negatives"
+    },
+    "matched_conventional_signed_adjacency": {
+      "correct": 540,
+      "total": 540
+    },
+    "independently_retrained_conventional": {
+      "correct": 540,
+      "total": 540
+    },
+    "causal_deletion_abstentions": {
+      "correct": 240,
+      "total": 240
+    },
+    "causal_restoration": {
+      "correct": 240,
+      "total": 240
+    },
+    "causal_gauge_outputs_unchanged": {
+      "correct": 480,
+      "total": 480
+    },
+    "causal_permuted_node_indices_unchanged": {
+      "correct": 480,
+      "total": 480
+    },
+    "four_state_responses": {
+      "correct": 480,
+      "total": 480
+    },
+    "four_state_after_gauge": {
+      "correct": 480,
+      "total": 480
+    },
+    "four_state_speaker_parameters": 56628,
+    "fewshot_new_phrases": {
+      "correct": 3,
+      "total": 3
+    },
+    "fewshot_old_classes_retained": {
+      "correct": 16,
+      "total": 16
+    },
+    "new_phrase_source_disjoint_qa": {
+      "correct": 180,
+      "total": 180
+    },
+    "language_only": {
+      "correct": 90,
+      "total": 180,
+      "positive": 0,
+      "negative": 90,
+      "failure_mode": "always abstain"
+    },
+    "writer_gradient_norm_range": [
+      6.4509790718148e-06,
+      3.416823165025562e-05
+    ],
+    "propagator_gradient_magnitude_range": [
+      5.074560613138601e-05,
+      0.00012147484085289761
+    ]
+  },
+  "native_integration": {
+    "production_authority": false,
+    "new_native_primitives": [
+      "mth.vector.logsoftmax256.f32",
+      "mth.lm.cross_entropy256.f32",
+      "mth.mirror.evidence.cycle_state.f32"
+    ],
+    "reused_native_primitives": [
+      "mth.mirror.cycle.train_step.f32",
+      "mth.mirror.cycle.predict16.f32",
+      "mth.mirror.cycle.contradiction.f32",
+      "mth.mirror.cycle.retain.f32",
+      "mth.trig.sincos.f32",
+      "mth.trig.rotate.f32",
+      "mth.ring.angular_map.u32"
+    ]
+  },
+  "non_claims": [
+    "Not fluent open-domain language; the primary decoder uses a restricted function-word/role vocabulary plus copied names.",
+    "Entity boundaries and constrained relation forms are supplied; arbitrary prose parsing is not solved.",
+    "The conventional signed-adjacency memory ties clean-input accuracy in every seed; no unique NaN geometric advantage is proven.",
+    "Language-token loss alone collapsed to abstention (90/180); auxiliary relation/proof supervision was required.",
+    "Gauge invariance and causal deletion/restoration are demonstrated on constructed episodes, not natural distribution shifts.",
+    "Snapshots are experimental host-layout images, not transactional or cryptographically secure storage.",
+    "The native C++ bridge is not NaN16 production execution.",
+    "No live deployment, production model, or open-domain dialogue claim."
+  ]
+}
