@@ -1,0 +1,50 @@
+name: native-graph-path-witness
+
+on:
+  pull_request:
+    paths:
+      - 'mth/nan16/mth_graph_path_witness.nas'
+      - 'mth/tests/mth_graph_path_witness_test.nas'
+      - '.github/workflows/native-graph-path-witness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'mth/nan16/mth_graph_path_witness.nas'
+      - 'mth/tests/mth_graph_path_witness_test.nas'
+      - '.github/workflows/native-graph-path-witness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-path-witness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+      - name: Checkout pinned NaN0S source assembler and native VM
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
+          path: nan0s
+      - name: Build native NaN16 VM
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble bounded native path-witness regression
+        run: |
+          mkdir -p build/mth
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_graph_path_witness_test.nas \
+            > build/mth/graph-path-witness.nan
+      - name: Execute native guest with contradictions and negative cases
+        run: |
+          nan0s/aarch64/android/nan_cli \
+            --img build/mth/graph-path-witness.nan \
+            --steps 10000000 --serial \
+            > build/mth/graph-path-witness.out \
+            2> build/mth/graph-path-witness.err
+          cat build/mth/graph-path-witness.out
+          cat build/mth/graph-path-witness.err
+          grep -q '^MTH GRAPH PATH WITNESS PASS' build/mth/graph-path-witness.out
+          ! grep -q '^MTH GRAPH PATH WITNESS FAIL' build/mth/graph-path-witness.out
