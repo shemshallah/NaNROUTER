@@ -151,6 +151,12 @@
 | 137 | Trig plane rotation | `mth/tests/mth_trig_rotate_test.nas` | 1,246 | PASS | yes (42569728986) |
 | 138 | Content-dependent cycle train step | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | yes (42569728986) |
 | 139 | Cycle readout 16×16 | `mth/tests/mth_mirror_cycle_train_test.nas` | 305,596 | PASS | yes (42569728986) |
+| 140 | Angular ring map | `mth/tests/mth_ring_angular_map_test.nas` | 4,757,984 | PASS | local only |
+| 141 | Native twiddle256 | `mth/tests/mth_trig_twiddle256_test.nas` | 40,725 | PASS | local only |
+| 142 | Oscillatory phase gate | `mth/tests/mth_mirror_cycle_phase_gate_test.nas` | 13,926 | PASS | local only |
+| 143 | Gated cycle retention | `mth/tests/mth_mirror_cycle_retain_test.nas` | 104,103 | PASS | local only |
+| 144 | Contradiction pair | `mth/tests/mth_mirror_cycle_contradiction_test.nas` | 785 | PASS | local only |
+| 145 | Attention/value mix16 | `mth/tests/mth_attention_mix16_test.nas` | 34,231 | PASS | local only |
 
 ## Python tests
 
@@ -231,14 +237,14 @@ Covered:
 python3 tools/run_mth_fixtures.py
 104 runner fixture paths registered; 103 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, xorshift64, and universe-map targeted set: 5/5 PASS
-Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 136/136 PASS
+Full canonical runner against NaN0S f31143e (fe63617 differs only in a CI workflow): 142/142 PASS
 ```
 
 Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 139 kernels (139 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **139 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 145 kernels (139 `ci_verified`, 6 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **145 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

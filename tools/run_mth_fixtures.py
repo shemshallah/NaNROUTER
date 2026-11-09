@@ -163,6 +163,12 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("trig_sincos", "mth/tests/mth_trig_sincos_test.nas", 20_000, "MTH TRIG SINCOS PASS", "native_verified"),
     Fixture("trig_rotate", "mth/tests/mth_trig_rotate_test.nas", 20_000, "MTH TRIG ROTATE PASS", "native_verified"),
     Fixture("mirror_cycle_train", "mth/tests/mth_mirror_cycle_train_test.nas", 500_000, "MTH MIRROR CYCLE TRAIN PASS", "native_verified"),
+    Fixture("ring_angular_map", "mth/tests/mth_ring_angular_map_test.nas", 30_000_000, "MTH RING ANGULAR MAP PASS", "native_verified"),
+    Fixture("trig_twiddle256", "mth/tests/mth_trig_twiddle256_test.nas", 2_000_000, "MTH TRIG TWIDDLE256 PASS", "native_verified"),
+    Fixture("cycle_phase_gate", "mth/tests/mth_mirror_cycle_phase_gate_test.nas", 2_000_000, "MTH CYCLE PHASE GATE PASS", "native_verified"),
+    Fixture("cycle_retain", "mth/tests/mth_mirror_cycle_retain_test.nas", 1_000_000, "MTH CYCLE RETAIN PASS", "native_verified"),
+    Fixture("cycle_contradiction", "mth/tests/mth_mirror_cycle_contradiction_test.nas", 100_000, "MTH CONTRADICTION PAIR PASS", "native_verified"),
+    Fixture("attention_mix16", "mth/tests/mth_attention_mix16_test.nas", 1_000_000, "MTH ATTENTION MIX16 PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical

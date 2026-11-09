@@ -24,7 +24,7 @@
 - [ ] Cross-repo checked-u32 math route: HERMES/NaNLMind expect `mth.u32.add_checked`/`sub_checked` and `/v1/hermes/leases/math`; main has no such route. See `docs/MTH_CROSS_REPO_SYNC_20261109.md`. Do not alias to the i32 kernel without an ABI decision.
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 136 runner fixture paths are registered; the full canonical runner passes 136/136 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
+- [x] 142 runner fixture paths are registered; the full canonical runner passes 142/142 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
 - [x] 1248 Python tests pass (29 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. The native-promotion set and the credential-free Koyeb container smoke are green in runs `42542521347` and `42542521266`; the four 2026-11-08 kernels are CI-verified in run `42539617226`.
 
@@ -208,7 +208,7 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-136 runner fixture paths registered; 135 unique manifest fixtures
+142 runner fixture paths registered; 141 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 (full 92-fixture sweep not rerun in this pass)
 

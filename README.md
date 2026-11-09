@@ -123,6 +123,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/WAVE_TILE_ORCHESTRATOR.md` — 256-tile page window and atomic publication.
 - `docs/UNIFIED_LEARNING_SYNTHESIS.md` — the Round 023–039 integration map, content-gated learning loop, and fair-evaluation gates.
 - `docs/ROUNDS_029_031_NATIVE_LEARNING.md` — the gauge advantage, native-root classifier, and resident byte-LM evidence.
+- `docs/ANGULAR_RING_NEXT_KERNELS.md` — 255-lane angular addressing, native twiddles, oscillatory gates, retention, contradiction pairs, and attention/value mixing.
 - `docs/TRIG_NATIVE_SYNTHESIS.md` — native sine/cosine, plane rotation, and the trigonometric design space.
 - `docs/ROUNDS_038_039_FREE_GENERATION.md` — unrestricted subword generation and the corrected native-cycle audit.
 - `docs/MTH_PAIR_TILE16_FILE_PAGES.md` — immutable file-backed matrix pages and CAS output generations.
@@ -155,7 +156,7 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `runner_riddle/wave_aperture.py` — aperture role/decomposition descriptor.
 - `runner_riddle/wave_adapter.py` — R9 adapter contract.
 
-The expanded native workflows are `.github/workflows/mth-native-contract.yml` and `.github/workflows/mth-remaining-fixtures.yml`. The manifest has 139 native kernels (139 `ci_verified`, no local-only) and the runner registers 136 fixture paths. The static NaN-native boundary audit is green over 137 MTH sources plus three explicitly excluded HERMES guests. Local evidence includes the normalize/prefix-sum/PRNG fixtures and the exhaustive 8 MiB universe-map fixture (12,916,386 steps) against the canonical NaN0S toolchain; canonical run `42539617226` executed all four successfully. No page-size enforcement gate exists: the 2 MiB value is an adjustable workspace budget, not a page-size limit, while the guest address space maps the full 8 MiB universe. See [`docs/MTH_UNIFIED_SYSTEM.md`](docs/MTH_UNIFIED_SYSTEM.md).
+The expanded native workflows are `.github/workflows/mth-native-contract.yml` and `.github/workflows/mth-remaining-fixtures.yml`. The manifest has 145 native kernels (139 `ci_verified`, 6 local-only) and the runner registers 142 fixture paths. The static NaN-native boundary audit is green over 143 MTH sources plus three explicitly excluded HERMES guests. Local evidence includes the normalize/prefix-sum/PRNG fixtures and the exhaustive 8 MiB universe-map fixture (12,916,386 steps) against the canonical NaN0S toolchain; canonical run `42539617226` executed all four successfully. No page-size enforcement gate exists: the 2 MiB value is an adjustable workspace budget, not a page-size limit, while the guest address space maps the full 8 MiB universe. See [`docs/MTH_UNIFIED_SYSTEM.md`](docs/MTH_UNIFIED_SYSTEM.md).
 
 ## Runner Riddle
 

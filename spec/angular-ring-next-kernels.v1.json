@@ -1,0 +1,93 @@
+{
+  "schema": "nanrouter.angular-ring-next-kernels.v1",
+  "date": "2026-11-09",
+  "scope": "native NaN16 angular ring addressing and the next native learning/trigonometry primitives",
+  "ring": {
+    "real_lane_positions": [
+      0,
+      254
+    ],
+    "real_lane_count": 255,
+    "rotation_modulus": 255,
+    "nannet0_ring_position": 255,
+    "nannet0_fixed": true,
+    "point0_is_ring_position": false,
+    "point0_namespace": "BS0:0/BSR0 transport ingress, not geometry",
+    "aliases": [
+      "physical head 0",
+      "page 255",
+      "ring 255",
+      "HW0:0"
+    ],
+    "rule": "angular rotation maps only 0..254; position 255 is never returned by the map"
+  },
+  "kernels": [
+    {
+      "kernel_id": "mth.ring.angular_map.u32",
+      "source": "mth/nan16/mth_ring_angular_map.nas",
+      "fixture": "mth/tests/mth_ring_angular_map_test.nas",
+      "steps": 4757984,
+      "abi": "r1=real lane 0..254, r2=signed offset -> r3=mapped lane, r4=255 fixed NANNET0, r5=1"
+    },
+    {
+      "kernel_id": "mth.trig.twiddle256.f32",
+      "source": "mth/nan16/mth_trig_twiddle256_f32.nas",
+      "fixture": "mth/tests/mth_trig_twiddle256_test.nas",
+      "steps": 40725,
+      "abi": "r1=cos[256], r2=sin[256], r3=scratch[4]"
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.phase_gate16.f32",
+      "source": "mth/nan16/mth_mirror_cycle_phase_gate.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_phase_gate_test.nas",
+      "steps": 13926,
+      "abi": "r1=position, r2=freq[16], r3=phase[16], r4=out[16], r5=scratch[6]"
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.retain.f32",
+      "source": "mth/nan16/mth_mirror_cycle_retain.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_retain_test.nas",
+      "steps": 104103,
+      "abi": "r1=current base, r2=source base, r3=gain in [0,1]"
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.contradiction.f32",
+      "source": "mth/nan16/mth_mirror_cycle_contradiction.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_contradiction_test.nas",
+      "steps": 785,
+      "abi": "r1=support, r2=oppose -> conflict=min, balance=support-oppose, both preserved"
+    },
+    {
+      "kernel_id": "mth.attention.mix16.f32",
+      "source": "mth/nan16/mth_attention_mix16_f32.nas",
+      "fixture": "mth/tests/mth_attention_mix16_test.nas",
+      "steps": 34231,
+      "abi": "r1=weights[16]>=0, r2=values[16][16], r3=out[16]"
+    }
+  ],
+  "implemented_behaviors": [
+    "255-lane angular rotation with NANNET0 fixed at 255",
+    "in-guest 256-point cosine/sine twiddle table",
+    "oscillatory per-channel write gates clamped to [0,1]",
+    "gated cycle-bank retention/consolidation toward a source bank",
+    "contradiction pair preserving support, oppose, conflict, and balance",
+    "16-candidate nonnegative attention/value mixing without forced top-1 selection"
+  ],
+  "phase_bind": "mth.trig.rotate.f32 is the native phase-bind primitive; bank-level binding is a caller composition of rotate, cycle predict, and cycle write, not a second geometry authority.",
+  "not_yet_native": [
+    "full Q/K/V attention projection",
+    "joint writer/decoder training",
+    "natural-language entity extraction",
+    "learned arbitrary-depth path competition",
+    "production optimizer and live deployment"
+  ],
+  "non_claims": [
+    "No rotation of NANNET0; point 0 is not a ring position.",
+    "No claim that oscillatory gates improve learning.",
+    "No truth collapse in the contradiction primitive; conflict/balance are not probabilities.",
+    "No top-1 forcing in the attention mix; weights are caller-supplied and unnormalized.",
+    "No full attention, transformer, or fluent LM.",
+    "No host trigonometry or host numerical substitution at runtime.",
+    "No CI, live deployment, or production claim from local fixtures."
+  ]
+}

@@ -31,7 +31,8 @@
         "mth.double_endian.",
         "mth.universe.",
         "mth.mirror.pair_map.",
-        "mth.mirror.slot_map."
+        "mth.mirror.slot_map.",
+        "mth.ring."
       ],
       "host_roles": [
         "allocate descriptor records",

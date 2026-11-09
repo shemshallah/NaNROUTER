@@ -99,6 +99,12 @@ jobs:
           --only trig_sincos \
           --only trig_rotate \
           --only mirror_cycle_train \
+          --only ring_angular_map \
+          --only trig_twiddle256 \
+          --only cycle_phase_gate \
+          --only cycle_retain \
+          --only cycle_contradiction \
+          --only attention_mix16 \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

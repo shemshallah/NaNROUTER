@@ -1986,6 +1986,93 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.ring.angular_map.u32",
+      "source": "mth/nan16/mth_ring_angular_map.nas",
+      "fixture": "mth/tests/mth_ring_angular_map_test.nas",
+      "marker": "MTH RING ANGULAR MAP PASS",
+      "steps": 4757984,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        255
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.trig.twiddle256.f32",
+      "source": "mth/nan16/mth_trig_twiddle256_f32.nas",
+      "fixture": "mth/tests/mth_trig_twiddle256_test.nas",
+      "marker": "MTH TRIG TWIDDLE256 PASS",
+      "steps": 40725,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.phase_gate16.f32",
+      "source": "mth/nan16/mth_mirror_cycle_phase_gate.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_phase_gate_test.nas",
+      "marker": "MTH CYCLE PHASE GATE PASS",
+      "steps": 13926,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.retain.f32",
+      "source": "mth/nan16/mth_mirror_cycle_retain.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_retain_test.nas",
+      "marker": "MTH CYCLE RETAIN PASS",
+      "steps": 104103,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.contradiction.f32",
+      "source": "mth/nan16/mth_mirror_cycle_contradiction.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_contradiction_test.nas",
+      "marker": "MTH CONTRADICTION PAIR PASS",
+      "steps": 785,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.attention.mix16.f32",
+      "source": "mth/nan16/mth_attention_mix16_f32.nas",
+      "fixture": "mth/tests/mth_attention_mix16_test.nas",
+      "marker": "MTH ATTENTION MIX16 PASS",
+      "steps": 34231,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
