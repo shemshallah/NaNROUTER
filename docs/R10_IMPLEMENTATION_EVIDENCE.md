@@ -143,8 +143,8 @@
 | 129 | Byte fallback argmax | `mth/tests/mth_byte_fallback_argmax_test.nas` | 69,144 | PASS | yes (42563161981) |
 | 130 | Exact 24-byte copy | `mth/tests/mth_byte_copy24_test.nas` | 15,808 | PASS | yes (42563161981) |
 | 131 | Copy-vs-generate gate | `mth/tests/mth_copy_gate_test.nas` | 2,823 | PASS | yes (42563161981) |
-| 132 | Definition slot I/O | `mth/tests/mth_definition_slot_io_test.nas` | 547,060 | PASS | local only |
-| 133 | Gauge triangle recover | `mth/tests/mth_gauge_triangle_recover_test.nas` | 9,665 | PASS | local only |
+| 132 | Definition slot I/O | `mth/tests/mth_definition_slot_io_test.nas` | 547,060 | PASS | yes (42563503457) |
+| 133 | Gauge triangle recover | `mth/tests/mth_gauge_triangle_recover_test.nas` | 9,665 | PASS | yes (42563503457) |
 
 ## Python tests
 
@@ -232,7 +232,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 133 kernels (131 `ci_verified`, 2 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **127 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 133 kernels (133 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **133 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

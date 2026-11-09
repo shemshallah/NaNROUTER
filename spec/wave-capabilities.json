@@ -1886,7 +1886,7 @@
         24
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.gauge.triangle_recover.f32",
@@ -1900,7 +1900,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }
