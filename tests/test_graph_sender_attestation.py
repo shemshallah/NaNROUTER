@@ -2,8 +2,12 @@
 import hashlib
 import unittest
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.exceptions import InvalidSignature
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.exceptions import InvalidSignature
+except ImportError:  # optional local dependency; CI installs cryptography
+    Ed25519PrivateKey = None
+    InvalidSignature = None
 
 from runner_riddle.graph_sender_attestation import (
     GraphSenderAttestationError, sign_graph_attestation, canonical,
@@ -11,6 +15,9 @@ from runner_riddle.graph_sender_attestation import (
 )
 
 
+@unittest.skipUnless(
+    Ed25519PrivateKey is not None, "cryptography package is not installed"
+)
 class AttestationTests(unittest.TestCase):
     def setUp(self):
         self.key = Ed25519PrivateKey.generate()

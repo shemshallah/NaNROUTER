@@ -24,7 +24,7 @@
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 93 runner fixture paths are registered; the full canonical runner passes 93/93 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
-- [x] 1217 Python tests pass (16 skipped).
+- [x] 1239 Python tests pass (26 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Newer native-promotion and Koyeb smoke workflows are present; the four 2026-11-08 kernels remain local-only pending CI.
 
 ## GAME PLAN `::` integration queue (P0–P13)
@@ -212,7 +212,7 @@ K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 (full 92-fixture sweep not rerun in this pass)
 
 python3 -m unittest discover -s tests -q
-Ran 1217 tests
+Ran 1239 tests
 OK (skipped=16)
 ```
 

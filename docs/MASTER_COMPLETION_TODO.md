@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-08
-**Baseline:** 1217 Python tests, 16 skipped, OK; 95 manifest kernels (91 `ci_verified`, 4 local-only); 93 canonical runner fixture paths and 92 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
+**Baseline:** 1239 Python tests, 26 skipped, OK; 95 manifest kernels (91 `ci_verified`, 4 local-only); 93 canonical runner fixture paths and 92 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.

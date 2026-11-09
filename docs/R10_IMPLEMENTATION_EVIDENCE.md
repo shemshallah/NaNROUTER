@@ -112,9 +112,14 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1217 tests in 340.821s
-OK (skipped=16)
+Ran 1239 tests in 227.981s
+OK (skipped=26)
 ```
+
+The 26 skips include the upstream Ed25519 attestation class because the optional
+`cryptography` package is not installed in this Termux environment; the
+canonical workflow installs it. The test module now skips cleanly rather than
+erroring when the optional package is absent.
 
 Covered:
 

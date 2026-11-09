@@ -181,8 +181,12 @@ The generated catalog explicitly records:
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
 | Unified catalog | 95 kernels, 91 CI-verified, 4 local-only, 93 sources, 92 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
-| Local Python tests | 1,217 tests, 16 skipped, OK |
+| Local Python tests | 1,239 tests, 26 skipped, OK |
 | Canonical native runner | 93/93 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+
+The 26 local skips include the upstream Ed25519 attestation class because the
+optional `cryptography` package is absent in Termux; the canonical workflow
+installs it and runs those tests.
 
 ## 8. Non-claims
 
