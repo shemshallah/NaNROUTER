@@ -161,6 +161,93 @@ class HeadObservationJournalTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM hermes_head_observation"
             ).fetchone()[0], 1)
 
+    def test_replaced_physical_dispatch_db_cannot_run_guest_again(self):
+        """Same pathname, new valid SQLite inode must not reset tombstones."""
+        home = self.path.parent / "native-physical.sqlite"
+        parked = self.path.parent / "native-original.sqlite"
+        journal = HermesHeadObservationJournal(
+            home, lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.journal.chart_fence_reader,
+        )
+        guest = self.guest()
+        result = journal.execute(
+            request=self.request, lease_receipt=self.lease,
+            network_head=0, raw_bank=self.raw, native_guest=guest,
+        )
+        self.assertFalse(result["replayed_from_journal"])
+        self.assertEqual(self.calls, 1)
+        home.rename(parked)
+        with sqlite3.connect(home) as foreign:
+            foreign.execute("CREATE TABLE foreign_journal (id INTEGER)")
+        with self.assertRaisesRegex(HermesHeadObservationError, "identity changed"):
+            journal.execute(
+                request=self.request, lease_receipt=self.lease,
+                network_head=0, raw_bank=self.raw, native_guest=guest,
+            )
+        with self.assertRaisesRegex(HermesHeadObservationError, "identity changed"):
+            journal.inspect(
+                request=self.request, lease_receipt=self.lease,
+                network_head=0,
+            )
+        self.assertEqual(self.calls, 1)
+        with sqlite3.connect(parked) as original:
+            self.assertEqual(original.execute(
+                "SELECT COUNT(*) FROM hermes_head_observation"
+            ).fetchone()[0], 1)
+        with sqlite3.connect(home) as foreign:
+            self.assertEqual(foreign.execute(
+                "SELECT COUNT(*) FROM foreign_journal"
+            ).fetchone()[0], 0)
+
+    def test_replaced_dispatch_db_with_symlink_denied_not_migrated(self):
+        home = self.path.parent / "journal-symlink-replace.sqlite"
+        journal = HermesHeadObservationJournal(
+            home, lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.journal.chart_fence_reader,
+        )
+        parked = self.path.parent / "journal-previous.sqlite"
+        foreign = self.path.parent / "journal-foreign.sqlite"
+        with sqlite3.connect(foreign) as db:
+            db.execute("CREATE TABLE foreign_marker (value INTEGER)")
+        home.rename(parked)
+        home.symlink_to(foreign)
+        with self.assertRaisesRegex(
+            HermesHeadObservationError, "not a regular file"
+        ):
+            with journal._db():
+                self.fail("replaced symlink reached SQLite journal")
+        self.assertEqual(parked.stat().st_ino, journal._database_inode[1])
+
+    def test_dispatch_db_inode_swap_during_sqlite_connect_fails_closed(self):
+        from unittest.mock import patch
+        import runner_riddle.hermes_head_observation as module
+        home = self.path.parent / "native-racing.sqlite"
+        journal = HermesHeadObservationJournal(
+            home, lease_registry=self.registry,
+            ring_epoch_reader=lambda: self.epoch,
+            chart_fence_reader=self.journal.chart_fence_reader,
+        )
+        parked = self.path.parent / "native-racing-original.sqlite"
+        connect_real = module.sqlite3.connect
+        swapped = [False]
+
+        def replacing_connect(*args, **kwargs):
+            if args and args[0] == str(home) and not swapped[0]:
+                swapped[0] = True
+                home.rename(parked)
+                with connect_real(str(home)) as foreign:
+                    foreign.execute("CREATE TABLE replacement (id INTEGER)")
+            return connect_real(*args, **kwargs)
+
+        with patch.object(module.sqlite3, "connect", side_effect=replacing_connect):
+            with self.assertRaisesRegex(HermesHeadObservationError, "identity changed"):
+                with journal._db():
+                    self.fail("swapped SQLite file was incorrectly accepted")
+        self.assertTrue(swapped[0])
+        self.assertEqual(parked.stat().st_ino, journal._database_inode[1])
+
     def test_journal_connections_close_and_enforce_full_sync(self):
         """Every read/write connection is FULL synchronous and closed."""
         with self.journal._db() as db:
