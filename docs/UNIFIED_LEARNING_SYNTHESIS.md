@@ -1,4 +1,4 @@
-# Unified learning synthesis — Rounds 023–039
+# Unified learning synthesis — Rounds 023–042
 
 **Status:** architecture synthesis and native integration ledger. It separates
 what is already implemented from what is still proposed. The external
@@ -30,6 +30,7 @@ conventional memory on natural prose.
 | 037 | Prose → typed writer → mirror → multi-hop → decoder | Entity boundaries supplied; controlled paraphrases |
 | 038 | 2,048-subword free sampling; memory-ablation effect | Superseded repeated-definition windowing |
 | 039 | Corrected paired audit; native gradient writes; gauge invariance | Dense control wins perplexity; malformed samples |
+| 042 | Joint writer → native two-lane memory → differentiable propagation → decoder; causal deletion; four-state dialogue | Conventional memory ties clean inputs; restricted vocabulary; language-only collapses to abstention |
 
 ## 3. The failure pattern
 
@@ -186,6 +187,9 @@ The first batch is now implemented and locally verified:
 | `mth.mirror.cycle.retain.f32` | implemented: gated bank consolidation |
 | candidate competition | implemented at the readout seam as `mth.attention.mix16.f32` |
 | `mth.mirror.cycle.contradiction.f32` | implemented: support/oppose/conflict/balance without collapse |
+| `mth.mirror.evidence.cycle_state.f32` | implemented: two-lane support/refute → unknown/support/refute/both |
+| `mth.vector.logsoftmax256.f32` | implemented: stable native log-softmax |
+| `mth.lm.cross_entropy256.f32` | implemented: native 256-way language loss |
 | `mth.ring.angular_map.u32` | implemented: 255 real lanes, NANNET0 fixed at 255 |
 | `mth.attention.project.f32` | not implemented: full Q/K/V projection remains open |
 | `mth.mirror.cycle.contradiction` phase closure | not implemented: numeric conflict pair exists; loop phase closure is still proposed |
@@ -194,6 +198,17 @@ The first batch is now implemented and locally verified:
 The next honest engineering gate is full native Q/K/V projection with a fixed
 model contract, followed by a matched geometric-versus-conventional training
 comparison. The new primitives are ingredients, not a fluent model.
+
+## 9b. Round 042 addendum
+
+Round 042 removes the supplied proof-status token and trains the writer,
+native two-lane memory, differentiable propagation, and response decoder
+jointly. It adds independent support and refutation lanes, causal physical
+deletion/restoration, and a four-state speaker. The conventional signed
+adjacency ties clean-input accuracy. Language-token loss alone collapses to
+abstention (90/180), while joint supervision succeeds. The native additions
+here are log-softmax, 256-way cross-entropy, and two-lane evidence state
+classification; full open-domain fluency remains unproven.
 
 ## 10. Guardrails
 
