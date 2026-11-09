@@ -195,6 +195,8 @@ The first batch is now implemented and locally verified:
 | `mth.byte.memory_mix256.f32` | implemented: base/memory probability interpolation |
 | `mth.attention.project16.f32` | implemented: one affine 16→16 Q/K/V-style projection; full attention block still open |
 | `mth.attention.head16.f32` | implemented: one 16-key score/softmax/value-mix head; multi-head block still open |
+| `mth.attention.mask16.f32` | implemented: 16-position boolean score mask with empty-mask rejection |
+| `mth.memory.condition16.f32` | implemented: gated residual `h + gate*m` memory injection |
 | `mth.mirror.pair.knockout.f32` | implemented: metadata-local causal pair deletion/restoration |
 | `mth.ring.angular_map.u32` | implemented: 255 real lanes, NANNET0 fixed at 255 |
 | `mth.attention.project.f32` | not implemented: full Q/K/V projection remains open |
