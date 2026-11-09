@@ -1,0 +1,77 @@
+{
+  "schema": "nanrouter.round033-generative-retrieval.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiment",
+  "source_archive": {
+    "name": "nan_recursive_round033.zip",
+    "sha256": "3462d986769cf7f8182af00b104eb00300b86342e83841cc66999b2818b3d543"
+  },
+  "episodic_copy": {
+    "task": "unseen WordNet lemma identity with two corrupted characters; emit first 24 bytes of stored gloss",
+    "identities_per_split": 3500,
+    "candidates_per_episode": 12,
+    "answer_bytes": 24,
+    "seeds": [17, 29, 41],
+    "episodes_per_seed": 300,
+    "correct_by_seed": [300, 296, 290],
+    "total_correct": 886,
+    "total_episodes": 900,
+    "exact_copy_fraction": 0.9844444444444445,
+    "interpretation": "exact retrieval-and-copy of stored text, not independent generation"
+  },
+  "native_root_episodic": {
+    "root_bytes": 8388608,
+    "episodes": 120,
+    "records_per_episode": 12,
+    "bytes_per_record": 24,
+    "key_found": 118,
+    "native_exact_clean": 118,
+    "native_exact_after_gauge": 118,
+    "conventional_copy_exact": 118,
+    "gauge_shift_std": 8.0,
+    "raw_bytes_correct_after_gauge": 94,
+    "total_bytes": 2880,
+    "raw_byte_accuracy_after_gauge": 0.03263888888888889,
+    "interpretation": "gauge-invariant triangle transport preserves the selected 24-byte record; conventional indexed copy has identical selection accuracy"
+  },
+  "free_form_lm": {
+    "updates": 180,
+    "trainable_memory_coefficients": 24,
+    "parameters": 43648,
+    "seeds": [17, 29],
+    "bits_per_byte": {
+      "plain_17": 3.6707045824532676,
+      "cycle_17": 3.6707721997355347,
+      "plain_29": 3.6788053601226918,
+      "cycle_29": 3.678806995220121
+    },
+    "mean_plain_bpb": 3.6747549712879797,
+    "mean_cycle_bpb": 3.674789597477828,
+    "difference": "effectively tied",
+    "samples_coherent": false
+  },
+  "non_claims": [
+    "This is not a fluent language model; free-form samples remain incoherent.",
+    "The episodic decoder hard-copies an already stored 24-byte answer; it does not synthesize unseen prose.",
+    "A conventional indexed copy system obtains identical 118/120 selection accuracy.",
+    "The cycle geometry has no demonstrated predictive gain in the matched byte-LM comparison.",
+    "The native episodic experiment is C++ over ordinary RAM, not NaN16 native execution or quantum hardware.",
+    "The episode root is re-instantiated per test; allocation costs are excluded from inference claims.",
+    "The gauge shift is a controlled classical reference-frame change, not a general robustness proof.",
+    "No canonical merge or live deployment is claimed."
+  ],
+  "integration": {
+    "production_authority": false,
+    "host_retrieval_adapter": "runner_riddle/mirror_retrieval_index.py",
+    "physical_layout": "spec/mirror-memory.v1.json",
+    "native_primitives_required": [
+      "mth.byte.copy24",
+      "mth.definition.slot_io",
+      "mth.gauge.triangle_recover",
+      "mth.copy_gate",
+      "mth.retrieval.top1",
+      "mth.byte.fallback_argmax"
+    ],
+    "next_gate": "jointly train a copy gate with the byte LM and compare against matched attention memory on held-out bits-per-byte, exact facts, latency, and memory"
+  }
+}
