@@ -1914,7 +1914,7 @@
         32385
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.relation.writer_class.u32",
@@ -1928,7 +1928,7 @@
         4
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }

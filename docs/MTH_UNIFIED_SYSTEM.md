@@ -115,6 +115,13 @@ copy-or-abstain reaches 99% accept/abstain but degrades under untrained
 entity slots, with contradiction and four-hop stress failures. None is a
 fluent language-model or unique NaN-geometry claim.
 
+Round 037 is recorded in `docs/ROUND_037_PROSE_MEMORY.md`: the writer learns
+four typed relation classes from controlled paraphrases, the native 8 MiB root
+stores the evidence, and matched 2/3-hop queries remain exact after gauge
+changes. The native additions are the 32,385 lexical slot map and the writer
+class codec. It is still a controlled pipeline, not unrestricted prose
+understanding or a unique geometry advantage.
+
 ## 4. Native kernel
 
 `mth/nan16/mth_universe_map.nas` implements the address law in NaN16:
