@@ -107,11 +107,11 @@ The second strongest rule is:
 
 At the time of writing the checked-in `main` contains:
 
-- **95 manifest kernels** with fixtures: 95 `ci_verified` and no local-only entries; 93 canonical runner fixture paths and 92 unique manifest fixtures;
+- **96 manifest kernels** with fixtures: 96 `ci_verified` and no local-only entries; 94 canonical runner fixture paths and 93 unique manifest fixtures;
 - **93 locally runnable runner fixtures**, including the K256 pair fixture, the normalize/prefix-sum/PRNG fixtures, and the full 8 MiB universe-map fixture;
-- static NaN-native boundary audit green over 93 registered MTH sources plus three explicitly excluded HERMES guests;
+- static NaN-native boundary audit green over 94 registered MTH sources plus three explicitly excluded HERMES guests;
 - **full 8 MiB guest address map** over 256 pages, 1,048,576 words, 256 fixed heads, 32,640 mirror pairs, and 32,896 relation points (`runner_riddle/universe_map.py`, `spec/universe-map.json`, native `mth.universe.map.u32`);
-- **unified cross-repo MTH catalog** binding the 95-kernel manifest to NaN0S, HERMES, Android, NaNLMind, NaNLM, and CLOCKED provider contracts (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`);
+- **unified cross-repo MTH catalog** binding the 96-kernel manifest to NaN0S, HERMES, Android, NaNLMind, NaNLM, and CLOCKED provider contracts (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`);
 - **2 MiB adjustable workspace budget** (`runner_riddle/budget.py`; 262,144 words), with 1 MiB and 512 KiB compatibility profiles. The workspace budget is separate from the 8 MiB guest address space and is not a page-size limit;
 - `MthRegistry`/`MthPlan`, `MthSystem`, `WaveStore`, `WaveService`, `WaveRingScheduler`, point-0 bridge/router, point-0 HTTP, tile orchestrator, file-backed pair pages, page-backed pair executor, live preflight, LM ablation harness, R7 harness, and JAHS handoff seal.
 

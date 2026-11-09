@@ -220,7 +220,8 @@
   "ci_workflows": [
     ".github/workflows/mth-native-contract.yml",
     ".github/workflows/mth-remaining-fixtures.yml",
-    ".github/workflows/mth-native-addsub-dispatch.yml"
+    ".github/workflows/mth-native-addsub-dispatch.yml",
+    ".github/workflows/native-graph-claim-probe.yml"
   ],
   "excluded_native_sources": {
     "mth/nan16/hermes_lease.nas": "HERMES lease guest, not an MTH mathematical kernel",

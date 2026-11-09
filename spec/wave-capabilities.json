@@ -1,7 +1,7 @@
 {
   "schema": "nanrouter.wave-capabilities.v1",
   "generated_by": "manual R10 promotion ledger",
-  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 95 current entries are CI-verified in canonical NaNROUTER workflow runs; local execution is tracked separately.",
+  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 96 current entries are CI-verified in canonical NaNROUTER workflow runs; local execution is tracked separately.",
   "kernels": [
     {
       "kernel_id": "mth.k256.laplacian.u16",
@@ -1363,6 +1363,21 @@
       "shape": [
         32896,
         10
+      ],
+      "status": "native_verified",
+      "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.graph.claim_probe.u32",
+      "source": "mth/nan16/mth_graph_claim_probe.nas",
+      "fixture": "mth/tests/mth_graph_claim_probe_test.nas",
+      "marker": "MTH GRAPH CLAIM PROBE PASS",
+      "steps": 1605,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        1024,
+        4
       ],
       "status": "native_verified",
       "ci_verified": true
