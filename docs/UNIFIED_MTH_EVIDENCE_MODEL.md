@@ -12,11 +12,11 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 
 | Item | Count |
 |---|---:|
-| Catalogued MTH kernels in `spec/wave-capabilities.json` | 127 |
-| Kernels with `ci_verified=true` in the manifest | 127 |
-| Unique native sources | 125 |
-| Unique manifest fixture files | 93 |
-| Fixture entries in the canonical runner | 125 |
+| Catalogued MTH kernels in `spec/wave-capabilities.json` | 139 |
+| Kernels with `ci_verified=true` in the manifest | 135 |
+| Unique native sources | 137 |
+| Unique manifest fixture files | 135 |
+| Fixture entries in the canonical runner | 136 |
 | Native-dispatch ABI kernels | 5 |
 | Local Python tests | 1,424+ |
 | Universe pages / NaN16 words / relation points | 256 / 1,048,576 / 32,896 |
@@ -223,12 +223,12 @@ At baseline commit `12980a3`:
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **127/127 `ci_verified=true`**. That is a ledger field,
+- The manifest declares **135/139 `ci_verified=true`**, with 4 newly integrated local-only kernels awaiting promotion. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,424+ local Python tests** (baseline record:
   `Ran 1424 tests`, `OK (skipped=30)`).
 - The full universe-map fixture passes locally in **12,916,386 guest steps**;
-  it is one fixture, not all 135 kernels.
+  it is one fixture, not all 139 kernels.
 
 The excluded `mth/nan16/mth_graph_path_witness.nas` is a separate candidate
 witness with its own gate and is not an authorized numerical MTH kernel. The
@@ -277,9 +277,9 @@ counts may be retained only as historical evidence.
   assertions and PASS marker passed.
 - “Local PASS is CI-verified.”
 - “Local PASS means the service is live.”
-- “125 runner fixtures means 127 kernels were executed.” The counts measure
+- “136 runner fixtures means 139 kernels were executed.” The counts measure
   different things and one fixture can serve multiple kernel entries.
-- “All 127 kernels ran in every local invocation.”
+- “All 139 kernels ran in every local invocation.”
 - “An untracked kernel is catalogued.”
 - “A route or address mapping proves a mathematical relation.”
 - “The runner independently verifies numerical results.” The runner checks a
@@ -332,7 +332,7 @@ not evidence.
 | `.github/workflows/manifest-contract.yml` | Full Python test discovery and manifest contract checks |
 | `.github/workflows/koyeb-container-smoke.yml` | Credential-free container build and `/healthz` contract; no Koyeb credentials and no live deployment |
 
-Therefore, one green workflow does not imply all 135 kernels, all 125 runner
+Therefore, one green workflow does not imply all 139 kernels, all 136 runner
 fixtures, or a live service.
 
 ### 4.4 Baseline CI records
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 127/127 `ci_verified` declaration in the manifest is supported by these
+The 135/139 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules

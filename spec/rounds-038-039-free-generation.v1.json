@@ -1,0 +1,143 @@
+{
+  "schema": "nanrouter.rounds-038-039-free-generation.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiment",
+  "source_archive": {
+    "name": "nan_recursive_round039.zip",
+    "sha256": "392cd775605fe829787ccee0354ad7c2fda4f6798b5d22948a03d5ad36f43f87",
+    "contains_round_038_sources": true,
+    "round_038_standalone_archive_present": false
+  },
+  "task": "unrestricted subword autoregressive WordNet-definition generation with a native 8 MiB cycle-memory adapter",
+  "corpus": {
+    "source": "WordNet 3.1 definitions",
+    "documents": {
+      "train": 25000,
+      "validation": 1500,
+      "test": 1500
+    },
+    "bpe_vocabulary": 2048,
+    "bpe_trained_on": "training split only",
+    "evaluation_documents_first": 300,
+    "evaluation_next_token_targets": 7863,
+    "stream_tokens": 627364,
+    "boundary_tokens": "BOS/EOS between complete definitions",
+    "test_metrics_use_complete_held_out_definitions": true
+  },
+  "architecture": {
+    "hidden_channels": 96,
+    "heads": 2048,
+    "adapter_shape": [
+      16,
+      16
+    ],
+    "adapter_coefficients": 256,
+    "parameters": 463984,
+    "native_adapter": "each coefficient is a directed three-edge triangle circulation in the native 8,388,608-byte root; gradients update pair lanes",
+    "control_adapter": "same 16x16 degrees of freedom as an ordinary dense PyTorch tensor",
+    "native_optimizer": "plain gradient step, lr=0.02",
+    "control_optimizer": "AdamW, lr=0.002",
+    "optimizers_strictly_matched": false
+  },
+  "round_038": {
+    "updates": 1200,
+    "held_out_tokens": 3511,
+    "models": {
+      "conventional_recurrent": {
+        "perplexity": 183.3,
+        "next_token_accuracy": 0.1418
+      },
+      "native_mirror_cycle": {
+        "perplexity": 186.8,
+        "next_token_accuracy": 0.1481
+      }
+    },
+    "native_without_learned_cycle_readout": {
+      "perplexity": 262.2
+    },
+    "gauge_predictions_effectively_unchanged": true,
+    "caveat": "superseded: preliminary windowing protocol; later corrected as repeated short-definition windowing"
+  },
+  "round_039": {
+    "updates": 240,
+    "batch": 8,
+    "context": 32,
+    "validation_steps": [
+      1,
+      120,
+      240
+    ],
+    "seeds": [
+      17,
+      29
+    ],
+    "full_test_tokens": 7863,
+    "variants": {
+      "plain_17": {
+        "full_perplexity": 251.84526741927124,
+        "no_memory_perplexity": 263.6533068633006,
+        "shuffled_memory_perplexity": 272.506385047593,
+        "full_next_token_accuracy": 0.12997583619483657
+      },
+      "native_17": {
+        "full_perplexity": 255.61256349895953,
+        "no_memory_perplexity": 259.7906733783739,
+        "shuffled_memory_perplexity": 260.7845603777275,
+        "full_next_token_accuracy": 0.12972148035101105,
+        "gauge_max_abs": 1.126900315284729e-06
+      },
+      "plain_29": {
+        "full_perplexity": 257.54578402571667,
+        "no_memory_perplexity": 270.89993941362536,
+        "shuffled_memory_perplexity": 276.71105125089684,
+        "full_next_token_accuracy": 0.12603332061554115
+      },
+      "native_29": {
+        "full_perplexity": 261.8060297735463,
+        "no_memory_perplexity": 266.7474153379726,
+        "shuffled_memory_perplexity": 264.8972153927167,
+        "full_next_token_accuracy": 0.12577896477171563,
+        "gauge_max_abs": 1.0980293154716492e-06
+      }
+    },
+    "dense_control_better_perplexity_by": [
+      3.767296079687683,
+      4.260245251829636
+    ],
+    "all_models_degrade_without_memory_or_with_shuffled_memory": true,
+    "native_gauge_round_trip": true,
+    "native_top1_delta_vs_plain": {
+      "seed_17": -0.00025435584382552,
+      "seed_29": -0.00025435584382552
+    }
+  },
+  "generation_samples": {
+    "status": "malformed and not reliably grammatical",
+    "examples_retained_in_archive": true,
+    "no_template_or_stored_definition_copy": true
+  },
+  "native_integration": {
+    "production_authority": false,
+    "native_primitives": [
+      "mth.trig.sincos.f32",
+      "mth.mirror.cycle.train_step.f32",
+      "mth.mirror.cycle.predict16.f32"
+    ],
+    "synthesis": [
+      "content-dependent gated delta-rule write into the physical 8 MiB mirror",
+      "native cycle readout with one mirror triangle per coefficient",
+      "phase and positional trigonometric primitive for future oscillatory/phase-coded memory",
+      "gauge-invariant transport retained from Rounds 023-033"
+    ]
+  },
+  "non_claims": [
+    "The native cycle model did not beat the dense control on test perplexity in either corrected seed.",
+    "Single-token top-1 differences are not a language-model advantage.",
+    "The optimizers were not strictly matched: plain gradient versus AdamW.",
+    "The generator is not fluent and not a general factual reasoner.",
+    "Gauge invariance is a mathematical transport property, not evidence of better language learning.",
+    "The native C++ experiment is not NaN16 production execution.",
+    "Round 038 results came from a superseded windowing protocol.",
+    "No live deployment or canonical model checkpoint is claimed."
+  ]
+}

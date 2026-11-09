@@ -1929,6 +1929,63 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.trig.sincos.f32",
+      "source": "mth/nan16/mth_trig_sincos_f32.nas",
+      "fixture": "mth/tests/mth_trig_sincos_test.nas",
+      "marker": "MTH TRIG SINCOS PASS",
+      "steps": 2020,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.trig.rotate.f32",
+      "source": "mth/nan16/mth_trig_rotate_f32.nas",
+      "fixture": "mth/tests/mth_trig_rotate_test.nas",
+      "marker": "MTH TRIG ROTATE PASS",
+      "steps": 1246,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.train_step.f32",
+      "source": "mth/nan16/mth_mirror_cycle_train_step_f32.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_train_test.nas",
+      "marker": "MTH MIRROR CYCLE TRAIN PASS",
+      "steps": 305596,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16,
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.mirror.cycle.predict16.f32",
+      "source": "mth/nan16/mth_mirror_cycle_predict16_f32.nas",
+      "fixture": "mth/tests/mth_mirror_cycle_train_test.nas",
+      "marker": "MTH MIRROR CYCLE TRAIN PASS",
+      "steps": 305596,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

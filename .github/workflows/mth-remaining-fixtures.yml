@@ -96,6 +96,9 @@ jobs:
           --only gauge_triangle_recover \
           --only mirror_slot_map \
           --only relation_writer_class \
+          --only trig_sincos \
+          --only trig_rotate \
+          --only mirror_cycle_train \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

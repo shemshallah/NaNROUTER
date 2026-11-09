@@ -122,6 +122,24 @@ changes. The native additions are the 32,385 lexical slot map and the writer
 class codec. It is still a controlled pipeline, not unrestricted prose
 understanding or a unique geometry advantage.
 
+Rounds 038–039 are recorded in `docs/ROUNDS_038_039_FREE_GENERATION.md`:
+the model samples a learned 2,048-subword vocabulary with about 464k
+parameters and a native 16×16 triangle-circulation adapter. In the corrected
+two-seed comparison the dense control wins test perplexity (251.845 vs 255.613
+and 257.546 vs 261.806). All models degrade without memory or with shuffled
+memory, and the native gauge round-trip stays below 1.13e-6. This is a real
+unrestricted generator prototype, not fluency or a geometry advantage.
+
+The integration adds `mth.mirror.cycle.train_step.f32` (content-gated
+delta-rule write with mirrored lanes and SSE readout),
+`mth.mirror.cycle.predict16.f32` (native CycleRead), and the native
+trigonometric layer `mth.trig.sincos.f32` / `mth.trig.rotate.f32`. The trig
+design space, including phase-coded memory, RoPE-style rotations, native
+twiddles, and oscillatory gates, is documented in
+`docs/TRIG_NATIVE_SYNTHESIS.md`. The next fair test must give the conventional
+baseline the same episode memory and evidence before claiming a geometric
+learning advantage.
+
 ## 4. Native kernel
 
 `mth/nan16/mth_universe_map.nas` implements the address law in NaN16:
@@ -239,10 +257,10 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 131 kernels, 127 CI-verified, 4 local-only, 129 sources, 128 fixtures |
+| Unified catalog | 139 kernels, 135 CI-verified, 4 local-only, 137 sources, 135 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,424 tests, 30 skipped, OK |
-| Canonical native runner | 110/110 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+| Canonical native runner | 136/136 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
 | Unified audit workflow | green in run `42542831186` |
 
 The 29 local skips include the upstream Ed25519 attestation class because the

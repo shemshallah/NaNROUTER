@@ -19,15 +19,15 @@ class NanNativeAuditTests(unittest.TestCase):
     def test_audit_is_green_and_covers_registered_native_sources(self):
         report = audit()
         self.assertEqual(report["status"], "green", report["errors"])
-        self.assertEqual(report["kernel_count"], 135)
-        self.assertEqual(report["native_source_count"], 133)
-        self.assertEqual(report["unique_fixture_count"], 132)
-        self.assertEqual(report["runner_fixture_count"], 133)
-        self.assertEqual(sum(report["layer_counts"].values()), 135)
+        self.assertEqual(report["kernel_count"], 139)
+        self.assertEqual(report["native_source_count"], 137)
+        self.assertEqual(report["unique_fixture_count"], 135)
+        self.assertEqual(report["runner_fixture_count"], 136)
+        self.assertEqual(sum(report["layer_counts"].values()), 139)
         self.assertEqual(report["layer_counts"]["L1"], 5)
         self.assertEqual(report["layer_counts"]["L2"], 7)
         self.assertEqual(report["layer_counts"]["L3"], 41)
-        self.assertEqual(report["layer_counts"]["L4"], 65)
+        self.assertEqual(report["layer_counts"]["L4"], 69)
         self.assertEqual(report["layer_counts"]["L5"], 11)
 
     def test_graph_claim_probe_is_catalogued_but_separately_gated(self):

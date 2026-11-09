@@ -161,7 +161,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
 - [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 95-entry canonical set; the four 2026-11-08 additions are CI-verified in run `42539617226`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All MTH sources are registered in the 131-entry manifest (127 `ci_verified`, 4 local-only); 133 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
+- [x] `B-04` All MTH sources are registered in the 139-entry manifest (135 `ci_verified`, 4 local-only); 136 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
@@ -170,7 +170,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-10` Pair codec regressions: byte/face/payload/inverse/missing-member/corruption.
 - [ ] `B-11` Resolve `mth_negate256_f32` registration so `DEEP_PLAN_CONT` ring-wave plan resolves.
 - [x] `B-12` Full 8 MiB guest map over 256 pages and 1,048,576 words; 256 fixed heads, 32,640 mirror pairs, 32,896 canonical relation points; NANNET0 aliases `head 0 = page 255 = ring 255 = HW0:0`. Host map is exhaustive; native `mth.universe.map.u32` passed locally (12,916,386 steps) and in canonical CI run `42539617226`. `spec/universe-map.json` records all page descriptors.
-- [x] `B-13` Unified cross-repo MTH catalog and provider drift audit (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`). It binds 127 kernels to NaN0S execution, HERMES/Android contracts, and the control plane, with worktree-first and fetched `origin/main` fallback. It never fetches or modifies sibling worktrees and never claims CI or a live deployment. The focused audit workflow is green in run `42542831186`.
+- [x] `B-13` Unified cross-repo MTH catalog and provider drift audit (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`). It binds 139 kernels to NaN0S execution, HERMES/Android contracts, and the control plane, with worktree-first and fetched `origin/main` fallback. It never fetches or modifies sibling worktrees and never claims CI or a live deployment. The focused audit workflow is green in run `42542831186`.
 
 ## B2. Tier 2–3 numeric/array operations
 
