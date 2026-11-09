@@ -101,7 +101,12 @@ experiment is recorded separately in `docs/ROUND_028_SEMANTIC_LEARNING.md`; it
 is not a native production kernel. Round 032’s sparse retrieval experiment is
 recorded in `docs/ROUND_032_RETRIEVAL.md`; its conventional hash index is
 faster, so the mirror geometry remains a directional/cycle state substrate,
-not a universal lookup replacement.
+not a universal lookup replacement. Round 033’s episodic copy result is recorded in
+`docs/ROUND_033_GENERATIVE_RETRIEVAL.md`: exact retrieval-and-copy reaches
+886/900 held-out episodes, while matched free-form byte LMs remain tied at
+about 3.6748 bits/byte and incoherent. The geometry is therefore being used as
+gauge-invariant episodic transport, not as a proven replacement for the
+generative decoder.
 
 ## 4. Native kernel
 
@@ -220,7 +225,7 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 127 kernels, 127 CI-verified, 0 local-only, 125 sources, 124 fixtures |
+| Unified catalog | 131 kernels, 127 CI-verified, 4 local-only, 129 sources, 128 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,282 tests, 29 skipped, OK |
 | Canonical native runner | 110/110 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |

@@ -88,6 +88,10 @@ jobs:
           --only hyperedge_path_score \
           --only mirror_hodge_projection \
           --only mirror_pair_lane_io \
+          --only retrieval_top1 \
+          --only byte_fallback_argmax \
+          --only byte_copy24 \
+          --only copy_gate \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

@@ -1817,6 +1817,62 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.retrieval.top1.f32",
+      "source": "mth/nan16/mth_retrieval_top1.nas",
+      "fixture": "mth/tests/mth_retrieval_top1_test.nas",
+      "marker": "MTH RETRIEVAL TOP1 PASS",
+      "steps": 4114,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        12
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.byte.fallback_argmax.f32",
+      "source": "mth/nan16/mth_byte_fallback_argmax.nas",
+      "fixture": "mth/tests/mth_byte_fallback_argmax_test.nas",
+      "marker": "MTH BYTE FALLBACK ARGMAX PASS",
+      "steps": 69144,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.byte.copy24.u32",
+      "source": "mth/nan16/mth_byte_copy24.nas",
+      "fixture": "mth/tests/mth_byte_copy24_test.nas",
+      "marker": "MTH BYTE COPY24 PASS",
+      "steps": 14630,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        24
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.copy_gate.f32",
+      "source": "mth/nan16/mth_copy_gate.nas",
+      "fixture": "mth/tests/mth_copy_gate_test.nas",
+      "marker": "MTH COPY GATE PASS",
+      "steps": 2823,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

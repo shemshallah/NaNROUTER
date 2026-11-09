@@ -139,6 +139,10 @@
 | 125 | Hyperedge path score | `mth/tests/mth_hyperedge_path_score_test.nas` | 9,632 | PASS | yes (42558900053) |
 | 126 | Mirror Hodge projection | `mth/tests/mth_mirror_hodge_projection_test.nas` | 20,130,891 | PASS | yes (42558900053) |
 | 127 | Mirror pair lane I/O | `mth/tests/mth_mirror_pair_lane_io_test.nas` | 509,737 | PASS | yes (42558900053) |
+| 128 | Retrieval top-1 over 12 candidates | `mth/tests/mth_retrieval_top1_test.nas` | 4,114 | PASS | local only |
+| 129 | Byte fallback argmax | `mth/tests/mth_byte_fallback_argmax_test.nas` | 69,144 | PASS | local only |
+| 130 | Exact 24-byte copy | `mth/tests/mth_byte_copy24_test.nas` | 14,630 | PASS | local only |
+| 131 | Copy-vs-generate gate | `mth/tests/mth_copy_gate_test.nas` | 2,823 | PASS | local only |
 
 ## Python tests
 
@@ -226,7 +230,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 127 kernels (127 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **127 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 131 kernels (127 `ci_verified`, 4 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **127 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
@@ -260,5 +264,6 @@ Run it after any kernel change.
 - Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are CI-verified in run `42539617226`; Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
 - The unified catalog is a cross-repo source/contract audit, not proof that every provider is deployed, reachable, or executing the same build. It deliberately leaves CI and live claims false.
 - Round 032 retrieval evidence is external C++: 50,268 facts, 250,000/250,000 exact lookups, 2,000/2,000 stored two-hop queries, and 1.01167 cycle invariance. The conventional hash index is ~4.3× faster (2.29752 ms vs 9.77183 ms); this is not decoder or generalization evidence. See `docs/ROUND_032_RETRIEVAL.md`.
+- Round 033 episodic evidence is external C++/PyTorch: 886/900 exact 24-byte copies across three seeds, 118/120 native gauge-invariant exact copies, 94/2880 raw-byte recovery, and a tied free-form LM (3.67475 vs 3.67479 bits/byte). It is retrieval/copy evidence, not novel generation or a cycle-geometry LM advantage. See `docs/ROUND_033_GENERATIVE_RETRIEVAL.md`.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

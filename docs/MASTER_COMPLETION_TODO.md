@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-08
-**Baseline:** 1248 Python tests, 29 skipped, OK; 127 manifest kernels (127 `ci_verified`, no local-only); 125 canonical runner fixture paths and 124 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
+**Baseline:** 1248 Python tests, 29 skipped, OK; 131 manifest kernels (127 `ci_verified`, 4 local-only); 129 canonical runner fixture paths and 128 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -161,7 +161,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
 - [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 95-entry canonical set; the four 2026-11-08 additions are CI-verified in run `42539617226`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All MTH sources are registered in the 127-entry manifest (127 `ci_verified`); 125 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
+- [x] `B-04` All MTH sources are registered in the 131-entry manifest (127 `ci_verified`, 4 local-only); 129 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
