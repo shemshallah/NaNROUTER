@@ -13,7 +13,7 @@ on:
       - '.github/workflows/hw4-frozen-reference.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   test_and_archive:
     runs-on: ubuntu-latest
@@ -63,3 +63,26 @@ jobs:
           path: /tmp/hw4-reference-wordnet31.tar.gz
           if-no-files-found: error
           retention-days: 30
+      - name: Publish persistent, versioned WordNet reference release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/hw4-wordnet-durable-reference-20261109'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="hw4-wordnet31-reference-g1"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; will not replace immutable reference asset"
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq .url
+          else
+            source_sha="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("/tmp/hw4-wordnet/frozen-reference/generation-00000001/manifest.json")
+          print(json.loads(p.read_text())["source_sha256"])
+          PY
+            )"
+            gh release create "$tag" /tmp/hw4-reference-wordnet31.tar.gz \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "HW4 Frozen WordNet 3.1 C(256,2) Reference — Generation 1" \
+              --notes "Immutable offline reference, NOT deployed NANNET HW4. Source data.noun SHA256: ${source_sha}. Archive contains 8 MiB matrix, exact SQLite overlay, SHA256 manifest, pointer and WordNet license." \
+              --target "$GITHUB_SHA" --latest=false
+          fi
