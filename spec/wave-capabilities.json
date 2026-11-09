@@ -2115,6 +2115,62 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.mirror.pair.knockout.f32",
+      "source": "mth/nan16/mth_mirror_pair_knockout.nas",
+      "fixture": "mth/tests/mth_mirror_pair_knockout_test.nas",
+      "marker": "MTH PAIR KNOCKOUT PASS",
+      "steps": 6617,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        52
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.attention.project16.f32",
+      "source": "mth/nan16/mth_attention_project16_f32.nas",
+      "fixture": "mth/tests/mth_attention_project16_test.nas",
+      "marker": "MTH ATTENTION PROJECT16 PASS",
+      "steps": 45779,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.byte.assoc3_reserve.u32",
+      "source": "mth/nan16/mth_byte_assoc3_reserve.nas",
+      "fixture": "mth/tests/mth_byte_assoc3_reserve_test.nas",
+      "marker": "MTH ASSOC3 RESERVE PASS",
+      "steps": 870499,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        128
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.byte.memory_mix256.f32",
+      "source": "mth/nan16/mth_byte_memory_mix256_f32.nas",
+      "fixture": "mth/tests/mth_byte_memory_mix256_test.nas",
+      "marker": "MTH BYTE MEMORY MIX PASS",
+      "steps": 52100,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

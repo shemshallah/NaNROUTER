@@ -172,6 +172,10 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("logsoftmax256", "mth/tests/mth_vector_logsoftmax256_f32_test.nas", 2_000_000, "MTH LOGSOFTMAX256 PASS", "native_verified"),
     Fixture("cross_entropy256", "mth/tests/mth_lm_cross_entropy256_f32_test.nas", 2_000_000, "MTH CROSS ENTROPY256 PASS", "native_verified"),
     Fixture("evidence_cycle_state", "mth/tests/mth_mirror_evidence_cycle_state_test.nas", 100_000, "MTH EVIDENCE CYCLE STATE PASS", "native_verified"),
+    Fixture("pair_knockout", "mth/tests/mth_mirror_pair_knockout_test.nas", 100_000, "MTH PAIR KNOCKOUT PASS", "native_verified"),
+    Fixture("attention_project16", "mth/tests/mth_attention_project16_test.nas", 1_000_000, "MTH ATTENTION PROJECT16 PASS", "native_verified"),
+    Fixture("assoc3_reserve", "mth/tests/mth_byte_assoc3_reserve_test.nas", 2_000_000, "MTH ASSOC3 RESERVE PASS", "native_verified"),
+    Fixture("byte_memory_mix", "mth/tests/mth_byte_memory_mix256_test.nas", 1_000_000, "MTH BYTE MEMORY MIX PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical

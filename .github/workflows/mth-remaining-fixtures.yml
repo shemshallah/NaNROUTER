@@ -108,6 +108,10 @@ jobs:
           --only logsoftmax256 \
           --only cross_entropy256 \
           --only evidence_cycle_state \
+          --only pair_knockout \
+          --only attention_project16 \
+          --only assoc3_reserve \
+          --only byte_memory_mix \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \
