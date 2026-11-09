@@ -19,15 +19,15 @@ class NanNativeAuditTests(unittest.TestCase):
     def test_audit_is_green_and_covers_registered_native_sources(self):
         report = audit()
         self.assertEqual(report["status"], "green", report["errors"])
-        self.assertEqual(report["kernel_count"], 96)
-        self.assertEqual(report["native_source_count"], 94)
-        self.assertEqual(report["unique_fixture_count"], 93)
-        self.assertEqual(report["runner_fixture_count"], 94)
-        self.assertEqual(sum(report["layer_counts"].values()), 96)
+        self.assertEqual(report["kernel_count"], 106)
+        self.assertEqual(report["native_source_count"], 104)
+        self.assertEqual(report["unique_fixture_count"], 103)
+        self.assertEqual(report["runner_fixture_count"], 104)
+        self.assertEqual(sum(report["layer_counts"].values()), 106)
         self.assertEqual(report["layer_counts"]["L1"], 3)
         self.assertEqual(report["layer_counts"]["L2"], 7)
-        self.assertEqual(report["layer_counts"]["L3"], 27)
-        self.assertEqual(report["layer_counts"]["L4"], 44)
+        self.assertEqual(report["layer_counts"]["L3"], 36)
+        self.assertEqual(report["layer_counts"]["L4"], 45)
 
     def test_graph_claim_probe_is_catalogued_but_separately_gated(self):
         """A tracked candidate query is not a math proof or native promotion."""

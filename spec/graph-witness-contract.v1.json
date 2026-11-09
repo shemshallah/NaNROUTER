@@ -1,0 +1,279 @@
+{
+  "schema": "nanrouter.graph-witness-contract.v1",
+  "version": 1,
+  "status": "active",
+  "canonical_language": "NaN16",
+  "numerical_mth_manifest": "spec/wave-capabilities.json",
+  "native_boundary": "spec/nan-native-boundary.json",
+  "reference_documents": [
+    "docs/NATIVE_GRAPH_CLAIM_PROBE.md",
+    "docs/NATIVE_GRAPH_PATH_WITNESS.md"
+  ],
+  "summary": "The catalogued numerical MTH kernel mth.graph.claim_probe.u32 answers one bounded directed claim lookup. The standalone excluded guest mth/nan16/mth_graph_path_witness.nas checks a caller-proposed 1-8 hop candidate path. Neither result is a proof, authorization, or promotion.",
+  "distinction": {
+    "claim_probe": "Catalogued numerical MTH kernel with kernel_id mth.graph.claim_probe.u32, registered in the numerical MTH manifest and exercised by the canonical claim-probe fixture.",
+    "path_witness": "Standalone excluded native guest with no numerical MTH kernel_id and no numerical MTH manifest entry; it has its own fixture and its own CI workflow.",
+    "operational_difference": "The claim probe matches one exact directed (src,dst,layer) tuple and may return an absent mask of 0. The path witness validates a complete ordered witness of 1-8 hops, requires every hop to have an active candidate, and rejects an absent hop atomically."
+  },
+  "shared_constants": {
+    "canonical_cell_range": {
+      "min": 0,
+      "max": 32895,
+      "head_range": {
+        "min": 0,
+        "max": 255
+      },
+      "mirror_pair_range": {
+        "min": 256,
+        "max": 32895
+      },
+      "out_of_range": "reject"
+    },
+    "layer_range": {
+      "min": 0,
+      "max": 9,
+      "out_of_range": "reject"
+    },
+    "relation_codes": {
+      "1": "supports",
+      "2": "refutes",
+      "accepted": [
+        1,
+        2
+      ],
+      "other": "reject"
+    },
+    "relation_masks": {
+      "0": "no candidate found (claim probe only; a path witness hop with zero active candidates is rejected)",
+      "1": "supports",
+      "2": "refutes",
+      "3": "both claims / contested"
+    },
+    "directed": true,
+    "wildcards_allowed": false,
+    "implicit_transitivity": false,
+    "logical_entailment": false,
+    "active_candidate_records_only": true
+  },
+  "reject_atomicity": {
+    "validate_entire_record_batch_before_any_output": true,
+    "validate_unrelated_records": true,
+    "validate_complete_witness_before_any_output": true,
+    "all_hops_must_be_found_before_output_commit": true,
+    "output_untouched_on_reject": true,
+    "partial_output_on_reject": false,
+    "claim_probe_output_words": 1,
+    "path_witness_output_words": 8,
+    "path_witness_words_beyond_hop_count_untouched_on_success": true,
+    "input_buffers_mutated": false,
+    "graph_or_model_state_mutated": false
+  },
+  "snapshot_preconditions": {
+    "authenticated_graph_snapshot_required_before_use": true,
+    "snapshot_must_be_complete_and_immutable": true,
+    "snapshot_must_come_from_independently_verified_nanrouter_graph_pages": true,
+    "hermes_binding_required": true,
+    "bind_to_resident_chart_and_revision_history_commitment": true,
+    "caller_must_bind_input_digest": true,
+    "caller_must_bind_chart_generation": true,
+    "caller_must_bind_rule_epoch": true,
+    "mixed_chart_generations_must_be_rejected": true,
+    "incomplete_history_must_be_rejected": true,
+    "wire_format_has_cryptographic_binding": false,
+    "records_must_be_active_candidates_only": true,
+    "external_checks_required": [
+      "historical graph revision and page hash verification (SHA-256)",
+      "MathLeaf evidence validation",
+      "pinned Ed25519 signature verification",
+      "ACL authorization",
+      "durable nonce replay protection",
+      "native admission policy",
+      "native admission receipt bound to the exact input digest, witness, guest image, chart generation, and rule epoch"
+    ]
+  },
+  "authority_boundary": {
+    "candidate_observation_only": true,
+    "mathematical_proof": false,
+    "logical_entailment": false,
+    "authorization": false,
+    "learning_admission": false,
+    "merge_promotion": false,
+    "native_promotion": false,
+    "nannet_route_commit": false,
+    "mathstore_write": false,
+    "graph_state_write": false,
+    "model_update": false,
+    "wire_format_trust": false,
+    "statement": "Neither primitive proves a fact, authorizes a learning or merge operation, nor promotes itself into the numerical MTH catalog. A future dispatcher must verify every external precondition and a bound native admission receipt before any learning admission."
+  },
+  "ci_separation": {
+    "separate_ci_workflows": true,
+    "canonical_numerical_ci_workflow": ".github/workflows/mth-native-contract.yml",
+    "claim_probe_workflow": ".github/workflows/native-graph-claim-probe.yml",
+    "path_witness_workflow": ".github/workflows/native-graph-path-witness.yml",
+    "path_witness_workflow_is_independent": true,
+    "path_witness_source_in_numerical_manifest": false,
+    "path_witness_fixture_in_numerical_manifest": false,
+    "path_witness_fixture_in_canonical_runner": false
+  },
+  "participants": {
+    "claim_probe": {
+      "kernel_id": "mth.graph.claim_probe.u32",
+      "classification": "catalogued_numerical_mth_kernel",
+      "numerical_mth_kernel": true,
+      "catalogued_in_numerical_manifest": true,
+      "excluded_from_numerical_manifest": false,
+      "source": "mth/nan16/mth_graph_claim_probe.nas",
+      "fixture": "mth/tests/mth_graph_claim_probe_test.nas",
+      "test_marker": "MTH GRAPH CLAIM PROBE PASS",
+      "ci_workflow": ".github/workflows/native-graph-claim-probe.yml",
+      "ci_workflow_name": "native-graph-claim-probe",
+      "separate_ci_workflow": true,
+      "authority_granted": [],
+      "observation_promotion": "none",
+      "allowed_inputs": {
+        "records": {
+          "register": "r1",
+          "layout": [
+            "src",
+            "dst",
+            "layer",
+            "relation"
+          ],
+          "word_type": "u32",
+          "words_per_record": 4,
+          "count_register": "r2",
+          "count_min": 0,
+          "count_max": 1024,
+          "semantics": "flat array of active candidate relations from an externally authenticated graph snapshot"
+        },
+        "query": {
+          "src_register": "r3",
+          "dst_register": "r4",
+          "layer_register": "r5",
+          "src_range": {
+            "min": 0,
+            "max": 32895
+          },
+          "dst_range": {
+            "min": 0,
+            "max": 32895
+          },
+          "layer_range": {
+            "min": 0,
+            "max": 9
+          },
+          "match": "exact directed (src,dst,layer)"
+        },
+        "output": {
+          "register": "r6",
+          "words": 1,
+          "caller_owned": true,
+          "must_not_alias": [
+            "records"
+          ]
+        }
+      },
+      "output_semantics": {
+        "mask_domain": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "mask_meaning": {
+          "0": "absent",
+          "1": "supports",
+          "2": "refutes",
+          "3": "both supports and refutes"
+        }
+      }
+    },
+    "path_witness": {
+      "kernel_id": null,
+      "classification": "standalone_excluded_multihop_path_witness",
+      "numerical_mth_kernel": false,
+      "catalogued_in_numerical_manifest": false,
+      "excluded_from_numerical_manifest": true,
+      "source": "mth/nan16/mth_graph_path_witness.nas",
+      "fixture": "mth/tests/mth_graph_path_witness_test.nas",
+      "test_marker": "MTH GRAPH PATH WITNESS PASS",
+      "ci_workflow": ".github/workflows/native-graph-path-witness.yml",
+      "ci_workflow_name": "native-graph-path-witness",
+      "separate_ci_workflow": true,
+      "exclusion_reason": "read-only unregistered multihop candidate witness verifier with independent real NaN16 guest fixture/CI; not an authorized numerical MTH kernel",
+      "authority_granted": [],
+      "observation_promotion": "none",
+      "allowed_inputs": {
+        "records": {
+          "register": "r1",
+          "layout": [
+            "src",
+            "dst",
+            "layer",
+            "relation"
+          ],
+          "word_type": "u32",
+          "words_per_record": 4,
+          "count_register": "r2",
+          "count_min": 0,
+          "count_max": 1024,
+          "semantics": "flat array of active candidate relations from an externally authenticated graph snapshot"
+        },
+        "witness": {
+          "register": "r3",
+          "layout": [
+            "src",
+            "dst",
+            "layer"
+          ],
+          "word_type": "u32",
+          "words_per_hop": 3,
+          "hop_count_register": "r4",
+          "hop_count_min": 1,
+          "hop_count_max": 8,
+          "src_range": {
+            "min": 0,
+            "max": 32895
+          },
+          "dst_range": {
+            "min": 0,
+            "max": 32895
+          },
+          "layer_range": {
+            "min": 0,
+            "max": 9
+          },
+          "directed": true,
+          "must_chain": true,
+          "chaining_rule": "hop[i].src must equal hop[i-1].dst for i > 0",
+          "each_hop_must_have_active_candidate": true,
+          "caller_proposed": true
+        },
+        "output": {
+          "register": "r5",
+          "words": 8,
+          "caller_owned": true,
+          "must_not_alias": [
+            "records",
+            "witness"
+          ]
+        }
+      },
+      "output_semantics": {
+        "mask_domain": [
+          1,
+          2,
+          3
+        ],
+        "mask_meaning": {
+          "1": "supports",
+          "2": "refutes",
+          "3": "contested"
+        },
+        "word_count": "one mask per hop; words beyond the hop count are untouched on success",
+        "zero_mask": "must not occur for a successful hop; an absent hop causes the entire witness to be rejected"
+      }
+    }
+  }
+}

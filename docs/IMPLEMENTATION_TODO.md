@@ -23,7 +23,7 @@
 - [x] Unified cross-repo MTH catalog: 96 kernels, provider contracts, worktree/origin-main fallback, no network fetch (`tools/mth_unified.py --check`).
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
-- [x] 94 runner fixture paths are registered; the full canonical runner passes 94/94 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
+- [x] 104 runner fixture paths are registered; the full canonical runner passes 94/94 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
 - [x] 1248 Python tests pass (29 skipped).
 - [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. The native-promotion set and the credential-free Koyeb container smoke are green in runs `42542521347` and `42542521266`; the four 2026-11-08 kernels are CI-verified in run `42539617226`.
 
@@ -207,7 +207,7 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-94 runner fixture paths registered; 93 unique manifest fixtures
+104 runner fixture paths registered; 93 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 (full 92-fixture sweep not rerun in this pass)
 

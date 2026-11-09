@@ -141,7 +141,7 @@ second authority:
 | `nanlm.experiment` | LM mixer experiment only, never a math authority |
 | `nanlmind.clocked` | CLOCKED/HW3 demonstration service, not a second universe |
 
-`runner_riddle/mth_unified.py` builds one catalog over the 96-kernel manifest
+`runner_riddle/mth_unified.py` builds one catalog over the 103-kernel manifest
 and the universe map. The catalogued graph-claim probe is a bounded candidate
 query kernel; the separate multihop path-witness guest is intentionally outside
 the numerical MTH ledger and keeps its own native CI gate. Each catalogued
@@ -186,10 +186,11 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 96 kernels, 96 CI-verified, 0 local-only, 94 sources, 93 fixtures |
+| Unified catalog | 106 kernels, 96 CI-verified, 10 local-only, 104 sources, 103 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,248 tests, 29 skipped, OK |
 | Canonical native runner | 94/94 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+| Unified audit workflow | green in run `42542831186` |
 
 The 29 local skips include the upstream Ed25519 attestation class because the
 optional `cryptography` package is absent in Termux; the canonical workflow

@@ -1,0 +1,119 @@
+name: mth-unified-native-matrix
+
+# Credential-free native matrix for the current canonical MTH fixture groups.
+# The NaN0S VM is pinned to the same full commit used by
+# mth-native-contract.yml and mth-remaining-fixtures.yml.
+#
+# Deliberately excluded from this matrix (owned by their separate workflows):
+#   - mth_graph_claim_probe: native-graph-claim-probe.yml
+#   - mth_graph_path_witness: native-graph-path-witness.yml
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/**"
+      - "tools/run_mth_fixtures.py"
+      - ".github/workflows/mth-unified-native-matrix.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/**"
+      - "mth/tests/**"
+      - "tools/run_mth_fixtures.py"
+      - ".github/workflows/mth-unified-native-matrix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-fixtures:
+    name: native-${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.limit_minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The 31-fixture remaining promotion set from
+          # mth-remaining-fixtures.yml, in the same order.
+          - group: remaining-31
+            limit_minutes: 40
+            fixtures:
+              - graph_degree
+              - graph_pattern
+              - graph_filter
+              - bool2
+              - bitwise
+              - integer
+              - shift
+              - multiply
+              - divide
+              - stage0
+              - double_endian
+              - vector_add
+              - preflight_typed
+              - native_dispatch
+              - vector_add256_f32
+              - vector_sub256_f32
+              - vector_mean256_f32
+              - vector_abs256_f32
+              - vector_relu256_f32
+              - graph_laplacian_csr
+              - rss_contract
+              - matrix_transpose256
+              - vector_argmax256_f32
+              - vector_argmin256_f32
+              - vector_scale256_f32
+              - matrix_diagonal256
+              - matrix_add256
+              - vector_normalize256_f32
+              - vector_prefix_sum256_u32
+              - prng_xorshift64
+              - universe_map
+
+          # Dedicated leg for the full 8 MiB universe-map fixture (also the
+          # 31st member of the remaining set above), so its output and timing
+          # are isolated in the matrix.
+          - group: universe-map
+            limit_minutes: 15
+            fixtures:
+              - universe_map
+
+          # Small smoke set: K256, K255, sparse graph, and vector dot.
+          - group: smoke
+            limit_minutes: 15
+            fixtures:
+              - k256
+              - k255
+              - sparse
+              - dot256
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned NaN0S toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+          persist-credentials: false
+
+      - name: Build NaN0S native CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+
+      - name: Run ${{ matrix.group }} fixtures
+        shell: bash
+        env:
+          FIXTURE_NAMES: ${{ join(matrix.fixtures, ' ') }}
+        run: |
+          set -euo pipefail
+          args=()
+          for fixture in $FIXTURE_NAMES; do
+            args+=(--only "$fixture")
+          done
+          python tools/run_mth_fixtures.py --nan0s-root nan0s "${args[@]}"

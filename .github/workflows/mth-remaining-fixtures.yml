@@ -57,6 +57,16 @@ jobs:
           --only vector_mean256_f32 \
           --only vector_abs256_f32 \
           --only vector_relu256_f32 \
+          --only vector_mask256_f32 \
+          --only vector_weighted_sum256_f32 \
+          --only vector_softmax256_f32 \
+          --only vector_sum256_f32 \
+          --only vector_max256_f32 \
+          --only vector_min256_f32 \
+          --only vector_head_concat256_f32 \
+          --only pair_full_grid_driver \
+          --only vector_sqrt256_f32 \
+          --only vector_rsqrt256_f32 \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

@@ -1,7 +1,7 @@
 {
   "schema": "nanrouter.wave-capabilities.v1",
   "generated_by": "manual R10 promotion ledger",
-  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 96 current entries are CI-verified in canonical NaNROUTER workflow runs; local execution is tracked separately. The standalone multihop graph path witness has its own native guest gate and is not an authorized numerical MTH kernel.",
+  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. 96 MTH kernels are CI-verified; seven 2026-11-09 vector additions await canonical CI. The standalone multihop graph path witness has its own native guest gate and is not an authorized numerical MTH kernel.",
   "kernels": [
     {
       "kernel_id": "mth.k256.laplacian.u16",
@@ -1381,6 +1381,147 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.vector.mask256.f32",
+      "source": "mth/nan16/mth_vector_mask256_f32.nas",
+      "fixture": "mth/tests/mth_vector_mask256_f32_test.nas",
+      "marker": "MTH VECTOR MASK256 F32 PASS",
+      "steps": 209763,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.weighted_sum256.f32",
+      "source": "mth/nan16/mth_vector_weighted_sum256_f32.nas",
+      "fixture": "mth/tests/mth_vector_weighted_sum256_f32_test.nas",
+      "marker": "MTH VECTOR WEIGHTED SUM256 F32 PASS",
+      "steps": 234486,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.softmax256.f32",
+      "source": "mth/nan16/mth_vector_softmax256_f32.nas",
+      "fixture": "mth/tests/mth_vector_softmax256_f32_test.nas",
+      "marker": "MTH VECTOR SOFTMAX256 F32 PASS",
+      "steps": 123760,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.sum256.f32",
+      "source": "mth/nan16/mth_vector_sum256_f32.nas",
+      "fixture": "mth/tests/mth_vector_sum256_f32_test.nas",
+      "marker": "MTH VECTOR SUM256 F32 PASS",
+      "steps": 65280,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.max256.f32",
+      "source": "mth/nan16/mth_vector_max256_f32.nas",
+      "fixture": "mth/tests/mth_vector_max256_f32_test.nas",
+      "marker": "MTH VECTOR MAX256 F32 PASS",
+      "steps": 73396,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.min256.f32",
+      "source": "mth/nan16/mth_vector_min256_f32.nas",
+      "fixture": "mth/tests/mth_vector_min256_f32_test.nas",
+      "marker": "MTH VECTOR MIN256 F32 PASS",
+      "steps": 73399,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.head_concat256.f32",
+      "source": "mth/nan16/mth_vector_head_concat256_f32.nas",
+      "fixture": "mth/tests/mth_vector_head_concat256_f32_test.nas",
+      "marker": "MTH VECTOR HEAD CONCAT256 F32 PASS",
+      "steps": 90048,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.graph.pair.full_grid.driver.f32",
+      "source": "mth/nan16/mth_graph_pair_full_grid_driver_f32.nas",
+      "fixture": "mth/tests/mth_graph_pair_full_grid_driver_f32_test.nas",
+      "marker": "MTH FULL GRID 256 TILE DRIVER PASS",
+      "steps": 570321519,
+      "precision": "float32",
+      "workspace_words": 17414,
+      "shape": [
+        256,
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.sqrt256.f32",
+      "source": "mth/nan16/mth_vector_sqrt256_f32.nas",
+      "fixture": "mth/tests/mth_vector_sqrt256_f32_test.nas",
+      "marker": "MTH VECTOR SQRT256 F32 PASS",
+      "steps": 187909,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.rsqrt256.f32",
+      "source": "mth/nan16/mth_vector_rsqrt256_f32.nas",
+      "fixture": "mth/tests/mth_vector_rsqrt256_f32_test.nas",
+      "marker": "MTH VECTOR RSQRT256 F32 PASS",
+      "steps": 196418,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

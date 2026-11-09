@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; all 96 manifest kernels are CI-verified.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; 96 manifest kernels are CI-verified and ten 2026-11-09 kernels await CI.
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Canonical run `42539617226` then passed the 31-fixture remaining promotion set, including normalize, prefix sum, xorshift64, and the full 8 MiB universe map. Run `42542521347` re-passed that set on commit `0fdb60c`; run `42542521393` passed `mth-native-contract`; run `42542521540` passed the manifest contract; run `42542521266` passed the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
@@ -108,6 +108,16 @@
 | 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | yes (42539617226) |
 | 95 | Full 8 MiB universe map | `mth/tests/mth_universe_map_test.nas` | 12,916,386 | PASS | yes (42539617226) |
 | 96 | Contradiction-aware graph claim probe | `mth/tests/mth_graph_claim_probe_test.nas` | 1,605 | PASS | yes (42539739728) |
+| 97 | Vector positive mask 256 | `mth/tests/mth_vector_mask256_f32_test.nas` | 209,763 | PASS | local only |
+| 98 | Vector weighted sum 256 | `mth/tests/mth_vector_weighted_sum256_f32_test.nas` | 234,486 | PASS | local only |
+| 99 | Vector stable softmax 256 | `mth/tests/mth_vector_softmax256_f32_test.nas` | 123,760 | PASS | local only |
+| 100 | Vector sum 256 | `mth/tests/mth_vector_sum256_f32_test.nas` | 65,280 | PASS | local only |
+| 101 | Vector max 256 | `mth/tests/mth_vector_max256_f32_test.nas` | 73,396 | PASS | local only |
+| 102 | Vector min 256 | `mth/tests/mth_vector_min256_f32_test.nas` | 73,399 | PASS | local only |
+| 103 | Vector head concat 256 | `mth/tests/mth_vector_head_concat256_f32_test.nas` | 90,048 | PASS | local only |
+| 104 | Full 256-tile pair driver | `mth/tests/mth_graph_pair_full_grid_driver_f32_test.nas` | 570,321,519 | PASS | local only |
+| 105 | Vector sqrt 256 | `mth/tests/mth_vector_sqrt256_f32_test.nas` | 187,909 | PASS | local only |
+| 106 | Vector rsqrt 256 | `mth/tests/mth_vector_rsqrt256_f32_test.nas` | 196,418 | PASS | local only |
 
 ## Python tests
 
@@ -195,7 +205,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 96 kernels (96 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **96 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 106 kernels (96 `ci_verified`, 10 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **96 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
