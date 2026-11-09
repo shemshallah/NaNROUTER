@@ -13,7 +13,7 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 | Item | Count |
 |---|---:|
 | Catalogued MTH kernels in `spec/wave-capabilities.json` | 145 |
-| Kernels with `ci_verified=true` in the manifest | 139 |
+| Kernels with `ci_verified=true` in the manifest | 145 |
 | Unique native sources | 143 |
 | Unique manifest fixture files | 141 |
 | Fixture entries in the canonical runner | 142 |
@@ -223,7 +223,7 @@ At baseline commit `12980a3`:
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **139/145 `ci_verified=true`**, with 6 newly integrated local-only kernels awaiting promotion. That is a ledger field,
+- The manifest declares **145/145 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,434+ local Python tests** (baseline record:
   `Ran 1434 tests`, `OK (skipped=30)`).
@@ -279,7 +279,7 @@ counts may be retained only as historical evidence.
 - “Local PASS means the service is live.”
 - “142 runner fixtures means 145 kernels were executed.” The counts measure
   different things and one fixture can serve multiple kernel entries.
-- “All 139 kernels ran in every local invocation.”
+- “All 145 kernels ran in every local invocation.”
 - “An untracked kernel is catalogued.”
 - “A route or address mapping proves a mathematical relation.”
 - “The runner independently verifies numerical results.” The runner checks a
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 139/145 `ci_verified` declaration in the manifest is supported by these
+The 145/145 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules

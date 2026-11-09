@@ -1999,7 +1999,7 @@
         255
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.trig.twiddle256.f32",
@@ -2014,7 +2014,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.mirror.cycle.phase_gate16.f32",
@@ -2028,7 +2028,7 @@
         16
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.mirror.cycle.retain.f32",
@@ -2043,7 +2043,7 @@
         16
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.mirror.cycle.contradiction.f32",
@@ -2057,7 +2057,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.attention.mix16.f32",
@@ -2072,7 +2072,7 @@
         16
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }
