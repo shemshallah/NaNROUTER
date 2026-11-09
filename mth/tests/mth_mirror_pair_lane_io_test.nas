@@ -34,6 +34,12 @@
 ;   8. Recovery: the complete typed-field roundtrip runs again after all
 ;      negative cases.
 ;
+; The documented id/lane/field domain cannot reach the defensive cause 4
+; (span overflow) or cause 5 (invalid destination class), so the fixture
+; instead drives the last valid lane-1 residual at the exact end of pair
+; 32,640 and verifies that the universe's final 24 reserved bytes are intact.
+; Cause 4 and cause 5 remain implementation guards, not claimed test coverage.
+;
 ; Every value is generated in-guest. There are no host-computed expected
 ; arrays and no floating-point arithmetic: f32 slots are transported as exact
 ; 32-bit payloads, which is the module's declared read/write contract.

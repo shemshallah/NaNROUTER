@@ -135,9 +135,9 @@
 | 121 | WordNet concept/head/pair map | `mth/tests/mth_wordnet_concept_map_test.nas` | 108,027 | PASS | local only |
 | 122 | Mirror block FNV checksum | `mth/tests/mth_mirror_block_checksum_test.nas` | 796,382 | PASS | local only |
 | 123 | Hyperedge incidence walk | `mth/tests/mth_hyperedge_incidence_walk_test.nas` | 5,647 | PASS | local only |
-| 124 | Mirror head record I/O | `mth/tests/mth_mirror_head_record_io_test.nas` | 347,769 | PASS | local only |
+| 124 | Mirror head record I/O | `mth/tests/mth_mirror_head_record_io_test.nas` | 431,684 | PASS | local only |
 | 125 | Hyperedge path score | `mth/tests/mth_hyperedge_path_score_test.nas` | 9,632 | PASS | local only |
-| 126 | Mirror Hodge projection | `mth/tests/mth_mirror_hodge_projection_test.nas` | 19,142,426 | PASS | local only |
+| 126 | Mirror Hodge projection | `mth/tests/mth_mirror_hodge_projection_test.nas` | 20,130,891 | PASS | local only |
 | 127 | Mirror pair lane I/O | `mth/tests/mth_mirror_pair_lane_io_test.nas` | 509,737 | PASS | local only |
 
 ## Python tests
