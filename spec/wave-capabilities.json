@@ -1366,6 +1366,21 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.graph.claim_probe.u32",
+      "source": "mth/nan16/mth_graph_claim_probe.nas",
+      "fixture": "mth/tests/mth_graph_claim_probe_test.nas",
+      "marker": "MTH GRAPH CLAIM PROBE PASS",
+      "steps": 2000000,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        1024,
+        4
+      ],
+      "status": "native_verified",
+      "ci_verified": true
     }
   ]
 }
