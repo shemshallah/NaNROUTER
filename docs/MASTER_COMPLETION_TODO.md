@@ -169,7 +169,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [x] `B-09` Typed scalar/array descriptor: element type, stride, layout, units, rank, shape, domain, context; optional fields preserve legacy digests; function composition rejects declared descriptor conflicts.
 - [ ] `B-10` Pair codec regressions: byte/face/payload/inverse/missing-member/corruption.
 - [ ] `B-11` Resolve `mth_negate256_f32` registration so `DEEP_PLAN_CONT` ring-wave plan resolves.
-- [x] `B-12` Full 8 MiB guest map over 256 pages and 1,048,576 words; 256 fixed heads, 32,640 mirror pairs, 32,896 canonical relation points; NANNET0 aliases `head 0 = page 255 = ring 255 = HW0:0`. Host map and native `mth.universe.map.u32` fixture pass locally (12,916,386 steps). `spec/universe-map.json` records all page descriptors.
+- [x] `B-12` Full 8 MiB guest map over 256 pages and 1,048,576 words; 256 fixed heads, 32,640 mirror pairs, 32,896 canonical relation points; NANNET0 aliases `head 0 = page 255 = ring 255 = HW0:0`. Host map is exhaustive; native `mth.universe.map.u32` passed locally (12,916,386 steps) and in canonical CI run `42539617226`. `spec/universe-map.json` records all page descriptors.
 - [x] `B-13` Unified cross-repo MTH catalog and provider drift audit (`runner_riddle/mth_unified.py`, `spec/mth-unified-system.v1.json`). It binds 96 kernels to NaN0S execution, HERMES/Android contracts, and the control plane, with worktree-first and fetched `origin/main` fallback. It never fetches or modifies sibling worktrees and never claims CI or a live deployment.
 
 ## B2. Tier 2–3 numeric/array operations

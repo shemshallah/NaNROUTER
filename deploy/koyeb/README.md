@@ -47,7 +47,7 @@ Physical mount paths are deployment bindings; they are never used as logical NaN
 
 Without volume bindings the service still starts as a control-plane listener, but `/healthz` reports `volume_registry.health=unknown` and `configured=false`. It never invents green health. Set `RIDDLE_REQUIRE_VOLUME_REGISTRY=1` for strict fail-closed startup: missing or non-green registry configuration exits non-zero.
 
-Run `python -m runner_riddle.koyeb_bootstrap --write` to exercise the same bootstrap path outside the container. The credential-free `.github/workflows/koyeb-container-smoke.yml` workflow builds the image, starts it without Koyeb credentials, and asserts the BS0:0 address, revision, 16-bit runtime declaration, six ring slots, one active slot, unknown volume registry, and `live_route_commit=false`. It is a readiness check, not a live Koyeb deployment.
+Run `python -m runner_riddle.koyeb_bootstrap --write` to exercise the same bootstrap path outside the container. The credential-free `.github/workflows/koyeb-container-smoke.yml` workflow builds the image, starts it without Koyeb credentials, and asserts the BS0:0 address, revision, 16-bit runtime declaration, six ring slots, one active slot, unknown volume registry, and `live_route_commit=false`. The contract smoke passed in CI run `42542521266`. It is a readiness check, not a live Koyeb deployment.
 
 ## API
 
