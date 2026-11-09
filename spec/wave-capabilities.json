@@ -1,7 +1,7 @@
 {
   "schema": "nanrouter.wave-capabilities.v1",
   "generated_by": "manual R10 promotion ledger",
-  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 106 current MTH kernels are CI-verified in canonical NaNROUTER workflow runs (run 42546293200 executed the ten 2026-11-09 additions). The standalone multihop graph path witness has its own native guest gate and is not an authorized numerical MTH kernel.",
+  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 112 current MTH kernels are CI-verified in canonical NaNROUTER workflow runs; run 42547371933 executed the six 2026-11-09 stable-numerics/sequence additions. The standalone multihop graph path witness has its own native gate and is not an authorized numerical MTH kernel.",
   "kernels": [
     {
       "kernel_id": "mth.k256.laplacian.u16",
@@ -1535,7 +1535,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.log256.f32",
@@ -1549,7 +1549,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.logsumexp256.f32",
@@ -1563,7 +1563,7 @@
         1
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.sequence.step.u32",
@@ -1577,7 +1577,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.sigmoid256.f32",
@@ -1591,7 +1591,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.tanh256.f32",
@@ -1605,7 +1605,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }
