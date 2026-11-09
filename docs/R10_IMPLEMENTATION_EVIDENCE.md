@@ -171,7 +171,7 @@
 | 157 | Field mixture reverse | `mth/tests/mth_field_mix255x16_backward_test.nas` | 935,271 | PASS | yes (42678421624) |
 | 158 | 255-head gate | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
 | 159 | 255-head gate reverse | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
-| 160 | Field training step | `mth/tests/mth_field_train_step255x16_test.nas` | 780,097 | PASS | local only |
+| 160 | Field training step | `mth/tests/mth_field_train_step255x16_test.nas` | 780,097 | PASS | yes (42682577285) |
 
 ## Local phase-system integration fixture
 
