@@ -50,8 +50,8 @@ jobs:
           if [ -n "$license" ] && [ -s "$license" ]; then
             cp "$license" /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
           else
-            curl --fail --show-error --silent --location --retry 3 \\
-              https://raw.githubusercontent.com/spdx/license-list-data/main/text/WordNet.txt \\
+            curl --fail --show-error --silent --location --retry 3 \
+              https://raw.githubusercontent.com/spdx/license-list-data/main/text/WordNet.txt \
               --output /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
           fi
           test -s /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
