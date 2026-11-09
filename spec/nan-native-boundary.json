@@ -206,7 +206,7 @@
   },
   "guarantees": [
     "Every registered kernel has a NaN16 source and a NaN16 fixture.",
-    "Every numerical mth/nan16 kernel is registered; non-numerical guest helpers are explicitly excluded from the numerical manifest.",
+    "Every non-excluded mth/nan16 mathematical kernel source is registered; explicitly excluded native guests have separate test gates.",
     "Every unique manifest fixture is present in the canonical local runner.",
     "Every runner fixture is referenced by the canonical CI workflow.",
     "Production control modules do not import host numerical libraries.",
@@ -220,14 +220,15 @@
   "ci_workflows": [
     ".github/workflows/mth-native-contract.yml",
     ".github/workflows/mth-remaining-fixtures.yml",
-    ".github/workflows/mth-native-addsub-dispatch.yml"
+    ".github/workflows/mth-native-addsub-dispatch.yml",
+    ".github/workflows/native-graph-claim-probe.yml"
   ],
   "excluded_native_sources": {
     "mth/nan16/hermes_lease.nas": "HERMES lease guest, not an MTH mathematical kernel",
     "mth/nan16/hermes_nannet_route.nas": "HERMES NANNET route guest, not an MTH mathematical kernel",
     "mth/nan16/hermes_native_runtime.nas": "HERMES native runtime guest, not an MTH mathematical kernel",
-    "mth/nan16/mth_graph_claim_probe.nas": "Read-only graph candidate query, not an authorized numerical MTH kernel; separate native guest workflow",
-    "mth/nan16/mth_graph_path_witness.nas": "Read-only multihop candidate witness verifier, not an authorized numerical MTH kernel; separate native guest workflow"
+    "mth/nan16/mth_graph_claim_probe.nas": "standalone candidate relation probe with its own native guest fixture/CI; not an authorized numerical MTH kernel",
+    "mth/nan16/mth_graph_path_witness.nas": "standalone read-only multihop candidate witness verifier with independent real NaN16 guest fixture/CI; not an authorized numerical MTH kernel"
   },
   "runner_only_fixtures": {
     "mth/tests/mth_native_vector_addsub_dispatch_test.nas": "end-to-end dispatch fixture over already-registered vector kernels"

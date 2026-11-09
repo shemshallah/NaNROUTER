@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -60,6 +62,10 @@ class HermesHeadObservationJournal:
         db_path = Path(database).expanduser()
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.database = str(db_path.resolve())
+        # Capture the inode of an existing journal *before* schema work.
+        # A later replacement by a fresh SQLite file at the same pathname
+        # must never be interpreted as an empty at-most-once dispatch ledger.
+        self._database_inode = self._file_identity(allow_missing=True)
         self.lease_registry = lease_registry
         self.ring_epoch_reader = ring_epoch_reader
         self.chart_fence_reader = chart_fence_reader
@@ -179,6 +185,36 @@ class HermesHeadObservationJournal:
             except Exception:
                 db.execute("ROLLBACK")
                 raise
+        # On first bootstrap, freeze the now-created physical DB identity.
+        # Existing stores are rechecked rather than silently replacing the
+        # inode captured before migration and concurrent initialization.
+        observed = self._file_identity()
+        if self._database_inode is None:
+            self._database_inode = observed
+        elif observed != self._database_inode:
+            raise HermesHeadObservationError("native dispatch journal identity changed")
+
+    def _file_identity(self, *, allow_missing: bool = False):
+        try:
+            info = os.stat(self.database, follow_symlinks=False)
+        except FileNotFoundError as exc:
+            if allow_missing:
+                return None
+            raise HermesHeadObservationError(
+                "pinned native dispatch journal database disappeared"
+            ) from exc
+        if not stat.S_ISREG(info.st_mode):
+            raise HermesHeadObservationError(
+                "pinned native dispatch journal database is not a regular file"
+            )
+        return (info.st_dev, info.st_ino)
+
+    def _check_file_identity(self):
+        expected = self._database_inode
+        if expected is not None and self._file_identity() != expected:
+            raise HermesHeadObservationError(
+                "pinned native dispatch journal identity changed"
+            )
 
     @contextmanager
     def _db(self):
@@ -188,13 +224,21 @@ class HermesHeadObservationJournal:
         close the handle. A durable at-most-once journal must also explicitly
         enforce FULL sync on every fresh connection, not just at startup.
         """
+        self._check_file_identity()
         db = sqlite3.connect(self.database, timeout=15, isolation_level=None)
         try:
+            # Double-check after opening: a path swap during connect cannot
+            # silently become a newly accepted dispatch ledger.
+            self._check_file_identity()
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA busy_timeout=15000")
             db.execute("PRAGMA synchronous=FULL")
             with db:
                 yield db
+                # The SQLite connection may still point at the former inode,
+                # but do not return an apparently successful replay receipt if
+                # another process replaced the durable pathname meanwhile.
+                self._check_file_identity()
         finally:
             db.close()
 
