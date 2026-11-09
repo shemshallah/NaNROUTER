@@ -165,8 +165,8 @@
 | 151 | 3-byte reserve-row hash | `mth/tests/mth_byte_assoc3_reserve_test.nas` | 870,499 | PASS | yes (42655735052) |
 | 152 | Byte memory interpolation | `mth/tests/mth_byte_memory_mix256_test.nas` | 52,100 | PASS | yes (42655735052) |
 | 153 | Single-head attention | `mth/tests/mth_attention_head16_test.nas` | 135,441 | PASS | yes (42667242944) |
-| 154 | Attention mask16 | `mth/tests/mth_attention_mask16_test.nas` | 3,586 | PASS | local only |
-| 155 | Memory conditioning16 | `mth/tests/mth_memory_condition16_test.nas` | 8,360 | PASS | local only |
+| 154 | Attention mask16 | `mth/tests/mth_attention_mask16_test.nas` | 3,586 | PASS | yes (42669871807) |
+| 155 | Memory conditioning16 | `mth/tests/mth_memory_condition16_test.nas` | 8,360 | PASS | yes (42669871807) |
 
 ## Local phase-system integration fixture
 
