@@ -108,6 +108,13 @@ about 3.6748 bits/byte and incoherent. The geometry is therefore being used as
 gauge-invariant episodic transport, not as a proven replacement for the
 generative decoder.
 
+Rounds 034–036 are recorded in `docs/ROUNDS_034_036_GENERATION.md`:
+copy-or-abstain reaches 99% accept/abstain but degrades under untrained
+6-character corruption; recursive typed composition is exact on the tested
+3-hop paths; and the neural multi-source generator is restricted to normalized
+entity slots, with contradiction and four-hop stress failures. None is a
+fluent language-model or unique NaN-geometry claim.
+
 ## 4. Native kernel
 
 `mth/nan16/mth_universe_map.nas` implements the address law in NaN16:

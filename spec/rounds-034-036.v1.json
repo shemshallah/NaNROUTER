@@ -1,0 +1,170 @@
+{
+  "schema": "nanrouter.rounds-034-036.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiments",
+  "archives": [
+    {
+      "round": 34,
+      "name": "nan_recursive_round034.zip",
+      "sha256": "2b4b7663ad5a9a0c8adae373fc44b2a91a1039cc07182924f549626f9a9c6942"
+    },
+    {
+      "round": 35,
+      "name": "nan_recursive_round035.zip",
+      "sha256": "3a395df35ebaad213c1a9636d656945252bdc7a299936ecb23fb1523dd64e31a"
+    },
+    {
+      "round": 36,
+      "name": "nan_recursive_round036.zip",
+      "sha256": "fc31bfbfa8d9b5ba19aa9347b0ca8fe7452f7fe479f5a0ce0dc42d6e60295969"
+    }
+  ],
+  "round_034": {
+    "task": "open-set copy-or-abstain router with byte LM/copy mixture",
+    "learned_router": {
+      "accept_accuracy_mean": 0.99,
+      "false_answer_rate_mean": 0.0044444444444444444,
+      "exact_grounded_completion_mean": 0.48944444444444446,
+      "queries_per_seed": 600,
+      "seeds": [
+        17,
+        29,
+        41
+      ]
+    },
+    "six_character_corruption": {
+      "accept_accuracy": 0.6189,
+      "positive_accept": 0.2378,
+      "interpretation": "material failure mode under an untrained corruption shift"
+    },
+    "native_audit": {
+      "episodes": 180,
+      "accepted_present": 89,
+      "native_exact": 89,
+      "conventional_index_exact": 89,
+      "raw_single_edge_exact": 0,
+      "root_bytes": 8388608
+    },
+    "hybrid_bits_per_byte": {
+      "lm_only_range": [
+        3.598170953326755,
+        3.6645858764648436
+      ],
+      "cycle_hybrid_range": [
+        0.18297396075946312,
+        0.44815594018609434
+      ],
+      "conventional_index_range": [
+        0.18297396075946312,
+        0.44815594018609434
+      ],
+      "note": "The large gain is expected because the correct 24-byte answer is already stored and copyable; the conventional index ties exactly. This is not synthesis."
+    }
+  },
+  "round_035": {
+    "task": "source-disjoint two-relation composition gate and typed 3-hop composition",
+    "two_hop_gate": {
+      "test_accuracy": 1.0,
+      "test_binary_cross_entropy_range": [
+        0.0008711571572348475,
+        0.0010121844243258238
+      ],
+      "target_bits_per_byte_range": [
+        0.001261323907882039,
+        0.0014652099236055365
+      ],
+      "examples_train": 4200,
+      "examples_validation": 900,
+      "examples_test": 900,
+      "caveat": "explicit equality indicators make a perfect score not evidence of autonomous language understanding"
+    },
+    "native_three_hop": {
+      "positive_chains": 60,
+      "broken_paths": 60,
+      "cycle_exact_answers": 120,
+      "positive_correct": 60,
+      "negative_abstentions": 60,
+      "raw_edge_exact_answers": 60,
+      "slots_used": 28800,
+      "note": "deterministic typed-path interpreter, not a trained 3-hop neural generalizer"
+    },
+    "conventional_two_source_composition": {
+      "correct": 900,
+      "total": 900
+    },
+    "second_source_removed": {
+      "correct": 450,
+      "total": 900
+    }
+  },
+  "round_036": {
+    "task": "neural multi-source encoder-attention-autoregressive GRU decoder over WordNet chains",
+    "data": {
+      "synsets": 81499,
+      "train": 17986,
+      "validation": 2998,
+      "test": 2998,
+      "vocab_size": 29,
+      "parameter_count": 38268,
+      "train_steps_per_seed": 145
+    },
+    "original_model": {
+      "seed_17_semantic_accuracy": 0.5,
+      "seed_17_failure": "collapsed to constant abstention",
+      "seed_29_semantic_accuracy": 1.0,
+      "seed_29_exact_surface_agreement": 0.6701,
+      "seed_17_nll_nats_per_token": 0.2064604942822361,
+      "seed_29_nll_nats_per_token": 0.09348
+    },
+    "native_audit": {
+      "prompts": 90,
+      "native_exact_after_gauge": 90,
+      "neural_answers_unchanged": 90,
+      "raw_edge_after_gauge": 0,
+      "conventional_index": 90,
+      "gauge_std": 80
+    },
+    "stress": {
+      "in_distribution_correct": 300,
+      "contradiction_abstentions": 0,
+      "four_hop_correct": 0,
+      "four_hop_total": 150
+    },
+    "robust_training": {
+      "connected_correct": 1499,
+      "connected_total": 1499,
+      "disconnected_correct": 1499,
+      "disconnected_total": 1499,
+      "relation_conflict_correct": 1499,
+      "relation_conflict_total": 1499
+    }
+  },
+  "non_claims": [
+    "No fluent open-domain language model.",
+    "No autonomous text extraction or arbitrary entity-name generation; Round 036 uses normalized e0/e1 slots and synthetic grammar variations.",
+    "No unique NaN-specific advantage: conventional indexed or invariant controls tie on retrieval/composition.",
+    "Round 034's large bits-per-byte gain is exact copy of an already stored 24-byte answer, not synthesis.",
+    "Round 035's two-hop gate uses explicit equality indicators and is not proof of compositional language understanding.",
+    "Round 036 four-hop extrapolation and contradiction handling fail before adversarial retraining.",
+    "The native C++ experiments are not NaN16 production execution.",
+    "No canonical merge or live deployment is claimed."
+  ],
+  "integration": {
+    "production_authority": false,
+    "existing_native_seams": [
+      "mth.copy_gate.f32",
+      "mth.retrieval.top1.f32",
+      "mth.byte.copy24.u32",
+      "mth.definition.slot_io.u32",
+      "mth.gauge.triangle_recover.f32",
+      "mth.hyperedge.path_score.f32",
+      "mth.relation.operator_apply.f32"
+    ],
+    "host_seams": [
+      "runner_riddle/mirror_retrieval_index.py",
+      "runner_riddle/mirror_relation_ops.py",
+      "runner_riddle/mirror_hyperedge_arena.py"
+    ],
+    "next_gate": "jointly train the copy gate with a byte decoder, use real unnormalized prose, and compare against matched conventional memory and attention baselines"
+  }
+}
