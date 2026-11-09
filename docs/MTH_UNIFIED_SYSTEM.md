@@ -135,7 +135,7 @@ second authority:
 |---|---|
 | `nanrouter.control` | NMP, point 0, six-slot ring, kernel manifest, universe map |
 | `nan0s.vm` | native NaN16 VM, `NH_WORDS=67838` head bank, N16T transport |
-| `hermes.runtime` | N16ROOT1, N16SNAP1, head-bank transport, L0–L9 layers |
+| `hermes.runtime` | N16ROOT1, N16SNAP1, N16PACK1, head-bank transport, L0–L9 layers |
 | `nanlmind.android` | N16T client and native NMP receipt path |
 | `nanlmind.core` | universe identity / ring integration reference |
 | `nanlm.experiment` | LM mixer experiment only, never a math authority |

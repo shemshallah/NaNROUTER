@@ -5,7 +5,10 @@
   "canonical_word": {
     "bits": 64,
     "bytes": 8,
-    "heads": ["far-big-endian", "near-little-endian"],
+    "heads": [
+      "far-big-endian",
+      "near-little-endian"
+    ],
     "legal_classes": 16
   },
   "universe": {
@@ -21,7 +24,11 @@
       "head": 0,
       "page": 255,
       "ring_position": 255,
-      "aliases": ["HW0:0", "page:255", "ring:255"]
+      "aliases": [
+        "HW0:0",
+        "page:255",
+        "ring:255"
+      ]
     },
     "address_space": "one guest-addressable 8 MiB window; workspace budget is separate"
   },
@@ -72,7 +79,7 @@
     {
       "id": "nan0s.vm",
       "repo": "nan0s",
-      "role": "native NaN16 VM, head bank, N16PACK, N16T transport",
+      "role": "native NaN16 VM, class-preserving raw-word transport, 255-head bank, N16T transport",
       "local_path": "~/nan0s",
       "required": true,
       "required_artifacts": [
@@ -96,14 +103,18 @@
     {
       "id": "hermes.runtime",
       "repo": "NaNLMind_HERMES",
-      "role": "N16ROOT1, N16SNAP1, native head bank transport, L0-L9 relation layers",
+      "role": "N16ROOT1, N16SNAP1, N16PACK1, native head-bank transport, L0-L9 relation layers",
       "local_path": "~/NaNLMind_HERMES",
       "required": true,
       "required_artifacts": [
         "nanlmind_hermes/universe_root.py",
         "nanlmind_hermes/head_bank_transport.py",
         "nanlmind_hermes/native_head_fence.py",
-        "nanlmind_hermes/mth_layers.py"
+        "nanlmind_hermes/mth_layers.py",
+        "nanlmind_hermes/chart_storage.py",
+        "nanlmind_hermes/native_head_checkpoint.py",
+        "nanlmind_hermes/universe_pack.py",
+        "nanlmind_hermes/universe_chart.py"
       ],
       "contracts": [
         {
@@ -117,6 +128,14 @@
         {
           "file": "nanlmind_hermes/head_bank_transport.py",
           "contains": "BANK_HEADS = 255"
+        },
+        {
+          "file": "nanlmind_hermes/chart_storage.py",
+          "contains": "N16SNAP1"
+        },
+        {
+          "file": "nanlmind_hermes/universe_pack.py",
+          "contains": "N16PACK1"
         }
       ]
     },
@@ -129,7 +148,11 @@
       "required_artifacts": [
         "aarch64/android/docs/N16T_GUEST_ABI.md",
         "src/training/n16_math_receipt_emit.nas",
-        "src/training/n16_nmp_kernel_guest.nas"
+        "src/training/n16_nmp_kernel_guest.nas",
+        "aarch64/android/core/nan16.c",
+        "aarch64/android/core/nan16.h",
+        "aarch64/android/core/nan16_int.h",
+        ".github/workflows/nan16-raw-parity.yml"
       ],
       "contracts": [
         {
@@ -139,6 +162,10 @@
         {
           "file": "src/training/n16_math_receipt_emit.nas",
           "contains": "n16_math_emit_receipt"
+        },
+        {
+          "file": "aarch64/android/core/nan16.h",
+          "contains": "nan_write_words_raw"
         }
       ]
     },
@@ -148,11 +175,18 @@
       "role": "universe identity and ring integration reference",
       "local_path": "~/NaNLMind",
       "required": false,
-      "required_artifacts": ["README.md"],
+      "required_artifacts": [
+        "README.md",
+        "integration/cross_repo_drift.py"
+      ],
       "contracts": [
         {
           "file": "README.md",
           "contains": "NaN"
+        },
+        {
+          "file": "integration/cross_repo_drift.py",
+          "contains": "NaN ecosystem repositories"
         }
       ]
     },
@@ -162,7 +196,9 @@
       "role": "LM mixer experiment only; never a production MTH authority",
       "local_path": "~/NaNLM",
       "required": false,
-      "required_artifacts": ["src/nanlm_mixer.c"],
+      "required_artifacts": [
+        "src/nanlm_mixer.c"
+      ],
       "contracts": []
     },
     {
@@ -171,7 +207,9 @@
       "role": "CLOCKED/HW3 demonstration service; not a second universe",
       "local_path": "~/NaNLMind_CLOCKED",
       "required": false,
-      "required_artifacts": ["README.md"],
+      "required_artifacts": [
+        "README.md"
+      ],
       "contracts": []
     }
   ],
