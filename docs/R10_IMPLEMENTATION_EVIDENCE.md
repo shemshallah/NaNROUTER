@@ -150,7 +150,7 @@
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1282 tests in 274.234s
+Ran 1410 tests in 253.647s
 OK (skipped=29)
 ```
 
