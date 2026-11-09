@@ -94,6 +94,8 @@ jobs:
           --only copy_gate \
           --only definition_slot_io \
           --only gauge_triangle_recover \
+          --only mirror_slot_map \
+          --only relation_writer_class \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

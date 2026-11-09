@@ -1,0 +1,83 @@
+{
+  "schema": "nanrouter.round037-prose-memory.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiment",
+  "source_archive": {
+    "name": "nan_recursive_round037.zip",
+    "sha256": "d28e1886ec0d9dde16c6b68d9d788c5349ec042b0e5e8989a22c29acc2d84c53"
+  },
+  "pipeline": {
+    "synsets": 81102,
+    "test_chains_per_seed": 200,
+    "seeds": [17, 29, 43],
+    "stages": ["prose relation writer", "native 8 MiB mirror storage", "deterministic multi-hop traversal", "autoregressive decoder"]
+  },
+  "writer": {
+    "parameters": 31044,
+    "training_patterns": 10,
+    "held_out_patterns": 2,
+    "seen_accuracy_per_seed": 1.0,
+    "held_out_accuracy_per_seed": 1.0,
+    "entity_boundaries_and_identities_supplied": true,
+    "caveat": "perfect template scores do not demonstrate unrestricted prose understanding"
+  },
+  "queries": {
+    "before_gauge": {"geometry_correct": 400, "conventional_correct": 400, "total": 400},
+    "after_gauge": {"geometry_correct": 400, "conventional_correct": 400, "total": 400},
+    "after_writer_adaptation": {"geometry_correct": 400, "conventional_correct": 400, "total": 400},
+    "after_root_restore": {"geometry_correct": 400, "conventional_correct": 400, "total": 400},
+    "old_after_new_memory_writes": {"geometry_correct": 400, "conventional_correct": 400, "total": 400},
+    "new_knowledge_positive": {"cycle_correct": 80, "conventional_correct": 80, "total": 80},
+    "raw_edges_after_gauge_mean_fraction": 0.6491666666666667,
+    "note": "all geometry results tie the conventional indexed control"
+  },
+  "generation": {
+    "episodes": 90,
+    "input_bytes_stored": 10080,
+    "neural_checkpoint": "Round 036 robust_29.pt",
+    "generative_model_parameters": 38365,
+    "native_cycle_source_recovery": 90,
+    "raw_source_recovery": 0,
+    "cycle_neural_outputs_unchanged": 90,
+    "raw_neural_outputs_unchanged": 30,
+    "native_semantic_correct": 90,
+    "conventional_index_semantic_correct": 90,
+    "restricted_entity_slot_vocabulary": true
+  },
+  "native": {
+    "root_bytes": 8388608,
+    "gradient_free_geometry_audit": true,
+    "cells_checked": 600,
+    "max_absolute_error_after_gauge": 1.811981201171875e-05,
+    "snapshot_bytes": 8388608,
+    "restoration_exact": true,
+    "slot_count": 32385,
+    "slot_order": "lexical (a,b), 1 <= a < b <= 255",
+    "writer_classes": ["forward subtype", "reverse subtype", "negated subtype", "uncertain subtype"]
+  },
+  "non_claims": [
+    "Not a full natural-language-trained generative model.",
+    "Entity boundaries and identities are supplied; no unsupervised extraction from raw WordNet glosses.",
+    "Graph traversal is deterministic; no learned arbitrary-depth reasoning model.",
+    "Writer adaptation is not proof of avoiding catastrophic forgetting in neural weights.",
+    "No accuracy advantage over an equally informed conventional indexed memory.",
+    "The decoder uses restricted entity-slot vocabulary and is not retrained jointly with the writer.",
+    "The native C++ experiments are not NaN16 production execution.",
+    "No canonical merge or live deployment is claimed."
+  ],
+  "integration": {
+    "production_authority": false,
+    "native_primitives": [
+      "mth.mirror.slot_map.u32",
+      "mth.relation.writer_class.u32"
+    ],
+    "existing_seams": [
+      "mth.hyperedge.path_score.f32",
+      "mth.gauge.triangle_recover.f32",
+      "mth.definition.slot_io.u32",
+      "mth.copy_gate.f32",
+      "runner_riddle/mirror_slot_index.py"
+    ],
+    "next_gate": "train the writer and decoder against natural unnormalized prose and compare matched geometric and conventional graph memories"
+  }
+}

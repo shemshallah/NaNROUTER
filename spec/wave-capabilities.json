@@ -1901,6 +1901,34 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.mirror.slot_map.u32",
+      "source": "mth/nan16/mth_mirror_slot_map.nas",
+      "fixture": "mth/tests/mth_mirror_slot_map_test.nas",
+      "marker": "MTH MIRROR SLOT MAP PASS",
+      "steps": 21192654,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        32385
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.relation.writer_class.u32",
+      "source": "mth/nan16/mth_relation_writer_class.nas",
+      "fixture": "mth/tests/mth_relation_writer_class_test.nas",
+      "marker": "MTH RELATION WRITER CLASS PASS",
+      "steps": 481,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        4
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

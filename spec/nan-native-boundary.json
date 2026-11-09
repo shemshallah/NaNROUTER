@@ -30,7 +30,8 @@
         "mth.stage0.",
         "mth.double_endian.",
         "mth.universe.",
-        "mth.mirror.pair_map."
+        "mth.mirror.pair_map.",
+        "mth.mirror.slot_map."
       ],
       "host_roles": [
         "allocate descriptor records",

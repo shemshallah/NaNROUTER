@@ -158,6 +158,8 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("copy_gate", "mth/tests/mth_copy_gate_test.nas", 20_000, "MTH COPY GATE PASS", "native_verified"),
     Fixture("definition_slot_io", "mth/tests/mth_definition_slot_io_test.nas", 1_000_000, "MTH DEFINITION SLOT IO PASS", "native_verified"),
     Fixture("gauge_triangle_recover", "mth/tests/mth_gauge_triangle_recover_test.nas", 50_000, "MTH GAUGE TRIANGLE RECOVER PASS", "native_verified"),
+    Fixture("mirror_slot_map", "mth/tests/mth_mirror_slot_map_test.nas", 25_000_000, "MTH MIRROR SLOT MAP PASS", "native_verified"),
+    Fixture("relation_writer_class", "mth/tests/mth_relation_writer_class_test.nas", 20_000, "MTH RELATION WRITER CLASS PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical
