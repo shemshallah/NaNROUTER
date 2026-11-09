@@ -164,8 +164,10 @@
 oscillatory gates, phase-gated cycle training, readout, attention mixing,
 retention, contradiction preservation, and angular ring addressing in one
 guest run. It passes locally in **288,659 steps** with marker
-`MTH PHASE SYSTEM PASS`. It is an integration fixture, not a manifest kernel
-and not a claim of CI verification or a live model.
+`MTH PHASE SYSTEM PASS`. It is an integration fixture, not a manifest kernel.
+The separate `phase-system-integration` workflow assembles and runs it directly
+with the pinned NaN0S toolchain; run `42638938887` passed. This is not a live
+model or a deployment claim.
 
 ## Python tests
 

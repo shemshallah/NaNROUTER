@@ -165,10 +165,11 @@ MTH PHASE SYSTEM PASS
 288,659 guest steps
 ```
 
-This fixture is deliberately outside the canonical 142-fixture runner/CI
-manifest so the manifest remains a kernel registry rather than treating a
-composition test as a new mathematical authority. Run it directly with the
-canonical NaN0S assembler and `nan_cli` when validating the composition.
+This fixture is deliberately outside the canonical 142-fixture runner and
+kernel manifest so the manifest remains a kernel registry rather than treating
+a composition test as a new mathematical authority. A separate
+`.github/workflows/phase-system-integration.yml` workflow assembles and runs
+it directly with the pinned NaN0S toolchain; run `42638938887` passed.
 
 ## 10. Non-claims
 
