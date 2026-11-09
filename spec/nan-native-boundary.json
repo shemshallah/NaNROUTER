@@ -221,7 +221,8 @@
     ".github/workflows/mth-native-contract.yml",
     ".github/workflows/mth-remaining-fixtures.yml",
     ".github/workflows/mth-native-addsub-dispatch.yml",
-    ".github/workflows/native-graph-claim-probe.yml"
+    ".github/workflows/native-graph-claim-probe.yml",
+    ".github/workflows/native-graph-path-witness.yml"
   ],
   "excluded_native_sources": {
     "mth/nan16/hermes_lease.nas": "HERMES lease guest, not an MTH mathematical kernel",
@@ -230,7 +231,6 @@
     "mth/nan16/mth_graph_path_witness.nas": "read-only unregistered multihop candidate witness verifier with independent real NaN16 guest fixture/CI; not an authorized numerical MTH kernel"
   },
   "runner_only_fixtures": {
-    "mth/tests/mth_native_vector_addsub_dispatch_test.nas": "end-to-end dispatch fixture over already-registered vector kernels",
-    "mth/tests/mth_graph_claim_probe_test.nas": "standalone candidate relation probe with its own native guest workflow; not an authorized numerical MTH kernel"
+    "mth/tests/mth_native_vector_addsub_dispatch_test.nas": "end-to-end dispatch fixture over already-registered vector kernels"
   }
 }
