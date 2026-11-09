@@ -202,6 +202,7 @@ treatment. Otherwise a win would only show that one model got more information.
 | `mth.mirror.cycle.predict16.f32` | native source + fixture locally verified |
 | RoPE/attention integration | proposed |
 | complex mirror cycles | proposed |
-| native twiddle table generation | proposed |
-| oscillatory gates / phase closure | proposed |
+| native twiddle table generation | implemented: `mth.trig.twiddle256.f32` |
+| oscillatory gates | implemented: `mth.mirror.cycle.phase_gate16.f32` |
+| phase closure / complex mirror cycles | proposed |
 | fair geometric-vs-conventional learning comparison | not yet run |

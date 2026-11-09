@@ -176,22 +176,24 @@ advantage.
 
 ## 9. Native next kernels
 
-These are the highest-value missing primitives, in order:
+The first batch is now implemented and locally verified:
 
-1. `mth.mirror.cycle.phase_gate16.f32` — oscillatory gate generator.
-2. `mth.mirror.cycle.phase_bind.f32` — complex phase bind/unbind over the
-   existing triangle bank.
-3. `mth.trig.twiddle256.f32` — native twiddle table for DFT/FFT.
-4. `mth.mirror.cycle.retain.f32` — replay/consolidation step with a
-   retention loss.
-5. `mth.graph.path_competition.f32` — keep multiple candidate paths active
-   and score them without forcing one early.
-6. `mth.attention.project.f32` — native Q/K/V projection once the surrounding
-   model contract is fixed.
-7. `mth.mirror.cycle.contradiction.f32` — represent signed evidence and a
-   phase/closure residual instead of collapsing to a single truth value.
+| Primitive | Status |
+|---|---|
+| `mth.mirror.cycle.phase_gate16.f32` | implemented: clamped oscillatory gates |
+| phase bind | implemented as `mth.trig.rotate.f32`; bank-level bind is caller composition |
+| `mth.trig.twiddle256.f32` | implemented: native 256-point twiddle table |
+| `mth.mirror.cycle.retain.f32` | implemented: gated bank consolidation |
+| candidate competition | implemented at the readout seam as `mth.attention.mix16.f32` |
+| `mth.mirror.cycle.contradiction.f32` | implemented: support/oppose/conflict/balance without collapse |
+| `mth.ring.angular_map.u32` | implemented: 255 real lanes, NANNET0 fixed at 255 |
+| `mth.attention.project.f32` | not implemented: full Q/K/V projection remains open |
+| `mth.mirror.cycle.contradiction` phase closure | not implemented: numeric conflict pair exists; loop phase closure is still proposed |
+| `mth.graph.path_competition.f32` | partially addressed: weighted candidate readout exists, learned path search does not |
 
-None of these is claimed today.
+The next honest engineering gate is full native Q/K/V projection with a fixed
+model contract, followed by a matched geometric-versus-conventional training
+comparison. The new primitives are ingredients, not a fluent model.
 
 ## 10. Guardrails
 
