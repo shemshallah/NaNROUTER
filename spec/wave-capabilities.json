@@ -1,7 +1,7 @@
 {
   "schema": "nanrouter.wave-capabilities.v1",
   "generated_by": "manual R10 promotion ledger",
-  "notes": "Source and fixture digests are computed at registration time; this file records the contract and local evidence, not a claim that every kernel is CI-verified.",
+  "notes": "Source and fixture digests are computed at registration time; this file records the contract and evidence. All 95 current entries are CI-verified in canonical NaNROUTER workflow runs; local execution is tracked separately.",
   "kernels": [
     {
       "kernel_id": "mth.k256.laplacian.u16",
@@ -1322,7 +1322,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.vector.prefix_sum256.u32",
@@ -1336,7 +1336,7 @@
         256
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.prng.xorshift64.u64",
@@ -1350,7 +1350,7 @@
         2
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     },
     {
       "kernel_id": "mth.universe.map.u32",
@@ -1365,7 +1365,7 @@
         10
       ],
       "status": "native_verified",
-      "ci_verified": false
+      "ci_verified": true
     }
   ]
 }

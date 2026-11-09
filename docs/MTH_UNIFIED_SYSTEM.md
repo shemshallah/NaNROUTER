@@ -179,7 +179,7 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 95 kernels, 91 CI-verified, 4 local-only, 93 sources, 92 fixtures |
+| Unified catalog | 95 kernels, 95 CI-verified, 0 local-only, 93 sources, 92 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,242 tests, 28 skipped, OK |
 | Canonical native runner | 93/93 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
@@ -190,8 +190,8 @@ installs it and runs those tests.
 
 ## 8. Non-claims
 
-- The native fixture is local evidence; it is not CI-verified until the
-  canonical workflow runs it.
+- The native fixture was executed locally first and then in canonical run
+  `42539617226`; the CI result is separate from the local step-count evidence.
 - Provider source presence is not a live service or routing claim.
 - Address coverage is not mathematical truth, proof, authorization, or a
   native head-bank update.

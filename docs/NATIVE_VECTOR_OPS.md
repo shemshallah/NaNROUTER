@@ -272,11 +272,9 @@ or the fixtures.
 
 ## 7. Limitations
 
-- Local `nan_cli` execution only. No CI run has been observed for these
-  fixtures, so they are not CI-verified.
-- Add/sub/mean plus the local abs/relu kernels are registered with
-  `ci_verified=false`; the two additional fixtures pass locally at 5,328 and
-  6,615 steps respectively.
+- Canonical CI executed these fixtures in run `42539617226`.
+- Add/sub/mean plus abs/relu are registered with `ci_verified=true`; the
+  additional abs/relu fixtures pass at 5,328 and 6,615 steps respectively.
 - Abs is an exact sign-bit clear; ReLU is a sign-only rule (negative NaN
   becomes +0.0) and is documented as such.
 - No span, alias, length, or type validation. Exact-alias safety is limited to

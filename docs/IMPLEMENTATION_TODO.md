@@ -25,7 +25,7 @@
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 93 runner fixture paths are registered; the full canonical runner passes 93/93 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
 - [x] 1242 Python tests pass (28 skipped).
-- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Newer native-promotion and Koyeb smoke workflows are present; the four 2026-11-08 kernels remain local-only pending CI.
+- [x] Canonical workflow `42405649076` passed 132 steps for the 61-fixture set, including both operand-range alias regressions, native preflight, and composed admission. Newer native-promotion and Koyeb smoke workflows are present; the four 2026-11-08 kernels are CI-verified in run `42539617226`.
 
 ## GAME PLAN `::` integration queue (P0–P13)
 
@@ -216,7 +216,7 @@ Ran 1242 tests
 OK (skipped=16)
 ```
 
-CI: `42405649076` — 132/132 steps for the 61-fixture set. No page-size limit is enforced; the 2 MiB guest budget is adjustable. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
+CI: `42405649076` — 132/132 steps for the 61-fixture set; `42539617226` — 31/31 remaining promotion fixtures. No page-size limit is enforced; the 2 MiB workspace budget is adjustable. See `docs/R10_IMPLEMENTATION_EVIDENCE.md` for the fixture table and the explicit not-yet-proven list.
 
 ## Parallel batch 2 (2026-11-07)
 

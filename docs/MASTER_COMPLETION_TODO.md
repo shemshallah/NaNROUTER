@@ -1,7 +1,7 @@
 # Master completion TODO — all game plans
 
 **Date:** 2026-11-08
-**Baseline:** 1242 Python tests, 28 skipped, OK; 95 manifest kernels (91 `ci_verified`, 4 local-only); 93 canonical runner fixture paths and 92 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
+**Baseline:** 1242 Python tests, 28 skipped, OK; 95 manifest kernels (95 `ci_verified`, no local-only entries); 93 canonical runner fixture paths and 92 unique manifest fixtures; static NaN-native boundary audit green. `main` includes the execution, storage, discovery, HTTP, authorization, ring, N16T worker, NMP HTTP, graph degree/pattern, page-record, point-0, Koyeb bootstrap, sequence controller, and capacity-harness work.
 **Rule:** an item is checked only when code, a test or explicit blocked record, and evidence text agree. A locally source-written kernel is not CI-verified. An external gate is never marked green without real evidence.
 
 Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a named acceptance condition; `OPEN` = no implementation; `BLOCKED` = requires unavailable external evidence/credentials/hardware.
@@ -12,7 +12,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [x] 2 MiB / 262,144-word default with 1 MiB and 512 KiB compatibility profiles.
 - [x] Single-active six-slot ring, JAHS, 7 GiB ceiling, lane/NANNET0 mapping.
-- [x] Native 95-kernel manifest (91 CI-verified, 4 local-only), 93 registered runner fixtures, and credential-free canonical native CI workflows.
+- [x] Native 95-kernel manifest (95 CI-verified, no local-only entries), 93 registered runner fixtures, and credential-free canonical native CI workflows.
 - [x] Full 8 MiB guest map and 32,896-point NANNET relation coverage (`runner_riddle/universe_map.py`, `spec/universe-map.json`, `mth.universe.map.u32`); workspace budget remains a separate 2 MiB adjustable policy bound.
 - [x] Unified cross-repo MTH catalog and provider audit (`runner_riddle/mth_unified.py`, `tools/mth_unified.py`, `spec/mth-unified-system.v1.json`).
 - [x] Static NaN-native boundary audit (`spec/nan-native-boundary.json`, `tools/audit_nan_native.py`) covering every registered MTH source, fixture, runner entry, CI workflow, and host numeric import boundary.
@@ -159,9 +159,9 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B1. Stage 0/1 native substrate
 
 - [x] `B-01` Machine-readable NaN16 word/class layout (`spec/nan16-word-layout.json`, 4 tests, `docs/NAN16_WORD_LAYOUT.md`).
-- [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 91-entry canonical set; the four 2026-11-08 additions remain local-only pending CI.
+- [x] `B-02` Stage 0, double-endian, vector, typed-preflight, and native-dispatch fixtures are registered and carry `ci_verified=true` in the 95-entry canonical set; the four 2026-11-08 additions are CI-verified in run `42539617226`.
 - [ ] `B-03` Exhaustive 16 Boolean functions, all 16 class pairs, illegal-pair/resync fixtures in CI.
-- [x] `B-04` All MTH sources are registered in the 95-entry manifest (91 `ci_verified`, 4 local-only); 93 runner fixture paths are wired to canonical native workflows. The normalize/prefix-sum/PRNG/universe-map fixtures pass locally, but are not described as CI-verified until canonical CI runs.
+- [x] `B-04` All MTH sources are registered in the 95-entry manifest (95 `ci_verified`); 93 runner fixture paths are wired to canonical native workflows. Canonical run `42539617226` executed the normalize/prefix-sum/PRNG/universe-map fixtures successfully.
 - [ ] `B-05` Signed, unsigned, checked, saturating, wrapping, unbounded, multiword integer arithmetic.
 - [ ] `B-06` Carry/borrow/overflow/divide-by-zero boundary fixtures.
 - [ ] `B-07` Bitwise/rotations/popcount/CLZ/CTZ/select/min/max/clamp/abs/sign and reductions.
@@ -176,7 +176,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
 - [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/scale/abs/relu are implemented and locally verified; broadcast, distance, and normalization remain open.
-- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; native inclusive prefix sum is also local-only. Masks, permutation, and CI promotion remain open.
+- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; native inclusive prefix sum is CI-verified in run `42539617226`. Masks and permutation remain open.
 - [ ] `B-23` **PARTIAL:** native 256×256 transpose, diagonal extraction, and elementwise add are locally verified; reshape/multiply/axis reductions/identity/zero/normalization remain open.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
@@ -188,7 +188,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `B-30` Stable softmax/log-softmax/log-sum-exp.
 - [ ] `B-31` exp/log/sqrt/rsqrt/sigmoid/tanh/ReLU.
 - [ ] `B-32` Entropy/cross-entropy/KL/CDF/inverse-CDF.
-- [ ] `B-33` **PARTIAL:** native xorshift64 forward step with known-answer, reference, aliasing, class, and zero-state rejection fixtures passes locally (`ci_verified=false`); seeded sampling, entropy conversion, and categorical sampling remain open.
+- [ ] `B-33` **PARTIAL:** native xorshift64 forward step with known-answer, reference, aliasing, class, and zero-state rejection fixtures passes; `ci_verified=true` in run `42539617226`. Seeded sampling, entropy conversion, and categorical sampling remain open.
 - [ ] `B-34` **PARTIAL:** host-only attention plan controller composes qk_dot/scale/mask/softmax/weighted_sum/head_concat/projection and returns typed UNAVAILABLE until native mask/softmax/weighted-sum/concat kernels exist. No host math or execution.
 - [ ] `B-35` **PARTIAL:** host-only loss/gradient/optimizer plan controller composes loss→gradient_accumulate→clip→moving_average→update and returns typed UNAVAILABLE until native kernels exist. Hyperparameter records and finite-difference fixtures remain open.
 - [ ] `B-36` **PARTIAL:** host-only `SequenceController` composes embedding_gather→position_add→slice_window→mask_apply→ngram_build with optional head_concat as a validated `MthPlan`, returning typed `UNAVAILABLE` for all missing declared kernels. 13 controller tests pass; native token/sequence kernels remain open.

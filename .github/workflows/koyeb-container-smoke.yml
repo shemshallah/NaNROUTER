@@ -47,7 +47,7 @@ jobs:
           python3 - <<'PY'
           import json, os
           health = json.load(open("/tmp/nanrouter-health.json", encoding="utf-8"))
-          assert health["address"] == "nan://GM0:SC0:MC0:BS0:0:HW0:0"
+          assert health["address"] == "nan://GM0:0::SC0:0::MC0:0::BS0:0::HW0:0"
           assert health["build_revision"] == os.environ["GITHUB_SHA"]
           assert health["runtime"] == {
               "nan16_word_bits": 16,

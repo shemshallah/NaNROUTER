@@ -1,9 +1,8 @@
 # Native xorshift64 forward step
 
-Status: source-written and executed locally with the canonical NaN0S toolchain
-(`nan0s/tools/nmk.awk` and `nan0s/aarch64/android/nan_cli`) on 2026-11-08.
-This is local native evidence only, not a CI claim. The manifest entry remains
-`ci_verified=false` until the canonical workflow executes it.
+Status: source-written, locally executed, and CI-verified in canonical run
+`42539617226` with the pinned NaN0S toolchain. The manifest entry is
+`ci_verified=true`.
 
 ## Scope
 

@@ -1,10 +1,8 @@
 # Native float32 vector normalization (256 elements)
 
-Status: source-written and executed locally with the canonical NaN0S toolchain
-(`nan0s/tools/nmk.awk` and `nan0s/aarch64/android/nan_cli`) on 2026-11-07.
-This is local native evidence only, not a CI claim. The source and fixture are
-registered in `spec/wave-capabilities.json` with `ci_verified=false`; the
-canonical runner and the `mth-remaining-fixtures` workflow include the fixture.
+Status: source-written, locally executed, and CI-verified in canonical run
+`42539617226` with the pinned NaN0S toolchain. The source and fixture are
+registered in `spec/wave-capabilities.json` with `ci_verified=true`.
 
 ## 1. Scope
 
@@ -236,10 +234,7 @@ halt step count is. The expected-value checks themselves run inside the guest.
 
 ## 7. Limitations
 
-- Local `nan_cli` execution only. No CI run has been observed for this source
-  or fixture, so this is not CI-verified.
-- The manifest entry is local-only until canonical CI executes the registered
-  fixture; it is not planning-eligible while `ci_verified=false`.
+- Canonical CI executed the registered fixture in run `42539617226`.
 - The divisor is the defined sequential 256-term `FADD` sum, not a correctly
   rounded exact sum. Results are not guaranteed to equal a high-precision
   normalization, and changing the accumulation order would change results.

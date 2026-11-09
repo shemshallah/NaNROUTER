@@ -5,8 +5,8 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four new 2026-11-08 kernels have `ci_verified=false`; the 91 earlier manifest kernels retain their recorded CI flags. Last canonical CI run 42405649076 predates the new registrations.
-**CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Current workflows also include the remaining-fixture promotion set and the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; all 95 manifest kernels are CI-verified.
+**CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Canonical run `42539617226` then passed the 31-fixture remaining promotion set, including normalize, prefix sum, xorshift64, and the full 8 MiB universe map. Current workflows also include the credential-free Koyeb container smoke check. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
 
@@ -75,38 +75,38 @@
 | 61 | Radial energy/localization | `mth/tests/mth_radial_energy_test.nas` | 61,373 | PASS | yes |
 | 62 | Native preflight gate | `mth/tests/mth_preflight_gate_test.nas` | 336 | PASS | yes |
 | 63 | Composed admission | `mth/tests/mth_admission_test.nas` | 931 | PASS | yes |
-| 64 | Boolean functions | `mth/tests/mth_bool2_test.nas` | 458 | PASS | local only |
-| 65 | Bitwise/compare | `mth/tests/mth_bitwise_test.nas` | 312 | PASS | local only |
-| 66 | Checked integer | `mth/tests/mth_integer_test.nas` | 245 | PASS | local only |
-| 67 | Shift | `mth/tests/mth_shift_test.nas` | 338 | PASS | local only |
-| 68 | Wide multiply | `mth/tests/mth_multiply_test.nas` | 1,578 | PASS | local only |
-| 69 | Divide/mod | `mth/tests/mth_divide_test.nas` | 2,062 | PASS | local only |
+| 64 | Boolean functions | `mth/tests/mth_bool2_test.nas` | 458 | PASS | yes (42539617226) |
+| 65 | Bitwise/compare | `mth/tests/mth_bitwise_test.nas` | 312 | PASS | yes (42539617226) |
+| 66 | Checked integer | `mth/tests/mth_integer_test.nas` | 245 | PASS | yes (42539617226) |
+| 67 | Shift | `mth/tests/mth_shift_test.nas` | 338 | PASS | yes (42539617226) |
+| 68 | Wide multiply | `mth/tests/mth_multiply_test.nas` | 1,578 | PASS | yes (42539617226) |
+| 69 | Divide/mod | `mth/tests/mth_divide_test.nas` | 2,062 | PASS | yes (42539617226) |
 | 70 | Negate 256 (composite) | `mth/tests/mth_ring_wave_energy_test.nas` | 86,374 | PASS | yes |
-| 71 | Stage 0 word layout | `mth/tests/mth_stage0_test.nas` | 1,161 | PASS | local only |
-| 72 | Double-endian pair codec | `mth/tests/mth_double_endian_test.nas` | 545 | PASS | local only |
-| 73 | Vector span add | `mth/tests/mth_vector_test.nas` | 381 | PASS | local only |
-| 74 | Typed preflight | `mth/tests/mth_preflight_test.nas` | 2,780 | PASS | local only |
-| 75 | Native dispatch | `mth/tests/mth_linker_preflight_test.nas` | 16,047 | PASS | local only |
-| 76 | Graph degree 256 | `mth/tests/mth_graph_degree_test.nas` | 48,117 | PASS | local only |
-| 77 | Graph pattern 256 | `mth/tests/mth_graph_pattern_test.nas` | 56,063 | PASS | local only |
-| 78 | Graph filter poly2 | `mth/tests/mth_graph_filter_test.nas` | 621,536 | PASS | local only |
-| 79 | CSR Laplacian | `mth/tests/mth_graph_laplacian_csr_test.nas` | 197,118 | PASS | local only |
-| 80 | RSS contract | `mth/tests/mth_rss_contract_test.nas` | 6,504 | PASS | local only |
-| 81 | Vector add 256 f32 | `mth/tests/mth_vector_add256_f32_test.nas` | 10,436 | PASS | local only |
-| 82 | Vector sub 256 f32 | `mth/tests/mth_vector_sub256_f32_test.nas` | 10,484 | PASS | local only |
-| 83 | Vector mean 256 f32 | `mth/tests/mth_vector_mean256_f32_test.nas` | 15,969 | PASS | local only |
-| 84 | Vector abs 256 f32 | `mth/tests/mth_vector_abs256_f32_test.nas` | 5,328 | PASS | local only |
-| 85 | Vector relu 256 f32 | `mth/tests/mth_vector_relu256_f32_test.nas` | 6,615 | PASS | local only |
-| 86 | Vector scale 256 f32 | `mth/tests/mth_vector_scale256_f32_test.nas` | 82,168 | PASS | local only |
-| 87 | Matrix transpose 256 | `mth/tests/mth_matrix_transpose256_f32_test.nas` | 3,290,464 | PASS | local only |
-| 88 | Matrix diagonal 256 | `mth/tests/mth_matrix_diagonal256_f32_test.nas` | 9,865 | PASS | local only |
-| 89 | Matrix add 256 | `mth/tests/mth_matrix_add256_f32_test.nas` | 2,500,024 | PASS | local only |
-| 90 | Vector argmax 256 | `mth/tests/mth_vector_argmax256_f32_test.nas` | 62,218 | PASS | local only |
-| 91 | Vector argmin 256 | `mth/tests/mth_vector_argmin256_f32_test.nas` | 61,708 | PASS | local only |
-| 92 | Vector normalize 256 f32 | `mth/tests/mth_vector_normalize256_f32_test.nas` | 118,131 | PASS | local only |
-| 93 | Vector inclusive prefix sum 256 u32 | `mth/tests/mth_vector_prefix_sum256_u32_test.nas` | 49,559 | PASS | local only |
-| 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | local only |
-| 95 | Full 8 MiB universe map | `mth/tests/mth_universe_map_test.nas` | 12,916,386 | PASS | local only |
+| 71 | Stage 0 word layout | `mth/tests/mth_stage0_test.nas` | 1,161 | PASS | yes (42539617226) |
+| 72 | Double-endian pair codec | `mth/tests/mth_double_endian_test.nas` | 545 | PASS | yes (42539617226) |
+| 73 | Vector span add | `mth/tests/mth_vector_test.nas` | 381 | PASS | yes (42539617226) |
+| 74 | Typed preflight | `mth/tests/mth_preflight_test.nas` | 2,780 | PASS | yes (42539617226) |
+| 75 | Native dispatch | `mth/tests/mth_linker_preflight_test.nas` | 16,047 | PASS | yes (42539617226) |
+| 76 | Graph degree 256 | `mth/tests/mth_graph_degree_test.nas` | 48,117 | PASS | yes (42539617226) |
+| 77 | Graph pattern 256 | `mth/tests/mth_graph_pattern_test.nas` | 56,063 | PASS | yes (42539617226) |
+| 78 | Graph filter poly2 | `mth/tests/mth_graph_filter_test.nas` | 621,536 | PASS | yes (42539617226) |
+| 79 | CSR Laplacian | `mth/tests/mth_graph_laplacian_csr_test.nas` | 197,118 | PASS | yes (42539617226) |
+| 80 | RSS contract | `mth/tests/mth_rss_contract_test.nas` | 6,504 | PASS | yes (42539617226) |
+| 81 | Vector add 256 f32 | `mth/tests/mth_vector_add256_f32_test.nas` | 10,436 | PASS | yes (42539617226) |
+| 82 | Vector sub 256 f32 | `mth/tests/mth_vector_sub256_f32_test.nas` | 10,484 | PASS | yes (42539617226) |
+| 83 | Vector mean 256 f32 | `mth/tests/mth_vector_mean256_f32_test.nas` | 15,969 | PASS | yes (42539617226) |
+| 84 | Vector abs 256 f32 | `mth/tests/mth_vector_abs256_f32_test.nas` | 5,328 | PASS | yes (42539617226) |
+| 85 | Vector relu 256 f32 | `mth/tests/mth_vector_relu256_f32_test.nas` | 6,615 | PASS | yes (42539617226) |
+| 86 | Vector scale 256 f32 | `mth/tests/mth_vector_scale256_f32_test.nas` | 82,168 | PASS | yes (42539617226) |
+| 87 | Matrix transpose 256 | `mth/tests/mth_matrix_transpose256_f32_test.nas` | 3,290,464 | PASS | yes (42539617226) |
+| 88 | Matrix diagonal 256 | `mth/tests/mth_matrix_diagonal256_f32_test.nas` | 9,865 | PASS | yes (42539617226) |
+| 89 | Matrix add 256 | `mth/tests/mth_matrix_add256_f32_test.nas` | 2,500,024 | PASS | yes (42539617226) |
+| 90 | Vector argmax 256 | `mth/tests/mth_vector_argmax256_f32_test.nas` | 62,218 | PASS | yes (42539617226) |
+| 91 | Vector argmin 256 | `mth/tests/mth_vector_argmin256_f32_test.nas` | 61,708 | PASS | yes (42539617226) |
+| 92 | Vector normalize 256 f32 | `mth/tests/mth_vector_normalize256_f32_test.nas` | 118,131 | PASS | yes (42539617226) |
+| 93 | Vector inclusive prefix sum 256 u32 | `mth/tests/mth_vector_prefix_sum256_u32_test.nas` | 49,559 | PASS | yes (42539617226) |
+| 94 | Xorshift64 forward step | `mth/tests/mth_prng_xorshift64_test.nas` | 5,043 | PASS | yes (42539617226) |
+| 95 | Full 8 MiB universe map | `mth/tests/mth_universe_map_test.nas` | 12,916,386 | PASS | yes (42539617226) |
 
 ## Python tests
 
@@ -194,7 +194,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 95 kernels (91 `ci_verified`, 4 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **95 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 95 kernels (95 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **95 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
@@ -224,7 +224,7 @@ Run it after any kernel change.
 - R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
 - P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, capacity-vs-SNR measurement, or native numeric executor delivery has been produced.
 - The P12 demo proves control-plane integration only; it does not compute a numeric dot product. Native numeric execution remains the external executor's responsibility.
-- Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are local native evidence only (`ci_verified=false`); Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
+- Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are CI-verified in run `42539617226`; Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
 - The unified catalog is a cross-repo source/contract audit, not proof that every provider is deployed, reachable, or executing the same build. It deliberately leaves CI and live claims false.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.
