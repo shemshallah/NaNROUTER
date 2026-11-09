@@ -20,7 +20,7 @@
 - [x] 2 MiB adjustable guest-word default checked in (262,144 words / 64 pages); 1 MiB/512 KiB compatibility modes implemented.
 - [x] No page-size limit: the 2 MiB workspace budget is adjustable and reports `page_limit_enforced=false`; 32 KiB is only the logical 8 MiB-universe page unit. No external page-size gate exists.
 - [x] Full 8 MiB guest address map: 256 pages, 1,048,576 words, 32,896 relation points, NANNET0 aliases; native `mth.universe.map.u32` fixture PASS (12,916,386 local steps), `spec/universe-map.json`.
-- [x] Unified cross-repo MTH catalog: 96 kernels, provider contracts, worktree/origin-main fallback, no network fetch (`tools/mth_unified.py --check`).
+- [x] Unified cross-repo MTH catalog: 95 kernels, provider contracts, worktree/origin-main fallback, no network fetch (`tools/mth_unified.py --check`).
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 94 runner fixture paths are registered; the full canonical runner passes 94/94 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
@@ -207,7 +207,7 @@
 
 ```
 python3 tools/run_mth_fixtures.py
-94 runner fixture paths registered; 93 unique manifest fixtures
+94 runner fixture paths registered; 92 unique manifest fixtures
 K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 (full 92-fixture sweep not rerun in this pass)
 

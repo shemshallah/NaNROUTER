@@ -1,8 +1,8 @@
 # HERMES MTH universal catalog and head-directed tools (v1)
 
-This implementation indexes **all 96 entries** of the existing
+This implementation indexes **all 95 entries** of the existing
 `spec/wave-capabilities.json` with the HERMES portal. Source and fixture files
-are hashed on load. **96 kernels** have CI-verification claims backed by the
+are hashed on load. **95 kernels** have CI-verification claims backed by the
 pinned NaN0S fixture workflow and are eligible for bounded plan composition.
 The four 2026-11-08 additions (normalize, prefix sum, xorshift64, and the
 full 8 MiB universe map) are CI-verified in run `42539617226` and are
