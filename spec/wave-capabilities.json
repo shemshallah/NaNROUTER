@@ -2185,6 +2185,34 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.attention.mask16.f32",
+      "source": "mth/nan16/mth_attention_mask16_f32.nas",
+      "fixture": "mth/tests/mth_attention_mask16_test.nas",
+      "marker": "MTH ATTENTION MASK16 PASS",
+      "steps": 3586,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.memory.condition16.f32",
+      "source": "mth/nan16/mth_memory_condition16_f32.nas",
+      "fixture": "mth/tests/mth_memory_condition16_test.nas",
+      "marker": "MTH MEMORY CONDITION PASS",
+      "steps": 8360,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

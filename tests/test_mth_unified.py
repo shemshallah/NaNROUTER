@@ -50,18 +50,18 @@ class MthUnifiedTests(unittest.TestCase):
         catalog = build_catalog()
         self.assertEqual(catalog["schema"], "nanrouter.mth-unified-catalog.v1")
         self.assertEqual(catalog["status"], "green", catalog["errors"])
-        self.assertEqual(catalog["kernel_catalog"]["count"], 153)
+        self.assertEqual(catalog["kernel_catalog"]["count"], 155)
         self.assertEqual(catalog["kernel_catalog"]["ci_verified"], 153)
-        self.assertEqual(catalog["kernel_catalog"]["local_only"], 0)
-        self.assertEqual(catalog["kernel_catalog"]["unique_sources"], 151)
-        self.assertEqual(catalog["kernel_catalog"]["unique_fixtures"], 149)
+        self.assertEqual(catalog["kernel_catalog"]["local_only"], 2)
+        self.assertEqual(catalog["kernel_catalog"]["unique_sources"], 153)
+        self.assertEqual(catalog["kernel_catalog"]["unique_fixtures"], 151)
         self.assertEqual(catalog["kernel_catalog"]["native_dispatch_abi"], 5)
         self.assertEqual(catalog["universe_map"]["relation_points"], 32_896)
         self.assertEqual(catalog["universe_map"]["pages"], 256)
         self.assertEqual(catalog["universe_map"]["universe_bytes"], 8 * 1024 * 1024)
-        self.assertEqual(len(catalog["kernels"]), 153)
+        self.assertEqual(len(catalog["kernels"]), 155)
         self.assertEqual(
-            len({item["kernel_id"] for item in catalog["kernels"]}), 153
+            len({item["kernel_id"] for item in catalog["kernels"]}), 155
         )
         for kernel in catalog["kernels"]:
             self.assertTrue(kernel["route"].startswith("math://"))

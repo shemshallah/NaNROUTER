@@ -111,6 +111,8 @@ jobs:
           --only pair_knockout \
           --only attention_project16 \
           --only attention_head16 \
+          --only attention_mask16 \
+          --only memory_condition16 \
           --only assoc3_reserve \
           --only byte_memory_mix \
           --only graph_laplacian_csr \

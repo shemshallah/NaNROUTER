@@ -175,6 +175,8 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("pair_knockout", "mth/tests/mth_mirror_pair_knockout_test.nas", 100_000, "MTH PAIR KNOCKOUT PASS", "native_verified"),
     Fixture("attention_project16", "mth/tests/mth_attention_project16_test.nas", 1_000_000, "MTH ATTENTION PROJECT16 PASS", "native_verified"),
     Fixture("attention_head16", "mth/tests/mth_attention_head16_test.nas", 2_000_000, "MTH ATTENTION HEAD16 PASS", "native_verified"),
+    Fixture("attention_mask16", "mth/tests/mth_attention_mask16_test.nas", 100_000, "MTH ATTENTION MASK16 PASS", "native_verified"),
+    Fixture("memory_condition16", "mth/tests/mth_memory_condition16_test.nas", 100_000, "MTH MEMORY CONDITION PASS", "native_verified"),
     Fixture("assoc3_reserve", "mth/tests/mth_byte_assoc3_reserve_test.nas", 2_000_000, "MTH ASSOC3 RESERVE PASS", "native_verified"),
     Fixture("byte_memory_mix", "mth/tests/mth_byte_memory_mix256_test.nas", 1_000_000, "MTH BYTE MEMORY MIX PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),

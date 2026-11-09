@@ -68,6 +68,21 @@ It is one head over 16 keys, not a multi-head transformer. The fixture checks
 uniform attention, a peaked first-key distribution, non-finite `q/K/V`
 rejection, output atomicity, and recovery. Observed: **135,441 steps PASS**.
 
+## 2c. Attention masking and memory conditioning
+
+`mth.attention.mask16.f32` maps 16 finite scores and a 16-bit mask to either
+the score or `-inf`; a zero mask is rejected. It is mask transport only, not a
+full masked head. Fixture: **3,586 steps PASS**.
+
+`mth.memory.condition16.f32` implements the decoder-side residual seam:
+
+```text
+out[i] = hidden[i] + gate[i] * memory[i]
+```
+
+with finite-only inputs, gate in `[0,1]`, scratch accumulation, and atomic
+publication. Fixture: **8,360 steps PASS**.
+
 ## 3. How this connects to Round 042 and fluency
 
 Round 042's causal audit deletes one indispensable native pair and requires the

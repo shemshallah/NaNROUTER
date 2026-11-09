@@ -165,6 +165,8 @@
 | 151 | 3-byte reserve-row hash | `mth/tests/mth_byte_assoc3_reserve_test.nas` | 870,499 | PASS | yes (42655735052) |
 | 152 | Byte memory interpolation | `mth/tests/mth_byte_memory_mix256_test.nas` | 52,100 | PASS | yes (42655735052) |
 | 153 | Single-head attention | `mth/tests/mth_attention_head16_test.nas` | 135,441 | PASS | yes (42667242944) |
+| 154 | Attention mask16 | `mth/tests/mth_attention_mask16_test.nas` | 3,586 | PASS | local only |
+| 155 | Memory conditioning16 | `mth/tests/mth_memory_condition16_test.nas` | 8,360 | PASS | local only |
 
 ## Local phase-system integration fixture
 
@@ -263,7 +265,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 153 kernels (153 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **153 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 153 kernels (153 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **155 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 
