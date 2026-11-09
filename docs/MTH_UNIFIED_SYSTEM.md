@@ -129,6 +129,13 @@ the resident byte LM loses bits per byte to the dense 16×16 control. These
 rounds establish gauge invariance and native training mechanics, not a general
 language advantage.
 
+The unified 255-head decoder-field contract is in
+`docs/UNIFIED_DECODER_FIELD.md`: one shared field of 255 individually
+addressable heads, NANNET0 fixed at ring 255, phase/rotation and triadic
+hyperedges, and sparse tensors rather than a dense 255³ object. The native
+field mixture `mth.field.mix255x16.f32` is implemented; full 255×255 head
+attention, a native backward pass, and joint field training remain open.
+
 Round 043 is recorded in `docs/ROUND_043_ASSOCIATIVE_MEMORY.md`: a frozen
 byte LM plus a native 3-byte associative cache reduces mean held-out loss from
 1.744586 to 1.645717 nats/byte (5.67%), while the flat conventional cache ties
@@ -282,10 +289,10 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 155 kernels, 155 CI-verified, no local-only, 153 sources, 151 fixtures |
+| Unified catalog | 156 kernels, 155 CI-verified, 1 local-only, 154 sources, 152 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,452 tests, 30 skipped, OK |
-| Canonical native runner | 152/152 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+| Canonical native runner | 153/153 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
 | Unified audit workflow | green in run `42542831186` |
 
 The 29 local skips include the upstream Ed25519 attestation class because the

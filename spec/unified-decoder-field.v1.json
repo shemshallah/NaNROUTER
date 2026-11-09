@@ -1,0 +1,165 @@
+{
+  "schema": "nanrouter.unified-decoder-field.v1",
+  "date": "2026-11-09",
+  "status": "architecture contract and native integration ledger",
+  "principle": "One 8 MiB universe, 255 real heads plus NANNET0 at ring position 255; a shared decoder field, not 255 independent models.",
+  "field": {
+    "real_heads": 255,
+    "nannet_position": 255,
+    "head_state_channels": 16,
+    "ring_positions": 256,
+    "field_vector_words": 4080,
+    "field_operator_max_dense_words": 65536,
+    "hyperedge_order": 3,
+    "dense_three_way_tensor_forbidden": true
+  },
+  "layers": [
+    {
+      "id": "L0",
+      "name": "token/byte",
+      "representation": "shared embedding vector",
+      "native_seams": [
+        "vector ops",
+        "byte memory"
+      ]
+    },
+    {
+      "id": "L1",
+      "name": "head state",
+      "representation": "255 x 16 vectors + phase per head",
+      "native_seams": [
+        "trig.sincos",
+        "trig.rotate",
+        "ring.angular_map",
+        "field.mix255x16"
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "pair relation",
+      "representation": "oriented mirror-pair triangle",
+      "native_seams": [
+        "mirror.cycle_flux",
+        "cycle.train_step",
+        "cycle.predict16",
+        "evidence.cycle_state"
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "triadic relation",
+      "representation": "typed 3-vertex simplex/incidence with phase and strength",
+      "native_seams": [
+        "hyperedge.incidence_walk",
+        "hyperedge.path_score",
+        "hyperedge.strength"
+      ]
+    },
+    {
+      "id": "L4",
+      "name": "relation-of-relations",
+      "representation": "hyperedge IDs as vertices in a higher typed incidence layer",
+      "native_seams": [
+        "graph components",
+        "relation operator",
+        "claim probe"
+      ]
+    },
+    {
+      "id": "L5",
+      "name": "field abstraction",
+      "representation": "ring modes, Laplacian/DFT, gated field mixture",
+      "native_seams": [
+        "graph laplacian",
+        "DFT",
+        "field.mix255x16",
+        "memory.condition16"
+      ]
+    }
+  ],
+  "decoder": {
+    "shared_trunk": true,
+    "per_head_adapter": "low-rank vector/rotation/gate adapter, not a full copy",
+    "head_phase": "theta_h = position phase + content phase + ring angle",
+    "head_gate": "phase coherence x evidence confidence x learned gate",
+    "head_readout": "q/k/v projection and masked single-head attention",
+    "mixture": "out = sum_h g_h * head_value_h; logits mixed with the same gates",
+    "nannet_rule": "NANNET0 is a boundary port, never a trainable head and never rotated",
+    "max_dense_attention": "256 x 256 matrix per tile; three-way relations stay sparse"
+  },
+  "trigonometry": {
+    "uses": [
+      "ring addressing",
+      "RoPE-style relative phase",
+      "complex mirror circulation",
+      "oscillatory write gates",
+      "native DFT twiddles",
+      "phase-coherence gating"
+    ],
+    "implemented": [
+      "mth.trig.sincos.f32",
+      "mth.trig.rotate.f32",
+      "mth.trig.twiddle256.f32",
+      "mth.mirror.cycle.phase_gate16.f32",
+      "mth.ring.angular_map.u32"
+    ]
+  },
+  "tensors": {
+    "meaning": "typed arrays of field values, not a second geometry",
+    "shapes": [
+      "255 x 16 head state",
+      "255 x 255 field/attention tile",
+      "sparse 3-vertex incidences",
+      "16 x 16 adapter matrices"
+    ],
+    "rule": "no dense 255^3 relation tensor; use sparse incidence and tiled dense matrices"
+  },
+  "gradients": {
+    "meaning": "typed local correction fields, not a hidden host math path",
+    "sources": [
+      "next-token cross entropy",
+      "relation direction",
+      "evidence support/refute",
+      "hyperedge reconstruction",
+      "gauge/mirror residual",
+      "retention"
+    ],
+    "native_mechanisms": [
+      "cycle.train_step delta rule",
+      "retain/consolidation",
+      "analytic projection/gate derivatives",
+      "straight-through or score-function learning for discrete hyperedges"
+    ],
+    "open": "a full native backward pass for the 255-head decoder field is not implemented"
+  },
+  "native_integration": {
+    "production_authority": false,
+    "new_primitive": "mth.field.mix255x16.f32",
+    "existing_primitives": [
+      "mth.attention.project16.f32",
+      "mth.attention.head16.f32",
+      "mth.attention.mask16.f32",
+      "mth.memory.condition16.f32",
+      "mth.vector.logsoftmax256.f32",
+      "mth.lm.cross_entropy256.f32",
+      "mth.byte.memory_mix256.f32",
+      "mth.mirror.pair.knockout.f32"
+    ]
+  },
+  "open_gates": [
+    "255 x 255 tiled head-to-head field attention",
+    "multi-head packing and causal masking beyond 16-key tiles",
+    "native backward pass for the decoder field",
+    "joint training of relation memory and free-running decoder",
+    "natural-prose evaluation and matched conventional baseline",
+    "fluency evaluation"
+  ],
+  "non_claims": [
+    "No 255 independent models; heads share a trunk and field.",
+    "No dense 255^3 triadic tensor.",
+    "NANNET0 is not a trainable head and is not rotated.",
+    "No claim that the field beats a matched conventional memory.",
+    "No fluent open-domain decoder yet.",
+    "The native field mixture is an aggregation seam, not a trained decoder."
+  ]
+}

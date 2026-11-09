@@ -2213,6 +2213,21 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.field.mix255x16.f32",
+      "source": "mth/nan16/mth_field_mix255x16_f32.nas",
+      "fixture": "mth/tests/mth_field_mix255x16_test.nas",
+      "marker": "MTH FIELD MIX255X16 PASS",
+      "steps": 486806,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        255,
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }

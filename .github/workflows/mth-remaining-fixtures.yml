@@ -113,6 +113,7 @@ jobs:
           --only attention_head16 \
           --only attention_mask16 \
           --only memory_condition16 \
+          --only field_mix255x16 \
           --only assoc3_reserve \
           --only byte_memory_mix \
           --only graph_laplacian_csr \
