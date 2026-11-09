@@ -54,6 +54,20 @@ and only then copies scratch to `out`. That makes rejection atomic.
 Fixture coverage: identity, bias, a non-identity row, NaN `x/W/bias`, overflow,
 output atomicity, and recovery. Observed: **45,779 steps PASS**.
 
+## 2b. Single-head attention
+
+`mth.attention.head16.f32` composes the projection seam into one actual head:
+
+```text
+score[p]  = dot(q, K[p])
+weight[p] = softmax(score)[p]     (native 256-way softmax on 16 scores)
+out[c]    = sum(p) weight[p] * V[p][c]
+```
+
+It is one head over 16 keys, not a multi-head transformer. The fixture checks
+uniform attention, a peaked first-key distribution, non-finite `q/K/V`
+rejection, output atomicity, and recovery. Observed: **135,441 steps PASS**.
+
 ## 3. How this connects to Round 042 and fluency
 
 Round 042's causal audit deletes one indispensable native pair and requires the

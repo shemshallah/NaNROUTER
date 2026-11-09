@@ -110,6 +110,7 @@ jobs:
           --only evidence_cycle_state \
           --only pair_knockout \
           --only attention_project16 \
+          --only attention_head16 \
           --only assoc3_reserve \
           --only byte_memory_mix \
           --only graph_laplacian_csr \

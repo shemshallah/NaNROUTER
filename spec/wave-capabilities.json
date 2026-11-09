@@ -2171,6 +2171,20 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.attention.head16.f32",
+      "source": "mth/nan16/mth_attention_head16_f32.nas",
+      "fixture": "mth/tests/mth_attention_head16_test.nas",
+      "marker": "MTH ATTENTION HEAD16 PASS",
+      "steps": 135441,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        16
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
