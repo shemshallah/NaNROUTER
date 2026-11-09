@@ -234,7 +234,7 @@ python3 tools/run_mth_fixtures.py
 K256 pair-space, normalize, prefix-sum, xorshift64, and universe-map targeted set: 5/5 PASS
 
 python3 -m unittest discover -s tests -q
-Ran 1239 tests
+Ran 1242 tests
 OK (skipped=16)
 ```
 
