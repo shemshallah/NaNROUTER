@@ -18,7 +18,7 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 | Unique manifest fixture files | 152 |
 | Fixture entries in the canonical runner | 153 |
 | Native-dispatch ABI kernels | 5 |
-| Local Python tests | 1,452+ |
+| Local Python tests | 1,457+ |
 | Universe pages / NaN16 words / relation points | 256 / 1,048,576 / 32,896 |
 | Providers in the unified system spec | 7 (3 required, 4 optional) |
 
@@ -225,8 +225,8 @@ At baseline commit `12980a3`:
   dispatch over already-registered vector kernels; it is not a 97th kernel.
 - The manifest declares **156/156 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
-- The recorded local suite is **1,452+ local Python tests** (baseline record:
-  `Ran 1452 tests`, `OK (skipped=30)`).
+- The recorded local suite is **1,457+ local Python tests** (baseline record:
+  `Ran 1457 tests`, `OK (skipped=30)`).
 - The full universe-map fixture passes locally in **12,916,386 guest steps**;
   it is one fixture, not all 156 kernels.
 
@@ -824,7 +824,7 @@ them:
     runner entries and 93 unique manifest fixture files.
 12. “94 runner fixtures means 94 catalogued kernels.” The runner has one
     runner-only dispatch fixture and some kernels share fixtures.
-13. “1,452+ local tests prove native numerical correctness.” They are host and
+13. “1,457+ local tests prove native numerical correctness.” They are host and
     control-plane tests plus fixture-oriented coverage, not an independent
     numerical oracle.
 14. “The manifest's `ci_verified=true` is self-authenticating.” It is a ledger
@@ -853,7 +853,7 @@ named evidence class and scope. It does not promote any other row.
 | GREEN | Local native fixture runner | E1 | 94/94 PASS recorded against NaN0S `f31143e`; pinned canonical `fe63617` differs only in a CI workflow per the recorded note | Local only; exact toolchain; not a fresh CI run |
 | GREEN | Host universe map | Static/generated | 256 pages, 1,048,576 words, 32,896 relation points, coverage 1.0; generated-map check passes | Address coverage only |
 | GREEN | Native universe-map fixture | E1 + E2 | PASS, 12,916,386 steps; recorded CI run `42539617226` | One fixture; no relation-truth claim |
-| GREEN | Local Python suite | Local tests | 1,452+ tests; baseline record `Ran 1452`, `OK (skipped=30)` | Host/control suite; not native numerical proof |
+| GREEN | Local Python suite | Local tests | 1,457+ tests; baseline record `Ran 1457`, `OK (skipped=30)` | Host/control suite; not native numerical proof |
 | GREEN | Canonical native CI | E2 | 96/96 declared CI-verified; recorded runs `42405649076`, `42539617226`, `42539739728`, `42542521347`, `42542521393` | Historical records; exact commits/workflows; not re-run here |
 | GREEN | Unified catalog and provider contracts | E3 | 96 kernels, 5 dispatch ABI, 7/7 providers available, 0 warnings; `claims_ci_verified=false`, `claims_live_deployment=false` | Contract presence only; no provider runtime claim |
 | GREEN | Unified audit workflow | E2 | Recorded run `42542831186` | Universe-map check, catalog check, two test modules; no native fixture execution |
