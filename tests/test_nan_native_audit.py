@@ -69,6 +69,20 @@ class NanNativeAuditTests(unittest.TestCase):
         self.assertIn("mth_graph_path_witness_test.nas", workflow)
         self.assertEqual(audit()["status"], "green")
 
+    def test_graph_claim_batch_has_independent_native_ci_and_no_promotion(self):
+        spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
+        source = "mth/nan16/mth_graph_claim_batch.nas"
+        self.assertIn(source, spec["excluded_native_sources"])
+        self.assertIn("not an authorized numerical MTH kernel",
+                      spec["excluded_native_sources"][source])
+        self.assertTrue((REPO_ROOT / source).is_file())
+        fixture = "mth/tests/mth_graph_claim_batch_test.nas"
+        self.assertTrue((REPO_ROOT / fixture).is_file())
+        workflow = (REPO_ROOT / ".github/workflows/native-graph-claim-batch.yml"
+                    ).read_text(encoding="utf-8")
+        self.assertIn(fixture, workflow)
+        self.assertEqual(audit()["status"], "green")
+
     def test_new_kernels_receive_the_expected_layer(self):
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
