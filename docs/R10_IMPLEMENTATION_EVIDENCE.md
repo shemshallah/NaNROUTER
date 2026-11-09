@@ -259,5 +259,6 @@ Run it after any kernel change.
 - Native stable softmax/log-sum-exp and exp/log/sqrt/rsqrt/sigmoid/tanh are CI-verified; log-softmax and exhaustive numerical error proofs remain open.
 - Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are CI-verified in run `42539617226`; Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
 - The unified catalog is a cross-repo source/contract audit, not proof that every provider is deployed, reachable, or executing the same build. It deliberately leaves CI and live claims false.
+- Round 032 retrieval evidence is external C++: 50,268 facts, 250,000/250,000 exact lookups, 2,000/2,000 stored two-hop queries, and 1.01167 cycle invariance. The conventional hash index is ~4.3× faster (2.29752 ms vs 9.77183 ms); this is not decoder or generalization evidence. See `docs/ROUND_032_RETRIEVAL.md`.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
 - No claim of intelligence, creativity, quantum tunneling, or consciousness.

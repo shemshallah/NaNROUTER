@@ -1,0 +1,65 @@
+{
+  "schema": "nanrouter.round032-retrieval.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-native-cpp-experiment",
+  "source_archive": {
+    "name": "nan_recursive_round032.zip",
+    "sha256": "19572e59a5038200b38f7e7ad063b2850458236de18ab58d83871ae46ccb11be"
+  },
+  "root": {
+    "bytes": 8388608,
+    "head_cells": 256,
+    "pair_cells": 32640,
+    "pair_index": "a*(511-a)/2 + (b-a-1), a < b",
+    "directional_lanes": 2,
+    "root_locked_linux": true
+  },
+  "facts": {
+    "count": 50268,
+    "source": "WordNet 3.1 noun hypernym facts derived from the Round 025 corpus",
+    "storage": "typed hyperedges in an append-only arena outside the root; concept-anchored pair posting lists",
+    "collision_policy": "explicit source/relation comparison after pair lookup"
+  },
+  "retrieval": {
+    "queries": 250000,
+    "posting_found": 250000,
+    "hash_found": 250000,
+    "posting_ms": 9.77183,
+    "hash_ms": 2.29752,
+    "relative_speed": "conventional hash index about 4.3x faster in this microbenchmark",
+    "two_hop_queries": 2000,
+    "two_hop_found": 2000,
+    "direct_found": 0
+  },
+  "cycle": {
+    "before": 0.0116667,
+    "after_update": 1.01167,
+    "after_gauge": 1.01167,
+    "gauge_invariant_to_float32_precision": true
+  },
+  "long_context": {
+    "queries": 1000,
+    "distractor_facts": 512,
+    "short_context_correct": 0,
+    "pair_index_correct": 1000,
+    "hash_index_correct": 1000,
+    "evaluation_ms": 157.8239210011816
+  },
+  "non_claims": [
+    "This is not a trained retrieval-augmented language decoder.",
+    "It does not test unseen-word inference; the 2,000 two-hop queries are sampled from already stored links.",
+    "The pair-index posting lists are headed in a separate fixed index array, not embedded directly in the root record.",
+    "The conventional hash index is faster in this microbenchmark; no unique mirror-geometry performance advantage is established.",
+    "The long-context test retrieves existing facts after distractors; it does not test neural generation.",
+    "The root float lanes receive a demonstrative triangle update, not next-token training.",
+    "There is no concurrent writer, WAL, or persistent hyperedge snapshot in this round.",
+    "No GPU, quantum, canonical merge, or live deployment claim is made."
+  ],
+  "integration": {
+    "production_authority": false,
+    "host_retrieval_adapter": "runner_riddle/mirror_retrieval_index.py",
+    "physical_layout": "spec/mirror-memory.v1.json",
+    "hyperedge_arena": "runner_riddle/mirror_hyperedge_arena.py",
+    "next_gate": "connect Round 031 native decoder to retrieval states and compare against a matched conventional memory baseline"
+  }
+}

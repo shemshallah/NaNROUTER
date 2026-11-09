@@ -98,7 +98,10 @@ profile and never overlay both writers simultaneously.
 See `docs/MIRROR_MEMORY_LAYOUT.md` and
 `docs/ROUNDS_023_027_INTEGRATION.md`. Round 028’s external shared-composition
 experiment is recorded separately in `docs/ROUND_028_SEMANTIC_LEARNING.md`; it
-is not a native production kernel.
+is not a native production kernel. Round 032’s sparse retrieval experiment is
+recorded in `docs/ROUND_032_RETRIEVAL.md`; its conventional hash index is
+faster, so the mirror geometry remains a directional/cycle state substrate,
+not a universal lookup replacement.
 
 ## 4. Native kernel
 
