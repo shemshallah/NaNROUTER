@@ -160,10 +160,10 @@
 | 146 | Log-softmax 256 | `mth/tests/mth_vector_logsoftmax256_f32_test.nas` | 62,379 | PASS | yes (42641768677) |
 | 147 | Cross-entropy 256 | `mth/tests/mth_lm_cross_entropy256_f32_test.nas` | 62,098 | PASS | yes (42641768677) |
 | 148 | Two-lane evidence state | `mth/tests/mth_mirror_evidence_cycle_state_test.nas` | 1,413 | PASS | yes (42641768677) |
-| 149 | Causal pair knockout/restore | `mth/tests/mth_mirror_pair_knockout_test.nas` | 6,617 | PASS | local only |
-| 150 | 16→16 attention projection | `mth/tests/mth_attention_project16_test.nas` | 45,779 | PASS | local only |
-| 151 | 3-byte reserve-row hash | `mth/tests/mth_byte_assoc3_reserve_test.nas` | 870,499 | PASS | local only |
-| 152 | Byte memory interpolation | `mth/tests/mth_byte_memory_mix256_test.nas` | 52,100 | PASS | local only |
+| 149 | Causal pair knockout/restore | `mth/tests/mth_mirror_pair_knockout_test.nas` | 6,617 | PASS | yes (42655735052) |
+| 150 | 16→16 attention projection | `mth/tests/mth_attention_project16_test.nas` | 45,779 | PASS | yes (42655735052) |
+| 151 | 3-byte reserve-row hash | `mth/tests/mth_byte_assoc3_reserve_test.nas` | 870,499 | PASS | yes (42655735052) |
+| 152 | Byte memory interpolation | `mth/tests/mth_byte_memory_mix256_test.nas` | 52,100 | PASS | yes (42655735052) |
 
 ## Local phase-system integration fixture
 
@@ -262,7 +262,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 152 kernels (148 `ci_verified`, 4 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **152 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 152 kernels (152 `ci_verified`, no local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **152 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

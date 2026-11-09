@@ -223,7 +223,7 @@ At baseline commit `12980a3`:
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **148/152 `ci_verified=true`**, with 4 newly integrated local-only kernels awaiting promotion. That is a ledger field,
+- The manifest declares **152/152 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,447+ local Python tests** (baseline record:
   `Ran 1447 tests`, `OK (skipped=30)`).
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 148/152 `ci_verified` declaration in the manifest is supported by these
+The 152/152 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules
