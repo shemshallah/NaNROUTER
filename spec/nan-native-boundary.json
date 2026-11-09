@@ -90,7 +90,8 @@
       "prefixes": [
         "mth.adapter.",
         "mth.lowrank.",
-        "mth.graph.pair."
+        "mth.graph.pair.",
+        "mth.sequence."
       ],
       "host_roles": [
         "cost/workspace accounting only"

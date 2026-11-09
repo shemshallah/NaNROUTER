@@ -67,6 +67,12 @@ jobs:
           --only pair_full_grid_driver \
           --only vector_sqrt256_f32 \
           --only vector_rsqrt256_f32 \
+          --only vector_exp256_f32 \
+          --only vector_log256_f32 \
+          --only vector_logsumexp256_f32 \
+          --only sequence_step_u32 \
+          --only vector_sigmoid256_f32 \
+          --only vector_tanh256_f32 \
           --only graph_laplacian_csr \
           --only rss_contract \
           --only matrix_transpose256 \

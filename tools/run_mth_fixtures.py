@@ -131,6 +131,12 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("pair_full_grid_driver", "mth/tests/mth_graph_pair_full_grid_driver_f32_test.nas", 600_000_000, "MTH FULL GRID 256 TILE DRIVER PASS", "native_verified"),
     Fixture("vector_sqrt256_f32", "mth/tests/mth_vector_sqrt256_f32_test.nas", 500_000, "MTH VECTOR SQRT256 F32 PASS", "native_verified"),
     Fixture("vector_rsqrt256_f32", "mth/tests/mth_vector_rsqrt256_f32_test.nas", 500_000, "MTH VECTOR RSQRT256 F32 PASS", "native_verified"),
+    Fixture("vector_exp256_f32", "mth/tests/mth_vector_exp256_f32_test.nas", 1_000_000, "MTH VECTOR EXP256 F32 PASS", "native_verified"),
+    Fixture("vector_log256_f32", "mth/tests/mth_vector_log256_f32_test.nas", 500_000, "MTH VECTOR LOG256 F32 PASS", "native_verified"),
+    Fixture("vector_logsumexp256_f32", "mth/tests/mth_vector_logsumexp256_f32_test.nas", 500_000, "MTH VECTOR LOGSUMEXP256 F32 PASS", "native_verified"),
+    Fixture("sequence_step_u32", "mth/tests/mth_sequence_step_u32_test.nas", 10_000, "MTH SEQUENCE STEP U32 PASS", "native_verified"),
+    Fixture("vector_sigmoid256_f32", "mth/tests/mth_vector_sigmoid256_f32_test.nas", 500_000, "MTH VECTOR SIGMOID256 F32 PASS", "native_verified"),
+    Fixture("vector_tanh256_f32", "mth/tests/mth_vector_tanh256_f32_test.nas", 500_000, "MTH VECTOR TANH256 F32 PASS", "native_verified"),
     Fixture("prng_xorshift64", "mth/tests/mth_prng_xorshift64_test.nas", 20_000, "MTH PRNG XORSHIFT64 PASS", "native_verified"),
     Fixture("universe_map", "mth/tests/mth_universe_map_test.nas", 13_000_000, "MTH UNIVERSE MAP PASS", "native_verified"),
     # These include ../../nan0s/... sources. Pass --nan0s-root at the canonical

@@ -107,7 +107,7 @@ The second strongest rule is:
 
 At the time of writing the checked-in `main` contains:
 
-- **106 manifest kernels** with fixtures: 96 `ci_verified` and no local-only entries; 104 canonical runner fixture paths and 103 unique manifest fixtures;
+- **106 manifest kernels** with fixtures: 96 `ci_verified` and no local-only entries; 110 canonical runner fixture paths and 109 unique manifest fixtures;
 - **94 locally runnable runner fixtures**, including the K256 pair fixture, the normalize/prefix-sum/PRNG fixtures, and the full 8 MiB universe-map fixture;
 - static NaN-native boundary audit green over 104 registered MTH sources plus three explicitly excluded HERMES guests;
 - **full 8 MiB guest address map** over 256 pages, 1,048,576 words, 256 fixed heads, 32,640 mirror pairs, and 32,896 relation points (`runner_riddle/universe_map.py`, `spec/universe-map.json`, native `mth.universe.map.u32`);

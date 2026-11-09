@@ -54,10 +54,17 @@ class HermesMthToolsTests(unittest.TestCase):
 
     def test_catalogue_ci_claims_match_local_promotion_state(self):
         kernels = self.tools.registry.kernels
-        self.assertEqual(len(kernels), 106)
+        self.assertEqual(len(kernels), 112)
         self.assertTrue(all(kernel.status == "native_verified" for kernel in kernels))
         self.assertEqual(sum(kernel.ci_verified for kernel in kernels), 106)
-        local_only = set()
+        local_only = {
+            "mth.vector.exp256.f32",
+            "mth.vector.log256.f32",
+            "mth.vector.logsumexp256.f32",
+            "mth.sequence.step.u32",
+            "mth.vector.sigmoid256.f32",
+            "mth.vector.tanh256.f32",
+        }
         self.assertEqual(
             {kernel.kernel_id for kernel in kernels if not kernel.ci_verified},
             local_only,

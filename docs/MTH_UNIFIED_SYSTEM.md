@@ -186,10 +186,10 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 106 kernels, 106 CI-verified, 0 local-only, 104 sources, 103 fixtures |
+| Unified catalog | 112 kernels, 106 CI-verified, 6 local-only, 110 sources, 109 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,248 tests, 29 skipped, OK |
-| Canonical native runner | 104/104 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
+| Canonical native runner | 110/110 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
 | Unified audit workflow | green in run `42542831186` |
 
 The 29 local skips include the upstream Ed25519 attestation class because the

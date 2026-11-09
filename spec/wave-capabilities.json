@@ -1522,6 +1522,90 @@
       ],
       "status": "native_verified",
       "ci_verified": true
+    },
+    {
+      "kernel_id": "mth.vector.exp256.f32",
+      "source": "mth/nan16/mth_vector_exp256_f32.nas",
+      "fixture": "mth/tests/mth_vector_exp256_f32_test.nas",
+      "marker": "MTH VECTOR EXP256 F32 PASS",
+      "steps": 417686,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.log256.f32",
+      "source": "mth/nan16/mth_vector_log256_f32.nas",
+      "fixture": "mth/tests/mth_vector_log256_f32_test.nas",
+      "marker": "MTH VECTOR LOG256 F32 PASS",
+      "steps": 111700,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.logsumexp256.f32",
+      "source": "mth/nan16/mth_vector_logsumexp256_f32.nas",
+      "fixture": "mth/tests/mth_vector_logsumexp256_f32_test.nas",
+      "marker": "MTH VECTOR LOGSUMEXP256 F32 PASS",
+      "steps": 101452,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        1
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.sequence.step.u32",
+      "source": "mth/nan16/mth_sequence_step_u32.nas",
+      "fixture": "mth/tests/mth_sequence_step_u32_test.nas",
+      "marker": "MTH SEQUENCE STEP U32 PASS",
+      "steps": 1467,
+      "precision": "u32",
+      "workspace_words": 0,
+      "shape": [
+        2
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.sigmoid256.f32",
+      "source": "mth/nan16/mth_vector_sigmoid256_f32.nas",
+      "fixture": "mth/tests/mth_vector_sigmoid256_f32_test.nas",
+      "marker": "MTH VECTOR SIGMOID256 F32 PASS",
+      "steps": 129881,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
+    },
+    {
+      "kernel_id": "mth.vector.tanh256.f32",
+      "source": "mth/nan16/mth_vector_tanh256_f32.nas",
+      "fixture": "mth/tests/mth_vector_tanh256_f32_test.nas",
+      "marker": "MTH VECTOR TANH256 F32 PASS",
+      "steps": 134794,
+      "precision": "float32",
+      "workspace_words": 0,
+      "shape": [
+        256
+      ],
+      "status": "native_verified",
+      "ci_verified": false
     }
   ]
 }
