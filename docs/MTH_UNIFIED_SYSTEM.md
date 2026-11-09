@@ -266,7 +266,7 @@ The generated catalog explicitly records:
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
 | Unified catalog | 139 kernels, 139 CI-verified, no local-only, 137 sources, 135 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
-| Local Python tests | 1,424 tests, 30 skipped, OK |
+| Local Python tests | 1,434 tests, 30 skipped, OK |
 | Canonical native runner | 136/136 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |
 | Unified audit workflow | green in run `42542831186` |
 
