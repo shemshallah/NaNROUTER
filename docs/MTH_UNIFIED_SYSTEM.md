@@ -174,6 +174,13 @@ The `.github/workflows/mth-unified-audit.yml` workflow runs the universe-map
 check, the unified-catalog check, and the two focused test modules on every
 change to those contracts.
 
+Known cross-repo gap: HERMES and NaNLMind still expect the checked-u32
+`mth.u32.add_checked` / `mth.u32.sub_checked` route and
+`/v1/hermes/leases/math`, while NaNROUTER main has neither. The unmerged
+`feat/native-hierarchy-router-hermes-bridge` branch supplies that contract.
+See `docs/MTH_CROSS_REPO_SYNC_20261109.md`; do not alias it to the i32 kernel
+without an ABI decision.
+
 The generated catalog explicitly records:
 
 ```json
