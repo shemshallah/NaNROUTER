@@ -121,6 +121,8 @@ The 255-head + one-NANNET-node architecture and its NaN16-native implementation 
 - `docs/IMPLEMENTATION_TODO.md` — active implementation ledger.
 - `docs/R10_IMPLEMENTATION_EVIDENCE.md` — local native fixture and test evidence.
 - `docs/WAVE_TILE_ORCHESTRATOR.md` — 256-tile page window and atomic publication.
+- `docs/UNIFIED_LEARNING_SYNTHESIS.md` — the Round 023–039 integration map, content-gated learning loop, and fair-evaluation gates.
+- `docs/ROUNDS_029_031_NATIVE_LEARNING.md` — the gauge advantage, native-root classifier, and resident byte-LM evidence.
 - `docs/TRIG_NATIVE_SYNTHESIS.md` — native sine/cosine, plane rotation, and the trigonometric design space.
 - `docs/ROUNDS_038_039_FREE_GENERATION.md` — unrestricted subword generation and the corrected native-cycle audit.
 - `docs/MTH_PAIR_TILE16_FILE_PAGES.md` — immutable file-backed matrix pages and CAS output generations.

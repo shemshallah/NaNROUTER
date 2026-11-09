@@ -1,0 +1,170 @@
+{
+  "schema": "nanrouter.rounds-029-031-native-learning.v1",
+  "date": "2026-11-09",
+  "evidence_class": "external-cpp-pytorch-experiment",
+  "archives": {
+    "round_029": {
+      "name": "nan_recursive_round029.zip",
+      "sha256": "cf6f526e361affcd85010f61a75c2a8815c2168862bfd51c27acae0827043bc3"
+    },
+    "round_030": {
+      "name": "nan_recursive_round030.zip",
+      "sha256": "8fc5399dbbb5c8c7477f0d1b1ef38be52765be963be298fcb0794279abf12591"
+    },
+    "round_031": {
+      "name": "nan_recursive_round031.zip",
+      "sha256": "87bffecf6912297162921ef48c588b757b0c8dbd3dd57f2f688d9214b2b3f080"
+    }
+  },
+  "round_029": {
+    "task": "controlled WordNet 3.1 gloss classification under artificial vertex-gauge distribution shift",
+    "seeds": [
+      17,
+      29,
+      41
+    ],
+    "held_out_synsets_per_seed": 1152,
+    "triangle_dimensions": 48,
+    "classifier_parameters": 4176,
+    "results": {
+      "true_cycle_triangle_shift": {
+        "accuracy": 0.5269097222222222,
+        "cross_entropy": 1.638588680678777
+      },
+      "raw_directed_pair_shift": {
+        "accuracy": 0.10966435185185185,
+        "cross_entropy": 11.675426924929143
+      },
+      "wrong_triangle_shift": {
+        "accuracy": 0.10706018518518519,
+        "cross_entropy": 11.629960212764543
+      },
+      "correct_conventional_triangle": {
+        "accuracy": 0.5269097222222222,
+        "cross_entropy": 1.638588680678777
+      },
+      "raw_clean_control": {
+        "accuracy": 0.5269097222222222,
+        "cross_entropy": 1.6385887773970957
+      },
+      "learned_all_edges_gauge_augmented": {
+        "accuracy": 0.2682291666666667,
+        "cross_entropy": 2.653669265315381
+      }
+    },
+    "native_root": {
+      "bytes": 8388608,
+      "mirror_pairs": 32640,
+      "max_gauge_error": 1.86265e-06,
+      "max_reverse_error": 0.0,
+      "finite_difference_error": 6.01865e-05,
+      "loss_before_step": 0.0658141,
+      "loss_after_step": 0.0322489,
+      "reads": 500000,
+      "read_milliseconds": 1.40741,
+      "mlock_status": 0,
+      "passed": true
+    },
+    "interpretation": "The correct gauge-invariant triangle ties the conventional implementation exactly; the gain over raw/wrong reads is an invariance effect, not a NaN-specific or general-language advantage."
+  },
+  "round_030": {
+    "task": "native-root-trained WordNet noun-category classifier with external TF-IDF/24D SVD features",
+    "seeds": [
+      17,
+      29,
+      41
+    ],
+    "test_synsets_per_seed": 560,
+    "classes": 16,
+    "effective_cycle_weights": 384,
+    "results": {
+      "mean_cycle_shift_accuracy": 0.42083333333333334,
+      "mean_raw_shift_accuracy": 0.08214285714285714,
+      "mean_cycle_shift_cross_entropy": 2.1155307307900255,
+      "conventional_no_intercept_logistic_accuracy": 0.423214,
+      "native_gradient_max_abs_error": 1.862645149230957e-09,
+      "gauge_weight_max_abs_error": 4.1653402149677277e-07,
+      "mirror_antisymmetry": true,
+      "snapshot_bitwise_restore": true,
+      "max_logit_delta_single_shift": 2.86102294921875e-05,
+      "max_logit_delta_101_shifts": 0.0002841949462890625,
+      "ctypes_1000_predictions_ms": 7.735439000498445,
+      "text_encoder_is_external": true
+    },
+    "per_seed_accuracy": {
+      "17": 0.3892857142857143,
+      "29": 0.4392857142857143,
+      "41": 0.43392857142857144
+    },
+    "interpretation": "The native root trains and preserves the triangle invariant, but the clean-input conventional classifier is equal or better."
+  },
+  "round_031": {
+    "task": "byte-level recurrent language model with a native 16x16 root-coupled cycle memory",
+    "seeds": [
+      17,
+      29
+    ],
+    "updates": 100,
+    "hidden_dimensions": 16,
+    "held_out_wordnet_bytes": 13200,
+    "wordnet_bits_per_byte": {
+      "seed_17": {
+        "ordinary": 3.89467,
+        "native_cycle": 4.00756
+      },
+      "seed_29": {
+        "ordinary": 3.78293,
+        "native_cycle": 3.84761
+      }
+    },
+    "train_or_eval_caveats": [
+      "1800 noun glosses per split selected in original corpus order, not a randomized representative sample",
+      "short-text wraparound during training",
+      "recurrent state reset between evaluated documents",
+      "encoder/decoder GRU remains external PyTorch",
+      "13,200 held-out WordNet bytes per evaluated model",
+      "native SGD step size not matched to neural AdamW"
+    ],
+    "native_audit": {
+      "reads": 10000,
+      "mean_read_ms": 0.006859622000047238,
+      "gauge_max_diff": 1.2293457984924316e-06,
+      "mirror_audit": true,
+      "snapshot_max_diff": 0.0
+    },
+    "readme_gauge_claim": "README says below 8e-7; archived audit.json reports 1.2293457984924316e-06. The audit value is authoritative for this record.",
+    "wordnet_graph": {
+      "synsets": 117570,
+      "two_hop_candidates": 87655,
+      "two_hop_proofs_checked": 1500,
+      "all_chain_edges_verified": true,
+      "direct_edge_only_hits": 0
+    },
+    "interpretation": "This is real native-root-coupled training, but the conventional 16x16 tensor wins bits per byte in both seeds."
+  },
+  "native_integration": {
+    "production_authority": false,
+    "native_primitives_reused": [
+      "mth.mirror.pair_map.u32",
+      "mth.mirror.cycle_flux.f32",
+      "mth.mirror.root_step.f32",
+      "mth.gauge.triangle_recover.f32",
+      "mth.mirror.cycle.train_step.f32",
+      "mth.mirror.cycle.predict16.f32",
+      "mth.trig.sincos.f32",
+      "mth.trig.rotate.f32"
+    ],
+    "synthesis": "These rounds provide the gauge-invariance and native-root-training evidence base; Rounds 038-039 show that fixed cycle adapters still lose to matched dense controls. The next gate is content-gated writes plus a matched conventional episode memory."
+  },
+  "non_claims": [
+    "No NaN-encoding advantage over a conventional implementation of the same triangle observable.",
+    "No quantum effect.",
+    "No general language-model advantage; the conventional control ties or wins.",
+    "Round 029 and 030 text features are external to the native root.",
+    "Round 031's GRU and decoder remain external PyTorch.",
+    "Artificial gauge shifts are not natural distribution shifts.",
+    "The 8 MiB root is RAM, not CPU registers or guaranteed mlocked residency.",
+    "No production optimizer, deployment, or fluent generation claim.",
+    "Round 031 native SGD was not matched to neural AdamW."
+  ]
+}

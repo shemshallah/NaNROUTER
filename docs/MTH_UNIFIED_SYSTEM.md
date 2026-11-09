@@ -122,6 +122,13 @@ changes. The native additions are the 32,385 lexical slot map and the writer
 class codec. It is still a controlled pipeline, not unrestricted prose
 understanding or a unique geometry advantage.
 
+Rounds 029–031 are recorded in `docs/ROUNDS_029_031_NATIVE_LEARNING.md`:
+the true cycle observable ties the conventional invariant exactly, the native
+root trains a classifier but the conventional control is equal or better, and
+the resident byte LM loses bits per byte to the dense 16×16 control. These
+rounds establish gauge invariance and native training mechanics, not a general
+language advantage.
+
 Rounds 038–039 are recorded in `docs/ROUNDS_038_039_FREE_GENERATION.md`:
 the model samples a learned 2,048-subword vocabulary with about 464k
 parameters and a native 16×16 triangle-circulation adapter. In the corrected

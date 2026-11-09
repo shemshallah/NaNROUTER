@@ -121,7 +121,8 @@
     "native_primitives": [
       "mth.trig.sincos.f32",
       "mth.mirror.cycle.train_step.f32",
-      "mth.mirror.cycle.predict16.f32"
+      "mth.mirror.cycle.predict16.f32",
+      "mth.trig.rotate.f32"
     ],
     "synthesis": [
       "content-dependent gated delta-rule write into the physical 8 MiB mirror",
