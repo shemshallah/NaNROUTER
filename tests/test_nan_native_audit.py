@@ -28,6 +28,22 @@ class NanNativeAuditTests(unittest.TestCase):
         self.assertEqual(report["layer_counts"]["L2"], 7)
         self.assertEqual(report["layer_counts"]["L3"], 27)
 
+    def test_graph_claim_probe_has_separate_native_ci_not_math_kernel_authority(self):
+        spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
+        name = "mth/nan16/mth_graph_claim_probe.nas"
+        self.assertIn(name, spec["excluded_native_sources"])
+        self.assertIn("not an authorized numerical MTH kernel",
+                      spec["excluded_native_sources"][name])
+        self.assertTrue((REPO_ROOT / name).is_file())
+        self.assertTrue(
+            (REPO_ROOT / "mth/tests/mth_graph_claim_probe_test.nas").is_file()
+        )
+        workflow = (
+            REPO_ROOT / ".github/workflows/native-graph-claim-probe.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("mth_graph_claim_probe_test.nas", workflow)
+        self.assertEqual(audit()["status"], "green")
+
     def test_new_kernels_receive_the_expected_layer(self):
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         self.assertEqual(

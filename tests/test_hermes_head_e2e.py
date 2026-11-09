@@ -470,6 +470,55 @@ class AuthenticatedNativeHeadCheckpointE2E(unittest.TestCase):
         self.assertEqual((root / SLOT_NAMES[1]).stat().st_size,
                          HEADER.size + len(alternate))
 
+    def test_real_guest_never_reexecutes_after_dispatch_sqlite_inode_swap(self):
+        """Permanent native dispatch identity survives neither DB replacement nor aliasing."""
+        from unittest.mock import patch
+        from runner_riddle.hermes_head_observation import HermesHeadObservationError
+
+        original_bank = bytes(BANK_BYTES)
+        starting = self.fence(self.universe_id)
+        request = self.request(
+            dispatch_id="native-inode-change-e2e-0001", raw=original_bank,
+            generation=starting["chart_generation"], feature=127, increment=1,
+        )
+        first = self.journal.execute(
+            request=request, lease_receipt=self.receipt,
+            network_head=0, raw_bank=original_bank,
+            native_guest=self.guest, allow_genesis_format=True,
+        )
+        self.assertTrue(first["native_guest_invoked_locally"])
+        journal_path = self.base / "dispatch.sqlite"
+        preserved = self.base / "dispatch-original.sqlite"
+        journal_path.rename(preserved)
+        with sqlite3.connect(journal_path) as new_db:
+            new_db.execute("CREATE TABLE unrelated_database (id INTEGER)")
+        with patch.object(
+            self.guest, "observe",
+            side_effect=AssertionError("native VM reexecution forbidden"),
+        ) as observe:
+            with self.assertRaisesRegex(
+                HermesHeadObservationError, "identity changed"
+            ):
+                self.journal.execute(
+                    request=request, lease_receipt=self.receipt,
+                    network_head=0, raw_bank=original_bank,
+                    native_guest=self.guest, allow_genesis_format=True,
+                )
+            observe.assert_not_called()
+        self.assertEqual(self.fence(self.universe_id)["chart_generation"], 1)
+        with sqlite3.connect(preserved) as old_db:
+            self.assertEqual(
+                old_db.execute(
+                    "SELECT COUNT(*) FROM hermes_head_observation"
+                ).fetchone()[0], 1,
+            )
+        with sqlite3.connect(journal_path) as new_db:
+            self.assertEqual(
+                new_db.execute(
+                    "SELECT COUNT(*) FROM unrelated_database"
+                ).fetchone()[0], 0,
+            )
+
     def test_two_authenticated_guest_results_from_same_page_only_one_commits(self):
         """Competing genuine native revisions cannot double-publish a chart."""
         from nanlmind_hermes.native_head_checkpoint import (
