@@ -12,11 +12,11 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 
 | Item | Count |
 |---|---:|
-| Catalogued MTH kernels in `spec/wave-capabilities.json` | 96 |
-| Kernels with `ci_verified=true` in the manifest | 96 |
-| Unique native sources | 94 |
+| Catalogued MTH kernels in `spec/wave-capabilities.json` | 112 |
+| Kernels with `ci_verified=true` in the manifest | 112 |
+| Unique native sources | 110 |
 | Unique manifest fixture files | 93 |
-| Fixture entries in the canonical runner | 94 |
+| Fixture entries in the canonical runner | 110 |
 | Native-dispatch ABI kernels | 5 |
 | Local Python tests | 1,248+ |
 | Universe pages / NaN16 words / relation points | 256 / 1,048,576 / 32,896 |
@@ -215,20 +215,20 @@ cannot promote a tracked manifest entry.
 
 At baseline commit `12980a3`:
 
-- `spec/wave-capabilities.json` contains **96 catalogued kernels**.
-- Those 96 entries reference **94 unique native sources** and **93 unique
+- `spec/wave-capabilities.json` contains **112 catalogued kernels**.
+- Those 112 entries reference **110 unique native sources** and **109 unique
   fixture files**; some kernels intentionally share a source or fixture.
-- `tools/run_mth_fixtures.py` contains **94 fixture entries**: the 93 unique
+- `tools/run_mth_fixtures.py` contains **110 fixture entries**: the 109 unique
   manifest fixtures plus one runner-only dispatch fixture,
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **96/96 `ci_verified=true`**. That is a ledger field,
+- The manifest declares **112/112 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,248+ local Python tests** (baseline record:
   `Ran 1248 tests`, `OK (skipped=29)`).
 - The full universe-map fixture passes locally in **12,916,386 guest steps**;
-  it is one fixture, not all 96 kernels.
+  it is one fixture, not all 112 kernels.
 
 The excluded `mth/nan16/mth_graph_path_witness.nas` is a separate candidate
 witness with its own gate and is not an authorized numerical MTH kernel. The
@@ -250,7 +250,7 @@ or promotion authority.
    does not promote sibling kernels, the manifest as a whole, or the universe
    map.
 
-**Baseline E1 result:** recorded local runner evidence is 94/94 PASS against
+**Baseline E1 result:** recorded local runner evidence is 110/110 PASS against
 NaN0S `f31143e`; the canonical workflow pin `fe63617` differs only in a CI
 workflow file according to `docs/R10_IMPLEMENTATION_EVIDENCE.md`. This is still
 local evidence, not a fresh E2 claim.
@@ -277,9 +277,9 @@ counts may be retained only as historical evidence.
   assertions and PASS marker passed.
 - “Local PASS is CI-verified.”
 - “Local PASS means the service is live.”
-- “94 runner fixtures means 96 kernels were executed.” The counts measure
+- “110 runner fixtures means 112 kernels were executed.” The counts measure
   different things and one fixture can serve multiple kernel entries.
-- “All 96 kernels ran in every local invocation.”
+- “All 112 kernels ran in every local invocation.”
 - “An untracked kernel is catalogued.”
 - “A route or address mapping proves a mathematical relation.”
 - “The runner independently verifies numerical results.” The runner checks a
@@ -324,7 +324,7 @@ not evidence.
 
 | Workflow | Coverage scope |
 |---|---|
-| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 94 runner entries |
+| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 110 runner entries |
 | `.github/workflows/mth-remaining-fixtures.yml` | The 31-fixture remaining promotion set, pinned NaN0S `fe63617` |
 | `.github/workflows/mth-native-addsub-dispatch.yml` | Add/sub dispatch and linker regression fixtures plus `test_hermes_mth_tools.py`, pinned NaN0S `fe63617` |
 | `.github/workflows/native-graph-claim-probe.yml` | The separately gated claim-probe fixture, pinned NaN0S `7f250a11` |
@@ -332,7 +332,7 @@ not evidence.
 | `.github/workflows/manifest-contract.yml` | Full Python test discovery and manifest contract checks |
 | `.github/workflows/koyeb-container-smoke.yml` | Credential-free container build and `/healthz` contract; no Koyeb credentials and no live deployment |
 
-Therefore, one green workflow does not imply all 96 kernels, all 94 runner
+Therefore, one green workflow does not imply all 112 kernels, all 110 runner
 fixtures, or a live service.
 
 ### 4.4 Baseline CI records
@@ -343,7 +343,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | Workflow | Recorded run | Recorded scope |
 |---|---|---|
 | `mth-native-contract` | `42405649076` | 61-fixture set, 132 steps |
-| `mth-remaining-fixtures` | `42539617226` | 31-fixture remaining promotion set, including the universe map |
+| `mth-remaining-fixtures` | `42547371933` | 47-fixture remaining promotion set, including stable numerics and sequence |
 | `native-graph-claim-probe` | `42539739728` | Graph claim-probe fixture |
 | `mth-remaining-fixtures` | `42542521347` | Re-pass of the remaining set on `0fdb60c` |
 | `mth-native-contract` | `42542521393` | Native contract set |
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 96/96 `ci_verified` declaration in the manifest is supported by these
+The 112/112 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules
@@ -437,7 +437,7 @@ In addition to the common envelope:
 
 At baseline, `tools/mth_unified.py --check` is green with:
 
-- **96 catalogued kernels**;
+- **112 catalogued kernels**;
 - **94 unique sources** and **93 unique fixture files**;
 - **5 native-dispatch ABI kernels**;
 - **7 providers**, **3 required** (`nanrouter.control`, `nan0s.vm`,

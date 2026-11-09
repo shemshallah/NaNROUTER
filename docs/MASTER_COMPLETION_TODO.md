@@ -175,23 +175,23 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 ## B2. Tier 2–3 numeric/array operations
 
 - [ ] `B-20` Vector create/index/slice/concat/gather/scatter.
-- [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/scale/abs/relu are implemented and locally verified; broadcast, distance, and normalization remain open.
-- [ ] `B-22` **PARTIAL:** native finite-domain argmax/argmin with first-index ties and fail-closed NaN/Inf are locally verified; native inclusive prefix sum is CI-verified in run `42539617226`. Masks and permutation remain open.
-- [ ] `B-23` **PARTIAL:** native 256×256 transpose, diagonal extraction, and elementwise add are locally verified; reshape/multiply/axis reductions/identity/zero/normalization remain open.
+- [ ] `B-21` **PARTIAL:** native float32 add/sub/mean/scale/abs/relu and normalization are implemented and CI-verified (normalization in run `42539617226`); broadcast and distance remain open.
+- [ ] `B-22` **PARTIAL:** native argmax/argmin, inclusive prefix sum, positive mask, and mask/weighted-sum/head-concat attention primitives are CI-verified in runs `42539617226` and `42546293200`. Permutation remains open.
+- [ ] `B-23` **PARTIAL:** native 256×256 transpose, diagonal extraction, elementwise add, and normalization are CI-verified. Reshape/multiply/axis reductions/identity/zero remain open.
 - [ ] `B-24` Determinant/inverse/triangular and tensor contraction.
 - [ ] `B-25` Implement `math.matrix.multiply` currently `proposed` with no implementation.
-- [ ] `B-26` General sparse-CSR pair action and full-grid 256-tile native execution.
+- [ ] `B-26` **PARTIAL:** the native full 256-tile pair-grid driver passes locally (570,321,519 steps) and in CI run `42546293200`; general sparse-CSR pair action remains open.
 - [x] `B-27` Add typed shape/precision/layout/domain/alias handoff checks and optional fuel/cancel bounds in `MthPlan`; legacy v1 plans remain serializable.
 
 ## B3. Tier 4–5 stable numerics/ML
 
-- [ ] `B-30` Stable softmax/log-softmax/log-sum-exp.
-- [ ] `B-31` exp/log/sqrt/rsqrt/sigmoid/tanh/ReLU.
+- [ ] `B-30` **PARTIAL:** native stable softmax and log-sum-exp are CI-verified in run `42547371933`; log-softmax remains open.
+- [x] `B-31` Native exp, log, sqrt, rsqrt, sigmoid, tanh, and ReLU kernels are implemented and CI-verified (run `42547371933` for the stable-numerics set; ReLU in the earlier vector set).
 - [ ] `B-32` Entropy/cross-entropy/KL/CDF/inverse-CDF.
 - [ ] `B-33` **PARTIAL:** native xorshift64 forward step with known-answer, reference, aliasing, class, and zero-state rejection fixtures passes; `ci_verified=true` in run `42539617226`. Seeded sampling, entropy conversion, and categorical sampling remain open.
-- [ ] `B-34` **PARTIAL:** host-only attention plan controller composes qk_dot/scale/mask/softmax/weighted_sum/head_concat/projection and returns typed UNAVAILABLE until native mask/softmax/weighted-sum/concat kernels exist. No host math or execution.
+- [ ] `B-34` **PARTIAL:** native mask, softmax, weighted-sum, and head-concat kernels now exist and are CI-verified; the host-only attention plan controller still returns typed UNAVAILABLE for qk_dot/scale/projection and executes no host math.
 - [ ] `B-35` **PARTIAL:** host-only loss/gradient/optimizer plan controller composes loss→gradient_accumulate→clip→moving_average→update and returns typed UNAVAILABLE until native kernels exist. Hyperparameter records and finite-difference fixtures remain open.
-- [ ] `B-36` **PARTIAL:** host-only `SequenceController` composes embedding_gather→position_add→slice_window→mask_apply→ngram_build with optional head_concat as a validated `MthPlan`, returning typed `UNAVAILABLE` for all missing declared kernels. 13 controller tests pass; native token/sequence kernels remain open.
+- [ ] `B-36` **PARTIAL:** native sequence-step and head-concat kernels are CI-verified; the host-only `SequenceController` still returns typed `UNAVAILABLE` for embedding_gather/position_add/slice_window/mask_apply/ngram_build. 13 controller tests pass; full native token/sequence kernels remain open.
 - [ ] `B-37` **PARTIAL:** host-only sampling/output controller composes logit scale/temperature/penalties/top-k/top-p/normalize/sample or greedy tie-break; missing native kernels return typed UNAVAILABLE.
 
 ## B4. Semantics/evidence/layers

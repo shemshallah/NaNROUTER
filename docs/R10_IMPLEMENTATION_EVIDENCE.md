@@ -235,12 +235,13 @@ Run it after any kernel change.
 
 - No long-run CFL/damping sweep with a paged graph operator and trace exists yet; the four-step C256 energy fixture is bounded.
 - Full 256 matvec, SVD top pair, SVD top-2, ENCODE/DECODE, adapter residual, full 255 certificate, stable top-k, Lanczos, JAHS gate, avoided-crossing sweep, radial, DRIVE/CFL, colored noise, and K16 driver pass locally; no page-size limit is enforced.
-- K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; a native full-grid driver and generic sparse-CSR pair action remain open.
+- K256 closed-form 256×256 pair exists; the general 16×16 pair tile is native_verified in CI run 218; the Python 256-tile page-window/atomic-publication layer and 31 tests exist; the native full 256-tile pair driver is CI-verified in run `42546293200`; generic sparse-CSR pair action remains open.
 - Wave and point-0 HTTP adapters exist; the offline live preflight/signed-volume gate exists; live Koyeb/NANNET0 deployment remains blocked on real credentials and network.
 - Full 256 adapter residual and a frozen-base ablation harness exist, but no real LM/data ablation or held-out benefit exists; the adapter remains disabled.
 - R7 protocol harness and native sweep exist; no real held-out LM/data experiment or creativity claim exists.
 - P13 live/experiment gates remain blocked: no live Koyeb/NANNET0 deployment, signed volume-registry verification, production MC0DB registration, frozen-model LM ablation, R7 held-out result, capacity-vs-SNR measurement, or native numeric executor delivery has been produced.
 - The P12 demo proves control-plane integration only; it does not compute a numeric dot product. Native numeric execution remains the external executor's responsibility.
+- Native stable softmax/log-sum-exp and exp/log/sqrt/rsqrt/sigmoid/tanh are CI-verified; log-softmax and exhaustive numerical error proofs remain open.
 - Normalize, inclusive prefix sum, xorshift64, and the full 8 MiB universe map are CI-verified in run `42539617226`; Koyeb bootstrap and container smoke readiness are not a live Koyeb/NANNET0 deployment, and no real provider IDs or mounted-volume health were observed.
 - The unified catalog is a cross-repo source/contract audit, not proof that every provider is deployed, reachable, or executing the same build. It deliberately leaves CI and live claims false.
 - No trusted proof checker exists, so production validity remains capped at V2 and proof candidates remain unchecked.
