@@ -167,7 +167,7 @@
 | 153 | Single-head attention | `mth/tests/mth_attention_head16_test.nas` | 135,441 | PASS | yes (42667242944) |
 | 154 | Attention mask16 | `mth/tests/mth_attention_mask16_test.nas` | 3,586 | PASS | yes (42669871807) |
 | 155 | Memory conditioning16 | `mth/tests/mth_memory_condition16_test.nas` | 8,360 | PASS | yes (42669871807) |
-| 156 | 255-head field mixture | `mth/tests/mth_field_mix255x16_test.nas` | 486,806 | PASS | local only |
+| 156 | 255-head field mixture | `mth/tests/mth_field_mix255x16_test.nas` | 486,806 | PASS | yes (42675452036) |
 
 ## Local phase-system integration fixture
 
