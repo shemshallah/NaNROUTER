@@ -1,0 +1,54 @@
+name: native-graph-claim-batch
+on:
+  pull_request:
+    paths:
+      - 'mth/nan16/mth_graph_claim_batch.nas'
+      - 'mth/tests/mth_graph_claim_batch_test.nas'
+      - '.github/workflows/native-graph-claim-batch.yml'
+      - 'spec/nan-native-boundary.json'
+      - 'tests/test_nan_native_audit.py'
+  push:
+    branches: [main]
+    paths:
+      - 'mth/nan16/mth_graph_claim_batch.nas'
+      - 'mth/tests/mth_graph_claim_batch_test.nas'
+      - '.github/workflows/native-graph-claim-batch.yml'
+      - 'spec/nan-native-boundary.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-claim-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Confirm read-only native audit classification
+        run: python tools/audit_nan_native.py
+      - name: Checkout pinned canonical NaN0S assembler and VM
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: 7f250a11bdb7845eae06ffb50df202187543ea5e
+          path: nan0s
+      - name: Build actual native guest CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble NaN16 multi-query test image
+        run: |
+          mkdir -p build/mth
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_graph_claim_batch_test.nas \
+            > build/mth/graph-claim-batch.nan
+      - name: Run native guest, verify all masks and atomic rejection
+        run: |
+          nan0s/aarch64/android/nan_cli \
+            --img build/mth/graph-claim-batch.nan \
+            --steps 2000000 --serial \
+            > build/mth/graph-claim-batch.out \
+            2> build/mth/graph-claim-batch.err
+          cat build/mth/graph-claim-batch.out
+          cat build/mth/graph-claim-batch.err
+          grep -q '^MTH GRAPH CLAIM BATCH PASS' build/mth/graph-claim-batch.out
+          ! grep -q 'MTH GRAPH CLAIM BATCH FAIL' build/mth/graph-claim-batch.out
