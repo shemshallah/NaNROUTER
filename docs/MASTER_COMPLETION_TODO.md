@@ -275,6 +275,7 @@ Status: `DONE` = code + test/evidence; `PARTIAL` = implemented but missing a nam
 - [ ] `F-08` Signed volume registry — **BLOCKED** on real provider IDs and mounted volumes. `runner_riddle/koyeb_bootstrap.py` initializes tier databases, chains registry generations, refuses partial configuration, and supports strict fail-closed mode; a missing registry reports `unknown`, never green.
 - [ ] `F-09` Production MC0DB — **BLOCKED**.
 - [x] `F-10` No page-size limit — the guest budget is adjustable and reports `page_limit_enforced=false`; 32 KiB is only the logical 8 MiB-universe page unit. No runtime page-size gate exists.
+- [ ] `F-11` **PARTIAL:** Cross-repo checked-u32 math route. HERMES/NaNLMind expect `mth.u32.add_checked`/`mth.u32.sub_checked` and `/v1/hermes/leases/math`; NaNROUTER main exposes neither. `origin/feat/native-hierarchy-router-hermes-bridge` supplies the route/labels but is unmerged. Tracked in `docs/MTH_CROSS_REPO_SYNC_20261109.md`; do not alias it to `mth.integer.checked.i32` without an ABI decision.
 
 ---
 

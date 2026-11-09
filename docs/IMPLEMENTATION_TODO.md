@@ -21,6 +21,7 @@
 - [x] No page-size limit: the 2 MiB workspace budget is adjustable and reports `page_limit_enforced=false`; 32 KiB is only the logical 8 MiB-universe page unit. No external page-size gate exists.
 - [x] Full 8 MiB guest address map: 256 pages, 1,048,576 words, 32,896 relation points, NANNET0 aliases; native `mth.universe.map.u32` fixture PASS (12,916,386 local steps), `spec/universe-map.json`.
 - [x] Unified cross-repo MTH catalog: 112 kernels, provider contracts, worktree/origin-main fallback, no network fetch (`tools/mth_unified.py --check`).
+- [ ] Cross-repo checked-u32 math route: HERMES/NaNLMind expect `mth.u32.add_checked`/`sub_checked` and `/v1/hermes/leases/math`; main has no such route. See `docs/MTH_CROSS_REPO_SYNC_20261109.md`. Do not alias to the i32 kernel without an ABI decision.
 - [x] JAHS ("Just A Handoff Seal") is mandatory in scheduler snapshots/checkpoint digests and `MthSystem.lease`; native gate/fixture CI PASS.
 - [x] Add single-active runner-ring scheduler and handoff tests (27 tests).
 - [x] 110 runner fixture paths are registered; the full canonical runner passes 110/110 against NaN0S f31143e (VM commit fe63617 differs only in a CI workflow). Targeted K256 pair-space, normalize, prefix-sum, PRNG, and universe-map fixtures also pass individually.
