@@ -181,7 +181,7 @@ model or a deployment claim.
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1452 tests in 386.074s
+Ran 1452 tests in 268.675s
 OK (skipped=29)
 ```
 
