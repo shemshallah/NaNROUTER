@@ -217,7 +217,7 @@ The generated catalog explicitly records:
 |---|---|
 | Host universe map | 256 pages, 1,048,576 words, 32,896 points, coverage 1.0 |
 | Native universe-map fixture | PASS, 12,916,386 steps, no trap |
-| Unified catalog | 127 kernels, 112 CI-verified, 15 local-only, 125 sources, 124 fixtures |
+| Unified catalog | 127 kernels, 127 CI-verified, 0 local-only, 125 sources, 124 fixtures |
 | Provider contracts | green against worktree or fetched `origin/main` |
 | Local Python tests | 1,282 tests, 29 skipped, OK |
 | Canonical native runner | 110/110 fixtures PASS with NaN0S f31143e; pinned VM commit fe63617 differs only in a CI workflow |

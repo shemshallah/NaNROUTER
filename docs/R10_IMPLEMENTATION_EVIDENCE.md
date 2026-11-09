@@ -5,7 +5,7 @@
 **Latest pair-tile CI:** run 218 (`42388101426`), two tile origins verified, 4,643,414 guest steps.
 **Bounded K16 pair tile:** canonical NaN16 CI run 242, 283,436 guest steps, 1,542-word workspace.
 **Toolchain:** canonical NaN0S source assembler (`nan0s/tools/nmk.awk`) and `aarch64/android/nan_cli`
-**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; 112 manifest kernels are CI-verified and fifteen 2026-11-09 mirror/hyperedge kernels await CI.
+**Result:** The registered native/graph fixtures passed locally (Stage 0, double-endian, vector, typed preflight, native dispatch, graph degree/pattern/filter, CSR Laplacian, RSS contract, vector arithmetic, matrix operations, arg reductions, normalize, inclusive prefix sum, xorshift64, and the exhaustive 8 MiB universe map); the full local Python suite is green (see the run block below). The four 2026-11-08 kernels are now `ci_verified=true` in canonical run `42539617226`; all 127 manifest kernels are CI-verified.
 **CI:** canonical run `42405649076` passed all 132 steps for the 61-fixture set, including the operand-range alias regressions, native preflight, and composed admission. Canonical run `42539617226` then passed the 31-fixture remaining promotion set, including normalize, prefix sum, xorshift64, and the full 8 MiB universe map. Run `42542521347` re-passed that set on commit `0fdb60c`; run `42542521393` passed `mth-native-contract`; run `42542521540` passed the manifest contract; run `42542521266` passed the credential-free Koyeb container smoke check. Run `42546293200` passed the 41-fixture set with the ten vector/full-grid additions; run `42547371933` passed the 47-fixture set with exp/log/logsumexp/sigmoid/tanh/sequence; runs `42547914257` and `42549422834` re-passed `mth-native-contract` and the container smoke on the unified catalog. No page-size limit is enforced; the guest budget is adjustable and reports `page_limit_enforced=false`.
 
 ## Native fixtures
@@ -124,21 +124,21 @@
 | 110 | Sequence step u32 | `mth/tests/mth_sequence_step_u32_test.nas` | 1,467 | PASS | yes (42547371933) |
 | 111 | Vector sigmoid 256 | `mth/tests/mth_vector_sigmoid256_f32_test.nas` | 129,881 | PASS | yes (42547371933) |
 | 112 | Vector tanh 256 | `mth/tests/mth_vector_tanh256_f32_test.nas` | 134,794 | PASS | yes (42547371933) |
-| 113 | Mirror pair address map | `mth/tests/mth_mirror_pair_map_test.nas` | 2,156,539 | PASS | local only |
-| 114 | Mirror cycle flux | `mth/tests/mth_mirror_cycle_flux_test.nas` | 108,730 | PASS | local only |
-| 115 | Mirror root-step residual update | `mth/tests/mth_mirror_root_step_test.nas` | 7,445 | PASS | local only |
-| 116 | Hyperedge strength step | `mth/tests/mth_hyperedge_strength_step_test.nas` | 4,265 | PASS | local only |
-| 117 | Hyperedge strength batch | `mth/tests/mth_hyperedge_strength_batch_test.nas` | 5,462 | PASS | local only |
-| 118 | Mirror bounds validator | `mth/tests/mth_mirror_bounds_check_test.nas` | 1,849 | PASS | local only |
-| 119 | Mirror gauge check | `mth/tests/mth_mirror_gauge_check_test.nas` | 4,043 | PASS | local only |
-| 120 | Relation operator apply | `mth/tests/mth_relation_operator_apply_test.nas` | 3,053 | PASS | local only |
-| 121 | WordNet concept/head/pair map | `mth/tests/mth_wordnet_concept_map_test.nas` | 108,027 | PASS | local only |
-| 122 | Mirror block FNV checksum | `mth/tests/mth_mirror_block_checksum_test.nas` | 796,382 | PASS | local only |
-| 123 | Hyperedge incidence walk | `mth/tests/mth_hyperedge_incidence_walk_test.nas` | 5,647 | PASS | local only |
-| 124 | Mirror head record I/O | `mth/tests/mth_mirror_head_record_io_test.nas` | 431,684 | PASS | local only |
-| 125 | Hyperedge path score | `mth/tests/mth_hyperedge_path_score_test.nas` | 9,632 | PASS | local only |
-| 126 | Mirror Hodge projection | `mth/tests/mth_mirror_hodge_projection_test.nas` | 20,130,891 | PASS | local only |
-| 127 | Mirror pair lane I/O | `mth/tests/mth_mirror_pair_lane_io_test.nas` | 509,737 | PASS | local only |
+| 113 | Mirror pair address map | `mth/tests/mth_mirror_pair_map_test.nas` | 2,156,539 | PASS | yes (42558900053) |
+| 114 | Mirror cycle flux | `mth/tests/mth_mirror_cycle_flux_test.nas` | 108,730 | PASS | yes (42558900053) |
+| 115 | Mirror root-step residual update | `mth/tests/mth_mirror_root_step_test.nas` | 7,445 | PASS | yes (42558900053) |
+| 116 | Hyperedge strength step | `mth/tests/mth_hyperedge_strength_step_test.nas` | 4,265 | PASS | yes (42558900053) |
+| 117 | Hyperedge strength batch | `mth/tests/mth_hyperedge_strength_batch_test.nas` | 5,462 | PASS | yes (42558900053) |
+| 118 | Mirror bounds validator | `mth/tests/mth_mirror_bounds_check_test.nas` | 1,849 | PASS | yes (42558900053) |
+| 119 | Mirror gauge check | `mth/tests/mth_mirror_gauge_check_test.nas` | 4,043 | PASS | yes (42558900053) |
+| 120 | Relation operator apply | `mth/tests/mth_relation_operator_apply_test.nas` | 3,053 | PASS | yes (42558900053) |
+| 121 | WordNet concept/head/pair map | `mth/tests/mth_wordnet_concept_map_test.nas` | 108,027 | PASS | yes (42558900053) |
+| 122 | Mirror block FNV checksum | `mth/tests/mth_mirror_block_checksum_test.nas` | 796,382 | PASS | yes (42558900053) |
+| 123 | Hyperedge incidence walk | `mth/tests/mth_hyperedge_incidence_walk_test.nas` | 5,647 | PASS | yes (42558900053) |
+| 124 | Mirror head record I/O | `mth/tests/mth_mirror_head_record_io_test.nas` | 431,684 | PASS | yes (42558900053) |
+| 125 | Hyperedge path score | `mth/tests/mth_hyperedge_path_score_test.nas` | 9,632 | PASS | yes (42558900053) |
+| 126 | Mirror Hodge projection | `mth/tests/mth_mirror_hodge_projection_test.nas` | 20,130,891 | PASS | yes (42558900053) |
+| 127 | Mirror pair lane I/O | `mth/tests/mth_mirror_pair_lane_io_test.nas` | 509,737 | PASS | yes (42558900053) |
 
 ## Python tests
 
@@ -226,7 +226,7 @@ Run it after any kernel change.
 
 ## Capability manifest
 
-`spec/wave-capabilities.json` records 127 kernels (112 `ci_verified`, 15 local-only), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **121 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
+`spec/wave-capabilities.json` records 127 kernels (127 `ci_verified`), source/fixture paths, markers, local step counts, precision, workspace, and CI status. `tools/register_wave_capabilities.py` hashes the source/fixture and registers operator/capability rows in MC0DB through `WaveStore`. A local dry run currently reports **127 kernels**; production registration remains gated on the deployed BS0DB/MC0DB.
 
 ## Unified MTH catalog and full-universe map
 

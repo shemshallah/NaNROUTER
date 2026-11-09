@@ -12,11 +12,11 @@ the baseline commit changes, re-baseline the counts before reusing any claim.
 
 | Item | Count |
 |---|---:|
-| Catalogued MTH kernels in `spec/wave-capabilities.json` | 112 |
-| Kernels with `ci_verified=true` in the manifest | 112 |
-| Unique native sources | 110 |
+| Catalogued MTH kernels in `spec/wave-capabilities.json` | 127 |
+| Kernels with `ci_verified=true` in the manifest | 127 |
+| Unique native sources | 125 |
 | Unique manifest fixture files | 93 |
-| Fixture entries in the canonical runner | 110 |
+| Fixture entries in the canonical runner | 125 |
 | Native-dispatch ABI kernels | 5 |
 | Local Python tests | 1,282+ |
 | Universe pages / NaN16 words / relation points | 256 / 1,048,576 / 32,896 |
@@ -215,15 +215,15 @@ cannot promote a tracked manifest entry.
 
 At baseline commit `12980a3`:
 
-- `spec/wave-capabilities.json` contains **112 catalogued kernels**.
-- Those 112 entries reference **110 unique native sources** and **109 unique
+- `spec/wave-capabilities.json` contains **127 catalogued kernels**.
+- Those 127 entries reference **125 unique native sources** and **124 unique
   fixture files**; some kernels intentionally share a source or fixture.
 - `tools/run_mth_fixtures.py` contains **110 fixture entries**: the 109 unique
   manifest fixtures plus one runner-only dispatch fixture,
   `mth/tests/mth_native_vector_addsub_dispatch_test.nas`. That fixture is
   declared in `spec/nan-native-boundary.json` as runner-only and exercises
   dispatch over already-registered vector kernels; it is not a 97th kernel.
-- The manifest declares **112/112 `ci_verified=true`**. That is a ledger field,
+- The manifest declares **127/127 `ci_verified=true`**. That is a ledger field,
   not a substitute for the E2 run record.
 - The recorded local suite is **1,282+ local Python tests** (baseline record:
   `Ran 1282 tests`, `OK (skipped=29)`).
@@ -277,9 +277,9 @@ counts may be retained only as historical evidence.
   assertions and PASS marker passed.
 - “Local PASS is CI-verified.”
 - “Local PASS means the service is live.”
-- “119 runner fixtures means 121 kernels were executed.” The counts measure
+- “125 runner fixtures means 127 kernels were executed.” The counts measure
   different things and one fixture can serve multiple kernel entries.
-- “All 121 kernels ran in every local invocation.”
+- “All 127 kernels ran in every local invocation.”
 - “An untracked kernel is catalogued.”
 - “A route or address mapping proves a mathematical relation.”
 - “The runner independently verifies numerical results.” The runner checks a
@@ -324,7 +324,7 @@ not evidence.
 
 | Workflow | Coverage scope |
 |---|---|
-| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 119 runner entries |
+| `.github/workflows/mth-native-contract.yml` | Explicit native fixture steps, pinned NaN0S `fe63617`; not automatically all 125 runner entries |
 | `.github/workflows/mth-remaining-fixtures.yml` | The 31-fixture remaining promotion set, pinned NaN0S `fe63617` |
 | `.github/workflows/mth-native-addsub-dispatch.yml` | Add/sub dispatch and linker regression fixtures plus `test_hermes_mth_tools.py`, pinned NaN0S `fe63617` |
 | `.github/workflows/native-graph-claim-probe.yml` | The separately gated claim-probe fixture, pinned NaN0S `7f250a11` |
@@ -332,7 +332,7 @@ not evidence.
 | `.github/workflows/manifest-contract.yml` | Full Python test discovery and manifest contract checks |
 | `.github/workflows/koyeb-container-smoke.yml` | Credential-free container build and `/healthz` contract; no Koyeb credentials and no live deployment |
 
-Therefore, one green workflow does not imply all 127 kernels, all 119 runner
+Therefore, one green workflow does not imply all 127 kernels, all 125 runner
 fixtures, or a live service.
 
 ### 4.4 Baseline CI records
@@ -351,7 +351,7 @@ identify the baseline evidence, not as a claim that this document re-ran them.
 | `koyeb-container-smoke` | `42542521266` | Credential-free container smoke |
 | `mth-unified-audit` | `42542831186` | Universe-map and unified-catalog checks |
 
-The 112/112 `ci_verified` declaration in the manifest is supported by these
+The 127/127 `ci_verified` declaration in the manifest is supported by these
 recorded canonical runs, not by the existence of the boolean itself.
 
 ### 4.5 Promotion rules
@@ -437,7 +437,7 @@ In addition to the common envelope:
 
 At baseline, `tools/mth_unified.py --check` is green with:
 
-- **112 catalogued kernels**;
+- **127 catalogued kernels**;
 - **94 unique sources** and **93 unique fixture files**;
 - **5 native-dispatch ABI kernels**;
 - **7 providers**, **3 required** (`nanrouter.control`, `nan0s.vm`,
