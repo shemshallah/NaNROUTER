@@ -168,9 +168,9 @@
 | 154 | Attention mask16 | `mth/tests/mth_attention_mask16_test.nas` | 3,586 | PASS | yes (42669871807) |
 | 155 | Memory conditioning16 | `mth/tests/mth_memory_condition16_test.nas` | 8,360 | PASS | yes (42669871807) |
 | 156 | 255-head field mixture | `mth/tests/mth_field_mix255x16_test.nas` | 486,806 | PASS | yes (42675452036) |
-| 157 | Field mixture reverse | `mth/tests/mth_field_mix255x16_backward_test.nas` | 935,271 | PASS | local only |
-| 158 | 255-head gate | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | local only |
-| 159 | 255-head gate reverse | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | local only |
+| 157 | Field mixture reverse | `mth/tests/mth_field_mix255x16_backward_test.nas` | 935,271 | PASS | yes (42678421624) |
+| 158 | 255-head gate | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
+| 159 | 255-head gate reverse | `mth/tests/mth_field_gate255_test.nas` | 170,803 | PASS | yes (42678421624) |
 
 ## Local phase-system integration fixture
 
