@@ -213,7 +213,7 @@ K256 pair-space, normalize, prefix-sum, and xorshift64 targeted set: 4/4 PASS
 (full 92-fixture sweep not rerun in this pass)
 
 python3 -m unittest discover -s tests -q
-Ran 1439 tests
+Ran 1442 tests
 OK (skipped=16)
 ```
 

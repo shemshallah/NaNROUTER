@@ -195,7 +195,7 @@ The physical lane payload stays in the native root. The route slot is a 16-byte 
 | R026 lanes | 26 residual logits/pair | Canonical `residual[26]` | Not semantic operators; head 0 excluded; no matched gain |
 | R027 strengths | Scalar hyperedge scores | HERMES relation/hyperedge score | Not calibrated confidence; no generalization |
 
-Count reconciliation: **91** = HERMES bundled kernels/fixtures (4 dynamic, 87 fixture-only); **96** = NaNROUTER `origin/main` catalog observed in the cross-repo audit (94 runner fixtures); **145** = current unified catalog (145 CI-verified, 143 sources, 141 fixtures); **78** = registered HERMES tools; **1,439** = local Python tests, 30 skipped. The 91→112 increase is catalog expansion, not evidence of a general dynamic ABI.
+Count reconciliation: **91** = HERMES bundled kernels/fixtures (4 dynamic, 87 fixture-only); **96** = NaNROUTER `origin/main` catalog observed in the cross-repo audit (94 runner fixtures); **145** = current unified catalog (145 CI-verified, 143 sources, 141 fixtures); **78** = registered HERMES tools; **1,442** = local Python tests, 30 skipped. The 91→112 increase is catalog expansion, not evidence of a general dynamic ABI.
 
 Concrete bridges:
 

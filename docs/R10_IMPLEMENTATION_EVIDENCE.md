@@ -158,11 +158,20 @@
 | 144 | Contradiction pair | `mth/tests/mth_mirror_cycle_contradiction_test.nas` | 785 | PASS | yes (42575195573) |
 | 145 | Attention/value mix16 | `mth/tests/mth_attention_mix16_test.nas` | 34,231 | PASS | yes (42575195573) |
 
+## Local phase-system integration fixture
+
+`mth/tests/mth_phase_system_test.nas` composes native twiddle generation,
+oscillatory gates, phase-gated cycle training, readout, attention mixing,
+retention, contradiction preservation, and angular ring addressing in one
+guest run. It passes locally in **288,659 steps** with marker
+`MTH PHASE SYSTEM PASS`. It is an integration fixture, not a manifest kernel
+and not a claim of CI verification or a live model.
+
 ## Python tests
 
 ```
 python3 -m unittest discover -s tests -q
-Ran 1439 tests in 308.843s
+Ran 1442 tests in 378.743s
 OK (skipped=29)
 ```
 
