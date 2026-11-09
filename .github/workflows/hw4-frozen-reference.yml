@@ -45,6 +45,16 @@ jobs:
           assert manifest["relations"]>10000
           print("WORDNET31_FROZEN_HW4_REFERENCE",json.dumps(manifest,sort_keys=True))
           PY
+          # Include WordNet's copyright and license terms with the data derivative.
+          license="$(find /tmp/hw4-wordnet -type f -name LICENSE -print -quit)"
+          if [ -n "$license" ] && [ -s "$license" ]; then
+            cp "$license" /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
+          else
+            curl --fail --show-error --silent --location --retry 3 \\
+              https://raw.githubusercontent.com/spdx/license-list-data/main/text/WordNet.txt \\
+              --output /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
+          fi
+          test -s /tmp/hw4-wordnet/frozen-reference/WORDNET_LICENSE.txt
           tar -C /tmp/hw4-wordnet -czf /tmp/hw4-reference-wordnet31.tar.gz frozen-reference
       - name: Archive immutable reference generation for verified later installation
         uses: actions/upload-artifact@v4
