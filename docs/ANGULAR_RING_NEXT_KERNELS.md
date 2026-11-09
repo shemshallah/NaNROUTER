@@ -142,7 +142,36 @@ second geometry authority.
 | `mth.mirror.cycle.contradiction.f32` | PASS | 785 |
 | `mth.attention.mix16.f32` | PASS | 34,231 |
 
-## 9. Non-claims
+## 9. Native phase-system integration fixture
+
+`mth/tests/mth_phase_system_test.nas` is a **local integration fixture**, not
+a new kernel or a manifest entry. It composes the new primitives in one guest
+run:
+
+```text
+twiddle256 -> phase_gate16 -> cycle_train_step x8
+           -> cycle_predict16 -> attention_mix16
+           -> cycle_retain -> predict
+           -> contradiction pair -> angular ring map
+```
+
+It checks that the native twiddle table, oscillatory gates, phase-gated cycle
+training, readout, candidate mixing, retention, contradiction pair, and
+NANNET-preserving angular map compose without host trigonometry. Observed
+local marker:
+
+```text
+MTH PHASE SYSTEM PASS
+288,659 guest steps
+```
+
+This fixture is deliberately outside the canonical 142-fixture runner/CI
+manifest so the manifest remains a kernel registry rather than treating a
+composition test as a new mathematical authority. Run it directly with the
+canonical NaN0S assembler and `nan_cli` when validating the composition.
+
+## 10. Non-claims
+
 
 - NANNET0 is not rotated and not replaced by point 0.
 - Oscillatory gates are not proven to improve learning.
