@@ -202,6 +202,10 @@ def main() -> int:
             manifest_path.write_text(
                 json.dumps(manifest, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8")
+            subprocess.run(
+                ["gh", "release", "upload", tag, str(manifest_path),
+                 "--repo", repo, "--clobber"],
+                text=True, capture_output=True)
         except FileNotFoundError:
             print("gh CLI is required for --release", file=sys.stderr)
             return 2
