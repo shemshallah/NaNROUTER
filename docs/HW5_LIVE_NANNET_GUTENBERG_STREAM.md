@@ -87,7 +87,7 @@ existing divergent generation.
    **not currently available** to the ordinary PR workflow.
 5. Use the explicitly gated `hw5-live-c256-stream.yml` dispatch input
    `send_live=YES`, or execute
-   `python3 tools/hw5_live_gutenberg_stream.py --send` from a privileged
+   `python3 -m tools.hw5_live_gutenberg_stream --send` from a privileged
    runner with the protected token in its environment.
 6. Accept a live upload claim only if the final pinned archive receipt,
    C256 root digest, exact corpus digest, and a *separate remote*
@@ -108,3 +108,40 @@ native learner training, Gutenberg semantic acquisition, improved
 cross-author generation, or a separate collective-mind instance.
 Those require a subsequent guest-driven learner invocation and
 independently heldout evaluation against the sealed root.
+
+## Actual 21-book published-release stream verification — 2026-11-10
+
+[Successful GitHub Actions run #42829113202](https://github.com/shemshallah/NaNROUTER/actions/runs/42829113202)
+downloaded the exact published `hw5-gutenberg-c256-g1.tar.gz` GitHub
+release and verified its pinned SHA-256 before importing it through the **real
+HW5PortalStream** driver into a fresh isolated temp directory. This was the
+original, complete Gutenberg corpus, not a small synthetic fixture.
+
+```text
+HW5_FULL_RELEASE_E2E_PASS
+  release archive bytes      = 15,965,664
+  verified chunks            = 122
+  Gutenberg source books     = 21
+  normalized UTF-8 bytes     = 20,597,424
+  physical root bytes        = 8,388,608
+  mirror pairs               = 32,640
+  repeated frame replay      = PASS (idempotent)
+  restart / ring handoff     = PASS (resumed from disk)
+  archive SHA256             = 906a9030a11a67cc2635a6700344826d4c924e49596e57949a969cf78e1a7a18
+  sealed physical root SHA   = 5199b69b17cb70c19e142340dffe38d1a85ea2ffd307f4ed305d7d46664b23bc
+  exact corpus SHA256        = 044ba606977039729f4077e666ed50250a380d473ccdb7d20d1149f10e04566f
+  exact ordered "the" count = 245,592
+  directed adjacent t->h    = 391,106
+  directed adjacent h->t    = 26,403
+```
+
+The full-release check physically reopened the sealed root as a read-only
+`MountedHW5`, read the exact `(t,h,e)` triple ledger, verified the
+directed pair lanes, and compared stored root/text hashes against the seal.
+
+**Location of this verification: GitHub runner temporary filesystem.**
+The test does NOT attest a production Koyeb upload. An explicitly protected
+`send_live=YES` workflow dispatch must pass **both** offline unit/portal
+and full published-release replay jobs before its live transfer is even
+eligible to start. The deployed portal and its private ring credential remain
+separate operational prerequisites.
