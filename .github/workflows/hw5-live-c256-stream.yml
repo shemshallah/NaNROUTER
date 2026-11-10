@@ -9,6 +9,7 @@ on:
       - 'deploy/portal/portal_ring.py'
       - 'deploy/portal/Dockerfile'
       - 'tools/hw5_live_gutenberg_stream.py'
+      - 'tools/hw5_full_release_e2e.py'
       - 'tests/test_hw5_portal_stream.py'
       - 'tests/test_hw5_portal_integration.py'
       - 'tests/test_hw4_portal_resident.py'
@@ -47,6 +48,29 @@ jobs:
           grep -F 'COPY runner_riddle/hw5_portal_stream.py /app/runner/hw5_portal_stream.py' deploy/portal/Dockerfile
           grep -F 'RIDDLE_HW5_STORE=/data/hw5-gutenberg-reference' deploy/portal/Dockerfile
           grep -F 'HW5_STREAM_KIND' deploy/portal/portal_ring.py
+  full-published-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact immutable 21-book release (read-only GitHub asset)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download hw5-gutenberg-c256-g1 \
+            --repo shemshallah/NaNROUTER \
+            --pattern 'hw5-gutenberg-c256-g1.tar.gz' \
+            --dir "$RUNNER_TEMP"
+          printf '%s  %s\n' \
+            '906a9030a11a67cc2635a6700344826d4c924e49596e57949a969cf78e1a7a18' \
+            "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" | sha256sum --check -
+      - name: Stream pinned real archive into temp C256 and test post-handoff physical triple readback
+        run: |
+          set -euo pipefail
+          python3 tools/hw5_full_release_e2e.py "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" \
+            | tee "$RUNNER_TEMP/hw5-e2e.log"
+          grep -F 'HW5_FULL_RELEASE_E2E_PASS' "$RUNNER_TEMP/hw5-e2e.log"
   live-transfer:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_live == 'YES' }}
     needs: offline-contract
