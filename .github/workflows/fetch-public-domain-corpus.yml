@@ -1,0 +1,115 @@
+name: Fetch public domain corpus
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_books:
+        description: Maximum English Gutenberg books to download
+        required: false
+        default: "10000"
+        type: string
+      max_short_stories:
+        description: Maximum short-story books to include
+        required: false
+        default: "4128"
+        type: string
+  schedule:
+    - cron: "0 5 1 * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-public-domain-corpus
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Install zstd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+
+      - name: Build public-domain corpora
+        env:
+          MAX_BOOKS: ${{ inputs.max_books || '10000' }}
+          MAX_SHORT_STORIES: ${{ inputs.max_short_stories || '4128' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/build_public_domain_corpus.py \
+            --max-books "$MAX_BOOKS" \
+            --max-short-stories "$MAX_SHORT_STORIES" \
+            --output-root corpora \
+            --work-dir /tmp/nanrouter-public-domain \
+            --max-workers 8
+
+      - name: Publish category releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          publish() {
+            local dir="$1"
+            local tag="$2"
+            local title="$3"
+            local name="$4"
+            local archive="release-assets/${name}.tar.zst"
+            echo "::group::publish ${tag}"
+            tar --zstd -cf "$archive" -C "corpora/${dir}" .
+            if [ "$(stat -c%s "$archive")" -ge $((1900 * 1024 * 1024)) ]; then
+              rm -f "${archive}.part-"*
+              split -b 1900M "$archive" "${archive}.part-"
+              rm -f "$archive"
+              (cd release-assets && sha256sum "${name}.tar.zst.part-"* > "${name}.SHA256SUMS")
+              assets=("release-assets/${name}.tar.zst.part-"* "release-assets/${name}.SHA256SUMS")
+              notes="Project Gutenberg public-domain ${title}. Split archive; extract with: cat ${name}.tar.zst.part-* | tar --zstd -x. See LICENSE.txt."
+            else
+              (cd release-assets && sha256sum "${name}.tar.zst" > "${name}.SHA256SUMS")
+              assets=("$archive" "release-assets/${name}.SHA256SUMS")
+              notes="Project Gutenberg public-domain ${title}. Extract with: tar --zstd -xf ${name}.tar.zst. See LICENSE.txt."
+            fi
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release edit "$tag" --title "$title" --notes "$notes"
+            else
+              gh release create "$tag" --title "$title" --notes "$notes"
+            fi
+            gh release upload "$tag" "${assets[@]}" --clobber
+            rm -f "${assets[@]}"
+            echo "::endgroup::"
+          }
+          publish sentences corpora-sentences "Public-domain sentences" sentences
+          publish paragraphs corpora-paragraphs "Public-domain paragraphs" paragraphs
+          publish short_stories corpora-short-stories "Public-domain short stories" short_stories
+
+      - name: Commit manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add corpora/sentences/MANIFEST.json corpora/paragraphs/MANIFEST.json corpora/short_stories/MANIFEST.json
+          if git diff --cached --quiet; then
+            echo "manifests unchanged"
+          else
+            git commit -m "Update public-domain corpus manifests [skip ci]"
+            git push || echo "::warning::manifest push skipped"
+          fi

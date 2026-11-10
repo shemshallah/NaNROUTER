@@ -1,0 +1,12 @@
+Project Gutenberg public-domain corpus
+
+Source: Project Gutenberg (https://www.gutenberg.org)
+Catalog: https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv
+License: https://www.gutenberg.org/policy/license.html
+
+The source eBooks are public domain in the United States. Some works may still
+be copyrighted outside the United States; check local law.
+
+The derived sentence, paragraph, and short-story files are provided for
+research and training. Please retain this notice and the Project Gutenberg
+attribution when redistributing.
