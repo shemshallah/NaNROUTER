@@ -27,6 +27,14 @@ from runner_riddle.point_fabric import Nan16DEWord, PointFrame
 
 PORTAL = "https://nannet.apps.mistral.run"
 CORPUS_BYTES = 20597424
+# Independently measured from the exact publicly pinned g1 release in CI.
+# A live portal must return THESE physical commitments, not merely an
+# internally consistent self-reported receipt from an untrusted release.
+EXPECTED_ROOT_SHA256 = "5199b69b17cb70c19e142340dffe38d1a85ea2ffd307f4ed305d7d46664b23bc"
+EXPECTED_CORPUS_SHA256 = "044ba606977039729f4077e666ed50250a380d473ccdb7d20d1149f10e04566f"
+EXPECTED_THE_TRIPLES = 245592
+EXPECTED_TH_ADJACENT = 391106
+EXPECTED_HT_ADJACENT = 26403
 
 
 class HW5UploadError(RuntimeError):
@@ -168,7 +176,11 @@ def upload(archive: Path, *, token: str, archive_size: int) -> dict:
     if (sealed.get("remote_verified") is not True or
             sealed.get("root_bytes") != 8388608 or
             sealed.get("mirror_pairs") != 32640 or
-            sealed.get("corpus_bytes") != CORPUS_BYTES):
+            sealed.get("corpus_bytes") != CORPUS_BYTES or
+            sealed.get("root_sha256") != EXPECTED_ROOT_SHA256 or
+            sealed.get("corpus_sha256") != EXPECTED_CORPUS_SHA256):
+        # Require matching out-of-band release commitments. A portal that
+        # uploads the wrong root must never be counted as a real HW5 seal.
         raise HW5UploadError("remote C(256,2) object failed full integrity checks")
     after = _get_json(PORTAL, token, "/v1/ring/status")
     root = after.get("hw5_gutenberg_reference") or {}
@@ -194,13 +206,35 @@ def upload(archive: Path, *, token: str, archive_size: int) -> dict:
             or exact.get("exact_ordered") is not True
             or exact.get("a") != ord("t") or exact.get("b") != ord("h")
             or exact.get("c") != ord("e")
-            or type(exact.get("count")) is not int or exact["count"] <= 0):
+            or type(exact.get("count")) is not int
+            or exact["count"] != EXPECTED_THE_TRIPLES):
         raise HW5UploadError("native routed HW5 ordered-triple readback failed")
     result = {key: sealed[key] for key in (
         "archive_sha256", "root_sha256", "corpus_sha256",
         "corpus_bytes", "root_bytes", "mirror_pairs", "book_count"
     )}
+    # Check both physical directions of a mirror-pair, not just an
+    # exact ordered-triple ledger count or root receipt.
+    pair_counts = {}
+    for first, second, expected in (
+            (ord("t"), ord("h"), EXPECTED_TH_ADJACENT),
+            (ord("h"), ord("t"), EXPECTED_HT_ADJACENT)):
+        response = _get_json(PORTAL, token, "/v1/ring/submit", {
+            "frame": _frame(token, 1, (first << 16) | (second << 8),
+                            kind=QUERY_KIND, tick=_clock(token))
+        })
+        physical = response.get("result") or {}
+        if (response.get("schema") != "nanrouter.hw5-gutenberg-readback.v1"
+                or response.get("endpoint") != "HW5:0"
+                or response.get("query") != "pair"
+                or response.get("root_sha256") != EXPECTED_ROOT_SHA256
+                or physical.get("a") != first
+                or physical.get("b") != second
+                or physical.get("adjacent_count") != expected):
+            raise HW5UploadError("directed physical HW5 mirror readback differs from release")
+        pair_counts["%s_to_%s" % (chr(first), chr(second))] = expected
     result["exact_the_count"] = exact["count"]
+    result["directed_pair_counts"] = pair_counts
     return result
 
 
