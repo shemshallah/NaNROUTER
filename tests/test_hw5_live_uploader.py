@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
 from unittest.mock import patch
 
 from runner_riddle.hw5_portal_stream import SCHEMA
@@ -61,6 +63,28 @@ class LiveHW5ClientTests(unittest.TestCase):
                 object(), None, 302, "found",
                 {"Location": "https://untrusted.invalid"},
                 "https://untrusted.invalid")
+
+    def test_live_success_requires_independent_pinned_root_commitments(self):
+        self.assertEqual(len(client.EXPECTED_ROOT_SHA256), 64)
+        self.assertEqual(len(client.EXPECTED_CORPUS_SHA256), 64)
+        self.assertEqual(client.EXPECTED_THE_TRIPLES, 245592)
+        self.assertEqual(client.EXPECTED_TH_ADJACENT, 391106)
+        self.assertEqual(client.EXPECTED_HT_ADJACENT, 26403)
+        with TemporaryDirectory() as folder:
+            archive = Path(folder) / "archive.tar.gz"
+            archive.write_bytes(b"x" * 17)
+            ready = {"ring_endpoint": "HW5:0", "active": True,
+                     "hw5_corpus_stream": {"configured": True}}
+            forged = {"remote_verified": True, "root_bytes": 8388608,
+                      "mirror_pairs": 32640, "corpus_bytes": client.CORPUS_BYTES,
+                      "root_sha256": "0"*64,
+                      "corpus_sha256": client.EXPECTED_CORPUS_SHA256}
+            with patch.object(client, "_get_json", return_value=ready), patch.object(
+                    client, "_submit", side_effect=[
+                        {"received_bytes": 17}, forged]):
+                with self.assertRaisesRegex(client.HW5UploadError,
+                                            "full integrity"):
+                    client.upload(archive, token=self.TOKEN, archive_size=17)
 
     def test_rejects_fake_transport_delivered_response(self):
         calls = []
