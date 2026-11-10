@@ -70,8 +70,8 @@ class HW4ResidentServiceTests(unittest.TestCase):
                     exact = fetch("/v1/riddle/hw4/exact?synset=00001740-n")
                     self.assertTrue(exact["pointers"])
                     health = fetch("/healthz")
-                    self.assertTrue(health["hw4_wordnet_reference"]["mounted"])
-                    self.assertFalse(health["hw4_wordnet_reference"].get("main_ring_writable", False))
+                    self.assertNotIn("hw4_wordnet_reference", health)
+                    self.assertEqual(service.hw4.status()["ring_owner"], "NaNROUTER/MC0:0")
                 finally:
                     server.shutdown()
                     worker.join(timeout=10)
