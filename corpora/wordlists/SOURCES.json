@@ -1,0 +1,25 @@
+{
+  "repo": "shemshallah/NaNROUTER",
+  "path": "corpora/wordlists",
+  "runner": ".github/workflows/fetch-wordlists.yml",
+  "release_tag": "wordlists-latest",
+  "sources": [
+    {"name": "david47k-top-english-wordlists", "url": "https://github.com/david47k/top-english-wordlists.git"},
+    {"name": "google-10000-english", "url": "https://github.com/first20hours/google-10000-english.git"},
+    {"name": "dwyl-english-words", "url": "https://github.com/dwyl/english-words.git"},
+    {"name": "en-wl-wordlist", "url": "https://github.com/en-wl/wordlist.git"},
+    {"name": "probable-wordlists", "url": "https://github.com/berzerk0/Probable-Wordlists.git"},
+    {"name": "wordset-dictionary", "url": "https://github.com/wordset/wordset-dictionary.git"},
+    {"name": "neopass-wordlist", "url": "https://github.com/neopass/wordlist.git"},
+    {"name": "scowl-mirror", "url": "https://github.com/rdeits/SCOWL-mirror.git"},
+    {"name": "nlile-dictionary-word-list", "url": "https://github.com/nlile/dictionary-word-list.git"},
+    {"name": "frequencywords", "url": "https://github.com/hermitdave/FrequencyWords.git"},
+    {"name": "wikipedia-word-frequency", "url": "https://github.com/IlyaSemenov/wikipedia-word-frequency.git"},
+    {"name": "kkrypt0nn-wordlists", "url": "https://github.com/kkrypt0nn/wordlists.git"},
+    {"name": "wordfreq", "url": "https://github.com/rspeer/wordfreq.git"},
+    {"name": "SecLists", "url": "https://github.com/danielmiessler/SecLists.git"},
+    {"name": "scowl", "url": "https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz"},
+    {"name": "crackstation-human-only", "url": "https://crackstation.net/files/crackstation-human-only.txt.gz"},
+    {"name": "mit-wordlist-10000", "url": "https://www.mit.edu/~ecprice/wordlist.10000"}
+  ]
+}

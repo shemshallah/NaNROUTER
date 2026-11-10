@@ -1,0 +1,184 @@
+name: Fetch wordlists
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish the packed bundle as a GitHub Release
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: "0 4 1 * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-wordlists
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Install zstd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+
+      - name: Fetch every wordlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST=corpora/wordlists
+          mkdir -p "$DEST"
+          cd "$DEST"
+
+          clone() {
+            local name="$1"
+            local url="$2"
+            echo "::group::clone $name"
+            git clone --depth 1 --quiet "$url" "$name"
+            rm -rf "$name/.git"
+            echo "::endgroup::"
+          }
+
+          clone david47k-top-english-wordlists https://github.com/david47k/top-english-wordlists.git
+          clone google-10000-english https://github.com/first20hours/google-10000-english.git
+          clone dwyl-english-words https://github.com/dwyl/english-words.git
+          clone en-wl-wordlist https://github.com/en-wl/wordlist.git
+          clone probable-wordlists https://github.com/berzerk0/Probable-Wordlists.git
+          clone wordset-dictionary https://github.com/wordset/wordset-dictionary.git
+          clone neopass-wordlist https://github.com/neopass/wordlist.git
+          clone scowl-mirror https://github.com/rdeits/SCOWL-mirror.git
+          clone nlile-dictionary-word-list https://github.com/nlile/dictionary-word-list.git
+
+          clone frequencywords https://github.com/hermitdave/FrequencyWords.git
+          clone wikipedia-word-frequency https://github.com/IlyaSemenov/wikipedia-word-frequency.git
+          clone kkrypt0nn-wordlists https://github.com/kkrypt0nn/wordlists.git
+          clone wordfreq https://github.com/rspeer/wordfreq.git
+          clone SecLists https://github.com/danielmiessler/SecLists.git
+
+          echo "::group::scowl"
+          mkdir -p scowl
+          curl -L --fail --retry 3 --silent --show-error \
+            -o /tmp/scowl.tar.gz \
+            https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz
+          tar -xzf /tmp/scowl.tar.gz -C scowl --strip-components=1
+          rm -f /tmp/scowl.tar.gz
+          echo "::endgroup::"
+
+          echo "::group::extras"
+          mkdir -p extras
+          curl -L --fail --retry 3 --silent --show-error \
+            -o extras/mit-wordlist-10000.txt \
+            https://www.mit.edu/~ecprice/wordlist.10000
+          curl -L --fail --retry 3 --silent --show-error \
+            -o crackstation-human-only.txt.gz \
+            https://crackstation.net/files/crackstation-human-only.txt.gz
+          gzip -t crackstation-human-only.txt.gz
+          echo "::endgroup::"
+
+          du -sh "$DEST"/* | sort -h
+
+      - name: Generate manifest and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd corpora/wordlists
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+
+          root = "."
+          entries = []
+          for name in sorted(os.listdir(root)):
+              path = os.path.join(root, name)
+              if not os.path.isdir(path) or name.startswith("."):
+                  continue
+              total = 0
+              files = 0
+              for dirpath, _, filenames in os.walk(path):
+                  for filename in filenames:
+                      filepath = os.path.join(dirpath, filename)
+                      try:
+                          total += os.path.getsize(filepath)
+                          files += 1
+                      except OSError:
+                          pass
+              entries.append({"name": name, "bytes": total, "files": files})
+
+          manifest = {
+              "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "repo": "shemshallah/NaNROUTER",
+              "path": "corpora/wordlists",
+              "total_bytes": sum(entry["bytes"] for entry in entries),
+              "total_files": sum(entry["files"] for entry in entries),
+              "entries": entries,
+          }
+          with open("MANIFEST.json", "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, indent=2, sort_keys=True)
+              handle.write("\n")
+          PY
+          find . -type f ! -name SHA256SUMS ! -name MANIFEST.json -print0 \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS
+          ls -lh MANIFEST.json SHA256SUMS
+
+      - name: Pack and split under 2 GB
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd corpora/wordlists
+          tar --zstd -cf ../NaNROUTER-wordlists.tar.zst .
+          rm -f ../NaNROUTER-wordlists.tar.zst.part-*
+          split -b 1900M ../NaNROUTER-wordlists.tar.zst ../NaNROUTER-wordlists.tar.zst.part-
+          sha256sum ../NaNROUTER-wordlists.tar.zst.part-* > ../SHA256SUMS.parts
+          rm -f ../NaNROUTER-wordlists.tar.zst
+          ls -lh ../NaNROUTER-wordlists.tar.zst.part-* ../SHA256SUMS.parts
+
+      - name: Publish release assets
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view wordlists-latest >/dev/null 2>&1; then
+            gh release create wordlists-latest \
+              --title "NaNROUTER wordlists" \
+              --notes "Full wordlist/corpus bundle generated by the fetch-wordlists workflow. Parts are under 2 GB. Reassemble with: cat NaNROUTER-wordlists.tar.zst.part-* | tar --zstd -x"
+          fi
+          gh release upload wordlists-latest \
+            corpora/NaNROUTER-wordlists.tar.zst.part-* \
+            corpora/SHA256SUMS.parts \
+            --clobber
+
+      - name: Commit manifest and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add corpora/wordlists/MANIFEST.json corpora/wordlists/SHA256SUMS
+          if git diff --cached --quiet; then
+            echo "manifest unchanged"
+          else
+            git commit -m "Update wordlist manifest [skip ci]"
+            git push || echo "::warning::manifest push skipped"
+          fi
