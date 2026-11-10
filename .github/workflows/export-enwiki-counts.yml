@@ -41,7 +41,7 @@ jobs:
           if len(p)!=1: raise RuntimeError(f'exactly one English source required: {p}')
           src=p[0]
           out=Path('release_english/corpora/wordlists/wikipedia-word-frequency/results/enwiki-2023-04-13.txt')
-          pat=re.compile(r'^([a-z]{6,10})\\s+([1-9][0-9]*)$')
+          pat=re.compile(r'^([a-z]{6,10})\s+([1-9][0-9]*)$')
           count=collections.Counter()
           total_lines=0
           with src.open(encoding='utf-8') as fh:
@@ -54,11 +54,11 @@ jobs:
           if len(count)<20000: raise RuntimeError(f'Insufficient counted entries: {len(count)}')
           with out.open('w',encoding='utf8') as fh:
               for word in sorted(count):
-                  fh.write(f'{word} {count[word]}\\n')
+                  fh.write(f'{word} {count[word]}\n')
           digest=hashlib.sha256(out.read_bytes()).hexdigest()
           root=Path('release_english/corpora/wordlists')
-          (root/'SOURCES.json').write_text(json.dumps({'repo':'shemshallah/NaNROUTER','path':'corpora/wordlists','source_release_tag':'wordlist-wikipedia-word-frequency','source_filename':str(src),'source_raw_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'source_archive_sha256':'8024f23519bec542619b787cfb70d6f14c840c53a91a61aa7acabda9203ea416','filtered_word_types':len(count),'source_total_lines':total_lines},indent=2)+'\\n')
-          (root/'SHA256SUMS').write_text(f'{digest}  wikipedia-word-frequency/results/enwiki-2023-04-13.txt\\n')
+          (root/'SOURCES.json').write_text(json.dumps({'repo':'shemshallah/NaNROUTER','path':'corpora/wordlists','source_release_tag':'wordlist-wikipedia-word-frequency','source_filename':str(src),'source_raw_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'source_archive_sha256':'8024f23519bec542619b787cfb70d6f14c840c53a91a61aa7acabda9203ea416','filtered_word_types':len(count),'source_total_lines':total_lines},indent=2)+'\n')
+          (root/'SHA256SUMS').write_text(f'{digest}  wikipedia-word-frequency/results/enwiki-2023-04-13.txt\n')
           print({'counted_word_types':len(count),'total_occurrences':sum(count.values()),'digest':digest,'source_lines':total_lines})
           PY
           sha256sum -c release_english/corpora/wordlists/SHA256SUMS --ignore-missing || (cd release_english/corpora/wordlists && sha256sum -c SHA256SUMS)
