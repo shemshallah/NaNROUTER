@@ -27,7 +27,8 @@ jobs:
           cd release_parts
           gh release download wordlists-latest -R shemshallah/NaNROUTER --pattern 'NaNROUTER-wordlists.tar.zst.part-*'
           gh release download wordlists-latest -R shemshallah/NaNROUTER --pattern SHA256SUMS.parts
-          sha256sum -c SHA256SUMS.parts
+          # The producer's checksums include ../ prefixes; normalize paths after download.
+          sed 's@  ../@  @' SHA256SUMS.parts | sha256sum -c -
           cat NaNROUTER-wordlists.tar.zst.part-* | tar --zstd -xf - -C ../extracted \
             ./SOURCES.json ./frequencywords/content/2018/en/en_50k.txt
       - name: Export exact count-bearing English source
