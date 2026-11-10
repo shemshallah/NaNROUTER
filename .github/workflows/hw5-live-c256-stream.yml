@@ -10,6 +10,8 @@ on:
       - 'deploy/portal/Dockerfile'
       - 'tools/hw5_live_gutenberg_stream.py'
       - 'tests/test_hw5_portal_stream.py'
+      - 'tests/test_hw5_portal_integration.py'
+      - 'tests/test_hw4_portal_resident.py'
       - '.github/workflows/hw5-live-c256-stream.yml'
   workflow_dispatch:
     inputs:
@@ -38,7 +40,7 @@ jobs:
       - name: Run replay, ordering, integrity, root-ownership controls
         run: |
           set -euo pipefail
-          python3 -m unittest tests.test_hw5_portal_stream tests.test_hw5_gutenberg -v
+          python3 -m unittest tests.test_hw5_portal_stream tests.test_hw5_portal_integration tests.test_hw4_portal_resident tests.test_hw5_gutenberg -v
       - name: Verify package contains receiver at the existing portal runtime path
         run: |
           set -euo pipefail
