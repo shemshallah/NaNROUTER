@@ -29,7 +29,10 @@ from .point_fabric import (
 from .runner_ring_authority import RunnerRingAuthError, RunnerRingAuthority
 from .hw4_full_dict import MountedHW4, RING_OWNER as HW4_RING_OWNER
 from .hw5_gutenberg import MountedHW5, OWNER as HW5_RING_OWNER
-from .hw5_portal_stream import HW5PortalStream, KIND as HW5_STREAM_KIND
+from .hw5_portal_stream import (
+    HW5PortalStream, KIND as HW5_STREAM_KIND,
+    QUERY_KIND as HW5_QUERY_KIND,
+)
 import os
 
 RING_SCHEMA = "nanrouter.portal-runner-ring.v1"
@@ -295,6 +298,33 @@ class PortalRingNode:
     def submit(self, body: dict[str, Any]) -> dict[str, Any]:
         if self.active:
             frame = frame_from_json(body.get("frame", body))
+            if frame.kind == HW5_QUERY_KIND:
+                # A native NaN16DE word holds the exact queried byte triple:
+                # [reserved high byte][a][b][c]. request_id=1 asks for a
+                # pair; request_id=2 asks for a true ordered triple. The
+                # immutable HW5 root and triple ledger provide the answer.
+                if "hw5_corpus" in body:
+                    raise PortalRingError("readback queries cannot carry archive data")
+                with self._lock:
+                    if (self._lease is None or self.hw5 is None or
+                            frame.source_hw != 0 or frame.destination_hw != 5 or
+                            frame.origin != "zero-point" or
+                            frame.request_id not in (1, 2) or
+                            frame.word.payload >> 24 != 0 or
+                            not self.fabric.point(5).active):
+                        raise PortalRingError("HW5 readback requires the sealed active point")
+                    payload = frame.word.payload
+                    a, b, d = (payload >> 16) & 255, (payload >> 8) & 255, payload & 255
+                    result = (self.hw5.pair(a, b) if frame.request_id == 1
+                              else self.hw5.triple(a, b, d))
+                    return {
+                        "schema": "nanrouter.hw5-gutenberg-readback.v1",
+                        "endpoint": "HW5:0",
+                        "query": "pair" if frame.request_id == 1 else "triple",
+                        "root_sha256": self.hw5.manifest["artifacts"]["gutenberg-c256.root"]["sha256"],
+                        "result": result,
+                        "remote_verified": True,
+                    }
             if frame.kind == HW5_STREAM_KIND:
                 with self._lock:
                     if self._lease is None:
