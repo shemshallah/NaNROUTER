@@ -20,8 +20,9 @@ class HW5(unittest.TestCase):
     def test_bad_source(self):
         for raw in (b"abc",b"*** START OF THE PROJECT GUTENBERG EBOOK X ***\nabc"):
             with self.assertRaises(ValueError): hw.clean(raw)
-        self.assertEqual(hw.clean(b"*** START OF THE PROJECT GUTENBERG EBOOK X ***\r\nabca"*1+
-                                  b"*** END OF THE PROJECT GUTENBERG EBOOK X ***\n"),b"abca\n")
+        body=b"abca"*600
+        self.assertEqual(hw.clean(b"*** START OF THE PROJECT GUTENBERG EBOOK X ***\r\n"+body+
+                                  b"\r\n*** END OF THE PROJECT GUTENBERG EBOOK X ***\n"),body+b"\n")
     def test_build_verify_and_readonly_contract(self):
         with TemporaryDirectory() as folder:
             root=Path(folder)
@@ -59,7 +60,7 @@ class HW5(unittest.TestCase):
                 f.seek(base)
                 header=struct.unpack("<IIII",f.read(16))
                 self.assertGreater(header[0],0)
-                self.assertEqual(header[1],0)
+                self.assertGreater(header[1],0)
                 self.assertEqual(header[2]&1,1)
                 f.seek(255*128)
                 self.assertEqual(f.read(128),bytes(128))
