@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import multiprocessing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -28,6 +29,21 @@ def make_frame(request_id: int, payload: int, *, source=0, destination=5,
         acl_digest="f" * 64,
         word=Nan16DEWord(far, near, payload),
     )
+
+
+def _racing_chunk_receiver(spool, store, digest, raw, start, results):
+    start.wait(15)
+    try:
+        receiver = HW5PortalStream(spool, store, archive_sha256=digest)
+        result = receiver.receive(
+            make_frame(1, zlib.crc32(raw)),
+            {"schema": SCHEMA, "archive_sha256": digest,
+             "operation": "chunk", "offset": 0,
+             "chunk_b64": base64.b64encode(raw).decode("ascii"),
+             "chunk_sha256": hashlib.sha256(raw).hexdigest()})
+        results.put(("ok", result["result"]))
+    except Exception as exc:
+        results.put(("error", type(exc).__name__))
 
 
 class TestHW5KoyebStream(unittest.TestCase):
@@ -102,6 +118,32 @@ class TestHW5KoyebStream(unittest.TestCase):
         with self.assertRaisesRegex(HW5StreamError, "immutable"):
             self.chunk(0, a)
         self.assertEqual(len(self.sealed), 1)
+
+    def test_two_processes_share_one_persistent_Koyeb_writer(self):
+        self.begin()
+        ctx = multiprocessing.get_context("fork")
+        start = ctx.Event()
+        results = ctx.Queue()
+        raw = self.blob[:CHUNK_BYTES]
+        procs = [
+            ctx.Process(
+                target=_racing_chunk_receiver,
+                args=(str(self.receiver.spool), str(self.receiver.store),
+                      self.digest, raw, start, results),
+            ) for _ in range(2)
+        ]
+        for proc in procs:
+            proc.start()
+        start.set()
+        for proc in procs:
+            proc.join(timeout=25)
+            self.assertEqual(proc.exitcode, 0)
+        acknowledgments = [results.get(timeout=5) for _ in range(2)]
+        self.assertEqual(sorted(acknowledgments),
+                         [("ok", "accepted"), ("ok", "duplicate")])
+        self.assertEqual(self.receiver.status()["received_bytes"], CHUNK_BYTES)
+        with self.receiver.payload.open("rb") as fp:
+            self.assertEqual(fp.read(), raw)
 
     def test_wrong_route_word_and_corruption_fail_closed(self):
         for f in (make_frame(0, len(self.blob), source=1),
