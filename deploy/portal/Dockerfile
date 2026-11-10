@@ -21,6 +21,15 @@ COPY --from=native /src/runner/hermes_router_delegate.py /app/runner/hermes_rout
 COPY --from=native /src/runner/runner_ring_authority.py /app/runner/runner_ring_authority.py
 COPY runner_riddle/point_fabric.py /app/runner/point_fabric.py
 COPY deploy/portal/portal_ring.py /app/runner/portal_ring.py
+# Install the exact WordNet 3.1 C(256,2) reference in the portal image.
+# It remains separate from the NaN0S guest and from BS0 learner state.
+COPY runner_riddle/wordnet_mirror_adapter.py /app/runner/wordnet_mirror_adapter.py
+COPY runner_riddle/hw4_reference.py /app/runner/hw4_reference.py
+COPY runner_riddle/hw4_full_dict.py /app/runner/hw4_full_dict.py
+COPY runner_riddle/hw4_release_bootstrap.py /app/runner/hw4_release_bootstrap.py
+RUN python -m runner.hw4_release_bootstrap /app/hw4-wordnet31
+RUN python -m runner.hw4_full_dict verify /app/hw4-wordnet31
+
 COPY --from=native /src/runner/head_cortex_service.py /app/head_cortex_service.py
 COPY --from=native /src/runner/nannet_router /app/nannet_router
 COPY --from=native /src/runner/nannet_clocked /app/nannet_clocked
@@ -33,7 +42,9 @@ ENV PYTHONUNBUFFERED=1 \
     NANLM_HEAD_STATE=/app/state/hermes-universe.nmg \
     NANLM_HEAD_CORTEX_HOST=127.0.0.1 \
     NANLM_HEAD_CORTEX_PORT=18083 \
-    NANLM_HEAD_CANDIDATE_DIR=/data/head-candidates
+    NANLM_HEAD_CANDIDATE_DIR=/data/head-candidates \
+    RIDDLE_HW4_STORE=/app/hw4-wordnet31 \
+    RIDDLE_HW4_RING=NaNROUTER/MC0:0
 VOLUME ["/data"]
 EXPOSE 8080
 RUN chmod 0755 /app/start_portal.sh /app/nanlm-universal \
