@@ -34,16 +34,4 @@ jobs:
             python -c "import nannet_router.http_service, nannet_clocked.gateway, nanlmind_nannet"
             echo PORTAL_PINNED_RUNTIME_PARITY_PASS
           '
-          docker run --rm --entrypoint python nanrouter-portal:parity -c '
-from runner.portal_ring import PortalRingNode
-from runner.hw4_full_dict import MountedHW4, verify
-import os
-p = os.environ["RIDDLE_HW4_STORE"]
-m = MountedHW4(p)
-assert m.status()["pair_count"] == 32640
-assert m.status()["synsets"] == 117791
-assert m.status()["pointers"] == 378203
-m.close()
-assert verify(p)["occupied_pairs"] == 32475
-print("HW4_PORTAL_IMAGE_PINNED_PASS")
-          '
+          docker run --rm --entrypoint python nanrouter-portal:parity -c 'from runner.portal_ring import PortalRingNode; from runner.hw4_full_dict import MountedHW4, verify; import os; p=os.environ["RIDDLE_HW4_STORE"]; m=MountedHW4(p); assert m.status()["pair_count"]==32640; assert m.status()["synsets"]==117791; assert m.status()["pointers"]==378203; m.close(); assert verify(p)["occupied_pairs"]==32475; print("HW4_PORTAL_IMAGE_PINNED_PASS")'
