@@ -1,0 +1,69 @@
+name: HW5 Gutenberg 20 MiB NaN16 hypermatrix reference
+on:
+  push:
+    branches: ['experiment/hw5-gutenberg-c256-20261109']
+    paths:
+      - 'runner_riddle/hw5_gutenberg.py'
+      - 'tests/test_hw5_gutenberg.py'
+      - '.github/workflows/hw5-gutenberg-c256.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-and-publish-hw5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test exact mirror, triple and corruption invariants
+        run: |
+          set -euo pipefail
+          python3 -m py_compile runner_riddle/hw5_gutenberg.py
+          python3 -m unittest tests.test_hw5_gutenberg -v
+      - name: Collect whole Gutenberg books from an authorized public mirror
+        run: |
+          set -euo pipefail
+          python3 -m runner_riddle.hw5_gutenberg collect "$RUNNER_TEMP/hw5-sources"
+      - name: Build and verify HW5 C(256,2) plus exact text and triple ledger
+        run: |
+          set -euo pipefail
+          python3 -m runner_riddle.hw5_gutenberg build "$RUNNER_TEMP/hw5-sources" "$RUNNER_TEMP/hw5-gutenberg-reference"
+          python3 -m runner_riddle.hw5_gutenberg verify "$RUNNER_TEMP/hw5-gutenberg-reference"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          store=Path(os.environ['RUNNER_TEMP'])/'hw5-gutenberg-reference'
+          m=json.loads((store/'generation-00000001'/'manifest.json').read_text())
+          assert 19*1048576<=m['corpus_bytes']<=22*1048576
+          assert m['root_bytes']==8388608 and m['mirror_pairs']==32640
+          assert m['canonical_cells']==32896 and m['gateway_head']==255
+          assert all(any(d['split']==s for d in m['books']) for s in ('train','dev','test'))
+          assert m['projection']['triple_count']==m['corpus_bytes']-2*len(m['books'])
+          print('HW5_EXACT_HYPERMATRIX_PASS',json.dumps({'bytes':m['corpus_bytes'],'books':len(m['books']),'triple_types':m['projection']['unique_triples'],'occupied_pairs':m['projection']['occupied_mirror_pairs'],'all_sha256':m['artifacts']['all.txt']['sha256'],'root_sha256':m['artifacts']['gutenberg-c256.root']['sha256']},sort_keys=True))
+          PY
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" hw5-gutenberg-reference
+          sha256sum "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz"
+      - name: Preserve reference and proof in GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: hw5-gutenberg-c256-g1
+          path: ${{ runner.temp }}/hw5-gutenberg-c256-g1.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish immutable HW5 reference (never writes live BS0)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/experiment/hw5-gutenberg-c256-20261109'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=hw5-gutenberg-c256-g1
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "HW5 reference release already exists; preserving immutability"
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq .url
+          else
+            gh release create "$tag" "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title 'HW5:0 Gutenberg ~20 MiB NaN16 32640-pair reference generation 1' \
+              --notes 'Immutable offline HW5:0 NaNROUTER/MC0:0 reference. Includes complete normalized Gutenberg slice, document-level train/dev/test, 8 MiB c256 pair image, exact ordered trigram SQLite ledger, provenance and checksums. Not a live ring write nor an executable guest.' \
+              --latest=false
+          fi
