@@ -14,7 +14,6 @@ import json
 import os
 from pathlib import Path
 import tempfile
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -79,10 +78,24 @@ def _get_json(base: str, token: str, path: str, body: dict | None = None) -> dic
     return payload
 
 
-def _frame(token: str, request_id: int, payload: int, *, kind: str = KIND) -> dict:
+def _clock(token: str) -> int:
+    """Reserve a real atomic, globally monotonic tick on the Koyeb authority.
+
+    No wall-clock timestamps are invented as substitute nanclock ticks.
+    """
+    live = _get_json(PORTAL, token, "/v1/ring/clock")
+    tick = live.get("nanclock_tick")
+    if (type(tick) is not int or not 0 <= tick <= 0xFFFFFFFFFFFFFFFF
+            or live.get("active") is not True):
+        raise HW5UploadError("live runner ring did not allocate an active nanclock tick")
+    return tick
+
+
+def _frame(token: str, request_id: int, payload: int, *,
+           kind: str = KIND, tick: int) -> dict:
     word = Nan16DEWord(0x7FF8, 0xFFF8, payload)
     frame = PointFrame(request_id=request_id, source_hw=0, destination_hw=5,
-                       nanclock_tick=int(time.time()), kind=kind,
+                       nanclock_tick=tick, kind=kind,
                        acl_digest=hashlib.sha256(
                            ("hw5/corpus/import/v1:" + token).encode()).hexdigest(),
                        word=word)
@@ -99,7 +112,7 @@ def _frame(token: str, request_id: int, payload: int, *, kind: str = KIND) -> di
 
 def _submit(token: str, envelope: dict, request_id: int, payload: int) -> dict:
     response = _get_json(PORTAL, token, "/v1/ring/submit",
-                         {"frame": _frame(token, request_id, payload),
+                         {"frame": _frame(token, request_id, payload, tick=_clock(token)),
                           "hw5_corpus": envelope})
     if response.get("schema") != SCHEMA or response.get("endpoint") != "HW5:0":
         raise HW5UploadError("remote HW5:0 did not acknowledge this stream")
@@ -171,7 +184,7 @@ def upload(archive: Path, *, token: str, archive_size: int) -> dict:
     # sealed mapped root/ordered-triple ledger through the NaN16DE point route.
     triple_query = _get_json(PORTAL, token, "/v1/ring/submit", {
         "frame": _frame(token, 2, (ord("t") << 16) | (ord("h") << 8) | ord("e"),
-                        kind=QUERY_KIND)
+                        kind=QUERY_KIND, tick=_clock(token))
     })
     exact = triple_query.get("result") or {}
     if (triple_query.get("schema") != "nanrouter.hw5-gutenberg-readback.v1"
