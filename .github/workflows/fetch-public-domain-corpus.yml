@@ -98,7 +98,7 @@ jobs:
               assets=("$archive" "release-assets/${name}.SHA256SUMS")
               extract="Extract with: tar --zstd -xf ${name}.tar.zst"
             fi
-            notes="Project Gutenberg public-domain ${description}. ${extract}. See LICENSE.txt and SOURCES.jsonl inside."
+            notes="Project Gutenberg public-domain ${description}. ${extract}. See SOURCES.jsonl inside; license details are in the complete category release and the repository LICENSE.txt."
             if gh release view "$tag" >/dev/null 2>&1; then
               gh release edit "$tag" --title "$title" --notes "$notes"
             else
