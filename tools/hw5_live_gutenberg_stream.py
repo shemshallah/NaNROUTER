@@ -162,6 +162,7 @@ def upload(archive: Path, *, token: str, archive_size: int) -> dict:
     stream = after.get("hw5_corpus_stream") or {}
     if (root.get("mounted") is not True or
             root.get("root_bytes") != sealed["root_bytes"] or
+            root.get("root_sha256") != sealed["root_sha256"] or
             root.get("source_sha256") != sealed["corpus_sha256"] or
             stream.get("sealed") is not True or
             stream.get("root_sha256") != sealed["root_sha256"]):
