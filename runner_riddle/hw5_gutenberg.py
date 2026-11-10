@@ -297,6 +297,63 @@ def verify(store:Path):
     if manifest["projection"]["triple_count"]!=manifest["corpus_bytes"]-2*len(manifest["books"]):
         raise ValueError("triple boundary invariant")
     return manifest
+class MountedHW5:
+    """Read-only HW5 attachment; never mutates live BS0 or creates a guest."""
+    def __init__(self,store):
+        self.store=Path(store)
+        self.manifest=verify(self.store)
+        folder=self.store/self.manifest["generation_name"]
+        self._file=(folder/"gutenberg-c256.root").open("rb")
+        self._matrix=mmap.mmap(self._file.fileno(),ROOT_BYTES,access=mmap.ACCESS_READ)
+        uri="file:"+str((folder/"gutenberg-triples.sqlite3").resolve())+"?mode=ro&immutable=1"
+        self._db=sqlite3.connect(uri,uri=True,check_same_thread=False)
+    def __enter__(self):return self
+    def __exit__(self,exc_type,exc,tb):self.close()
+    def close(self):
+        self._db.close()
+        self._matrix.close()
+        self._file.close()
+    @staticmethod
+    def _head(x):
+        n=int(x)
+        if not 0<=n<HEADS:raise ValueError("byte head out of range")
+        return n
+    def status(self):
+        return {"route":ROUTE,"ring_owner":OWNER,"main_ring_writable":False,
+                "heads":HEADS,"gateway_head":255,"mirror_pairs":PAIRS,
+                "canonical_cells":PAIRS+HEADS,
+                "root_bytes":ROOT_BYTES,"corpus_bytes":self.manifest["corpus_bytes"],
+                "books":len(self.manifest["books"]),
+                "occupied_pairs":self.manifest["projection"]["occupied_mirror_pairs"],
+                "unique_ordered_triples":self.manifest["projection"]["unique_triples"],
+                "source_sha256":self.manifest["artifacts"]["all.txt"]["sha256"]}
+    def pair(self,a,b):
+        a=self._head(a);b=self._head(b)
+        if a==b:
+            head=struct.unpack_from("<IIIIIIII",self._matrix,a*HEAD_BYTES)
+            return {"a":a,"b":b,"fixed_point":True,"address":a*257,
+                    "pair_id":0,"adjacent_count":head[3],"skip_one_count":head[4],
+                    "physical_offset":a*HEAD_BYTES,"reference_only":True}
+        low,high=sorted((a,b))
+        index=pair_index(low,high)
+        offset=HEADS*HEAD_BYTES+(index-1)*PAIR_BYTES
+        direction=0 if a<b else 1
+        adjacent,mask=struct.unpack_from("<II",self._matrix,offset+4*direction)[0],struct.unpack_from("<I",self._matrix,offset+8+4*direction)[0]
+        lane_base=offset+16+4*direction*16
+        adjacent_lane,skip=struct.unpack_from("<II",self._matrix,lane_base)
+        if adjacent!=adjacent_lane:raise ValueError("HW5 pair header/lanes inconsistent")
+        return {"a":a,"b":b,"fixed_point":False,"pair_id":index,
+                "logical_address":(a<<8)|b,"mirror_address":(b<<8)|a,
+                "physical_offset":offset,"lane_direction":direction,
+                "adjacent_count":adjacent,"skip_one_count":skip,
+                "lane_mask":mask,"reference_only":True}
+    def triple(self,a,b,c):
+        a=self._head(a);b=self._head(b);c=self._head(c)
+        result=self._db.execute("SELECT n FROM triples WHERE a=? AND b=? AND c=?",(a,b,c)).fetchone()
+        return {"a":a,"b":b,"c":c,"count":result[0] if result else 0,
+                "legs":[self.pair(a,b),self.pair(b,c),self.pair(c,a)],
+                "exact_ordered":True,"reference_only":True}
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     sub=p.add_subparsers(dest="action",required=True)
