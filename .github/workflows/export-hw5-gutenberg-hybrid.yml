@@ -1,0 +1,30 @@
+name: Export HW5 Gutenberg reference corpus for hybrid training
+on:
+  push:
+    paths:
+      - '.github/workflows/export-hw5-gutenberg-hybrid.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify immutable HW5 reference
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p export
+          gh release download hw5-gutenberg-c256-g1 -R shemshallah/NaNROUTER --pattern hw5-gutenberg-c256-g1.tar.gz --dir export
+          echo '906a9030a11a67cc2635a6700344826d4c924e49596e57949a969cf78e1a7a18  export/hw5-gutenberg-c256-g1.tar.gz' | sha256sum -c -
+          tar -tzf export/hw5-gutenberg-c256-g1.tar.gz | head -120 | tee export/CONTENTS.txt
+          sha256sum export/hw5-gutenberg-c256-g1.tar.gz > export/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hw5-gutenberg-hybrid-source
+          path: export/
+          retention-days: 14
