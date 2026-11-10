@@ -153,8 +153,15 @@ class RiddleService:
             if self.hermes_leases is not None:
                 # A delegated HERMES universe has an active HW2 endpoint.
                 self.point_fabric.register(2, status="active")
+            if self.hw4 is not None:
+                # HW4 fixed role was reserved until the complete generation
+                # verified. Register it on this existing NaNROUTER fabric.
+                self.point_fabric.register(4, status="active")
 
     def close(self) -> None:
+        if self.hw4 is not None:
+            self.hw4.close()
+            self.hw4 = None
         if self.point_fabric is not None:
             self.point_fabric.close()
             self.point_fabric = None
