@@ -48,3 +48,37 @@ fresh/staging deployment. Do not point a second service at the production
 
 No secret, token, HMAC key, allocator manifest or live route cache belongs in
 Git.
+
+
+## HW4 WordNet 3.1 reference on the embedded ring
+
+The portal Dockerfile now **bakes in** the verified full WordNet 3.1 HW4
+reference from the immutable NaNROUTER release, checking the pinned archive
+SHA256 and the full generation's root/SQLite digests during image build.
+The exact synset/sense/pointer ledger is packaged alongside the 8 MiB C256
+matrix. This copy is read-only and cannot be mistaken for a NaN0S guest root.
+
+The existing embedded six-slot PortalRingNode holds one read-only mmap and
+SQLite connection to the same reference at /app/hw4-wordnet31. When the
+portal ring obtains a lease it activates the **existing** HW4:0 fixed
+WordNet role in its CentralPointFabric. Across checkpoint/handoff it retains
+the reference in the portal process and does not train/commit into BS0.
+The image supplies RIDDLE_HW4_STORE and RIDDLE_HW4_RING values. A container
+restart remounts the same verified generation from its pinned image;
+there is no runtime corpus download or additional persistent writer.
+
+Existing GET /v1/ring/status now reports hw4_wordnet_reference with mounted,
+read_only, version, digest, ring owner, and counts. GET /v1/ring/points
+reports HW4:0 active when the embedded slot holds the ring lease. This
+is internal control/reference readout; it does not expose full WordNet
+contents without authentication or change the stable public /healthz shape.
+
+**Deploy requirement:** production nannet-portal has
+no_deploy_on_push=true. Merging code does not automatically roll out this
+image or prove that the remote embedded ring is holding HW4. Perform the
+normal reviewed Koyeb rollout and verify the live /v1/ring/status before
+making a live claim.
+
+PR #113 provides the full corpus build + historical stand-alone router
+adapter. The portal-specific runtime integration is separate to preserve
+the existing one-service, one-ring authority.

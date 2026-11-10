@@ -27,6 +27,8 @@ from .point_fabric import (
     frames_to_json,
 )
 from .runner_ring_authority import RunnerRingAuthError, RunnerRingAuthority
+from .hw4_full_dict import MountedHW4, RING_OWNER as HW4_RING_OWNER
+import os
 
 RING_SCHEMA = "nanrouter.portal-runner-ring.v1"
 DEFAULT_SLOT = 0
@@ -61,6 +63,13 @@ class PortalRingNode:
         self.ttl_seconds = ttl_seconds
         self.poll_seconds = poll_seconds
         self.checkpoint_seconds = checkpoint_seconds
+        # Full HW4 WordNet reference lives at one immutable pinned path in
+        # the *portal* image. Its read-only mmap stays open for the lifetime
+        # of the existing ring node (including slot handoffs).
+        hw4_store = os.environ.get("RIDDLE_HW4_STORE", "")
+        if hw4_store and os.environ.get("RIDDLE_HW4_RING", HW4_RING_OWNER) != HW4_RING_OWNER:
+            raise PortalRingError("HW4 cannot attach to the main BS0 runner ring")
+        self.hw4 = MountedHW4(hw4_store) if hw4_store else None
         self.fabric = CentralPointFabric(database=database)
         self._lock = threading.RLock()
         self._stop = threading.Event()
@@ -99,6 +108,9 @@ class PortalRingNode:
                 except Exception:
                     pass
                 self._lease = None
+            if self.hw4 is not None:
+                self.hw4.close()
+                self.hw4 = None
             self.fabric.close()
 
     def _error(self, exc: BaseException) -> None:
@@ -130,6 +142,16 @@ class PortalRingNode:
                 self.fabric.register(hw, status="active")
             else:
                 self.fabric.heartbeat(hw, status="active")
+        if self.hw4 is not None:
+            # HW4's original fixed role is reserved until the image hashes
+            # were verified. Activation is part of the same portal fabric,
+            # never a new runner or a writable training chart.
+            try:
+                self.fabric.point(4)
+            except FabricRoutingError:
+                self.fabric.register(4, status="active")
+            else:
+                self.fabric.heartbeat(4, status="active")
         self._lease = lease
         self._handoffs += 1
         self._last_checkpoint = time.monotonic()
@@ -224,6 +246,11 @@ class PortalRingNode:
                 "errors": self._errors,
                 "last_error": self._last_error,
                 "fabric": self.fabric.monitor(),
+                "hw4_wordnet_reference": (
+                    self.hw4.status() if self.hw4 is not None else
+                    {"mounted": False, "read_only": True,
+                     "ring_owner": HW4_RING_OWNER}
+                ),
             }
 
     def points(self) -> dict[str, Any]:
