@@ -94,7 +94,7 @@ jobs:
           gzip -t crackstation-human-only.txt.gz
           echo "::endgroup::"
 
-          du -sh "$DEST"/* | sort -h
+          du -sh ./* | sort -h
 
       - name: Generate manifest and checksums
         shell: bash
