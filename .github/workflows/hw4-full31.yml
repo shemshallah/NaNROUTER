@@ -4,8 +4,12 @@ on:
     branches: [feat/hw4-wordnet-durable-reference-20261109]
     paths:
       - runner_riddle/hw4_full_dict.py
+      - runner_riddle/hw4_release_bootstrap.py
+      - deploy/start_router.sh
       - runner_riddle/http_service.py
       - tests/test_hw4_full_dict.py
+      - tests/test_hw4_mounted_service.py
+      - tests/test_hw4_release_bootstrap.py
       - .github/workflows/hw4-full31.yml
   pull_request:
     paths:
@@ -27,8 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test dense matrix, exact ledger and immutable mount
         run: |
-          python3 -m unittest tests.test_hw4_full_dict -v
-          python3 -m py_compile runner_riddle/hw4_full_dict.py runner_riddle/http_service.py
+          python3 -m unittest tests.test_hw4_full_dict tests.test_hw4_mounted_service tests.test_hw4_release_bootstrap -v
+          python3 -m py_compile runner_riddle/hw4_full_dict.py runner_riddle/hw4_release_bootstrap.py runner_riddle/http_service.py
       - name: Reconstruct complete WordNet 3.1 ZIP and verify user corpus digests
         run: |
           set -euo pipefail
