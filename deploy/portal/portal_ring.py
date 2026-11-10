@@ -270,7 +270,10 @@ class PortalRingNode:
                      "ring_owner": HW4_RING_OWNER}
                 ),
                 "hw5_gutenberg_reference": (
-                    dict(self.hw5.status(), mounted=True, read_only=True)
+                    dict(
+                        self.hw5.status(), mounted=True, read_only=True,
+                        root_sha256=self.hw5.manifest["artifacts"]["gutenberg-c256.root"]["sha256"],
+                    )
                     if self.hw5 is not None else
                     {"mounted": False, "read_only": True,
                      "ring_owner": HW5_RING_OWNER}
