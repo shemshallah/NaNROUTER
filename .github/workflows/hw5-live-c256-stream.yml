@@ -68,7 +68,7 @@ jobs:
       - name: Stream pinned real archive into temp C256 and test post-handoff physical triple readback
         run: |
           set -euo pipefail
-          python3 tools/hw5_full_release_e2e.py "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" \
+          python3 -m tools.hw5_full_release_e2e "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" \
             | tee "$RUNNER_TEMP/hw5-e2e.log"
           grep -F 'HW5_FULL_RELEASE_E2E_PASS' "$RUNNER_TEMP/hw5-e2e.log"
   live-transfer:
@@ -90,4 +90,4 @@ jobs:
       - name: Verify remote portal, stream pinned Gutenberg archive and read back C256 digest
         run: |
           set -euo pipefail
-          python3 tools/hw5_live_gutenberg_stream.py --send
+          python3 -m tools.hw5_live_gutenberg_stream --send
