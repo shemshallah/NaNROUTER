@@ -383,6 +383,10 @@ class MountedHW4:
         self._matrix = mmap.mmap(self._file.fileno(), ROOT_BYTES, access=mmap.ACCESS_READ)
         uri = "file:" + str((folder / "wordnet-exact.sqlite3").resolve()) + "?mode=ro&immutable=1"
         self._db = sqlite3.connect(uri, uri=True, check_same_thread=False)
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
     def close(self):
         self._db.close()
         self._matrix.close()
