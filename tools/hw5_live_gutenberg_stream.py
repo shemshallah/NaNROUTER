@@ -34,6 +34,13 @@ class HW5UploadError(RuntimeError):
     pass
 
 
+class _NeverRedirectCredentials(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # urllib's default redirect handling may forward sensitive headers.
+        # Never send a live ring bearer to a secondary origin.
+        raise HW5UploadError("authenticated NANNET endpoint redirected")
+
+
 def _get_json(base: str, token: str, path: str, body: dict | None = None) -> dict:
     if base != PORTAL:
         raise HW5UploadError("only the pinned production HTTPS NANNET portal is permitted")
@@ -52,7 +59,8 @@ def _get_json(base: str, token: str, path: str, body: dict | None = None) -> dic
             data=raw, method="POST")
     try:
         # Authentication is sent only to the exact verified HTTPS origin.
-        with urllib.request.urlopen(req, timeout=45) as response:
+        with urllib.request.build_opener(
+                _NeverRedirectCredentials()).open(req, timeout=45) as response:
             if urllib.parse.urlsplit(response.url).netloc != "nannet.apps.mistral.run":
                 raise HW5UploadError("credential-bearing request crossed origins")
             data = response.read(262145)
