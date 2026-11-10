@@ -1,12 +1,20 @@
 """Offline integrity and coordinate tests for Gutenberg HW5:0."""
 import json
+import os
+import tarfile
+import threading
+from http.server import ThreadingHTTPServer
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+from unittest.mock import patch
+from runner_riddle.hw5_release_bootstrap import bootstrap
+from runner_riddle.http_service import RiddleService, ServiceConfigError, make_handler
 import mmap
 from pathlib import Path
 import sqlite3
 import struct
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
 from runner_riddle import hw5_gutenberg as hw
 
 class HW5(unittest.TestCase):
@@ -79,6 +87,54 @@ class HW5(unittest.TestCase):
                 self.assertEqual(len(query["legs"]),3)
                 self.assertEqual(mounted.triple(255,254,253)["count"],0)
                 with self.assertRaises(ValueError):mounted.triple(256,0,1)
+            archive=root/"synthetic-hw5.tar.gz"
+            with tarfile.open(archive,"w:gz") as tar:
+                tar.add(store,arcname="hw5-gutenberg-reference")
+            import runner_riddle.hw5_release_bootstrap as boot
+            with patch.object(boot,"ARCHIVE_SHA256",hw.sha(archive)):
+                installed=boot.bootstrap(root/"mounted-hw5",archive_path=archive)
+                self.assertFalse(installed["reused"])
+                self.assertTrue(boot.bootstrap(root/"mounted-hw5",archive_path=archive)["reused"])
+            env={"RIDDLE_DATA_DIR":str(root/"router-data"),
+                 "RIDDLE_HW5_STORE":str(store),
+                 "RIDDLE_HW5_RING":"NaNROUTER/MC0:0",
+                 "RIDDLE_FABRIC_ENABLED":"1",
+                 "RIDDLE_INTAKE_TOKEN":"i"*40,
+                 "RIDDLE_WORKER_TOKEN":"w"*40,
+                 "RIDDLE_FEEDBACK_HMAC_KEY":"f"*40}
+            with patch.dict(os.environ,env):
+                service=RiddleService()
+                try:
+                    self.assertIsNotNone(service.hw5)
+                    self.assertEqual(service.hw5.status()["books"],12)
+                    self.assertEqual(service.point_fabric.point(5).monitor()["endpoint"],"HW5:0")
+                    server=ThreadingHTTPServer(("127.0.0.1",0),make_handler(service))
+                    worker=threading.Thread(target=server.serve_forever,daemon=True)
+                    worker.start()
+                    try:
+                        url=f"http://127.0.0.1:{server.server_port}"
+                        with self.assertRaises(HTTPError) as unauthorized:
+                            urlopen(url+"/v1/riddle/hw5/status",timeout=5)
+                        self.assertEqual(unauthorized.exception.code,401)
+                        def query(path):
+                            request=Request(url+path,headers={"Authorization":"Bearer "+"w"*40})
+                            with urlopen(request,timeout=5) as reply:return json.load(reply)
+                        self.assertEqual(query("/v1/riddle/hw5/status")["route"],hw.ROUTE)
+                        p=query("/v1/riddle/hw5/pair?a=120&b=121")
+                        self.assertEqual(p["pair_id"],hw.pair_index(120,121))
+                        self.assertGreater(query("/v1/riddle/hw5/triple?a=120&b=121&c=120")["count"],0)
+                        with self.assertRaises(HTTPError) as invalid:
+                            query("/v1/riddle/hw5/pair?a=256&b=0")
+                        self.assertEqual(invalid.exception.code,400)
+                    finally:
+                        server.shutdown()
+                        worker.join(timeout=5)
+                        server.server_close()
+                finally:
+                    service.close()
+            with patch.dict(os.environ,dict(env,RIDDLE_HW5_RING="NaNLMind/BS0")):
+                with self.assertRaisesRegex(ServiceConfigError,"main runner ring"):
+                    RiddleService()
             with (gen/"all.txt").open("ab") as f:f.write(b"corrupt")
             with self.assertRaisesRegex(ValueError,"artifact mismatch"):hw.verify(store)
 
