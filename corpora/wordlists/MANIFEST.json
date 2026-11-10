@@ -1,0 +1,89 @@
+{
+  "entries": [
+    {
+      "bytes": 1970786716,
+      "files": 6277,
+      "name": "SecLists"
+    },
+    {
+      "bytes": 47462604,
+      "files": 56,
+      "name": "david47k-top-english-wordlists"
+    },
+    {
+      "bytes": 19356660,
+      "files": 16,
+      "name": "dwyl-english-words"
+    },
+    {
+      "bytes": 15285730,
+      "files": 104,
+      "name": "en-wl-wordlist"
+    },
+    {
+      "bytes": 75880,
+      "files": 1,
+      "name": "extras"
+    },
+    {
+      "bytes": 1478316545,
+      "files": 364,
+      "name": "frequencywords"
+    },
+    {
+      "bytes": 537309,
+      "files": 10,
+      "name": "google-10000-english"
+    },
+    {
+      "bytes": 708671463,
+      "files": 314,
+      "name": "kkrypt0nn-wordlists"
+    },
+    {
+      "bytes": 8827534,
+      "files": 383,
+      "name": "neopass-wordlist"
+    },
+    {
+      "bytes": 27948226,
+      "files": 5,
+      "name": "nlile-dictionary-word-list"
+    },
+    {
+      "bytes": 12300190,
+      "files": 41,
+      "name": "probable-wordlists"
+    },
+    {
+      "bytes": 8495199,
+      "files": 533,
+      "name": "scowl"
+    },
+    {
+      "bytes": 8461384,
+      "files": 504,
+      "name": "scowl-mirror"
+    },
+    {
+      "bytes": 346253078,
+      "files": 25,
+      "name": "wikipedia-word-frequency"
+    },
+    {
+      "bytes": 60394736,
+      "files": 101,
+      "name": "wordfreq"
+    },
+    {
+      "bytes": 67312828,
+      "files": 35,
+      "name": "wordset-dictionary"
+    }
+  ],
+  "generated_at": "2026-11-10T20:19:09.378117+00:00",
+  "path": "corpora/wordlists",
+  "repo": "shemshallah/NaNROUTER",
+  "total_bytes": 4780486082,
+  "total_files": 8769
+}
