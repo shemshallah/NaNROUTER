@@ -60,7 +60,7 @@ The remote service still requires an attached persistent MC0 volume and deployme
 
 ## Runtime verification
 
-- GET /healthz: hw4_wordnet_reference.mounted true only while mounted.
+- GET /healthz keeps its stable public status schema; mounting is visible through the authenticated HW4 status and existing fabric monitor.
 - Authenticated worker-token GET /v1/riddle/hw4/status: immutable generation, digest, counts, route, ring ownership.
 - Authenticated GET /v1/riddle/hw4/pair?a=0&b=1: direction-preserving pair record.
 - Authenticated GET /v1/riddle/hw4/exact?synset=00001740-n: exact source pointers, not inferred semantic similarity.
