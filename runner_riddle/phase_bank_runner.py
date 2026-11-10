@@ -83,7 +83,7 @@ def main() -> int:
         return completed.returncode
     vectors_doc = json.loads(json_path.read_text(encoding="utf-8"))
     artifacts = {}
-    for suffix in (".codes.bin", ".knn.bin", ".spectral.bin"):
+    for suffix in (".codes.bin", ".knn.bin", ".spectral.bin", ".matrix.bin"):
         artifact = Path(str(prefix) + suffix)
         if artifact.is_file():
             artifacts[suffix] = {
