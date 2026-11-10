@@ -25,14 +25,25 @@ jobs:
         run: python3 -m unittest tests.test_hw4_portal_resident -v
       - name: Build the source-pinned portal image
         run: docker build --pull -t nanrouter-portal:parity -f deploy/portal/Dockerfile .
-      - name: Check process entrypoint and imports
+      - name: Check process entrypoint, imports and pinned WordNet matrix
         run: |
           docker run --rm --entrypoint sh nanrouter-portal:parity -ec '
             sh -n /app/start_portal.sh
             test -s /app/state/hermes-universe.nmg
             test -x /app/nanlm-universal
             python -c "import nannet_router.http_service, nannet_clocked.gateway, nanlmind_nannet"
-            python -c "from runner.portal_ring import PortalRingNode; from runner.hw4_full_dict import MountedHW4; import os; p=os.environ['RIDDLE_HW4_STORE']; m=MountedHW4(p); assert m.status()['pair_count']==32640; assert m.status()['synsets']==117791; assert m.status()['pointers']==378203; m.close(); print('HW4_PORTAL_IMAGE_PINNED_PASS')"
-            python -c "from runner.hw4_full_dict import verify; m=verify('/app/hw4-wordnet31'); assert m['occupied_pairs']==32475; print('HW4_REF_DIGEST_VERIFIED')"
             echo PORTAL_PINNED_RUNTIME_PARITY_PASS
+          '
+          docker run --rm --entrypoint python nanrouter-portal:parity -c '
+from runner.portal_ring import PortalRingNode
+from runner.hw4_full_dict import MountedHW4, verify
+import os
+p = os.environ["RIDDLE_HW4_STORE"]
+m = MountedHW4(p)
+assert m.status()["pair_count"] == 32640
+assert m.status()["synsets"] == 117791
+assert m.status()["pointers"] == 378203
+m.close()
+assert verify(p)["occupied_pairs"] == 32475
+print("HW4_PORTAL_IMAGE_PINNED_PASS")
           '
