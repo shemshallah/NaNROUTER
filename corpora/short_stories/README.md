@@ -4,6 +4,9 @@ Short-story books and collections from the Project Gutenberg
 **Category: Short Stories** bookshelf. Each `.txt` file is one Gutenberg
 short-story book or collection, cleaned of the Gutenberg header/footer.
 
+The bookshelf has 4,128 books across all languages; the current catalog
+contains **3,615 English** short-story books, all of which are included here.
+
 Files are grouped into batches of up to 1,000 books, and **each batch is its
 own GitHub Release**, so you can download only the slice you want.
 

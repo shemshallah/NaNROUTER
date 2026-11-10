@@ -21,8 +21,10 @@ gh workflow run fetch-public-domain-corpus.yml -R shemshallah/NaNROUTER
 gh run watch -R shemshallah/NaNROUTER
 ```
 
-Defaults: up to **10,000 English Gutenberg books**, including all available
-English books in the **Category: Short Stories** bookshelf (currently 4,128).
+Defaults: up to **10,000 English Gutenberg books**, including every available
+English book in the **Category: Short Stories** bookshelf. The bookshelf has
+4,128 books across all languages; the current catalog contains **3,615 English**
+short-story books, all of which are included.
 
 Each public-domain category is published twice: as a complete release and as
 choosable batch releases of up to **1,000 books** each (for example
