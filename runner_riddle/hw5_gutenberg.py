@@ -71,8 +71,8 @@ BOOKS = (
  (829, "The Arabian Nights", "Anonymous"),
  (3207, "Leviathan", "Thomas Hobbes"),
 )
-START = re.compile(rb"(?im)^\\*\\*\\*\\s*START OF (?:THE|THIS) PROJECT GUTENBERG EBOOK[^\\n]*\\n")
-END = re.compile(rb"(?im)^\\*\\*\\*\\s*END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK")
+START = re.compile(rb"(?im)^\*\*\*\s*START OF (?:THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*\n")
+END = re.compile(rb"(?im)^\*\*\*\s*END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK")
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 def sha(path: Path) -> str:
@@ -87,9 +87,9 @@ def clean(raw: bytes) -> bytes:
     if not start or not end or end.start()<=start.end():
         raise ValueError("missing or reversed Gutenberg START/END boundaries")
     text=raw[start.end():end.start()].decode("utf-8-sig",errors="strict")
-    text=text.replace("\\r\\n","\\n").replace("\\r","\\n").strip()
-    encoded=(text+"\\n").encode("utf-8")
-    if b"\\xff" in encoded or len(encoded)<2048:
+    text=text.replace("\r\n","\n").replace("\r","\n").strip()
+    encoded=(text+"\n").encode("utf-8")
+    if b"\xff" in encoded or len(encoded)<2048:
         raise ValueError("text violates native ingress or minimum length")
     return encoded
 def book_url(book_id: int) -> str:
@@ -125,7 +125,7 @@ def collect(source_dir: Path):
         raise ValueError(f"Insufficient whole Gutenberg works: books={len(records)}, bytes={total}")
     (source_dir/"source_manifest.json").write_text(
         json.dumps({"schema":"nanrouter.hw5-source-ledger.v1","books":records,
-                    "corpus_bytes":total},sort_keys=True,indent=2)+"\\n")
+                    "corpus_bytes":total},sort_keys=True,indent=2)+"\n")
     print("HW5_SOURCE_COLLECTED",json.dumps({"books":len(records),"bytes":total}))
 def pair_index(a:int,b:int)->int:
     if not (0<=a<b<256): raise ValueError("pair endpoints out of range")
@@ -248,10 +248,10 @@ def build(source_dir:Path,store:Path):
                for name in ("all.txt","train.txt","dev.txt","test.txt",
                             "gutenberg-c256.root","gutenberg-triples.sqlite3")}
         }
-        (generation/"manifest.json").write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\\n")
+        (generation/"manifest.json").write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n")
         pointer={"schema":SCHEMA,"generation_name":"generation-00000001",
                  "manifest_sha256":sha(generation/"manifest.json")}
-        (tmp/"CURRENT.json").write_text(json.dumps(pointer,sort_keys=True)+"\\n")
+        (tmp/"CURRENT.json").write_text(json.dumps(pointer,sort_keys=True)+"\n")
         tmp.rename(store)
     except Exception:
         shutil.rmtree(tmp,ignore_errors=True)
