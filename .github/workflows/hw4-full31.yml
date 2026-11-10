@@ -1,0 +1,121 @@
+name: HW4 full WordNet 3.1 — NaNROUTER pinned reference
+on:
+  push:
+    branches: [feat/hw4-wordnet-durable-reference-20261109]
+    paths:
+      - runner_riddle/hw4_full_dict.py
+      - runner_riddle/hw4_release_bootstrap.py
+      - deploy/start_router.sh
+      - runner_riddle/http_service.py
+      - tests/test_hw4_full_dict.py
+      - tests/test_hw4_mounted_service.py
+      - tests/test_hw4_release_bootstrap.py
+      - .github/workflows/hw4-full31.yml
+  pull_request:
+    paths:
+      - runner_riddle/hw4_full_dict.py
+      - runner_riddle/http_service.py
+      - tests/test_hw4_full_dict.py
+      - .github/workflows/hw4-full31.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hw4-full31-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  complete-wordnet-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test dense matrix, exact ledger and immutable mount
+        run: |
+          python3 -m unittest tests.test_hw4_full_dict tests.test_hw4_mounted_service tests.test_hw4_release_bootstrap -v
+          python3 -m py_compile runner_riddle/hw4_full_dict.py runner_riddle/hw4_release_bootstrap.py runner_riddle/http_service.py
+      - name: Reconstruct complete WordNet 3.1 ZIP and verify user corpus digests
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hw4-full31
+          curl --fail --location --show-error --silent --retry 3 \
+            https://wordnetcode.princeton.edu/wn3.1.dict.tar.gz \
+            --output /tmp/hw4-full31/source.tar.gz
+          tar -xzf /tmp/hw4-full31/source.tar.gz -C /tmp/hw4-full31
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root=Path('/tmp/hw4-full31')
+          target=root/'wn3.1.dict.zip'
+          expected={
+              'data.noun':'2cad22fe43461ee7ae61a564ae6a518c57445c8597e53542caddb5c26a6a5d94',
+              'data.verb':'eb1cf196dab6e1b815a1c86fa20c909fb7413b2f34250d7fe60a0fb35ef59e03',
+              'data.adj':'ca1033bf627eb95f6cbb2864f8990be8e6a01a3c182e7d7c7094ccf8ead242cc',
+              'data.adv':'aea301f39ac1b24be9a880dbc6cc6331bc5391f58c7525a1b298a13c922f2ed3',
+              'index.sense':'a09db263da96dbb3273064c60546530dee5927a2e5a39c90fb576cdbebbb1a22',
+          }
+          with ZipFile(target,'w',ZIP_DEFLATED) as out:
+              for name,digest in expected.items():
+                  matches=[p for p in root.rglob(name) if p.is_file()]
+                  assert len(matches)==1,(name,len(matches))
+                  content=matches[0].read_bytes()
+                  real=hashlib.sha256(content).hexdigest()
+                  assert real==digest,(name,'WordNet source version mismatch',real,digest)
+                  out.writestr('wn3.1.dict/dict/'+name,content)
+          print('FULL_WORDNET_CORPUS_MATCH',len(expected),'dictionary files')
+          PY
+      - name: Build and verify dense HW4 complete reference
+        run: |
+          set -euo pipefail
+          python3 -m runner_riddle.hw4_full_dict install \
+            /tmp/hw4-full31/wn3.1.dict.zip /tmp/hw4-full31/hw4-full-reference \
+            | tee /tmp/hw4-full31/build.json
+          python3 -m runner_riddle.hw4_full_dict verify \
+            /tmp/hw4-full31/hw4-full-reference \
+            | tee /tmp/hw4-full31/verify.json
+          python3 - <<'PY'
+          from runner_riddle.hw4_full_dict import verify,MountedHW4
+          m=verify('/tmp/hw4-full31/hw4-full-reference')
+          assert m['root_bytes']==8388608
+          assert m['pair_count']==32640
+          assert m['synsets']>110000,m['synsets']
+          assert m['senses']>200000,m['senses']
+          assert m['pointers']>350000,m['pointers']
+          assert m['occupied_pairs']>30000,m['occupied_pairs']
+          with MountedHW4('/tmp/hw4-full31/hw4-full-reference') as mount:
+              assert mount.status()['ring_owner']=='NaNROUTER/MC0:0'
+              assert mount.pair(0,1)['pair_id']==1
+              assert mount.pair(254,255)['pair_id']==32640
+          print('FULL_WORDNET_HW4_PASS',m['synsets'],m['senses'],m['pointers'],m['occupied_pairs'])
+          PY
+          curl --fail --location --show-error --silent --retry 3 \
+            https://raw.githubusercontent.com/spdx/license-list-data/main/text/WordNet.txt \
+            --output /tmp/hw4-full31/hw4-full-reference/WORDNET_LICENSE.txt
+          test -s /tmp/hw4-full31/hw4-full-reference/WORDNET_LICENSE.txt
+          tar -C /tmp/hw4-full31 -czf /tmp/hw4-wordnet31-full-reference.tar.gz hw4-full-reference
+      - name: Archive complete pinned generation
+        uses: actions/upload-artifact@v4
+        with:
+          name: hw4-wordnet31-full-32640-mirror-pairs
+          path: |
+            /tmp/hw4-wordnet31-full-reference.tar.gz
+            /tmp/hw4-full31/build.json
+            /tmp/hw4-full31/verify.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publish immutable full reference release (not live deployment)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/hw4-wordnet-durable-reference-20261109'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=hw4-wordnet31-full-g1
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Immutable full reference exists; not replacing it'
+          else
+            gh release create "$tag" /tmp/hw4-wordnet31-full-reference.tar.gz \
+              --repo "$GITHUB_REPOSITORY" \
+              --title 'HW4 WordNet 3.1 complete matrix — all POS, generation 1' \
+              --notes 'Reference-only C(256,2) 8 MiB matrix plus exact SQLite overlay. NaNROUTER/MC0:0 owner. Requires persistent service volume installation. No main-ring writes.' \
+              --target "$GITHUB_SHA" --latest=false
+          fi
