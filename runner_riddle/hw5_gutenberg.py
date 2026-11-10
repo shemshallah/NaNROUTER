@@ -229,6 +229,14 @@ def build(source_dir:Path,store:Path):
                 for doc in docs:
                     if name=="all" or name==doc["split"]:
                         out.write(doc["text"])
+        (generation/"PROVENANCE.txt").write_text(
+            "HW5:0 Gutenberg public-domain prose reference.\n"
+            "Original Project Gutenberg editions: see books and original URLs in manifest.json.\n"
+            "U.S. public-domain books: review copyright in other jurisdictions.\n"
+            "Project Gutenberg terms/trademark: https://www.gutenberg.org/policy/terms_of_use.html\n"
+            "Normalized by stripping ebook headers, footers and CRLF; documents are never truncated.\n"
+            "This is a reference-only data snapshot, not an executable NaN16 guest or live ring.\n"
+        )
         stats=project(docs,generation/"gutenberg-c256.root",generation/"gutenberg-triples.sqlite3")
         manifest={
             "schema":SCHEMA,"route":ROUTE,"ring_owner":OWNER,
@@ -246,7 +254,7 @@ def build(source_dir:Path,store:Path):
             "corpus_bytes":stats["total_bytes"],"projection":stats,
             "artifacts":{name:{"bytes":(generation/name).stat().st_size,"sha256":sha(generation/name)}
                for name in ("all.txt","train.txt","dev.txt","test.txt",
-                            "gutenberg-c256.root","gutenberg-triples.sqlite3")}
+                            "gutenberg-c256.root","gutenberg-triples.sqlite3","PROVENANCE.txt")}
         }
         (generation/"manifest.json").write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n")
         pointer={"schema":SCHEMA,"generation_name":"generation-00000001",
