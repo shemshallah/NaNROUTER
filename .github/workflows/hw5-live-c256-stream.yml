@@ -1,0 +1,94 @@
+name: HW5:0 live NANNET C256 Gutenberg importer and safety gates
+on:
+  push:
+    branches: ['experiment/hw5-koyeb-c256-stream-20261110']
+    paths:
+      - 'runner_riddle/hw5_portal_stream.py'
+      - 'runner_riddle/hw5_gutenberg.py'
+      - 'runner_riddle/hw5_release_bootstrap.py'
+      - 'deploy/portal/portal_ring.py'
+      - 'deploy/portal/Dockerfile'
+      - 'tools/hw5_live_gutenberg_stream.py'
+      - 'tools/hw5_full_release_e2e.py'
+      - 'tests/test_hw5_portal_stream.py'
+      - 'tests/test_hw5_portal_integration.py'
+      - 'tests/test_hw5_live_uploader.py'
+      - 'tests/test_hw4_portal_resident.py'
+      - '.github/workflows/hw5-live-c256-stream.yml'
+  workflow_dispatch:
+    inputs:
+      send_live:
+        description: 'Set exactly YES for a credentialed production NANNET write'
+        required: true
+        default: 'NO'
+        type: choice
+        options: ['NO', 'YES']
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile exact HW5 portable receiver and real C256 reference APIs
+        run: |
+          set -euo pipefail
+          python3 -m py_compile runner_riddle/hw5_portal_stream.py \
+            runner_riddle/hw5_gutenberg.py \
+            runner_riddle/hw5_release_bootstrap.py \
+            deploy/portal/portal_ring.py \
+            tools/hw5_live_gutenberg_stream.py
+      - name: Run replay, ordering, integrity, root-ownership controls
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests.test_hw5_portal_stream tests.test_hw5_portal_integration tests.test_hw5_live_uploader tests.test_hw4_portal_resident tests.test_hw5_gutenberg -v
+      - name: Verify package contains receiver at the existing portal runtime path
+        run: |
+          set -euo pipefail
+          grep -F 'COPY runner_riddle/hw5_portal_stream.py /app/runner/hw5_portal_stream.py' deploy/portal/Dockerfile
+          grep -F 'RIDDLE_HW5_STORE=/data/hw5-gutenberg-reference' deploy/portal/Dockerfile
+          grep -F 'HW5_STREAM_KIND' deploy/portal/portal_ring.py
+  full-published-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact immutable 21-book release (read-only GitHub asset)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download hw5-gutenberg-c256-g1 \
+            --repo shemshallah/NaNROUTER \
+            --pattern 'hw5-gutenberg-c256-g1.tar.gz' \
+            --dir "$RUNNER_TEMP"
+          printf '%s  %s\n' \
+            '906a9030a11a67cc2635a6700344826d4c924e49596e57949a969cf78e1a7a18' \
+            "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" | sha256sum --check -
+      - name: Stream pinned real archive into temp C256 and test post-handoff physical triple readback
+        run: |
+          set -euo pipefail
+          python3 -m tools.hw5_full_release_e2e "$RUNNER_TEMP/hw5-gutenberg-c256-g1.tar.gz" \
+            | tee "$RUNNER_TEMP/hw5-e2e.log"
+          grep -F 'HW5_FULL_RELEASE_E2E_PASS' "$RUNNER_TEMP/hw5-e2e.log"
+  live-transfer:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_live == 'YES' }}
+    needs: [offline-contract, full-published-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: hw5-koyeb-production
+    env:
+      NANROUTER_RING_TOKEN: ${{ secrets.NANROUTER_RING_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require scoped protected ring bearer; never run anonymous or simulated
+        run: |
+          if [ "${#NANROUTER_RING_TOKEN}" -lt 32 ]; then
+            echo 'BLOCKED: protected NANNET ring bearer unavailable'
+            exit 1
+          fi
+      - name: Verify remote portal, stream pinned Gutenberg archive and read back C256 digest
+        run: |
+          set -euo pipefail
+          python3 -m tools.hw5_live_gutenberg_stream --send

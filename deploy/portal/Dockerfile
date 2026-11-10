@@ -27,6 +27,11 @@ COPY runner_riddle/wordnet_mirror_adapter.py /app/runner/wordnet_mirror_adapter.
 COPY runner_riddle/hw4_reference.py /app/runner/hw4_reference.py
 COPY runner_riddle/hw4_full_dict.py /app/runner/hw4_full_dict.py
 COPY runner_riddle/hw4_release_bootstrap.py /app/runner/hw4_release_bootstrap.py
+# The HW5 immutable Gutenberg object is *received through* the existing
+# authenticated /v1/ring/submit route, never downloaded by a second writer.
+COPY runner_riddle/hw5_gutenberg.py /app/runner/hw5_gutenberg.py
+COPY runner_riddle/hw5_release_bootstrap.py /app/runner/hw5_release_bootstrap.py
+COPY runner_riddle/hw5_portal_stream.py /app/runner/hw5_portal_stream.py
 RUN python -m runner.hw4_release_bootstrap /app/hw4-wordnet31
 RUN python -m runner.hw4_full_dict verify /app/hw4-wordnet31
 
@@ -44,7 +49,10 @@ ENV PYTHONUNBUFFERED=1 \
     NANLM_HEAD_CORTEX_PORT=18083 \
     NANLM_HEAD_CANDIDATE_DIR=/data/head-candidates \
     RIDDLE_HW4_STORE=/app/hw4-wordnet31 \
-    RIDDLE_HW4_RING=NaNROUTER/MC0:0
+    RIDDLE_HW4_RING=NaNROUTER/MC0:0 \
+    RIDDLE_HW5_STREAM_DIR=/data/hw5-c256-incoming \
+    RIDDLE_HW5_STORE=/data/hw5-gutenberg-reference \
+    RIDDLE_HW5_RING=NaNROUTER/MC0:0
 VOLUME ["/data"]
 EXPOSE 8080
 RUN chmod 0755 /app/start_portal.sh /app/nanlm-universal \

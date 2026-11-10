@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 from zipfile import ZipFile
 
-from runner_riddle import hw4_full_dict, point_fabric
+from runner_riddle import hw4_full_dict, hw5_gutenberg, hw5_portal_stream, point_fabric
 from tests.test_hw4_full_dict import DATA
 
 
@@ -24,6 +24,8 @@ def portal_module():
         base + ".runner_ring_authority": stub,
         base + ".point_fabric": point_fabric,
         base + ".hw4_full_dict": hw4_full_dict,
+        base + ".hw5_gutenberg": hw5_gutenberg,
+        base + ".hw5_portal_stream": hw5_portal_stream,
     }):
         sys.modules.pop(base + ".portal_ring", None)
         return importlib.import_module(base + ".portal_ring")

@@ -28,6 +28,11 @@ from .point_fabric import (
 )
 from .runner_ring_authority import RunnerRingAuthError, RunnerRingAuthority
 from .hw4_full_dict import MountedHW4, RING_OWNER as HW4_RING_OWNER
+from .hw5_gutenberg import MountedHW5, OWNER as HW5_RING_OWNER
+from .hw5_portal_stream import (
+    HW5PortalStream, KIND as HW5_STREAM_KIND,
+    QUERY_KIND as HW5_QUERY_KIND,
+)
 import os
 
 RING_SCHEMA = "nanrouter.portal-runner-ring.v1"
@@ -70,6 +75,19 @@ class PortalRingNode:
         if hw4_store and os.environ.get("RIDDLE_HW4_RING", HW4_RING_OWNER) != HW4_RING_OWNER:
             raise PortalRingError("HW4 cannot attach to the main BS0 runner ring")
         self.hw4 = MountedHW4(hw4_store) if hw4_store else None
+        # The HW5 receiver lives on the SAME persistent Koyeb /data writer
+        # as the ring authority, never on a second independently owned VM.
+        hw5_store = os.environ.get("RIDDLE_HW5_STORE", "")
+        hw5_upload = os.environ.get("RIDDLE_HW5_STREAM_DIR", "")
+        if bool(hw5_store) != bool(hw5_upload):
+            raise PortalRingError("HW5 store and stream directory must be configured together")
+        if hw5_store and os.environ.get("RIDDLE_HW5_RING", HW5_RING_OWNER) != HW5_RING_OWNER:
+            raise PortalRingError("HW5 cannot attach to BS0 writer ownership")
+        self.hw5_store = hw5_store
+        self.hw5_stream = (HW5PortalStream(hw5_upload, hw5_store)
+                           if hw5_store else None)
+        self.hw5 = (MountedHW5(hw5_store)
+                    if hw5_store and os.path.exists(hw5_store) else None)
         self.fabric = CentralPointFabric(database=database)
         self._lock = threading.RLock()
         self._stop = threading.Event()
@@ -251,6 +269,19 @@ class PortalRingNode:
                     {"mounted": False, "read_only": True,
                      "ring_owner": HW4_RING_OWNER}
                 ),
+                "hw5_gutenberg_reference": (
+                    dict(
+                        self.hw5.status(), mounted=True, read_only=True,
+                        root_sha256=self.hw5.manifest["artifacts"]["gutenberg-c256.root"]["sha256"],
+                    )
+                    if self.hw5 is not None else
+                    {"mounted": False, "read_only": True,
+                     "ring_owner": HW5_RING_OWNER}
+                ),
+                "hw5_corpus_stream": (
+                    self.hw5_stream.status() if self.hw5_stream is not None
+                    else {"configured": False, "sealed": False}
+                ),
             }
 
     def points(self) -> dict[str, Any]:
@@ -270,6 +301,50 @@ class PortalRingNode:
     def submit(self, body: dict[str, Any]) -> dict[str, Any]:
         if self.active:
             frame = frame_from_json(body.get("frame", body))
+            if frame.kind == HW5_QUERY_KIND:
+                # A native NaN16DE word holds the exact queried byte triple:
+                # [reserved high byte][a][b][c]. request_id=1 asks for a
+                # pair; request_id=2 asks for a true ordered triple. The
+                # immutable HW5 root and triple ledger provide the answer.
+                if "hw5_corpus" in body:
+                    raise PortalRingError("readback queries cannot carry archive data")
+                with self._lock:
+                    if (self._lease is None or self.hw5 is None or
+                            frame.source_hw != 0 or frame.destination_hw != 5 or
+                            frame.origin != "zero-point" or
+                            frame.request_id not in (1, 2) or
+                            frame.word.payload >> 24 != 0 or
+                            not self.fabric.point(5).active):
+                        raise PortalRingError("HW5 readback requires the sealed active point")
+                    payload = frame.word.payload
+                    a, b, d = (payload >> 16) & 255, (payload >> 8) & 255, payload & 255
+                    result = (self.hw5.pair(a, b) if frame.request_id == 1
+                              else self.hw5.triple(a, b, d))
+                    return {
+                        "schema": "nanrouter.hw5-gutenberg-readback.v1",
+                        "endpoint": "HW5:0",
+                        "query": "pair" if frame.request_id == 1 else "triple",
+                        "root_sha256": self.hw5.manifest["artifacts"]["gutenberg-c256.root"]["sha256"],
+                        "result": result,
+                        "remote_verified": True,
+                    }
+            if frame.kind == HW5_STREAM_KIND:
+                with self._lock:
+                    if self._lease is None:
+                        raise PortalRingError("HW5 corpus import requires an active ring lease")
+                    if self.hw5_stream is None:
+                        raise PortalRingError("HW5 corpus import is disabled on this portal")
+                    if not self.fabric.point(5).active:
+                        raise PortalRingError("HW5 point is not active")
+                    result = self.hw5_stream.receive(frame, body.get("hw5_corpus"))
+                    if result.get("remote_verified") and self.hw5 is None:
+                        self.hw5 = MountedHW5(self.hw5_store)
+                    # Stream claims are consumed by the HW5:0 object receiver,
+                    # not left in the generic NaN16DE inbox as fake corpus.
+                    return dict(result, endpoint="HW5:0",
+                                central_status="hw5_object_consumed")
+            if "hw5_corpus" in body:
+                raise PortalRingError("corpus payload requires the HW5 stream frame kind")
             return self.fabric.intake(frame)
         return self._proxy("POST", "/v1/ring/submit", body)
 
