@@ -145,3 +145,52 @@ The test does NOT attest a production Koyeb upload. An explicitly protected
 and full published-release replay jobs before its live transfer is even
 eligible to start. The deployed portal and its private ring credential remain
 separate operational prerequisites.
+
+## Further portal-route, atomic-time and cross-process verification
+
+The verifier now repeats the **full original 15,965,664-byte pinned archive**
+through `PortalRingNode.submit`, not just directly through the stream
+receiver. A mocked ring lease switches **epoch 1 → 2** midway while the same
+persistent spool survives into the successor portal instance. The second
+instance seals the original immutable C256 root. The actual routed
+`hw5.gutenberg.c256.query.v1` word for `(t,h,e)` returns exactly
+**245,592**, and its `(t,h)` directional pair returns exactly **391,106**;
+zero corpus frames are left queued as generic point-fabric packets.
+[Full 21-book routed test #42830532969](https://github.com/shemshallah/NaNROUTER/actions/runs/42830532969)
+is **successful**.
+
+The *live* uploader now acquires each frame's `nanclock_tick` from
+`GET /v1/ring/clock` on the authoritative Koyeb service, whose
+`RunnerRingAuthority.clock` allocates the tick atomically in a SQLite
+`BEGIN IMMEDIATE` transaction. A local wall-clock surrogate is forbidden.
+The live client also checks the independent published release commitments
+before reporting success:
+
+- C256 root SHA-256:
+  `5199b69b17cb70c19e142340dffe38d1a85ea2ffd307f4ed305d7d46664b23bc`
+- Original full corpus SHA-256:
+  `044ba606977039729f4077e666ed50250a380d473ccdb7d20d1149f10e04566f`
+- Exact `(t,h,e)` count: **245,592**; directed `t→h` = **391,106**;
+  directed `h→t` = **26,403**.
+
+Those values are compared against fresh authenticated NaN16DE routed
+readbacks, independently of the server's receipt text. Incorrect roots,
+short intermediate chunks, noncanonical word heads, post-seal mutation,
+invalid atomic ticks, and misleading generic transport acknowledgments are
+rejected.
+
+Finally, the importer uses a Linux `flock` on the persistent HW5 spool
+around both cursor writes and status reads, in addition to its per-process
+`RLock`. This serializes potential overlapping containers during Koyeb
+rolling deployment or runner-handoff recovery. The regression starts two
+**independent processes** simultaneously against the same cursor and
+requires exactly one `accepted` and one byte-for-byte `duplicate` receipt,
+with a correct final file. [Extended full-data and concurrency run
+#42831333482](https://github.com/shemshallah/NaNROUTER/actions/runs/42831333482)
+passed.
+
+**Limit:** the production Koyeb portal remains unmodified until the reviewed
+image is actually deployed. These are GitHub-native integrations and
+published-release proofs, not evidence of production ingestion or neural
+learning. Live transfer is still an explicit protected `send_live=YES`
+action with the private ring credential and a second remote readback.
