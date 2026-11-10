@@ -248,7 +248,7 @@ def build(source_dir:Path,store:Path):
             "pair_record":"offset=32768+(pair_id-1)*256; u32 forward_adjacent, reverse_adjacent, forward_mask, reverse_mask; 16*u32 forward lanes, 16*u32 reverse lanes; reserved",
             "lanes":{"0":"directed adjacent bytes","1":"directed distance-two bytes"},
             "head_record":"u32 head_id,outgoing,incoming,self_adjacent,self_skip,document_starts,document_ends,projection_version",
-            "hypermatrix":"ordered exact (a,b,c,count) SQLite; 3 mirror legs a->b,b->c,c->a; no extra dense cubic tensor",
+            "hypermatrix":"ordered exact (a,b,c,count) SQLite; 3 observed legs a->b,b->c,a->c (lag-two); c->a is inverse mirror view; no dense cubic tensor",
             "corpus_policy":"whole books only; document-level split ordinal modulo 10, no split inside a title",
             "source_mirror":MIRROR,"books":[{k:v for k,v in d.items() if k!="text"} for d in docs],
             "corpus_bytes":stats["total_bytes"],"projection":stats,
@@ -351,7 +351,8 @@ class MountedHW5:
         a=self._head(a);b=self._head(b);c=self._head(c)
         result=self._db.execute("SELECT n FROM triples WHERE a=? AND b=? AND c=?",(a,b,c)).fetchone()
         return {"a":a,"b":b,"c":c,"count":result[0] if result else 0,
-                "legs":[self.pair(a,b),self.pair(b,c),self.pair(c,a)],
+                "legs":[self.pair(a,b),self.pair(b,c),self.pair(a,c)],
+                "cycle_inverse":self.pair(c,a),
                 "exact_ordered":True,"reference_only":True}
 
 def main():
