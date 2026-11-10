@@ -1,0 +1,35 @@
+{
+  "batch_size": 1000,
+  "batches": [
+    {
+      "batch": 1,
+      "books": 1000,
+      "bytes": 291764030,
+      "files": 1000,
+      "tag": "corpora-short-stories-0001"
+    },
+    {
+      "batch": 2,
+      "books": 1000,
+      "bytes": 231132859,
+      "files": 1000,
+      "tag": "corpora-short-stories-0002"
+    },
+    {
+      "batch": 3,
+      "books": 1000,
+      "bytes": 242240534,
+      "files": 1000,
+      "tag": "corpora-short-stories-0003"
+    },
+    {
+      "batch": 4,
+      "books": 615,
+      "bytes": 106427911,
+      "files": 615,
+      "tag": "corpora-short-stories-0004"
+    }
+  ],
+  "generated_at": "2026-11-10T21:46:40.408789+00:00",
+  "release_tag_prefix": "corpora-short-stories"
+}

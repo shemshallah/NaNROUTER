@@ -1,0 +1,77 @@
+{
+  "batch_size": 1000,
+  "batches": [
+    {
+      "batch": 1,
+      "books": 996,
+      "bytes": 377756520,
+      "files": 988,
+      "tag": "corpora-sentences-0001"
+    },
+    {
+      "batch": 2,
+      "books": 999,
+      "bytes": 355754006,
+      "files": 997,
+      "tag": "corpora-sentences-0002"
+    },
+    {
+      "batch": 3,
+      "books": 997,
+      "bytes": 322291304,
+      "files": 996,
+      "tag": "corpora-sentences-0003"
+    },
+    {
+      "batch": 4,
+      "books": 991,
+      "bytes": 240159637,
+      "files": 977,
+      "tag": "corpora-sentences-0004"
+    },
+    {
+      "batch": 5,
+      "books": 989,
+      "bytes": 284585141,
+      "files": 989,
+      "tag": "corpora-sentences-0005"
+    },
+    {
+      "batch": 6,
+      "books": 995,
+      "bytes": 269935177,
+      "files": 989,
+      "tag": "corpora-sentences-0006"
+    },
+    {
+      "batch": 7,
+      "books": 996,
+      "bytes": 264230123,
+      "files": 989,
+      "tag": "corpora-sentences-0007"
+    },
+    {
+      "batch": 8,
+      "books": 989,
+      "bytes": 288962023,
+      "files": 989,
+      "tag": "corpora-sentences-0008"
+    },
+    {
+      "batch": 9,
+      "books": 997,
+      "bytes": 230588962,
+      "files": 995,
+      "tag": "corpora-sentences-0009"
+    },
+    {
+      "batch": 10,
+      "books": 995,
+      "bytes": 164820541,
+      "files": 995,
+      "tag": "corpora-sentences-0010"
+    }
+  ],
+  "generated_at": "2026-11-10T21:46:40.408789+00:00",
+  "release_tag_prefix": "corpora-sentences"
+}

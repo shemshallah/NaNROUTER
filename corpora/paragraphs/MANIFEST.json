@@ -1,0 +1,96 @@
+{
+  "batches": [
+    {
+      "batch": 1,
+      "books": 996,
+      "bytes": 411117697,
+      "files": 988,
+      "tag": "corpora-paragraphs-0001"
+    },
+    {
+      "batch": 2,
+      "books": 999,
+      "bytes": 381875493,
+      "files": 997,
+      "tag": "corpora-paragraphs-0002"
+    },
+    {
+      "batch": 3,
+      "books": 997,
+      "bytes": 343807489,
+      "files": 996,
+      "tag": "corpora-paragraphs-0003"
+    },
+    {
+      "batch": 4,
+      "books": 991,
+      "bytes": 261951911,
+      "files": 978,
+      "tag": "corpora-paragraphs-0004"
+    },
+    {
+      "batch": 5,
+      "books": 989,
+      "bytes": 307345949,
+      "files": 989,
+      "tag": "corpora-paragraphs-0005"
+    },
+    {
+      "batch": 6,
+      "books": 995,
+      "bytes": 288730482,
+      "files": 989,
+      "tag": "corpora-paragraphs-0006"
+    },
+    {
+      "batch": 7,
+      "books": 996,
+      "bytes": 290781210,
+      "files": 990,
+      "tag": "corpora-paragraphs-0007"
+    },
+    {
+      "batch": 8,
+      "books": 989,
+      "bytes": 310220643,
+      "files": 989,
+      "tag": "corpora-paragraphs-0008"
+    },
+    {
+      "batch": 9,
+      "books": 997,
+      "bytes": 244948904,
+      "files": 995,
+      "tag": "corpora-paragraphs-0009"
+    },
+    {
+      "batch": 10,
+      "books": 995,
+      "bytes": 173661238,
+      "files": 995,
+      "tag": "corpora-paragraphs-0010"
+    }
+  ],
+  "catalog_url": "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv",
+  "generated_at": "2026-11-10T21:46:40.408789+00:00",
+  "license": "Public domain in the USA; Project Gutenberg License",
+  "license_url": "https://www.gutenberg.org/policy/license.html",
+  "release_tag": "corpora-paragraphs",
+  "selection": {
+    "batch_size": 1000,
+    "downloaded": 9944,
+    "failed": 56,
+    "max_books": 10000,
+    "max_short_stories": 4128,
+    "selected": 10000,
+    "short_story_books_selected": 3615
+  },
+  "source": "Project Gutenberg",
+  "stats": {
+    "batches": 10,
+    "books": 9944,
+    "bytes": 3014441016,
+    "files": 9906,
+    "paragraphs": 6143318
+  }
+}
