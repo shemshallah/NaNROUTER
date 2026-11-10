@@ -4,15 +4,16 @@
 Source: Project Gutenberg (public domain in the USA).
 The script downloads the Gutenberg catalog, selects English Text entries,
 downloads them politely in parallel, strips the Gutenberg header/footer,
-and writes:
+and writes per-book files grouped into batch directories:
 
-  corpora/sentences/sentences-NNNN.txt      one sentence per line
-  corpora/paragraphs/paragraphs-NNNN.txt    one paragraph per line
-  corpora/short_stories/<id>--<author>--<title>.txt
+  corpora/sentences/batch-0001/<id>--<author>--<title>.txt
+  corpora/paragraphs/batch-0001/<id>--<author>--<title>.txt
+  corpora/short_stories/batch-0001/<id>--<author>--<title>.txt
 
-It also writes MANIFEST.json and SOURCES.jsonl in each category. The payload
-is intentionally not committed to git; the GitHub workflow publishes it as
-release assets.
+Each batch directory becomes its own GitHub Release
+(corpora-sentences-0001, corpora-paragraphs-0001,
+corpora-short-stories-0001, ...), while the full category release contains
+all batches. The payload is intentionally not committed to git.
 """
 
 from __future__ import annotations
@@ -20,12 +21,10 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import re
 import shutil
 import sys
 import time
-import urllib.error
 import urllib.request
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -44,40 +43,13 @@ END_RE = re.compile(
 )
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 ABBREVIATIONS = {
-    "mr.",
-    "mrs.",
-    "ms.",
-    "dr.",
-    "st.",
-    "jr.",
-    "sr.",
-    "vs.",
-    "etc.",
-    "e.g.",
-    "i.e.",
-    "no.",
-    "vol.",
-    "ch.",
-    "p.",
-    "pp.",
-    "cf.",
-    "al.",
-    "prof.",
-    "rev.",
-    "hon.",
-    "capt.",
-    "col.",
-    "gen.",
-    "lt.",
-    "sgt.",
-    "maj.",
-    "adm.",
-    "gov.",
-    "sen.",
-    "rep.",
-    "pres.",
+    "mr.", "mrs.", "ms.", "dr.", "st.", "jr.", "sr.", "vs.", "etc.",
+    "e.g.", "i.e.", "no.", "vol.", "ch.", "p.", "pp.", "cf.", "al.",
+    "prof.", "rev.", "hon.", "capt.", "col.", "gen.", "lt.", "sgt.",
+    "maj.", "adm.", "gov.", "sen.", "rep.", "pres.",
 }
 CATEGORY_SHORT_STORIES = "Category: Short Stories"
+PROTECTED_NAMES = {"README.md", "SOURCES.json", ".gitignore", "LICENSE.txt"}
 
 
 def fetch_url(url: str, destination: Path, retries: int = 4, timeout: int = 90) -> bool:
@@ -246,61 +218,65 @@ def slugify(value: str, max_length: int = 80) -> str:
     return (value[:max_length].strip("-") or "untitled")
 
 
-class ShardWriter:
-    def __init__(self, directory: Path, prefix: str, max_lines: int):
-        self.directory = directory
-        self.prefix = prefix
-        self.max_lines = max_lines
-        self.index = 0
-        self.count = 0
-        self.total = 0
-        self.handle = None
-        self.path = None
-        self._open()
+def book_filename(row: dict[str, str]) -> str:
+    book_id = row["Text#"]
+    authors = slugify(row.get("Authors") or "unknown")
+    title = slugify(row.get("Title") or "untitled")
+    return f"{book_id}--{authors}--{title}.txt"
 
-    def _open(self) -> None:
-        self.index += 1
-        self.count = 0
-        self.path = self.directory / f"{self.prefix}-{self.index:04d}.txt"
-        self.handle = self.path.open("w", encoding="utf-8")
 
-    def write(self, line: str) -> None:
-        if self.count >= self.max_lines:
-            self.handle.close()
-            self._open()
-        self.handle.write(line + "\n")
-        self.count += 1
-        self.total += 1
-
-    def close(self) -> None:
-        if self.handle:
-            self.handle.close()
-            self.handle = None
-
-    @property
-    def shards(self) -> int:
-        return self.index
+def batch_for(rows: list[dict[str, str]], batch_size: int) -> dict[str, int]:
+    ordered = sorted(rows, key=lambda row: int(row["Text#"]))
+    return {
+        row["Text#"]: (index // batch_size) + 1
+        for index, row in enumerate(ordered)
+    }
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def directory_bytes(directory: Path, patterns: tuple[str, ...]) -> int:
-    total = 0
+def build_batch_manifest(
+    directory: Path, metadata_by_batch: dict[int, list[dict]], prefix: str
+) -> list[dict]:
+    batches = []
+    for batch, rows in sorted(metadata_by_batch.items()):
+        batch_dir = directory / f"batch-{batch:04d}"
+        files = sorted(batch_dir.glob("*.txt")) if batch_dir.is_dir() else []
+        if not files:
+            continue
+        batches.append(
+            {
+                "batch": batch,
+                "tag": f"{prefix}-{batch:04d}",
+                "books": len(rows),
+                "files": len(files),
+                "bytes": sum(path.stat().st_size for path in files),
+            }
+        )
+    return batches
+
+
+def cleanup_output(directory: Path, patterns: tuple[str, ...]) -> None:
     for pattern in patterns:
         for path in directory.glob(pattern):
-            if path.is_file():
-                total += path.stat().st_size
-    return total
+            if path.name in PROTECTED_NAMES:
+                continue
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-books", type=int, default=10000)
     parser.add_argument("--max-short-stories", type=int, default=4128)
+    parser.add_argument("--batch-size", type=int, default=1000)
     parser.add_argument("--output-root", type=Path, default=Path("corpora"))
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/nanrouter-public-domain"))
     parser.add_argument("--max-workers", type=int, default=8)
@@ -308,6 +284,8 @@ def main() -> int:
 
     if args.max_books < 1:
         parser.error("--max-books must be >= 1")
+    if args.batch_size < 1:
+        parser.error("--batch-size must be >= 1")
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
     raw_dir = args.work_dir / "raw"
@@ -317,8 +295,13 @@ def main() -> int:
     with catalog.open(newline="", encoding="utf-8", errors="replace") as handle:
         rows = list(csv.DictReader(handle))
     selected, short_stories = select_books(rows, args.max_books, args.max_short_stories)
+    selected_batch = batch_for(selected, args.batch_size)
+    short_batch = batch_for(short_stories, args.batch_size)
     short_ids = {row["Text#"] for row in short_stories}
-    print(f"Selected {len(selected):,} books ({len(short_stories):,} short-story books)")
+    print(
+        f"Selected {len(selected):,} books ({len(short_stories):,} short-story books); "
+        f"batch size {args.batch_size}"
+    )
 
     output_sentences = args.output_root / "sentences"
     output_paragraphs = args.output_root / "paragraphs"
@@ -326,23 +309,21 @@ def main() -> int:
     for directory in (output_sentences, output_paragraphs, output_stories):
         directory.mkdir(parents=True, exist_ok=True)
 
-    # Remove previous generated payload but keep tracked README/SOURCES/LICENSE/.gitignore.
-    for directory, patterns in (
-        (output_sentences, ("sentences-*.txt", "SOURCES.jsonl", "MANIFEST.json")),
-        (output_paragraphs, ("paragraphs-*.txt", "SOURCES.jsonl", "MANIFEST.json")),
-        (output_stories, ("*.txt", "SOURCES.jsonl", "MANIFEST.json")),
-    ):
-        for pattern in patterns:
-            for path in directory.glob(pattern):
-                if path.name in {"README.md", "SOURCES.json", ".gitignore", "LICENSE.txt"}:
-                    continue
-                path.unlink()
+    cleanup_output(
+        output_sentences,
+        ("batch-*", "sentences-*.txt", "SOURCES.jsonl", "MANIFEST.json", "BATCHES.json"),
+    )
+    cleanup_output(
+        output_paragraphs,
+        ("batch-*", "paragraphs-*.txt", "SOURCES.jsonl", "MANIFEST.json", "BATCHES.json"),
+    )
+    cleanup_output(
+        output_stories,
+        ("batch-*", "*.txt", "SOURCES.jsonl", "MANIFEST.json", "BATCHES.json"),
+    )
 
-    sentence_writer = ShardWriter(output_sentences, "sentences", 1_000_000)
-    paragraph_writer = ShardWriter(output_paragraphs, "paragraphs", 500_000)
-
-    metadata: list[dict] = []
-    story_metadata: list[dict] = []
+    metadata_by_batch: dict[int, list[dict]] = defaultdict(list)
+    story_metadata_by_batch: dict[int, list[dict]] = defaultdict(list)
     downloaded = 0
     failed = 0
 
@@ -355,26 +336,40 @@ def main() -> int:
             return
         cleaned = clean_text(text)
         if not cleaned:
+            path.unlink(missing_ok=True)
             return
         downloaded += 1
         book_id = row["Text#"]
-        title = row.get("Title") or ""
-        authors = row.get("Authors") or ""
+        filename = book_filename(row)
+        batch = selected_batch.get(book_id, 1)
         is_short_story = book_id in short_ids
 
+        sentence_dir = output_sentences / f"batch-{batch:04d}"
+        sentence_dir.mkdir(parents=True, exist_ok=True)
+        sentence_path = sentence_dir / filename
         sentence_count = 0
-        for sentence in iter_sentences(cleaned):
-            sentence_writer.write(sentence)
-            sentence_count += 1
+        with sentence_path.open("w", encoding="utf-8") as handle:
+            for sentence in iter_sentences(cleaned):
+                handle.write(sentence + "\n")
+                sentence_count += 1
+        if sentence_count == 0:
+            sentence_path.unlink(missing_ok=True)
+
+        paragraph_dir = output_paragraphs / f"batch-{batch:04d}"
+        paragraph_dir.mkdir(parents=True, exist_ok=True)
+        paragraph_path = paragraph_dir / filename
         paragraph_count = 0
-        for paragraph in iter_paragraphs(cleaned):
-            paragraph_writer.write(paragraph)
-            paragraph_count += 1
+        with paragraph_path.open("w", encoding="utf-8") as handle:
+            for paragraph in iter_paragraphs(cleaned):
+                handle.write(paragraph + "\n")
+                paragraph_count += 1
+        if paragraph_count == 0:
+            paragraph_path.unlink(missing_ok=True)
 
         meta = {
             "id": book_id,
-            "title": title,
-            "authors": authors,
+            "title": row.get("Title") or "",
+            "authors": row.get("Authors") or "",
             "bookshelves": row.get("Bookshelves") or "",
             "subjects": row.get("Subjects") or "",
             "source_url": source_url or "",
@@ -382,14 +377,22 @@ def main() -> int:
             "short_story": is_short_story,
             "sentences": sentence_count,
             "paragraphs": paragraph_count,
+            "batch": batch,
+            "sentence_batch_tag": f"corpora-sentences-{batch:04d}",
+            "paragraph_batch_tag": f"corpora-paragraphs-{batch:04d}",
         }
-        metadata.append(meta)
+        metadata_by_batch[batch].append(meta)
+
         if is_short_story:
-            story_metadata.append(meta)
-            filename = (
-                f"{book_id}--{slugify(authors)}--{slugify(title)}.txt"
-            )
-            (output_stories / filename).write_text(cleaned + "\n", encoding="utf-8")
+            story_batch = short_batch.get(book_id, 1)
+            story_dir = output_stories / f"batch-{story_batch:04d}"
+            story_dir.mkdir(parents=True, exist_ok=True)
+            (story_dir / filename).write_text(cleaned + "\n", encoding="utf-8")
+            story_meta = dict(meta)
+            story_meta["batch"] = story_batch
+            story_meta["short_story_batch_tag"] = f"corpora-short-stories-{story_batch:04d}"
+            story_metadata_by_batch[story_batch].append(story_meta)
+
         path.unlink(missing_ok=True)
 
     with ThreadPoolExecutor(max_workers=max(1, args.max_workers)) as executor:
@@ -413,19 +416,48 @@ def main() -> int:
             if completed % 250 == 0:
                 print(f"  processed {completed:,}/{len(selected):,} books")
 
-    sentence_writer.close()
-    paragraph_writer.close()
+    all_metadata = sorted(
+        (item for items in metadata_by_batch.values() for item in items),
+        key=lambda item: int(item["id"]),
+    )
+    all_story_metadata = sorted(
+        (item for items in story_metadata_by_batch.values() for item in items),
+        key=lambda item: int(item["id"]),
+    )
 
-    metadata.sort(key=lambda item: int(item["id"]))
-    story_metadata.sort(key=lambda item: int(item["id"]))
-    write_jsonl(output_sentences / "SOURCES.jsonl", metadata)
-    write_jsonl(output_paragraphs / "SOURCES.jsonl", metadata)
-    write_jsonl(output_stories / "SOURCES.jsonl", story_metadata)
+    write_jsonl(output_sentences / "SOURCES.jsonl", all_metadata)
+    write_jsonl(output_paragraphs / "SOURCES.jsonl", all_metadata)
+    write_jsonl(output_stories / "SOURCES.jsonl", all_story_metadata)
+    for batch, items in metadata_by_batch.items():
+        write_jsonl(
+            output_sentences / f"batch-{batch:04d}" / "SOURCES.jsonl",
+            sorted(items, key=lambda item: int(item["id"])),
+        )
+        write_jsonl(
+            output_paragraphs / f"batch-{batch:04d}" / "SOURCES.jsonl",
+            sorted(items, key=lambda item: int(item["id"])),
+        )
+    for batch, items in story_metadata_by_batch.items():
+        write_jsonl(
+            output_stories / f"batch-{batch:04d}" / "SOURCES.jsonl",
+            sorted(items, key=lambda item: int(item["id"])),
+        )
+
+    sentence_batches = build_batch_manifest(
+        output_sentences, metadata_by_batch, "corpora-sentences"
+    )
+    paragraph_batches = build_batch_manifest(
+        output_paragraphs, metadata_by_batch, "corpora-paragraphs"
+    )
+    story_batches = build_batch_manifest(
+        output_stories, story_metadata_by_batch, "corpora-short-stories"
+    )
 
     generated_at = datetime.now(timezone.utc).isoformat()
     selection = {
         "max_books": args.max_books,
         "max_short_stories": args.max_short_stories,
+        "batch_size": args.batch_size,
         "selected": len(selected),
         "short_story_books_selected": len(short_stories),
         "downloaded": downloaded,
@@ -440,56 +472,73 @@ def main() -> int:
         "selection": selection,
     }
 
-    sentence_manifest = {
-        **common,
-        "release_tag": "corpora-sentences",
-        "stats": {
-            "books": downloaded,
-            "sentences": sentence_writer.total,
-            "shards": sentence_writer.shards,
-            "bytes": directory_bytes(output_sentences, ("sentences-*.txt",)),
-        },
+    sentence_stats = {
+        "books": len(all_metadata),
+        "sentences": sum(item["sentences"] for item in all_metadata),
+        "files": sum(batch["files"] for batch in sentence_batches),
+        "batches": len(sentence_batches),
+        "bytes": sum(batch["bytes"] for batch in sentence_batches),
     }
-    paragraph_manifest = {
-        **common,
-        "release_tag": "corpora-paragraphs",
-        "stats": {
-            "books": downloaded,
-            "paragraphs": paragraph_writer.total,
-            "shards": paragraph_writer.shards,
-            "bytes": directory_bytes(output_paragraphs, ("paragraphs-*.txt",)),
-        },
+    paragraph_stats = {
+        "books": len(all_metadata),
+        "paragraphs": sum(item["paragraphs"] for item in all_metadata),
+        "files": sum(batch["files"] for batch in paragraph_batches),
+        "batches": len(paragraph_batches),
+        "bytes": sum(batch["bytes"] for batch in paragraph_batches),
     }
-    story_manifest = {
-        **common,
-        "release_tag": "corpora-short-stories",
-        "stats": {
-            "books": len(story_metadata),
-            "stories": len(story_metadata),
-            "bytes": directory_bytes(output_stories, ("*.txt",)),
-        },
+    story_stats = {
+        "books": len(all_story_metadata),
+        "stories": sum(batch["files"] for batch in story_batches),
+        "files": sum(batch["files"] for batch in story_batches),
+        "batches": len(story_batches),
+        "bytes": sum(batch["bytes"] for batch in story_batches),
     }
 
-    (output_sentences / "MANIFEST.json").write_text(
-        json.dumps(sentence_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    (output_paragraphs / "MANIFEST.json").write_text(
-        json.dumps(paragraph_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    (output_stories / "MANIFEST.json").write_text(
-        json.dumps(story_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-
-    print(json.dumps(
-        {
-            "sentences": sentence_manifest["stats"],
-            "paragraphs": paragraph_manifest["stats"],
-            "short_stories": story_manifest["stats"],
-            "downloaded": downloaded,
-            "failed": failed,
+    documents = {
+        output_sentences: {
+            "release_tag": "corpora-sentences",
+            "batches": sentence_batches,
+            "stats": sentence_stats,
         },
-        indent=2,
-    ))
+        output_paragraphs: {
+            "release_tag": "corpora-paragraphs",
+            "batches": paragraph_batches,
+            "stats": paragraph_stats,
+        },
+        output_stories: {
+            "release_tag": "corpora-short-stories",
+            "batches": story_batches,
+            "stats": story_stats,
+        },
+    }
+    for directory, document in documents.items():
+        manifest = {**common, **document}
+        (directory / "MANIFEST.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        batches_document = {
+            "generated_at": generated_at,
+            "release_tag_prefix": document["release_tag"],
+            "batch_size": args.batch_size,
+            "batches": document["batches"],
+        }
+        (directory / "BATCHES.json").write_text(
+            json.dumps(batches_document, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    print(
+        json.dumps(
+            {
+                "sentences": sentence_stats,
+                "paragraphs": paragraph_stats,
+                "short_stories": story_stats,
+                "downloaded": downloaded,
+                "failed": failed,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

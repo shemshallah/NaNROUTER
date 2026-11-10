@@ -6,9 +6,9 @@ category has a stable release tag and a manifest in this tree.
 | Category | Release tag | Contents |
 |---|---|---|
 | [`wordlists/`](wordlists/README.md) | `wordlists-latest` + `wordlist-*` | Wordlists, frequency lists, SecLists, SCOWL, and related sources |
-| [`sentences/`](sentences/README.md) | `corpora-sentences` | One sentence per line, derived from Project Gutenberg |
-| [`paragraphs/`](paragraphs/README.md) | `corpora-paragraphs` | One paragraph per line, derived from Project Gutenberg |
-| [`short_stories/`](short_stories/README.md) | `corpora-short-stories` | Project Gutenberg short-story books and collections |
+| [`sentences/`](sentences/README.md) | `corpora-sentences` + `corpora-sentences-*` | One sentence per line, one file per Gutenberg book, in choosable batches |
+| [`paragraphs/`](paragraphs/README.md) | `corpora-paragraphs` + `corpora-paragraphs-*` | One paragraph per line, one file per Gutenberg book, in choosable batches |
+| [`short_stories/`](short_stories/README.md) | `corpora-short-stories` + `corpora-short-stories-*` | Project Gutenberg short-story books and collections, in choosable batches |
 
 ## Public-domain pipeline
 
@@ -23,6 +23,12 @@ gh run watch -R shemshallah/NaNROUTER
 
 Defaults: up to **10,000 English Gutenberg books**, including all available
 English books in the **Category: Short Stories** bookshelf (currently 4,128).
+
+Each public-domain category is published twice: as a complete release and as
+choosable batch releases of up to **1,000 books** each (for example
+`corpora-sentences-0001`). Every batch contains individual per-book `.txt`
+files, so you can download only the slice you need. The batch mapping is in
+`BATCHES.json` inside each category.
 
 ## Source and license
 

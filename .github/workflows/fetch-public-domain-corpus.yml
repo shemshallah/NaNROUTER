@@ -13,6 +13,11 @@ on:
         required: false
         default: "4128"
         type: string
+      batch_size:
+        description: Books per choosable batch release
+        required: false
+        default: "1000"
+        type: string
   schedule:
     - cron: "0 5 1 * *"
 
@@ -26,7 +31,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -50,17 +55,19 @@ jobs:
         env:
           MAX_BOOKS: ${{ inputs.max_books || '10000' }}
           MAX_SHORT_STORIES: ${{ inputs.max_short_stories || '4128' }}
+          BATCH_SIZE: ${{ inputs.batch_size || '1000' }}
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/build_public_domain_corpus.py \
             --max-books "$MAX_BOOKS" \
             --max-short-stories "$MAX_SHORT_STORIES" \
+            --batch-size "$BATCH_SIZE" \
             --output-root corpora \
             --work-dir /tmp/nanrouter-public-domain \
             --max-workers 8
 
-      - name: Publish category releases
+      - name: Publish full and batch releases
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -68,25 +75,30 @@ jobs:
           set -euo pipefail
           mkdir -p release-assets
           publish() {
-            local dir="$1"
+            local source_dir="$1"
             local tag="$2"
             local title="$3"
             local name="$4"
+            local description="$5"
             local archive="release-assets/${name}.tar.zst"
+            local extract
+            local notes
+            local -a assets
             echo "::group::publish ${tag}"
-            tar --zstd -cf "$archive" -C "corpora/${dir}" .
+            rm -f "$archive" "${archive}.part-"* "release-assets/${name}.SHA256SUMS"
+            tar --zstd -cf "$archive" -C "$source_dir" .
             if [ "$(stat -c%s "$archive")" -ge $((1900 * 1024 * 1024)) ]; then
-              rm -f "${archive}.part-"*
               split -b 1900M "$archive" "${archive}.part-"
               rm -f "$archive"
               (cd release-assets && sha256sum "${name}.tar.zst.part-"* > "${name}.SHA256SUMS")
               assets=("release-assets/${name}.tar.zst.part-"* "release-assets/${name}.SHA256SUMS")
-              notes="Project Gutenberg public-domain ${title}. Split archive; extract with: cat ${name}.tar.zst.part-* | tar --zstd -x. See LICENSE.txt."
+              extract="Split archive; extract with: cat ${name}.tar.zst.part-* | tar --zstd -x"
             else
               (cd release-assets && sha256sum "${name}.tar.zst" > "${name}.SHA256SUMS")
               assets=("$archive" "release-assets/${name}.SHA256SUMS")
-              notes="Project Gutenberg public-domain ${title}. Extract with: tar --zstd -xf ${name}.tar.zst. See LICENSE.txt."
+              extract="Extract with: tar --zstd -xf ${name}.tar.zst"
             fi
+            notes="Project Gutenberg public-domain ${description}. ${extract}. See LICENSE.txt and SOURCES.jsonl inside."
             if gh release view "$tag" >/dev/null 2>&1; then
               gh release edit "$tag" --title "$title" --notes "$notes"
             else
@@ -96,9 +108,25 @@ jobs:
             rm -f "${assets[@]}"
             echo "::endgroup::"
           }
-          publish sentences corpora-sentences "Public-domain sentences" sentences
-          publish paragraphs corpora-paragraphs "Public-domain paragraphs" paragraphs
-          publish short_stories corpora-short-stories "Public-domain short stories" short_stories
+          publish_category() {
+            local dir="$1"
+            local prefix="$2"
+            local title="$3"
+            local name="$4"
+            local noun="$5"
+            local batch_dir
+            local batch
+            publish "corpora/${dir}" "$prefix" "$title" "$name" "${noun} (complete corpus)"
+            for batch_dir in corpora/"${dir}"/batch-*; do
+              [ -d "$batch_dir" ] || continue
+              batch="$(basename "$batch_dir")"
+              batch="${batch#batch-}"
+              publish "$batch_dir" "${prefix}-${batch}" "${title} — batch ${batch}" "${name}-${batch}" "${noun} batch ${batch}"
+            done
+          }
+          publish_category sentences corpora-sentences "Public-domain sentences" sentences "sentences"
+          publish_category paragraphs corpora-paragraphs "Public-domain paragraphs" paragraphs "paragraphs"
+          publish_category short_stories corpora-short-stories "Public-domain short stories" short_stories "short stories"
 
       - name: Commit manifests
         shell: bash
@@ -106,7 +134,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add corpora/sentences/MANIFEST.json corpora/paragraphs/MANIFEST.json corpora/short_stories/MANIFEST.json
+          git add \
+            corpora/sentences/MANIFEST.json corpora/sentences/BATCHES.json \
+            corpora/paragraphs/MANIFEST.json corpora/paragraphs/BATCHES.json \
+            corpora/short_stories/MANIFEST.json corpora/short_stories/BATCHES.json
           if git diff --cached --quiet; then
             echo "manifests unchanged"
           else
