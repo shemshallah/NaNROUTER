@@ -23,6 +23,7 @@ from .point_fabric import PointFrame
 
 SCHEMA = "nanrouter.hw5-gutenberg-live-stream.v1"
 KIND = "hw5.gutenberg.c256.archive.v1"
+QUERY_KIND = "hw5.gutenberg.c256.query.v1"
 CHUNK_BYTES = 131072
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 SEAL_REQUEST = 0xFFFFFFFF
