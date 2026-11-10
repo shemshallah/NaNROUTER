@@ -21,7 +21,7 @@ import urllib.request
 import zlib
 
 from runner_riddle.hw5_portal_stream import (
-    CHUNK_BYTES, KIND, SCHEMA, SEAL_REQUEST, SEAL_WORD, MAX_ARCHIVE_BYTES,
+    CHUNK_BYTES, KIND, QUERY_KIND, SCHEMA, SEAL_REQUEST, SEAL_WORD, MAX_ARCHIVE_BYTES,
 )
 from runner_riddle.hw5_release_bootstrap import RELEASE_URL, ARCHIVE_SHA256
 from runner_riddle.point_fabric import Nan16DEWord, PointFrame
@@ -79,10 +79,10 @@ def _get_json(base: str, token: str, path: str, body: dict | None = None) -> dic
     return payload
 
 
-def _frame(token: str, request_id: int, payload: int) -> dict:
+def _frame(token: str, request_id: int, payload: int, *, kind: str = KIND) -> dict:
     word = Nan16DEWord(0x7FF8, 0xFFF8, payload)
     frame = PointFrame(request_id=request_id, source_hw=0, destination_hw=5,
-                       nanclock_tick=int(time.time()), kind=KIND,
+                       nanclock_tick=int(time.time()), kind=kind,
                        acl_digest=hashlib.sha256(
                            ("hw5/corpus/import/v1:" + token).encode()).hexdigest(),
                        word=word)
@@ -166,10 +166,28 @@ def upload(archive: Path, *, token: str, archive_size: int) -> dict:
             stream.get("sealed") is not True or
             stream.get("root_sha256") != sealed["root_sha256"]):
         raise HW5UploadError("live remote readback disagrees with verified seal")
-    return {key: sealed[key] for key in (
+    # Do not settle for a metadata receipt: query real byte relations in the
+    # sealed mapped root/ordered-triple ledger through the NaN16DE point route.
+    triple_query = _get_json(PORTAL, token, "/v1/ring/submit", {
+        "frame": _frame(token, 2, (ord("t") << 16) | (ord("h") << 8) | ord("e"),
+                        kind=QUERY_KIND)
+    })
+    exact = triple_query.get("result") or {}
+    if (triple_query.get("schema") != "nanrouter.hw5-gutenberg-readback.v1"
+            or triple_query.get("root_sha256") != sealed["root_sha256"]
+            or triple_query.get("endpoint") != "HW5:0"
+            or triple_query.get("query") != "triple"
+            or exact.get("exact_ordered") is not True
+            or exact.get("a") != ord("t") or exact.get("b") != ord("h")
+            or exact.get("c") != ord("e")
+            or type(exact.get("count")) is not int or exact["count"] <= 0):
+        raise HW5UploadError("native routed HW5 ordered-triple readback failed")
+    result = {key: sealed[key] for key in (
         "archive_sha256", "root_sha256", "corpus_sha256",
         "corpus_bytes", "root_bytes", "mirror_pairs", "book_count"
     )}
+    result["exact_the_count"] = exact["count"]
+    return result
 
 
 def main() -> int:
