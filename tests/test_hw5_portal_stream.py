@@ -21,12 +21,12 @@ from runner_riddle.point_fabric import Nan16DEWord, PointFrame
 
 
 def make_frame(request_id: int, payload: int, *, source=0, destination=5,
-               kind=KIND):
+               kind=KIND, far=0x7FF8, near=0xFFF8):
     return PointFrame(
         request_id=request_id, source_hw=source, destination_hw=destination,
         nanclock_tick=12, kind=kind,
         acl_digest="f" * 64,
-        word=Nan16DEWord(0x7FF8, 0xFFF8, payload),
+        word=Nan16DEWord(far, near, payload),
     )
 
 
@@ -99,11 +99,16 @@ class TestHW5KoyebStream(unittest.TestCase):
             self.receiver.receive(make_frame(SEAL_REQUEST, SEAL_WORD),
                                   self.env("seal"))["result"], "already_sealed")
         self.assertEqual(len(self.sealed), 1)
+        with self.assertRaisesRegex(HW5StreamError, "immutable"):
+            self.chunk(0, a)
+        self.assertEqual(len(self.sealed), 1)
 
     def test_wrong_route_word_and_corruption_fail_closed(self):
         for f in (make_frame(0, len(self.blob), source=1),
                   make_frame(0, len(self.blob), destination=4),
-                  make_frame(0, len(self.blob), kind="other")):
+                  make_frame(0, len(self.blob), kind="other"),
+                  make_frame(0, len(self.blob), far=0x7FF1),
+                  make_frame(0, len(self.blob), near=0xFFF1)):
             with self.assertRaises(HW5StreamError):
                 self.receiver.receive(f, self.env("begin", size=len(self.blob)))
         self.begin()
@@ -133,6 +138,11 @@ class TestHW5KoyebStream(unittest.TestCase):
             self.receiver.receive(make_frame(0, len(self.blob)), {
                 **self.env("begin", size=len(self.blob)), "extra": 1})
         self.begin()
+        # A non-final data chunk cannot be short, even with a correct SHA
+        # and word CRC: it would irreversibly misalign the resume cursor.
+        with self.assertRaises(HW5StreamError):
+            self.chunk(0, self.blob[:777])
+        self.assertEqual(self.receiver.status()["received_bytes"], 0)
         with self.assertRaises(HW5StreamError):
             self.receiver.receive(make_frame(1, 0),
                                   self.env("chunk", offset=0,
