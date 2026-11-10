@@ -97,7 +97,9 @@ class HW5PortalStream:
                 or type(state.get("size")) is not int
                 or type(state.get("received")) is not int
                 or not 0 < state["size"] <= MAX_ARCHIVE_BYTES
-                or not 0 <= state["received"] <= state["size"]):
+                or not 0 <= state["received"] <= state["size"]
+                or (state["received"] % CHUNK_BYTES != 0
+                    and state["received"] != state["size"])):
             raise HW5StreamError("stream cursor is corrupt or from another release")
         if self.payload.is_symlink() or not self.payload.is_file():
             raise HW5StreamError("stream payload is missing or symbolic")
@@ -128,7 +130,8 @@ class HW5PortalStream:
     def receive(self, frame: PointFrame, envelope: object) -> dict:
         if (not isinstance(frame, PointFrame) or frame.source_hw != 0
                 or frame.destination_hw != 5 or frame.kind != KIND
-                or frame.origin != "zero-point"):
+                or frame.origin != "zero-point"
+                or frame.word.far != 0x7FF8 or frame.word.near != 0xFFF8):
             raise HW5StreamError("HW5 import requires a routed HW0:0 to HW5:0 point frame")
         if type(envelope) is not dict or envelope.get("schema") != SCHEMA:
             raise HW5StreamError("invalid HW5 stream schema")
@@ -157,6 +160,10 @@ class HW5PortalStream:
                     raise HW5StreamError("archive length changed in a replay")
                 return self._ack(state, "begun")
             if op == "chunk":
+                # Once the sealed generation has been committed, replay can
+                # never reopen the incoming data plane or overwrite its spool.
+                if self.receiptfile.exists():
+                    raise HW5StreamError("sealed HW5 archive is immutable")
                 item = _strict_object(envelope, {
                     "schema", "archive_sha256", "operation", "offset",
                     "chunk_b64", "chunk_sha256",
@@ -176,6 +183,8 @@ class HW5PortalStream:
                 except (binascii.Error, ValueError) as exc:
                     raise HW5StreamError("invalid base64 archive chunk") from exc
                 if (not raw or len(raw) > CHUNK_BYTES
+                        or (len(raw) != CHUNK_BYTES
+                            and offset + len(raw) != state["size"])
                         or offset + len(raw) > state["size"]
                         or hashlib.sha256(raw).hexdigest() != digest
                         or frame.request_id != 1 + offset // CHUNK_BYTES
