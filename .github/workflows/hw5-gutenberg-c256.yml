@@ -4,6 +4,9 @@ on:
     branches: ['experiment/hw5-gutenberg-c256-20261109']
     paths:
       - 'runner_riddle/hw5_gutenberg.py'
+      - 'runner_riddle/hw5_release_bootstrap.py'
+      - 'runner_riddle/http_service.py'
+      - 'deploy/start_router.sh'
       - 'tests/test_hw5_gutenberg.py'
       - '.github/workflows/hw5-gutenberg-c256.yml'
   workflow_dispatch:
@@ -18,7 +21,7 @@ jobs:
       - name: Test exact mirror, triple and corruption invariants
         run: |
           set -euo pipefail
-          python3 -m py_compile runner_riddle/hw5_gutenberg.py
+          python3 -m py_compile runner_riddle/hw5_gutenberg.py runner_riddle/hw5_release_bootstrap.py runner_riddle/http_service.py
           python3 -m unittest tests.test_hw5_gutenberg -v
       - name: Collect whole Gutenberg books from an authorized public mirror
         run: |
