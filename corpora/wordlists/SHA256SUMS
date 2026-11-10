@@ -1,6 +1,6 @@
 b8bcd0358990595dbe2da2fb0d8f4f82ce22a77fa09a674b4757a1fb93702cbc  ./.gitignore
-47df2f8ccf5462caaec7313dd46e24f8a0d190481da418115d39a9f5b4e8863c  ./README.md
-b228b39408e6b81d153215e5c99b82275fe63771335cd00bba7e7b67c7914e49  ./SOURCES.json
+7927aaf2049f30fc8a2d9be8f947b1fa500606f1d26070a76ee2ff58f7d291a9  ./README.md
+d3e892a6be26578d7ad0a0e627ec1f6d364b398889a385f875fa68b800082eef  ./SOURCES.json
 f4db6c695a99ed0ca084374f6e50887e2869828f6301528555f36fab8397c500  ./SecLists/.bin/README.md
 c9d2fc8938f67f7a34b8dab087496ab35827a91a34981d9e6e5f442594cf9138  ./SecLists/.bin/brute-force-renormalize.sh
 5c5d39c877bf6da2cf9ac96a0c8e9a3875c5a4a2d709296377a6f832d611fa2f  ./SecLists/.bin/checkers/README.md
@@ -6278,7 +6278,7 @@ da2f8f6ddb8b82304698138e26b967ece3443e2cd7a07a28c3dea5abb13208a6  ./SecLists/Web
 eb126c8b50b410d19894d449adac395678b2ee1b78d8b93a5f29466853a44b48  ./SecLists/Web-Shells/laudanum-1.0/wordpress/templates/settings.php
 0291cccda35498538d07365264169487db14427c6d90af212f79e6fd6fefb37c  ./SecLists/Web-Shells/laudanum-1.0/wordpress/templates/shell.php
 fb9e1fb1d2c1e2f623da16bffb5cd6797546ac02ef968237c73fdb647ae1e5a2  ./SecLists/funding.json
-201f8815c71a47d39775304aa422a505fc4cca18493cfaf5a76e608a72920267  ./crackstation-human-only.txt.gz
+201f8815c71a47d39775304aa422a505fc4cca18493cfaf5a76e608a72920267  ./crackstation-human-only/crackstation-human-only.txt.gz
 6af50eaf04b98f8aed9a4d86f3a93a62e3ca09b9144676c385783edf10bfe66f  ./david47k-top-english-wordlists/1_fetch_ngram_data.sh
 2ff131ac334c9fb6bb69606728d66b4f103260b218de7ea77138adaca2d07c10  ./david47k-top-english-wordlists/2_extract_lists.sh
 9881dd40fdea40c3f4ce7f59afc63afe9fd924f5de6572eb7379cea468f89cd4  ./david47k-top-english-wordlists/3_create_limited_lists.sh
@@ -6453,7 +6453,6 @@ e3b41b7062b073ccd409db612076e131cd10418d3e9560d29dac63b1c23f1861  ./en-wl-wordli
 789d4369e0715ad3f8e01b963c1f38c8120d047a558463647d4c7cb1042d1800  ./en-wl-wordlist/speller/make-libreoffice
 3f823b28e53a8c2a1f6589bea9a8157c2a3a3da33ccf4807a53ab4e46635741b  ./en-wl-wordlist/speller/munch-list
 1e78fdd3c48d7984321167240cb6af2551b88c7a67103f7bbf41f038ec131afa  ./en-wl-wordlist/speller/to-clean
-af666de8d0275181775a05695f059f71be3d7f46303b33087271cd0a149a61bc  ./extras/mit-wordlist-10000.txt
 e2b775ea971ab8bcb48c958a4fa4c12f44cd69db90f193d76b341242af0fef03  ./frequencywords/.gitignore
 e08d916cc953f85f7dfa0df530f6d7931f14ce804d053602662d8649b5fac829  ./frequencywords/LICENSE
 a92fcc50e27f7b2d5860ec1c1ce794dc4c892d945bfa4c8c3136cdfd213ee710  ./frequencywords/README.md
@@ -7142,6 +7141,7 @@ f573fc1b646cca7176718c45c33d9930d64a58bf71573466dad370fee398c6c5  ./kkrypt0nn-wo
 3cea2fe31735e9736f68fb19605e9001eb4e331aea763d7a7f8b61e4b1a271a9  ./kkrypt0nn-wordlists/wordlists/vulnerabilities/websphere.txt
 9b9a392b27adeac22f86a39d0c9039c0f26c55e30e7b96543d58dda261d63bfb  ./kkrypt0nn-wordlists/wordlists/vulnerabilities/xss.txt
 c49ebc07d9d61b40762fbaab33c5bc26cd535610aad9abee331f244cdad0bf3a  ./kkrypt0nn-wordlists/wordlists/vulnerabilities/xxe.txt
+af666de8d0275181775a05695f059f71be3d7f46303b33087271cd0a149a61bc  ./mit-wordlist-10000/wordlist.10000
 ab0dfb208150a4f44a83e204590fed91b574e0ad0f6c07dc682207163e446da6  ./neopass-wordlist/.babelrc
 c4c59c1a5e0cefb7a9cf4197462659912244fd29277284901ab6cd45112ed196  ./neopass-wordlist/.gitignore
 bb6e20bab076a4708cf307463e728b968ae760a5ffa5a40f98815f5aa8cc9029  ./neopass-wordlist/.travis.yml

@@ -3,87 +3,109 @@
     {
       "bytes": 1970786716,
       "files": 6277,
-      "name": "SecLists"
+      "name": "SecLists",
+      "release_tag": "wordlist-seclists"
+    },
+    {
+      "bytes": 257973006,
+      "files": 1,
+      "name": "crackstation-human-only",
+      "release_tag": "wordlist-crackstation-human-only"
     },
     {
       "bytes": 47462604,
       "files": 56,
-      "name": "david47k-top-english-wordlists"
+      "name": "david47k-top-english-wordlists",
+      "release_tag": "wordlist-david47k-top-english-wordlists"
     },
     {
       "bytes": 19356660,
       "files": 16,
-      "name": "dwyl-english-words"
+      "name": "dwyl-english-words",
+      "release_tag": "wordlist-dwyl-english-words"
     },
     {
       "bytes": 15285730,
       "files": 104,
-      "name": "en-wl-wordlist"
-    },
-    {
-      "bytes": 75880,
-      "files": 1,
-      "name": "extras"
+      "name": "en-wl-wordlist",
+      "release_tag": "wordlist-en-wl-wordlist"
     },
     {
       "bytes": 1478316545,
       "files": 364,
-      "name": "frequencywords"
+      "name": "frequencywords",
+      "release_tag": "wordlist-frequencywords"
     },
     {
       "bytes": 537309,
       "files": 10,
-      "name": "google-10000-english"
+      "name": "google-10000-english",
+      "release_tag": "wordlist-google-10000-english"
     },
     {
       "bytes": 708671463,
       "files": 314,
-      "name": "kkrypt0nn-wordlists"
+      "name": "kkrypt0nn-wordlists",
+      "release_tag": "wordlist-kkrypt0nn-wordlists"
+    },
+    {
+      "bytes": 75880,
+      "files": 1,
+      "name": "mit-wordlist-10000",
+      "release_tag": "wordlist-mit-wordlist-10000"
     },
     {
       "bytes": 8827534,
       "files": 383,
-      "name": "neopass-wordlist"
+      "name": "neopass-wordlist",
+      "release_tag": "wordlist-neopass-wordlist"
     },
     {
       "bytes": 27948226,
       "files": 5,
-      "name": "nlile-dictionary-word-list"
+      "name": "nlile-dictionary-word-list",
+      "release_tag": "wordlist-nlile-dictionary-word-list"
     },
     {
       "bytes": 12300190,
       "files": 41,
-      "name": "probable-wordlists"
+      "name": "probable-wordlists",
+      "release_tag": "wordlist-probable-wordlists"
     },
     {
       "bytes": 8495199,
       "files": 533,
-      "name": "scowl"
+      "name": "scowl",
+      "release_tag": "wordlist-scowl"
     },
     {
       "bytes": 8461384,
       "files": 504,
-      "name": "scowl-mirror"
+      "name": "scowl-mirror",
+      "release_tag": "wordlist-scowl-mirror"
     },
     {
       "bytes": 346253078,
       "files": 25,
-      "name": "wikipedia-word-frequency"
+      "name": "wikipedia-word-frequency",
+      "release_tag": "wordlist-wikipedia-word-frequency"
     },
     {
       "bytes": 60394736,
       "files": 101,
-      "name": "wordfreq"
+      "name": "wordfreq",
+      "release_tag": "wordlist-wordfreq"
     },
     {
       "bytes": 67312828,
       "files": 35,
-      "name": "wordset-dictionary"
+      "name": "wordset-dictionary",
+      "release_tag": "wordlist-wordset-dictionary"
     }
   ],
-  "generated_at": "2026-11-10T20:19:09.378117+00:00",
+  "generated_at": "2026-11-10T20:33:56.608206+00:00",
   "path": "corpora/wordlists",
   "repo": "shemshallah/NaNROUTER",
-  "total_bytes": 4780486082,
-  "total_files": 8769
+  "total_bytes": 5038459088,
+  "total_files": 8770
 }
