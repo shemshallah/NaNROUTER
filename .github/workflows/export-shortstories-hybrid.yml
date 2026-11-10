@@ -1,0 +1,86 @@
+name: Export disjoint short-story document splits for hybrid
+on:
+  push:
+    paths: ['.github/workflows/export-shortstories-hybrid.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+      - name: Verify published short stories and extract
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p input storytree
+          gh release download corpora-short-stories -R shemshallah/NaNROUTER --pattern short_stories.tar.zst --dir input
+          echo '6e516b11f8bf6d8bf2041fb12a6394ab7b61b5c659adc631566e6cfdcce5ed6d  input/short_stories.tar.zst' | sha256sum -c -
+          tar --zstd -xf input/short_stories.tar.zst -C storytree
+      - name: Construct fixed document splits (exclude original HW5 books)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p export
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,hashlib,json,collections
+          src=Path('storytree'); out=Path('export')
+          excluded={2600,2000,2701,4300,2554,1400,1260,1342,345,98,1661,76,74,84,174,36,1322,1497,1232,6130,1727}
+          docs=[]; seen=set(); rejects=collections.Counter()
+          for file in src.rglob('*.txt'):
+              match=re.match(r'^(\d+)--',file.name)
+              if not match:
+                  rejects['unidentifiable']+=1; continue
+              gid=int(match.group(1))
+              if gid in excluded:
+                  rejects['HW5_gutenberg_id']+=1; continue
+              try: b=file.read_bytes(); t=b.decode('utf8')
+              except UnicodeDecodeError:
+                  rejects['not_utf8']+=1; continue
+              if not (6000<=len(b)<=1200000):
+                  rejects['invalid_size']+=1; continue
+              if len(re.findall('[a-zA-Z]',t)) < len(t)*.52:
+                  rejects['non_english_or_low_alpha']+=1; continue
+              digest=hashlib.sha256(b).hexdigest()
+              if digest in seen: rejects['exact_duplicates']+=1;continue
+              seen.add(digest)
+              docs.append((gid,file,t,b,digest))
+          docs.sort(key=lambda x:hashlib.sha256(('r20-independent-split:'+str(x[0])).encode()).digest())
+          if len(docs)<320:raise RuntimeError('Insufficient distinct Gutenberg documents: '+str(len(docs)))
+          selection={'train':docs[:260],'dev':docs[260:300],'test':docs[300:340]}
+          # Each document is separated by >= 2 empty lines to reset token contexts.
+          manifest={'source_repo':'shemshallah/NaNROUTER','source_release':'corpora-short-stories',
+               'archive_sha256':'6e516b11f8bf6d8bf2041fb12a6394ab7b61b5c659adc631566e6cfdcce5ed6d',
+               'selection':'sha256 sorted ids (260 train / 40 dev / 40 test); excludes original 21 HW5 Gutenberg IDs',
+               'reject_counts':rejects,'splits':{}}
+          ids={}
+          for label,records in selection.items():
+              parts=[]; entries=[]
+              for gid,file,t,b,digest in records:
+                  parts.append(t.strip())
+                  entries.append({'gutenberg_id':gid,'source_path':str(file.relative_to(src)),'source_sha256':digest,'bytes':len(b)})
+              text='\n\n\n'.join(parts)+'\n'
+              target=out/(label+'.txt');target.write_text(text,encoding='utf8')
+              manifest['splits'][label]={'documents':len(records),'bytes':target.stat().st_size,
+                  'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'sources':entries}
+              ids[label]=set(e['gutenberg_id'] for e in entries)
+          assert not(ids['train']&ids['dev'] or ids['train']&ids['test'] or ids['dev']&ids['test'])
+          (out/'manifest.json').write_text(json.dumps(manifest,indent=2,default=list)+'\n')
+          with (out/'SHA256SUMS').open('w') as f:
+              for name in ('train.txt','dev.txt','test.txt','manifest.json'):
+                  f.write(hashlib.sha256((out/name).read_bytes()).hexdigest()+'  '+name+'\n')
+          print({name:{k:v for k,v in meta.items() if k!='sources'} for name,meta in manifest['splits'].items()})
+          print('rejections',rejects)
+          PY
+          (cd export && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nanrouter-disjoint-shortstory-splits
+          path: export/
+          retention-days: 14
