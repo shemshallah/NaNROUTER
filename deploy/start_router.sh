@@ -7,6 +7,13 @@ set -eu
 # configuration is reported as unknown by /healthz instead of inventing health.
 python -m runner_riddle.koyeb_bootstrap --write
 
+# If provisioned directly from the immutable GitHub release, enforce its
+# baked-in archive SHA256 and import only to the dedicated router volume.
+if [ "${RIDDLE_HW4_RELEASE_BOOTSTRAP:-0}" = "1" ]; then
+    : "${RIDDLE_HW4_STORE:?Set /mc0db/hw4-wordnet31 or dedicated router volume}"
+    python -m runner_riddle.hw4_release_bootstrap "$RIDDLE_HW4_STORE"
+fi
+
 # Optional persistent HW4 WordNet reference. The source ZIP is supplied by
 # the operator on the NaNROUTER/MC0 volume, never by the BS0 learning ring.
 # install() is digest-idempotent; a corrupt generation fails startup closed.
