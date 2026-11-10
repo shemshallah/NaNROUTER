@@ -17,7 +17,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: hw4-full31-current
+  group: hw4-full31-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   complete-wordnet-reference:
