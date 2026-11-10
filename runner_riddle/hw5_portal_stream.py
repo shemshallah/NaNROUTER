@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import base64
 import binascii
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import json
 import os
@@ -87,6 +89,27 @@ class HW5PortalStream:
         self.statefile = self.spool / "cursor.json"
         self.payload = self.spool / "pinned-archive.tar.gz"
         self.receiptfile = self.spool / "sealed-receipt.json"
+        self.lockfile = self.spool / ".hw5-single-writer.lock"
+
+    @contextmanager
+    def _disk_lock(self):
+        """Serialize the one Koyeb /data writer across process handoffs.
+
+        A thread RLock alone cannot protect the cursor if an old container
+        and its successor overlap briefly during a rolling deployment.
+        The lock remains advisory, but all receiver instances obey it.
+        """
+        self.spool.mkdir(parents=True, exist_ok=True)
+        if self.spool.is_symlink():
+            raise HW5StreamError("HW5 persistent spool cannot be a symlink")
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(self.lockfile, flags, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
 
     def _state(self) -> dict | None:
         if not self.statefile.exists():
@@ -109,7 +132,7 @@ class HW5PortalStream:
         return state
 
     def status(self) -> dict:
-        with self.lock:
+        with self.lock, self._disk_lock():
             state = self._state()
             receipt = None
             if self.receiptfile.exists():
@@ -138,7 +161,7 @@ class HW5PortalStream:
         if envelope.get("archive_sha256") != self.expected:
             raise HW5StreamError("the requested archive is not pinned")
         op = envelope.get("operation")
-        with self.lock:
+        with self.lock, self._disk_lock():
             if op == "begin":
                 item = _strict_object(envelope, {"schema", "archive_sha256", "operation", "size"})
                 size = item["size"]
