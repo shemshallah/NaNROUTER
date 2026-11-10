@@ -73,7 +73,7 @@ jobs:
           grep -F 'HW5_FULL_RELEASE_E2E_PASS' "$RUNNER_TEMP/hw5-e2e.log"
   live-transfer:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_live == 'YES' }}
-    needs: offline-contract
+    needs: [offline-contract, full-published-release]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: hw5-koyeb-production
