@@ -1,0 +1,48 @@
+name: Export NaNROUTER release English counts
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-english-counts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zstd
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+      - name: Fetch verified published wordlist parts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release_parts extracted
+          cd release_parts
+          gh release download wordlists-latest -R shemshallah/NaNROUTER --pattern 'NaNROUTER-wordlists.tar.zst.part-*'
+          gh release download wordlists-latest -R shemshallah/NaNROUTER --pattern SHA256SUMS.parts
+          sha256sum -c SHA256SUMS.parts
+          cat NaNROUTER-wordlists.tar.zst.part-* | tar --zstd -xf - -C ../extracted \
+            ./SOURCES.json ./frequencywords/content/2018/en/en_50k.txt
+      - name: Export exact count-bearing English source
+        shell: bash
+        run: |
+          set -euo pipefail
+          dst=release_english/corpora/wordlists
+          mkdir -p "$dst/frequencywords/content/2018/en"
+          cp extracted/SOURCES.json "$dst/SOURCES.json"
+          cp extracted/frequencywords/content/2018/en/en_50k.txt "$dst/frequencywords/content/2018/en/en_50k.txt"
+          cd "$dst"
+          sha256sum frequencywords/content/2018/en/en_50k.txt > SHA256SUMS
+          test "$(wc -l < frequencywords/content/2018/en/en_50k.txt)" -gt 1000
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nanrouter-release-english-counts
+          path: release_english/
+          retention-days: 14
