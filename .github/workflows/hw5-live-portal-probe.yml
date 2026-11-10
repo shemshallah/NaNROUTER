@@ -1,0 +1,24 @@
+name: HW5:0 read-only LIVE Koyeb NANNET portal probe
+on:
+  push:
+    branches: ['experiment/hw5-live-koyeb-probe-20261109']
+    paths:
+      - 'tools/probe_hw5_live_koyeb.py'
+      - '.github/workflows/hw5-live-portal-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-hw5-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NANROUTER_RING_TOKEN: ${{ secrets.NANROUTER_RING_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read public production health and verify actual HW5 runner ring
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/probe_hw5_live_koyeb.py
+          python3 tools/probe_hw5_live_koyeb.py
