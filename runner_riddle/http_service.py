@@ -375,7 +375,6 @@ def make_handler(service: RiddleService):
                     "route_cache_present": service.route_cache_path.exists(),
                     "volume_registry": service.volume_registry_health(),
                     "runner_ring": self._ring_health(service),
-                    "hw4_wordnet_reference": {"mounted": service.hw4 is not None, "ring_owner": HW4_RING_OWNER},
                     "live_route_commit": False,
                     "hermes_delegated_lease_authority": service.hermes_leases is not None,
                     "hermes_native_guest_configured": service.hermes_native is not None,
