@@ -1,0 +1,69 @@
+name: Export English Wikipedia counts for hybrid training
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-enwiki-counts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zstd
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+      - name: Fetch and verify NaNROUTER Wikipedia release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release_parts
+          cd release_parts
+          gh release download wordlist-wikipedia-word-frequency -R shemshallah/NaNROUTER --pattern wikipedia-word-frequency.tar.zst
+          echo '8024f23519bec542619b787cfb70d6f14c840c53a91a61aa7acabda9203ea416  wikipedia-word-frequency.tar.zst' | sha256sum -c -
+          tar --zstd -tf wikipedia-word-frequency.tar.zst | grep 'enwiki-2023-04-13.txt'
+      - name: Export English counts preserving occurrence weights
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p extracted release_english/corpora/wordlists/wikipedia-word-frequency/results
+          tar --zstd -xf release_parts/wikipedia-word-frequency.tar.zst -C extracted --wildcards '*enwiki-2023-04-13.txt'
+          python3 - <<'PY'
+          from pathlib import Path
+          import collections, hashlib, json, re
+          p = list(Path('extracted').rglob('enwiki-2023-04-13.txt'))
+          if len(p)!=1: raise RuntimeError(f'exactly one English source required: {p}')
+          src=p[0]
+          out=Path('release_english/corpora/wordlists/wikipedia-word-frequency/results/enwiki-2023-04-13.txt')
+          pat=re.compile(r'^([a-z]{6,10})\\s+([1-9][0-9]*)$')
+          count=collections.Counter()
+          total_lines=0
+          with src.open(encoding='utf-8') as fh:
+              for line in fh:
+                  total_lines+=1
+                  m=pat.fullmatch(line.strip())
+                  if m:
+                      word,n=m.groups()
+                      count[word]+=int(n)
+          if len(count)<20000: raise RuntimeError(f'Insufficient counted entries: {len(count)}')
+          with out.open('w',encoding='utf8') as fh:
+              for word in sorted(count):
+                  fh.write(f'{word} {count[word]}\\n')
+          digest=hashlib.sha256(out.read_bytes()).hexdigest()
+          root=Path('release_english/corpora/wordlists')
+          (root/'SOURCES.json').write_text(json.dumps({'repo':'shemshallah/NaNROUTER','path':'corpora/wordlists','source_release_tag':'wordlist-wikipedia-word-frequency','source_filename':str(src),'source_raw_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'source_archive_sha256':'8024f23519bec542619b787cfb70d6f14c840c53a91a61aa7acabda9203ea416','filtered_word_types':len(count),'source_total_lines':total_lines},indent=2)+'\\n')
+          (root/'SHA256SUMS').write_text(f'{digest}  wikipedia-word-frequency/results/enwiki-2023-04-13.txt\\n')
+          print({'counted_word_types':len(count),'total_occurrences':sum(count.values()),'digest':digest,'source_lines':total_lines})
+          PY
+          sha256sum -c release_english/corpora/wordlists/SHA256SUMS --ignore-missing || (cd release_english/corpora/wordlists && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nanrouter-enwiki-english-counts
+          path: release_english/
+          retention-days: 14
