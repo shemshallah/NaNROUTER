@@ -188,8 +188,8 @@ def project(docs,root:Path,dbpath:Path):
              n INTEGER NOT NULL CHECK(n>0), PRIMARY KEY(a,b,c)) WITHOUT ROWID;
         """)
         db.executemany("INSERT INTO documents VALUES(?,?,?,?,?,?,?,?)",
-                       ((d[k] for k in ("id","title","author","split","url",
-                                          "raw_sha256","text_sha256","bytes")) for d in docs))
+                       ((d["id"],d["title"],d["author"],d["split"],d["url"],
+                         d["raw_sha256"],d["text_sha256"],d["bytes"]) for d in docs))
         db.executemany("INSERT INTO triples VALUES(?,?,?,?)",
                        ((a,b,c,n) for (a,b,c),n in sorted(triples.items())))
     return {"adjacent_transitions":sum(adjacent.values()),"skip_transitions":sum(skip.values()),
