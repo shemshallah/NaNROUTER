@@ -11,7 +11,7 @@ import unittest
 import zlib
 
 from runner_riddle.hw5_portal_stream import (
-    HW5PortalStream, HW5StreamError, KIND, SCHEMA, SEAL_WORD, SEAL_REQUEST
+    HW5PortalStream, HW5StreamError, KIND, QUERY_KIND, SCHEMA, SEAL_WORD, SEAL_REQUEST
 )
 from runner_riddle.point_fabric import Nan16DEWord, PointFrame
 from tests.test_hw4_portal_resident import portal_module, Authority
@@ -32,8 +32,14 @@ def frame(i, word, *, kind=KIND):
 class FakeMountedHW5:
     def __init__(self, path):
         self.path = path
+        self.manifest = {"artifacts": {"gutenberg-c256.root": {"sha256": "a"*64}}}
     def status(self):
         return {"root_bytes": 8388608, "source_sha256": "b"*64}
+    def pair(self, a, b):
+        return {"a": a, "b": b, "adjacent_count": 777, "reference_only": True}
+    def triple(self, a, b, c):
+        return {"a": a, "b": b, "c": c, "count": 456,
+                "exact_ordered": True, "reference_only": True}
     def close(self):
         pass
 
@@ -98,6 +104,22 @@ class TestPortalHW5Route(unittest.TestCase):
                 self.assertEqual(node.status()["hw5_corpus_stream"]["root_sha256"], "a"*64)
                 self.assertTrue(node.status()["hw5_gutenberg_reference"]["mounted"])
                 self.assertEqual(count,[1])
+                self.assertEqual(node.fabric.monitor()["queued"],0)
+                # Read back the actual head bytes using only the 32-bit
+                # NaN16DE word on the same authenticated point route.
+                result = node.submit({
+                    "frame": frame(2,(ord("t") << 16) | (ord("h") << 8) | ord("e"),
+                                   kind=QUERY_KIND)
+                })
+                self.assertEqual(result["query"], "triple")
+                self.assertEqual(result["result"]["count"], 456)
+                self.assertTrue(result["result"]["exact_ordered"])
+                self.assertEqual(result["root_sha256"], "a"*64)
+                pair_result = node.submit({
+                    "frame": frame(1,(ord("t") << 16) | (ord("h") << 8),
+                                   kind=QUERY_KIND)
+                })
+                self.assertEqual(pair_result["result"]["adjacent_count"], 777)
                 self.assertEqual(node.fabric.monitor()["queued"],0)
                 # An unrelated frame must never smuggle a corpus sidecar.
                 with self.assertRaises(portal.PortalRingError):
