@@ -1,0 +1,40 @@
+name: Inspect NaNROUTER short-story corpus format
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-shortstories-hybrid.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+      - name: Download verified release and inspect tar listing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p inspect
+          gh release download corpora-short-stories -R shemshallah/NaNROUTER --pattern short_stories.tar.zst --dir inspect
+          echo '6e516b11f8bf6d8bf2041fb12a6394ab7b61b5c659adc631566e6cfdcce5ed6d  inspect/short_stories.tar.zst' | sha256sum -c -
+          tar --zstd -tf inspect/short_stories.tar.zst > inspect/archive_listing.txt
+          head -100 inspect/archive_listing.txt
+          echo 'COUNT'; wc -l inspect/archive_listing.txt
+          echo 'FILE FORMAT EXCERPT'
+          python3 - <<'PY'
+          from pathlib import Path
+          from collections import Counter
+          p=Path('inspect/archive_listing.txt').read_text().splitlines()
+          print('suffix counts',Counter(Path(x).suffix for x in p).most_common(12))
+          print('sample',p[30:50])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shortstories-archive-listing
+          path: inspect/archive_listing.txt
+          retention-days: 7
