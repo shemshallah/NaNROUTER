@@ -1,0 +1,52 @@
+name: mth-hypertensor-simplicial-native
+
+on:
+  pull_request:
+    paths:
+      - 'mth/nan16/mth_hypertensor16_f32.nas'
+      - 'mth/nan16/mth_simplicial_motif3.nas'
+      - 'mth/nan16/mth_triangle_hodge3_f32.nas'
+      - 'mth/nan16/mth_poincare_pair2_f32.nas'
+      - 'mth/nan16/mth_simplicial_wavelet3_f32.nas'
+      - 'mth/tests/mth_hypertensor_simplicial_native_test.nas'
+      - '.github/workflows/mth-hypertensor-simplicial-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nan16-guest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout NaNROUTER
+        uses: actions/checkout@v4
+      - name: Checkout pinned NaN0S canonical toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build canonical NaN16 CLI
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble native guest fixture
+        run: |
+          mkdir -p build/mth
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_hypertensor_simplicial_native_test.nas > build/mth/hypertriad.nan
+      - name: Execute native NaN16 arithmetic and checks
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/hypertriad.nan --steps 15000000 --serial > build/mth/hypertriad.out 2> build/mth/hypertriad.err
+          cat build/mth/hypertriad.out
+          cat build/mth/hypertriad.err
+          grep -q '^MTH HYPERTENSOR SIMPLICIAL PASS' build/mth/hypertriad.out
+      - name: Attach diagnostic output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypertriad-native-failure
+          path: |
+            build/mth/hypertriad.out
+            build/mth/hypertriad.err
+          if-no-files-found: ignore
