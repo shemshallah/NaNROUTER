@@ -1,0 +1,38 @@
+{
+  "schema": "nanrouter.void255-active-head-math/1",
+  "physical_fixed_points": 256,
+  "canonical_pairs": 32640,
+  "active_math_head_indices": {
+    "first": 0,
+    "last": 254,
+    "count": 255
+  },
+  "reserved_zero_void_head_index": 255,
+  "void_incident_edge_flow": "signed_float_zero_only",
+  "void_allowed_in_simplicial_faces": false,
+  "root0_control_plane_policy": "preserve existing NANNET and BSR roles; mathematical eligibility does not grant any writer permission",
+  "core_model_checkpoint_modified": false,
+  "nannet_root_remapped": false,
+  "nannet_hardware_address_changed": false,
+  "overbootstrap_mc0_meta_enabled": false,
+  "corpus_inverse_training": {
+    "release": "corpora-sentences-0001",
+    "native_kernel": "mth/nan16/mth_inverse_dual_batch16_f32.nas",
+    "native_global_bridge": "mth_global_focus16_f32 -> mth_memory_condition16_f32",
+    "split_documents": {
+      "train": 12,
+      "dev": 4,
+      "test": 4
+    },
+    "directional_examples": {
+      "train": 3072,
+      "dev": 512,
+      "test": 512
+    },
+    "native_epochs": 2,
+    "test_hits_before": 41,
+    "test_hits_after": 116,
+    "run_id": 42947839695,
+    "test_class_accuracy_scope": "16-bin adjacent ASCII letter classes, not full word/token accuracy"
+  }
+}
