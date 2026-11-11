@@ -1,0 +1,31 @@
+name: Native NaN16 volume64 four-tier codec
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mth/nan16/mth_nan_volume_address64.nas'
+      - 'mth/tests/mth_nan_volume_address64_test.nas'
+      - '.github/workflows/native-nan-volume64.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exhaustive-typed-volume-identities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: main
+          path: nan0s
+      - name: Build canonical NaN16 interpreter
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Check all four tiers, all 256 shards, CRC and NaN head types
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_nan_volume_address64_test.nas > /tmp/nan-volume64.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/nan-volume64.nan --steps 12000000 --serial > /tmp/nan-volume64.log 2>&1
+          cat /tmp/nan-volume64.log
+          grep -q '^MTH NAN VOLUME64 ALL SHARDS PASS' /tmp/nan-volume64.log
