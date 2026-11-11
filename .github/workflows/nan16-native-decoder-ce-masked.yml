@@ -62,9 +62,9 @@ jobs:
           p.mkdir(parents=True,exist_ok=True)
           arr=["BF800000"]*28+["FF800000"]*228
           arr[4]="00000000"
-          line="4 "+" ".join(arr)+"\\n"
+          line="4 "+" ".join(arr)+"\n"
           for split in ("dev","test"):
-            (p/f"{split}.trace").write_text("FROZEN_DECODER_TRACE_V1 19 7 1\\n"+line)
+            (p/f"{split}.trace").write_text("FROZEN_DECODER_TRACE_V1 19 7 1\n"+line)
           build(p/"dev.trace",p/"test.trace",
                 Path("mth/tests/mth_r25_char_generated_test.nas"),
                 p/"r25_char_manifest.json",19,7,4,"r25-48m-char")
