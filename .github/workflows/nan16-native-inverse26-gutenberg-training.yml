@@ -1,0 +1,78 @@
+name: nan16-native-inverse26-gutenberg-training
+
+on:
+  push:
+    branches:
+      - mth-hypertensor-simplicial-native-20261110
+    paths:
+      - "mth/nan16/mth_inverse_dual_batch26_f32.nas"
+      - "scripts/build_native_inverse26_corpus_fixture.py"
+      - ".github/workflows/nan16-native-inverse26-gutenberg-training.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inverse26:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned canonical NaN0S VM
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build NaN16 VM and validate intake
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile scripts/build_native_inverse26_corpus_fixture.py
+      - name: Download and verify Gutenberg sentence corpus batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/inverse26/release build/inverse26/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER --pattern 'sentences-0001.*' --dir build/inverse26/release
+          (cd build/inverse26/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/inverse26/release/sentences-0001.tar.zst -C build/inverse26/books
+      - name: Produce versioned 26-letter disjoint document splits
+        run: |
+          set -euo pipefail
+          python3 scripts/build_native_inverse26_corpus_fixture.py \
+            --corpus-root build/inverse26/books \
+            --output mth/tests/mth_inverse26_corpus_generated_test.nas \
+            --manifest build/inverse26/manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_inverse26_corpus_generated_test.nas > build/inverse26/inverse26.nan
+      - name: Train inverse and forward directions using native NaN16 math
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/inverse26/inverse26.nan \
+            --steps 600000000 --serial \
+            > build/inverse26/training.out 2> build/inverse26/training.err
+          cat build/inverse26/training.out
+          cat build/inverse26/training.err
+          grep -q '^INV26_TEST_BEFORE_HITS_PERMIL ' build/inverse26/training.out
+          grep -q '^INV26_INVERSE_BEFORE_HITS_PERMIL ' build/inverse26/training.out
+          grep -q '^INV26_TEST_AFTER_HITS_PERMIL ' build/inverse26/training.out
+          grep -q '^INV26_INVERSE_AFTER_HITS_PERMIL ' build/inverse26/training.out
+          grep -q '^INV26_FORWARD_AFTER_HITS_PERMIL ' build/inverse26/training.out
+          grep -q '^MTH INVERSE26 GLOBAL HEAD BRIDGE PASS' build/inverse26/training.out
+          grep -q '^MTH INVERSE26 CORPUS TRAIN PASS' build/inverse26/training.out
+      - name: Save compact training evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-inverse26-gutenberg-results
+          path: |
+            build/inverse26/manifest.json
+            build/inverse26/training.out
+            build/inverse26/training.err
+          if-no-files-found: ignore
+          retention-days: 14
