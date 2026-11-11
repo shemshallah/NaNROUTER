@@ -297,9 +297,9 @@ mth_tm_test_single:
 
 ; Native U32 -> exact eight capital hex digit printer, no host formatters.
 mth_tm_test_hex32:
-  MOVI r3,28
+  MOVI r3,0
 mth_tm_test_hex_nibble:
-  SHR r2,r1,r3
+  SHR r2,r1,28
   MOVI r4,15
   BOOL.8 r2,r2,r4
   MOVI r4,10
@@ -311,9 +311,11 @@ mth_tm_test_hex_decimal:
   ADDI r2,r2,48
 mth_tm_test_hex_emit:
   PUTC r2
-  ADDI r3,r3,-4
-  CMP r3,r0
-  JMP[GE] @mth_tm_test_hex_nibble
+  SHL r1,r1,4               ; next high nibble; NaN16 shifts are immediate
+  ADDI r3,r3,1
+  MOVI r4,8
+  CMP r3,r4
+  JMP[LT] @mth_tm_test_hex_nibble
   RET
 
 mth_tm_test_fail:
