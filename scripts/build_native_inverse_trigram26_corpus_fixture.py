@@ -190,6 +190,10 @@ mth_inv_epoch:
   CALL @mth_inv_puts
   MOVI r1,@mth_inv_stats
   CALL @mth_inv_print_metrics
+  ; Later direction-specific scores replace mth_inv_stats. Save the full
+  ; held-out probability sum NOW, so totals are compared at equal sample counts.
+  LD r7,r0,@mth_inv_stats+1
+  ST r7,r0,@mth_inv_test_after
 
   ; Evaluate inverse-only and forward-only independently on disjoint
   ; held-out documents. Identical W used for both, neither is trained.
@@ -225,7 +229,7 @@ mth_inv_epoch:
   ; whether the inverse adapter learned more signal than zero-init, not
   ; whether 43M language perplexity improved.
   LD r10,r0,@mth_inv_test_before
-  LD r11,r0,@mth_inv_stats+1
+  LD r11,r0,@mth_inv_test_after
   FCMP r11,r10
   JMP[LE] @mth_inv_not_improved
   MOVI r1,@mth_inv_label_improved
@@ -460,6 +464,8 @@ mth_inv_workspace:
 mth_inv_stats:
 .word 0,0,0
 mth_inv_test_before:
+.word 0
+mth_inv_test_after:
 .word 0
 mth_inv_epoch_num:
 .word 0
