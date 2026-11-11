@@ -25,6 +25,8 @@ on:
       - 'mth/tests/mth_fiedler16_native_test.nas'
       - 'mth/nan16/mth_global_focus16_backward_f32.nas'
       - 'mth/tests/mth_global_focus16_backward_native_test.nas'
+      - 'mth/nan16/mth_global_hodge256_f32.nas'
+      - 'mth/tests/mth_global_hodge256_native_test.nas'
       - '.github/workflows/mth-hypertensor-simplicial-native.yml'
   workflow_dispatch:
 
@@ -127,6 +129,16 @@ jobs:
           cat build/mth/global-backward.out
           cat build/mth/global-backward.err
           grep -q '^MTH GLOBAL FOCUS BACKWARD PASS' build/mth/global-backward.out
+      - name: Assemble global canonical-pair Hodge incidence fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_global_hodge256_native_test.nas > build/mth/global-hodge.nan
+      - name: Execute 256-head B1/B2 Hodge in NaN16
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/global-hodge.nan --steps 15000000 --serial > build/mth/global-hodge.out 2> build/mth/global-hodge.err
+          cat build/mth/global-hodge.out
+          cat build/mth/global-hodge.err
+          grep -q '^MTH GLOBAL HODGE256 PASS' build/mth/global-hodge.out
       - name: Attach diagnostic output on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -149,4 +161,6 @@ jobs:
             build/mth/fiedler.err
             build/mth/global-backward.out
             build/mth/global-backward.err
+            build/mth/global-hodge.out
+            build/mth/global-hodge.err
           if-no-files-found: ignore
