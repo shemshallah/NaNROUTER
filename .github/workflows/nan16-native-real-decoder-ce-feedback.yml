@@ -1,0 +1,128 @@
+name: nan16-native-real-decoder-ce-feedback
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
+      - "scripts/build_native_decoder_ce_fixture.py"
+      - "tools/export_unified_decoder_nextbyte_logits.cpp"
+      - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
+      - "scripts/build_native_decoder_ce_fixture.py"
+      - "tools/export_unified_decoder_nextbyte_logits.cpp"
+      - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-decoder-native-meta-ce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned real unified HW0 decoder (NOT 43M hybrid)
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/nanlm-test
+          ref: 14edacd03be735610d26edd7643034b3b15cd727
+          path: nanlm-test
+      - name: Checkout pinned native NaN16 toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build frozen-decoder trace exporter and native NaN16
+        run: |
+          set -euo pipefail
+          mkdir -p build/decoder
+          make -s -C nanlm-test nanlm CXX=clang++
+          clang++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
+            -Inanlm-test/include tools/export_unified_decoder_nextbyte_logits.cpp \
+            -o build/decoder/export_frozen_logits
+          make -s -C nan0s/aarch64/android nan_cli
+          python3 -m py_compile scripts/build_native_decoder_ce_fixture.py
+      - name: Train REAL unified decoder once, then freeze its exact root
+        run: |
+          set -euo pipefail
+          nanlm-test/nanlm build/decoder/frozen-root.bin train \
+            nanlm-test/tests/fixtures/unified_quality_train.txt 1 0 \
+            > build/decoder/train.log
+          test "$(stat -c %s build/decoder/frozen-root.bin)" = 8388608
+          sha256sum build/decoder/frozen-root.bin > build/decoder/frozen-root.SHA256
+          nanlm-test/nanlm build/decoder/frozen-root.bin eval \
+            nanlm-test/tests/fixtures/unified_quality_dev.txt \
+            > build/decoder/decoder-dev.log
+          nanlm-test/nanlm build/decoder/frozen-root.bin eval \
+            nanlm-test/tests/fixtures/unified_quality_heldout.txt \
+            > build/decoder/decoder-test.log
+          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+      - name: Export CAUSAL decoder next-byte logits on disjoint dev and test
+        run: |
+          set -euo pipefail
+          build/decoder/export_frozen_logits build/decoder/frozen-root.bin \
+            nanlm-test/tests/fixtures/unified_quality_dev.txt 116 104 24 \
+            > build/decoder/dev-trace.txt
+          build/decoder/export_frozen_logits build/decoder/frozen-root.bin \
+            nanlm-test/tests/fixtures/unified_quality_heldout.txt 116 104 24 \
+            > build/decoder/test-trace.txt
+          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+          python3 scripts/build_native_decoder_ce_fixture.py \
+            --dev build/decoder/dev-trace.txt \
+            --test build/decoder/test-trace.txt \
+            --output mth/tests/mth_real_decoder_ce_generated_test.nas \
+            --manifest build/decoder/trace-manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_real_decoder_ce_generated_test.nas \
+            > build/decoder/real-decoder-meta.nan
+      - name: Perform ONLY native cross-entropy acceptance, then readonly test
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/decoder/real-decoder-meta.nan \
+            --steps 400000000 --serial \
+            > build/decoder/native-ce.out 2> build/decoder/native-ce.err
+          cat build/decoder/native-ce.out
+          cat build/decoder/native-ce.err
+          grep -q '^DCE_DEV_NAT_MILLI ' build/decoder/native-ce.out
+          grep -q '^DCE_TEST_NAT_MILLI ' build/decoder/native-ce.out
+          grep -qx 'MTH REAL DECODER CE FEEDBACK PASS' build/decoder/native-ce.out
+          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("build/decoder/native-ce.out").read_text().splitlines()
+          rows=[x for x in p if x.startswith("DCE_")]
+          assert len(rows)==2, rows
+          d,t=[tuple(map(int,x.split()[1:])) for x in rows]
+          assert len(d)==3 and len(t)==3
+          assert d[2] in (0,1)
+          print("REAL_DECODER_CE_DEV_TEST_META",json.dumps({
+            "dev_before_milli":d[0],"dev_after_milli":d[1],
+            "dev_admitted":bool(d[2]),"test_before_milli":t[0],
+            "test_after_milli":t[1],
+            "test_delta_milli":t[1]-t[0],
+            "model":"real HW0 unified decoder, NOT 43M hybrid",
+            "root_frozen":True,
+          },sort_keys=True))
+          PY
+      - name: Preserve root/prose hashes and NaN16 decoder-loss audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-unified-decoder-native-ce-feedback
+          path: |
+            build/decoder/train.log
+            build/decoder/decoder-dev.log
+            build/decoder/decoder-test.log
+            build/decoder/frozen-root.SHA256
+            build/decoder/trace-manifest.json
+            build/decoder/native-ce.out
+            build/decoder/native-ce.err
+          if-no-files-found: ignore
+          retention-days: 21
