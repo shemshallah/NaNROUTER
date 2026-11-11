@@ -124,6 +124,30 @@ mth_ww_main:
   MOVI r1,@mth_ww_test_out
   CALL @mth_ww_print_stats
 
+  ; Native dev-only acceptance journal. The six words are contiguous:
+  ; [proposer,h,a,b,mirror_offset,candidate_weight].
+  LD r11,r0,@mth_ww_dev_out+2
+  CMP r11,r13
+  JMP[NE] @mth_ww_no_journal
+  MOVI r1,@mth_ww_journal_label
+  CALL @mth_ww_puts
+  MOVI r6,0
+mth_ww_journal_words:
+  MOVI r2,@mth_ww_proposal
+  ADD r2,r2,r6
+  LD r1,r2,0
+  CALL @mth_ww_hex32
+  ADDI r6,r6,1
+  MOVI r12,6
+  CMP r6,r12
+  JMP[EQ] @mth_ww_journal_end
+  MOVI r1,32
+  PUTC r1
+  JMP @mth_ww_journal_words
+mth_ww_journal_end:
+  MOVI r1,10
+  PUTC r1
+mth_ww_no_journal:
   MOVI r1,@mth_ww_pass_label
   CALL @mth_ww_puts
   HALT
@@ -184,6 +208,29 @@ mth_ww_num_print:
   JMP[GT] @mth_ww_num_print
   RET
 
+; Native exact eight-hex-digit U32 transport printer.
+mth_ww_hex32:
+  MOVI r3,0
+mth_ww_hex_nibble:
+  SHR r2,r1,28
+  MOVI r4,15
+  BOOL.8 r2,r2,r4
+  MOVI r4,10
+  CMP r2,r4
+  JMP[LT] @mth_ww_hex_digit
+  ADDI r2,r2,55
+  JMP @mth_ww_hex_emit
+mth_ww_hex_digit:
+  ADDI r2,r2,48
+mth_ww_hex_emit:
+  PUTC r2
+  SHL r1,r1,4
+  ADDI r3,r3,1
+  MOVI r4,8
+  CMP r3,r4
+  JMP[LT] @mth_ww_hex_nibble
+  RET
+
 mth_ww_puts:
   MOVI r4,255
 mth_ww_puts_word:
@@ -229,6 +276,8 @@ mth_ww_dev_label:
 .str "WHOLEWORD_DEV_NLL_MILLI "
 mth_ww_test_label:
 .str "WHOLEWORD_TEST_NLL_MILLI "
+mth_ww_journal_label:
+.str "MTH_WHOLEWORD_ACCEPTED_HEX "
 mth_ww_pass_label:
 .str "MTH ORIGINAL 48M WHOLEWORD NLL FEEDBACK PASS\n"
 mth_ww_bad_label:
