@@ -16,6 +16,12 @@ mth_tm_test_build:
   MOVI r9,@mth_tm_test_permissions
   ADD r9,r9,r8
   ST r13,r9,0
+  ; Initial meta-credit is 1.0 for every eligible proposer.
+  MOVI r9,@mth_tm_test_credit
+  ADD r9,r9,r8
+  MOVI r11,0
+  MOVHI r11,0x3F80
+  ST r11,r9,0
   MOVI r10,6
   MUL r10,r10,r8
   MOVI r9,@mth_tm_test_proposals
@@ -41,6 +47,7 @@ mth_tm_test_build:
   MOVI r4,@mth_tm_test_tiles
   MOVI r5,7
   MOVI r6,@mth_tm_test_stats
+  MOVI r7,@mth_tm_test_credit
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   CMP r1,r13
@@ -101,6 +108,7 @@ mth_tm_test_build:
   MOVI r4,@mth_tm_test_tiles
   MOVI r5,8
   MOVI r6,@mth_tm_test_stats
+  MOVI r7,@mth_tm_test_credit
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   CMP r1,r0
@@ -124,6 +132,17 @@ mth_tm_test_build:
   MOVHI r10,0x3F7F
   CMP r9,r10
   JMP[NE] @mth_tm_test_fail
+
+  ; Rejection teaches meta to downweight head 0 on the next proposal.
+  LD r9,r0,@mth_tm_test_credit
+  MOVI r10,0
+  MOVHI r10,0x3F60           ; 7/8 = .875 credit
+  CMP r9,r10
+  JMP[NE] @mth_tm_test_fail
+  ; Restore full credit to isolate the next exact-math acceptance check.
+  MOVI r10,0
+  MOVHI r10,0x3F80
+  ST r10,r0,@mth_tm_test_credit
 
   ; A small beneficial delta reaches the independent feedback target.
   MOVI r11,0
@@ -166,6 +185,25 @@ mth_tm_test_build:
   CMP r9,r10
   JMP[NE] @mth_tm_test_fail
 
+  ; Learned meta-credit modifies subsequent update magnitude without ever
+  ; removing candidate access (minimum scalar multiplier 1/4).
+  MOVI r11,0
+  MOVHI r11,0x3F00           ; credit 0.5
+  ST r11,r0,@mth_tm_test_credit
+  CALL @mth_tm_test_single      ; another +.5 request to reverse lane
+  CMP r1,r13
+  JMP[NE] @mth_tm_test_fail
+  LD r9,r0,@mth_tm_test_tiles+5
+  MOVI r10,0
+  MOVHI r10,0x3F50           ; .5 + (.5 * .625) = .8125
+  CMP r9,r10
+  JMP[NE] @mth_tm_test_fail
+  LD r9,r0,@mth_tm_test_credit
+  MOVI r10,0
+  MOVHI r10,0x3F10           ; EMA .5 -> .5625
+  CMP r9,r10
+  JMP[NE] @mth_tm_test_fail
+
   ; Invalid semantic head coordinate 255 must never be repaired by aliasing.
   MOVI r11,255
   ST r11,r0,@mth_tm_test_proposals+1
@@ -187,6 +225,7 @@ mth_tm_test_single:
   MOVI r4,@mth_tm_test_tiles
   MOVI r5,7
   MOVI r6,@mth_tm_test_stats
+  MOVI r7,@mth_tm_test_credit
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   LD r15,r0,@mth_tm_test_single_link
@@ -229,6 +268,9 @@ mth_tm_test_pass:
 .str "MTH TRIHEAD META FEEDBACK PASS\n"
 mth_tm_test_bad:
 .str "MTH TRIHEAD META FEEDBACK FAIL\n"
+.org 40960
+mth_tm_test_credit:
+.word 0
 .org 42000
 mth_tm_test_proposals:
 .word 0
