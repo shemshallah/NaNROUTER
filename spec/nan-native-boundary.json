@@ -235,7 +235,9 @@
     "mth/nan16/hermes_nannet_route.nas": "HERMES NANNET route guest, not an MTH mathematical kernel",
     "mth/nan16/hermes_native_runtime.nas": "HERMES native runtime guest, not an MTH mathematical kernel",
     "mth/nan16/mth_graph_claim_batch.nas": "read-only candidate graph multi-query guest with separate native CI; not an authorized numerical MTH kernel",
-    "mth/nan16/mth_graph_path_witness.nas": "read-only unregistered multihop candidate witness verifier with independent real NaN16 guest fixture/CI; not an authorized numerical MTH kernel"
+    "mth/nan16/mth_graph_path_witness.nas": "read-only unregistered multihop candidate witness verifier with independent real NaN16 guest fixture/CI; not an authorized numerical MTH kernel",
+    "mth/nan16/mth_hw5_gutenberg_slot_guard.nas": "native hardware-node admission and address-role codec with independent exhaustive NaN16 fixture/CI; not an authorized numerical MTH kernel or lease issuer",
+    "mth/nan16/mth_nan_volume_address64.nas": "native +sNaN logical-volume identity/CRC codec with independent exhaustive NaN16 fixture/CI; not an authorized numerical MTH kernel or registry signer"
   },
   "runner_only_fixtures": {
     "mth/tests/mth_native_vector_addsub_dispatch_test.nas": "end-to-end dispatch fixture over already-registered vector kernels"
