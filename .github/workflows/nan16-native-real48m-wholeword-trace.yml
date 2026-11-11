@@ -7,6 +7,7 @@ on:
       - "tests/fixtures/r28_frozen48m_wholeword_pairs.b64"
       - "scripts/build_native_wholeword_nll_fixture.py"
       - "scripts/apply_native_wholeword_journal_transport.py"
+      - "tests/test_native_wholeword_transport.py"
       - "scripts/init_full128_mirror_tensor_storage.py"
       - "mth/nan16/mth_trihead_wholeword_nll_feedback_f32.nas"
       - ".github/workflows/nan16-native-real48m-wholeword-trace.yml"
@@ -103,6 +104,9 @@ jobs:
           print("NATIVE_REAL48M_FULLWORD_LOSS",json.dumps(result,sort_keys=True))
           Path("build/real-48m/audit.json").write_text(json.dumps(result,indent=2)+"\n")
           PY
+      - name: Test strict native original-48M acceptance parser
+        run: |
+          python3 -m unittest discover -s tests -p 'test_native_wholeword_transport.py' -v
       - name: Native-approved original 48M candidate -> 128 MiB mirror bank1 ONLY
         run: |
           set -euo pipefail
