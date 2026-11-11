@@ -41,26 +41,51 @@ A hot or cold motif is a property of three valid observed pair states, not of a 
 
 The included NaN16 guest fixture checks exact stream tensor entries and failure atomicity, 2/3 hot and cold/unknown classes, triangle Hodge identities, hyperbolic zero and nonzero distance affinities with unit-boundary rejection, and one-scale diffusion/wavelet outputs. The GitHub Actions workflow builds the pinned canonical NaN0S CLI, runs the assembled guest, and requires a unique PASS marker. This is a *unit-level mathematical package*, not an end-to-end trained model or measured Transformer parity.
 
-## Verification update — 2026-11-10 (native PR #119)
+## Verification update — November 10, 2026 (native PR #119)
 
-All six current fixtures were **assembled and executed** with pinned canonical NaN0S toolchain in [GitHub Actions run #42943352111](https://github.com/shemshallah/NaNROUTER/actions/runs/42943352111):
+All eight current fixtures assembled and executed in the pinned canonical NaN0S toolchain, with real guest arithmetic, in [GitHub Actions run #42944705145](https://github.com/shemshallah/NaNROUTER/actions/runs/42944705145).
 
-| Fixture | NaN16 guest steps | Result |
+| NaN16 fixture | Guest steps | Outcome |
 |---|---:|---|
-| Native hypertensor, motif, local Hodge, Poincaré and simplex wavelet | 109701 | PASS |
-| Masked global focus plus symmetric 16-node graph wavelet | 46103 | PASS |
-| Directed hyperbolic sheaf plus supplied-basis graph Fourier | 28925 | PASS |
-| 16-triad hot/cold global counts plus spectral-cut readout | 2886 | PASS |
-| Connected Poincaré → sheaf → hypertensor → hot motif/Hodge → focal softmax | 136226 | PASS |
-| Reverse-mode gradient from 4096 tensor components into all three source vectors | 302523 | PASS |
-| **Total** | **626364** | **6/6 PASS** |
+| Native streamed 16³ hypertensor, hot/cold motifs, Hodge, Poincaré and simplex wavelet | 109,701 | PASS |
+| 16-candidate global masked attention and symmetric 16-node graph wavelet | 46,103 | PASS |
+| Directional Poincaré-weighted sheaf restrictions, supplied-basis graph Fourier | 28,925 | PASS |
+| Global hot/cold 16-triad reducer, spectral-cut readout | 2,886 | PASS |
+| Connected Poincaré → sheaf → rank-3 tensor → motif/Hodge → global masked softmax → next-step head residual | 137,293 | PASS |
+| Rank-3 tensor reverse-mode backward into A/B/C streams | 302,523 | PASS |
+| Native diffusion-derived approximate Fiedler mode and two-cluster spectral partition | 211,773 | PASS |
+| Native masked global softmax backward into candidate scores and value features | 13,710 | PASS |
+| **Total** | **852,914** | **8/8 PASS** |
 
-No new Python or C++ mathematical opcode handler is involved. The current routines operate in the NaN16 guest with caller-owned scratch and make no modifications to the canonical 8 MiB root. The tensor is a full rank-3 16×16×16 outer product; its reverse-mode gradient is now implemented, but there is not yet a native trainable global softmax backward pass or a measured decrease in held-out text loss from this architecture.
+### The 14 added NaN16 kernels
 
-Additional kernels introduced after the initial stage: `mth_global_focus16_f32`, `mth_graph_wavelet16_f32`, `mth_hyperbolic_sheaf16_f32`, `mth_graph_fourier16_f32`, `mth_global_motif_reduce16`, `mth_spectral_cut16_f32`, and `mth_hypertensor16_backward_f32`. Together with the initial five these make **12 new native NaN16 kernels**.
+1. `mth_hypertensor16_f32.nas`: full rank-3 streamed tensor construction.
+2. `mth_simplicial_motif3.nas`: tri-state complete/2-of-3 hot/cold masks.
+3. `mth_triangle_hodge3_f32.nas`: oriented local gradient/curl/divergence.
+4. `mth_poincare_pair2_f32.nas`: 2D disk cosh-distance and reciprocal affinity.
+5. `mth_simplicial_wavelet3_f32.nas`: K3 heat-step spectral detail.
+6. `mth_global_focus16_f32.nas`: native masked softmax over 16 triads.
+7. `mth_graph_wavelet16_f32.nas`: weighted 16-vertex graph heat-scale/detail.
+8. `mth_hyperbolic_sheaf16_f32.nas`: independently directed sheaf restriction discrepancy, gated by hyperbolic affinity.
+9. `mth_graph_fourier16_f32.nas`: analysis/synthesis using caller-provided graph Laplacian eigenbasis.
+10. `mth_global_motif_reduce16.nas`: 16-triad hot/cold/global counts, unknowns distinct.
+11. `mth_spectral_cut16_f32.nas`: binary partition from caller-selected spectral mode.
+12. `mth_hypertensor16_backward_f32.nas`: gradients into all streamed inputs from rank-3 upstream gradient.
+13. `mth_fiedler16_f32.nas`: approximate Fiedler mode extracted **in the guest** from a real weighted graph using centered normalized diffusion (not a complete eigensolver or certified convergence).
+14. `mth_global_focus16_backward_f32.nas`: gradients through 16-candidate softmax and values; canonical masked score zeros.
 
-Spectral semantics: `mth_graph_fourier16_f32` projects using a caller-provided graph eigenbasis (eigenbasis generation/validation is not done in that kernel); `mth_spectral_cut16_f32` partitions from a supplied Fiedler mode (not an eigen-solver). The 3-node and 16-node heat-detail operators are single-scale wavelets, not yet a multiscale spectral bank. The Poincaré pair kernel computes `cosh(d)` and its inverse as an affinity; it is not an exact geodesic or tangent log map. The directed sheaf operator is linear restriction-map discrepancy, not Riemannian parallel transport. The local Hodge triangle has no harmonic 1-form; full-root Hodge remains a distinct existing kernel.
+### What this does and does not prove
 
-The genuine meta layer is **Overbootstrap MC0**, which is deliberately deferred. The native global attention readout is not labeled a trained meta layer.
+- Verified: native `.nas` mathematical execution, basic numeric oracles, reject atomicity, local gradient/curl and hotspot operations, graph spectral scale, graph-based spectral cluster on a planted connected two-community graph, gradient availability at the **rank-3 tensor and global softmax seams**, and a **forward** global-to-next-head residual connection.
+- Not yet verified: multi-chart NANNET deployment, canonical 8 MiB root writes/epoch transactions for these new kernels, an entire compiled trained head→trihead→global model, backpropagation through the Poincaré embedding and sheaf maps or the complete temporal attention loop, a global graph/simplicial multiscale Fourier/Hodge decomposition, a learned hyperbolic embedding of all 256 heads, and measurable language loss gain over the frozen 43M hybrid.
+- The 16×16 relationship graph, directed 16×16 restriction maps and Laplacian eigenbasis are separate **mathematical operator descriptors**, NOT a matrix made from streamed vectors. The streamed head input is transformed directly into a 16×16×16 hypertensor; it does not become a vector-covariance matrix first.
+- The Poincaré kernel returns a monotone reciprocal cosh-distance affinity, not exact geodesic coordinates or Riemannian parallel transport. The sheaf restriction operator is not a full geodesic sheet connection. The 3- and 16-node heat detail are single-scale rather than multiscale wavelet banks. Graph Fourier analysis accepts a supplied eigenbasis; the separate native Fiedler estimator computes an approximate *single* mode for a weighted graph.
+- Real **META** is reserved to **Overbootstrap MC0** for a later release. The global attention feedback into the next head is not an implementation of MC0 meta or a claim of consciousness/understanding.
 
-Before claiming an end-to-end language-model improvement: build a native graph Laplacian eigenbasis for the actual learned graph (rather than injecting one), train global masked Q/K/V and the hypertensor projection with a causal next-token objective, connect to the frozen 43M decoder through a rollback-gated residual, and evaluate with independent document-level held-out bits per byte and exact-word metrics against a matched small Transformer. No improvement is asserted until those measurements exist.
+### Remaining integration priorities
+
+1. Produce versioned canonical 256-head/tensor/simplicial mapping and enforce native admitted root write permissions and temporal snapshots, with true directed lanes and explicit unknown evidence.
+2. Implement genuine sparse B1/B2 incidence operators, global Hodge divergence/curl/cycle separation, and multiscale graph/simplicial spectral transforms on the learned graph.
+3. Train Poincaré embeddings and hyperedge-to-hypertensor sheet connection, including hyperbolic gradient/parallel transport if tests show benefit.
+4. Join tensor and global-attention backward with native Q/K/V, sheaf, spectral and head projections; plug resulting gated residual into the **existing** 43M model without retraining a separate model. Verify gradients from next-word cross-entropy and exact zero-gate identity regression.
+5. Benchmark an entirely new document-held-out split against an equally trained small causal Transformer with comparable byte-level evaluation (bits per byte, exact word/OOV, context recall and generation). No transformer superiority claim until shown.
