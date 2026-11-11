@@ -21,6 +21,8 @@ on:
       - 'mth/tests/mth_connected_hypertensor_focus_native_test.nas'
       - 'mth/nan16/mth_hypertensor16_backward_f32.nas'
       - 'mth/tests/mth_hypertensor_backward_native_test.nas'
+      - 'mth/nan16/mth_fiedler16_f32.nas'
+      - 'mth/tests/mth_fiedler16_native_test.nas'
       - '.github/workflows/mth-hypertensor-simplicial-native.yml'
   workflow_dispatch:
 
@@ -103,6 +105,16 @@ jobs:
           cat build/mth/tensor-backward.out
           cat build/mth/tensor-backward.err
           grep -q '^MTH HYPERTENSOR BACKWARD PASS' build/mth/tensor-backward.out
+      - name: Assemble native approximate Fiedler fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_fiedler16_native_test.nas > build/mth/fiedler.nan
+      - name: Execute graph Fiedler and spectral clustering in NaN16
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/fiedler.nan --steps 15000000 --serial > build/mth/fiedler.out 2> build/mth/fiedler.err
+          cat build/mth/fiedler.out
+          cat build/mth/fiedler.err
+          grep -q '^MTH FIEDLER16 NATIVE PASS' build/mth/fiedler.out
       - name: Attach diagnostic output on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -121,4 +133,6 @@ jobs:
             build/mth/connected-focus.err
             build/mth/tensor-backward.out
             build/mth/tensor-backward.err
+            build/mth/fiedler.out
+            build/mth/fiedler.err
           if-no-files-found: ignore
