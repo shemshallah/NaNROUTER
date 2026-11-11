@@ -1,0 +1,78 @@
+name: nan16-native-inverse26-matched-pair-control
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - ".github/workflows/nan16-native-inverse26-matched-control.yml"
+      - "mth/nan16/mth_inverse_dual_batch26_f32.nas"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matched-pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned canonical NaN0S VM
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Compile native VM and intake syntax
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile scripts/build_native_inverse_trigram26_corpus_fixture.py
+      - name: Fetch and verify identical public-domain sentence source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/pair-control/release build/pair-control/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER --pattern 'sentences-0001.*' --dir build/pair-control/release
+          (cd build/pair-control/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/pair-control/release/sentences-0001.tar.zst -C build/pair-control/books
+      - name: Generate exact matched-position pair baseline guest image
+        run: |
+          set -euo pipefail
+          python3 scripts/build_native_inverse_trigram26_corpus_fixture.py \
+            --mode pair_control \
+            --corpus-root build/pair-control/books \
+            --output mth/tests/mth_inverse26_matched_pair_generated_test.nas \
+            --manifest build/pair-control/manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_inverse26_matched_pair_generated_test.nas > build/pair-control/pair.nan
+      - name: Train same native forward/inverse objective with only one neighbor
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/pair-control/pair.nan \
+            --steps 1200000000 --serial \
+            > build/pair-control/training.out 2> build/pair-control/training.err
+          cat build/pair-control/training.out
+          cat build/pair-control/training.err
+          grep -q '^INVPAIR_TEST_BEFORE_HITS_PERMIL ' build/pair-control/training.out
+          grep -q '^INVPAIR_INVERSE_BEFORE_HITS_PERMIL ' build/pair-control/training.out
+          grep -q '^INVPAIR_TEST_AFTER_HITS_PERMIL ' build/pair-control/training.out
+          grep -q '^INVPAIR_INVERSE_AFTER_HITS_PERMIL ' build/pair-control/training.out
+          grep -q '^INVPAIR_FORWARD_AFTER_HITS_PERMIL ' build/pair-control/training.out
+          grep -q '^MTH INVERSE PAIR26 GLOBAL HEAD BRIDGE PASS' build/pair-control/training.out
+          grep -q '^MTH INVERSE PAIR26 CORPUS TRAIN PASS' build/pair-control/training.out
+      - name: Archive paired-control native metrics and disjoint manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-inverse26-matched-pair-control
+          path: |
+            build/pair-control/manifest.json
+            build/pair-control/training.out
+            build/pair-control/training.err
+          if-no-files-found: ignore
+          retention-days: 14
