@@ -1,5 +1,8 @@
 # Head → Trihead → Global → Meta: causal hierarchical attention v1
 
+> **Void-head participation revision (2026-11-10):** Semantic/math fixed-point index **255** is reserved for zero/void and must not be trained, used as a nonzero incidence edge, or included in an admitted triangle face. The other **255 mathematical positions 0–254** may integrate with the same hypertensor/simplicial/global layer **subject to existing authorization**. The older NANNET root/control roles of head 0 and BSR are separate and are not reassigned. The native negative tests and Gutenberg inverse training in [implementation PR #119](https://github.com/shemshallah/NaNROUTER/pull/119) are recorded in `docs/MTH_INVERSE_CORPUS_VOID255_NATIVE_V1.md`.
+
+
 > **Architecture revision (2026-11-10, native implementation PR #119):** The approved data path now begins **head streaming vectors → 16x16x16 hypertensor → hot/cold simplicial triheads → Hodge, graph wavelets/Fourier and hyperbolic sheaf geometry → global masked attention**. The historical four-level sequence described below predates this change. **True META is reserved for Overbootstrap MC0 and is explicitly deferred**; per-token attention feedback is a global-layer operation, not an MC0 implementation. The discrete C(256,2) physical root and head-role reservations remain unchanged. See [the working native code](https://github.com/shemshallah/NaNROUTER/pull/119).
 
 
