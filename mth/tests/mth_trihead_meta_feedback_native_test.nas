@@ -237,6 +237,13 @@ mth_tm_test_build:
   CMP r1,r0
   JMP[NE] @mth_tm_test_fail
 
+  ; Restore the legal coordinate after the prior void rejection; only
+  ; the last ACCEPTED native journal entry is eligible for replay.
+  ST r13,r0,@mth_tm_test_proposals+1
+  LD r9,r0,@mth_tm_test_journal+2
+  CMP r9,r13
+  JMP[NE] @mth_tm_test_fail
+
   ; Emit one *native-authored* verified admitted journal entry for the
   ; external storage transport CI. All numbers emitted are raw U32 hex,
   ; not host-computed model values. The preceding test verified acceptance.
