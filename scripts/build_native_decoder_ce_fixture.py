@@ -42,9 +42,10 @@ def parse(path: Path, h: int, a: int) -> list[tuple[int, tuple[int, ...]]]:
             raise ValueError("Logits must be exact native float32 bit patterns")
         bits = tuple(int(w, 16) for w in fields[1:])
         if bits[255] != 0xFF800000 or any(
-            (w & 0x7F800000) == 0x7F800000 for w in bits[:255]
-        ):
-            raise ValueError("Decoder trace has invalid logits or nonvoid class255")
+            (w & 0x7F800000) == 0x7F800000 and w != 0xFF800000
+            for w in bits[:255]
+        ) or bits[label] == 0xFF800000:
+            raise ValueError("Decoder trace has invalid logits, masked target or nonvoid class255")
         rows.append((label, bits))
     return rows
 
@@ -63,11 +64,21 @@ def emit_rows(label: str, rows: list[tuple[int, tuple[int, ...]]]) -> str:
 
 
 def build(dev: Path, test: Path, output: Path, manifest: Path,
-          h: int, a: int, b: int) -> None:
+          h: int, a: int, b: int, model_kind: str = "hw0-byte") -> None:
     if any(v > 254 or v < 0 for v in (h, a, b)):
         raise ValueError("Semantic head 255 is not a tensor coordinate")
+    if model_kind not in ("hw0-byte", "r25-48m-char"):
+        raise ValueError("Unknown frozen decoder type")
     dev_rows = parse(dev, h, a)
     test_rows = parse(test, h, a)
+    if model_kind == "r25-48m-char":
+        if h > 25 or a > 25 or b > 27:
+            raise ValueError("Hybrid character tensor must use alphabet indices, not ASCII")
+        for target, bits in (*dev_rows, *test_rows):
+            if target > 27 or any(w != 0xFF800000 for w in bits[28:]):
+                raise ValueError("Hybrid 28-way spelling trace must pad all unused logits with -inf")
+    decoder_name = ("real HW0 unified byte" if model_kind == "hw0-byte"
+                    else "original frozen 48M R25 contextual spelling")
     offset, cell, lane = physical_offset(0, h, a, b)
     # Deterministic signed backtracking grid selected before any results.
     # Every trial is scored by native NaN16 against the CURRENT tensor tile.
@@ -102,7 +113,7 @@ def build(dev: Path, test: Path, output: Path, manifest: Path,
   ST r12,r0,@mth_dce_accepted_moves
 """)
     dev_steps = "\n".join(steps)
-    code = f"""; Frozen HW0 decoder logits -> real NaN16 next-byte CE meta gate.
+    code = f"""; Frozen {decoder_name} decoder logits -> NaN16 CE meta gate.
 ; Dev is the only training/admission signal. Test is read-only.
 ; Source traces are read-only, causal; the active 8 MiB model is frozen.
 .org 0
@@ -380,7 +391,10 @@ mth_dce_workspace:
     output.write_text(code, encoding="utf8")
     evidence = {
         "schema": "nanrouter.real-frozen-decoder-ce-feedback/1",
-        "model": "shemshallah/nanlm-test UnifiedWaveLanguage (NOT 43M hybrid)",
+        "model": decoder_name,
+        "model_kind": model_kind,
+        "hybrid_spelling_48m_connected": model_kind == "r25-48m-char",
+        "hybrid_full_word_perplexity_connected": False,
         "geometry": "full 256^3 mirrored directional tensor, 128 MiB dual bank",
         "tensor_coordinate": [h,a,b],
         "mirror_canonical_cell": cell,
@@ -389,7 +403,8 @@ mth_dce_workspace:
         "proposer": 1,
         "candidate_delta_grid_dev_only": list(signed_grid),
         "admission_split": "six signed native dev-only moves; test read-only",
-        "loss": "native NaN16 full 256-way next-byte cross entropy",
+        "loss": ("native NaN16 255-way byte CE" if model_kind == "hw0-byte"
+                 else "native NaN16 masked 28-way contextual character CE"),
         "frozen_trace_sha256": {
             "dev": hashlib.sha256(dev.read_bytes()).hexdigest(),
             "test": hashlib.sha256(test.read_bytes()).hexdigest(),
@@ -414,9 +429,12 @@ def main() -> None:
     p.add_argument("--manifest", type=Path, required=True)
     p.add_argument("--h", type=int, default=116)  # 't'
     p.add_argument("--a", type=int, default=104)  # 'h'
-    p.add_argument("--b", type=int, default=101)  # 'e'
+    p.add_argument("--b", type=int, default=101)  # 'e' as raw HW0 byte
+    p.add_argument("--model-kind", choices=("hw0-byte","r25-48m-char"),
+                   default="hw0-byte")
     args = p.parse_args()
-    build(args.dev,args.test,args.output,args.manifest,args.h,args.a,args.b)
+    build(args.dev,args.test,args.output,args.manifest,
+          args.h,args.a,args.b,args.model_kind)
 
 
 if __name__ == "__main__":
