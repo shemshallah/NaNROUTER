@@ -92,30 +92,8 @@ jobs:
           grep -q '^INV3_DEV_AFTER_HITS_PERMIL ' build/resume/training.out
           grep -q '^INV3_TEST_AFTER_HITS_PERMIL ' build/resume/training.out
           grep -q '^INV3_INVERSE_AFTER_HITS_PERMIL ' build/resume/training.out
-          # Compare full 768-example sums, NOT 384-example directional sums.
-          grep -q '^INV3_TEST_PROBABILITY_IMPROVED          grep -q '^MTH INVERSE TRIGRAM26 GLOBAL HEAD BRIDGE PASS$' build/resume/training.out
-          grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS$' build/resume/training.out
-      - name: Make dev-only admission decision and SHA-verify resumed tensor
-        run: |
-          set -euo pipefail
-          python3 scripts/export_native_inverse_trigram26_resumed.py \
-            --log build/resume/training.out \
-            --manifest build/resume/new_split.json \
-            --output-dir build/resume/candidate
-          (cd build/resume/candidate && sha256sum -c SHA256SUMS)
-      - name: Preserve the parent and candidate with exact provenance
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nan16-inverse-trigram26-resume-fresh-gutenberg
-          path: |
-            build/resume/new_split.json
-            build/resume/training.out
-            build/resume/training.err
-            build/resume/candidate/
-          if-no-files-found: ignore
-          retention-days: 21
- build/resume/training.out
+          # Same full-test counts: never compare a half-length directional run.
+          grep -q '^INV3_TEST_PROBABILITY_IMPROVED$' build/resume/training.out
           grep -q '^MTH INVERSE TRIGRAM26 GLOBAL HEAD BRIDGE PASS$' build/resume/training.out
           grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS$' build/resume/training.out
       - name: Make dev-only admission decision and SHA-verify resumed tensor
