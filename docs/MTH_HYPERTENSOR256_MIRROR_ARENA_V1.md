@@ -1,10 +1,10 @@
 # 256³ hypertensor over the canonical palindromic mirror topology (v1)
 
-Status: **native 128 MiB dual-bank address map, full logical external file
-provisioning, and recurrent all-trihead candidate feedback are implemented and
-CI-verified**. The persistent NaN16-to-external-arena writer, transactional
-promotion, checkpoint-loading into head recurrence, and full-language-model
-training are **not yet wired**.
+Status: **full 128 MiB address mapping, external storage, recurrent
+255-head meta-feedback, and CI-only transport of the guest-approved value
+into the persistent candidate bank are verified**. The production
+authenticated controller, atomic promotion, integration into the deployed
+head recurrence, and full-language-model training are **not yet wired**.
 
 References:
 - Native guest: `mth/nan16/mth_hypertensor256_mirror_arena_map.nas`
@@ -190,9 +190,26 @@ CI evidence:
 - [All 255 proposers + meta-credit learning native pass](https://github.com/shemshallah/NaNROUTER/actions/runs/42957115646)
 - [Both full 64 MiB banks, native map, physical file provisioning](https://github.com/shemshallah/NaNROUTER/actions/runs/42956642489)
 
-**Current trust boundary:** the test kernel modifies *guest-owned shadow
-candidate tiles*. It does not yet apply approved sparse deltas to the
-persistent 128 MiB file, and it does not promote candidate bank 1 to
-active bank 0. Those operations require a versioned native journal,
-authoritative root admission and atomic checkpoint promotion, before
-end-to-end persistent self-modification can be claimed.
+**Current trust boundary (updated):** the native guest now emits a
+versioned-width six-word exact hexadecimal journal record containing
+proposer, tensor coordinates, canonical mirror offset and accepted f32
+word. In pinned/trusted CI, the transport-only script
+`scripts/apply_native_trihead_journal_transport.py` verifies that the
+coordinates map to that exact mirror offset and transports the guest-approved
+float32 bit pattern to the candidate half of an actual 128 MiB tensor file.
+The live active half stays unchanged. The updated tensor file's SHA-256 and
+candidate generation are verified after replay.
+
+This is a **real end-to-end guest-decision -> persistent external candidate
+byte-write pilot**. The replay driver performs no learning computation.
+
+The trust model is still **CI-only**: mere unsigned journal text is not
+production authorization. Authoritative NANNET/BSR root admission, an
+authenticated journal replay channel, atomic checkpoint promotion/rollback,
+external-arena integration inside the deployed NaN0S, and real held-out
+language-model feedback are required before calling it production-ready
+full-tensor self-modification. The 8 MiB root and 43M frozen decoder are
+unchanged.
+
+Native+transport CI:
+- [Guest-approved candidate replay against actual 128 MiB backing](https://github.com/shemshallah/NaNROUTER/actions/runs/42957959608)
