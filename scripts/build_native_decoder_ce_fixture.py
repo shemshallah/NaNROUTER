@@ -69,9 +69,39 @@ def build(dev: Path, test: Path, output: Path, manifest: Path,
     dev_rows = parse(dev, h, a)
     test_rows = parse(test, h, a)
     offset, cell, lane = physical_offset(0, h, a, b)
-    # Fixed candidate proposal (+1/2) is selected before dev or test scoring,
-    # never tuned using the held-out test targets.
-    # A genuine but untrained base decoder has logits imported independently.
+    # Deterministic signed backtracking grid selected before any results.
+    # Every trial is scored by native NaN16 against the CURRENT tensor tile.
+    # Only development labels contribute to the candidate and meta-credit.
+    # The final test trace is entered ONCE, in read-only mode.
+    import struct
+    signed_grid = (0.5, -0.25, 0.125, -0.0625, 0.03125, -0.015625)
+    steps = []
+    for step, delta in enumerate(signed_grid):
+        raw = struct.unpack("<I", struct.pack("<f", delta))[0]
+        steps.append(f"""
+  ; Development-only feedback move {step}: {delta:+g}f
+  MOVI r11,0x{raw & 65535:04X}
+  MOVHI r11,0x{raw >> 16:04X}
+  ST r11,r0,@mth_dce_proposal+4
+  MOVI r1,@mth_dce_proposal
+  MOVI r2,@mth_dce_permission
+  MOVI r3,@mth_dce_credit
+  MOVI r4,@mth_dce_tile
+  MOVI r5,@mth_dce_dev_records
+  MOVI r6,{len(dev_rows)}
+  MOVI r7,@mth_dce_dev_stats
+  MOVI r8,@mth_dce_workspace
+  MOVI r9,7
+  MOVI r10,1
+  CALL @mth_trihead_decoder_ce_feedback_f32
+  CMP r1,r13
+  JMP[NE] @mth_dce_fail
+  LD r11,r0,@mth_dce_dev_stats+2
+  LD r12,r0,@mth_dce_accepted_moves
+  ADD r12,r12,r11
+  ST r12,r0,@mth_dce_accepted_moves
+""")
+    dev_steps = "\\n".join(steps)
     code = f"""; Frozen HW0 decoder logits -> real NaN16 next-byte CE meta gate.
 ; Dev is the only training/admission signal. Test is read-only.
 ; Source traces are read-only, causal; the active 8 MiB model is frozen.
@@ -87,7 +117,11 @@ mth_dce_main:
   ; authorize proposer head 1 (head 0 remains route/control).
   ST r13,r0,@mth_dce_permission+1
 
-  ; Real development CE controls candidate acceptance.
+  ; Each proposer remains eligible for feedback updates to ANY mirror
+  ; coordinate, with one trusted local tile. Only the DEV split trains.
+{dev_steps}
+  ; Final read-only DEV audit: measure original frozen CE against the
+  ; development-selected candidate after all six signed trials.
   MOVI r1,@mth_dce_proposal
   MOVI r2,@mth_dce_permission
   MOVI r3,@mth_dce_credit
@@ -97,7 +131,7 @@ mth_dce_main:
   MOVI r7,@mth_dce_dev_stats
   MOVI r8,@mth_dce_workspace
   MOVI r9,7
-  MOVI r10,1
+  MOVI r10,0
   CALL @mth_trihead_decoder_ce_feedback_f32
   CMP r1,r13
   JMP[NE] @mth_dce_fail
@@ -139,6 +173,12 @@ mth_dce_main:
   CALL @mth_dce_puts
   MOVI r1,@mth_dce_test_stats
   CALL @mth_dce_print_metrics
+  MOVI r1,@mth_dce_moves_label
+  CALL @mth_dce_puts
+  LD r1,r0,@mth_dce_accepted_moves
+  CALL @mth_dce_print_uint
+  MOVI r1,10
+  PUTC r1
 
   MOVI r1,@mth_dce_pass
   CALL @mth_dce_puts
@@ -242,6 +282,8 @@ mth_dce_dev_weight:
 .word 0
 mth_dce_dev_credit:
 .word 0
+mth_dce_accepted_moves:
+.word 0
 mth_dce_pr_link:
 .word 0
 mth_dce_pr_ptr:
@@ -252,6 +294,8 @@ mth_dce_dev_label:
 .str "DCE_DEV_NAT_MILLI "
 mth_dce_test_label:
 .str "DCE_TEST_NAT_MILLI "
+mth_dce_moves_label:
+.str "DCE_DEV_ACCEPTED_MOVES "
 mth_dce_pass:
 .str "MTH REAL DECODER CE FEEDBACK PASS\\n"
 mth_dce_bad:
@@ -282,8 +326,8 @@ mth_dce_workspace:
         "mirror_direction": lane,
         "mirror_relative_offset": offset,
         "proposer": 1,
-        "candidate_delta": 0.5,
-        "admission_split": "dev only; test read-only",
+        "candidate_delta_grid_dev_only": list(signed_grid),
+        "admission_split": "six signed native dev-only moves; test read-only",
         "loss": "native NaN16 full 256-way next-byte cross entropy",
         "frozen_trace_sha256": {
             "dev": hashlib.sha256(dev.read_bytes()).hexdigest(),
