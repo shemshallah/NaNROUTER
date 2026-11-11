@@ -2,7 +2,7 @@
 """Decode a checkpoint emitted by the native NaN16 inverse trainer.
 
 This script DOES NOT train a model, compute softmax/gradients or modify weights.
-It validates and byte-copies the exact 26x26x26x26 float32 parameter bit patterns
+It validates and byte-copies the exact 26x26x26 float32 parameter bit patterns
 already learned and printed by the NaN16 guest over its serial output.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ def main() -> None:
         raise ValueError("Expected exactly one native checkpoint frame")
     begin = lines.index("INV3_CHECKPOINT_BEGIN")
     end = lines.index("INV3_CHECKPOINT_END")
-    if end - begin != 677:
+    if end - begin != 17577:
         raise ValueError(f"Expected 17576 native f32 words, got {end-begin-1}")
     if "MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS" not in lines:
         raise ValueError("Guest did not pass all native training/bridge checks")
