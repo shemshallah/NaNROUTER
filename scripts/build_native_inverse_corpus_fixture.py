@@ -103,6 +103,7 @@ def emit_fixture(groups: dict[str, list[tuple[int,int,int]]]) -> str:
 .org 0
 JMP @mth_inv_main
 .include "../nan16/mth_inverse_dual_batch16_f32.nas"
+.include "../nan16/mth_memory_condition16_f32.nas"
 
 mth_inv_main:
   MOVI r0,0
@@ -194,6 +195,70 @@ mth_inv_void_check:
   LD r10,r0,@mth_inv_void255
   CMP r10,r0
   JMP[NE] @mth_inv_fail
+  ; Bridge trained shared relationship weights into the real native
+  ; global masked-softmax readout, then into a next-step head residual.
+  ; Forward scores are row W[0,:]; inverse scores are W[:,0].
+  ; This is a read-only bridge from an ephemeral corpus-trained operator,
+  ; not a root write or a 43M checkpoint update.
+  MOVI r1,@mth_inv_weights
+  MOVI r2,0xFFFF
+  MOVI r3,@mth_inv_weights
+  MOVI r4,@mth_inv_focus_out
+  MOVI r5,@mth_inv_focus_scratch
+  CALL @mth_global_focus16_f32
+  CMP r1,r13
+  JMP[NE] @mth_inv_fail
+  MOVI r7,0
+mth_inv_column:
+  SHL r8,r7,4
+  MOVI r9,@mth_inv_weights
+  ADD r9,r9,r8
+  LD r10,r9,0
+  MOVI r9,@mth_inv_reverse_scores
+  ADD r9,r9,r7
+  ST r10,r9,0
+  ADDI r7,r7,1
+  MOVI r8,16
+  CMP r7,r8
+  JMP[LT] @mth_inv_column
+  MOVI r1,@mth_inv_reverse_scores
+  MOVI r2,0xFFFF
+  MOVI r3,@mth_inv_weights
+  MOVI r4,@mth_inv_focus_out
+  MOVI r5,@mth_inv_focus_scratch
+  CALL @mth_global_focus16_f32
+  CMP r1,r13
+  JMP[NE] @mth_inv_fail
+
+  MOVI r10,0
+  MOVHI r10,0x3F00        ; bounded next-step head gate = 1/2
+  MOVI r7,0
+mth_inv_gate_fill:
+  MOVI r11,@mth_inv_gate
+  ADD r11,r11,r7
+  ST r10,r11,0
+  ADDI r7,r7,1
+  MOVI r11,16
+  CMP r7,r11
+  JMP[LT] @mth_inv_gate_fill
+  MOVI r1,@mth_inv_head
+  MOVI r2,@mth_inv_focus_out
+  MOVI r3,@mth_inv_gate
+  MOVI r4,@mth_inv_next_head
+  MOVI r5,@mth_inv_head_scratch
+  CALL @mth_memory_condition16_f32
+  CMP r1,r13
+  JMP[NE] @mth_inv_fail
+  LD r10,r0,@mth_inv_focus_out
+  MOVI r11,0
+  MOVHI r11,0x3F00
+  FMUL r10,r10,r11
+  LD r12,r0,@mth_inv_next_head
+  CMP r10,r12
+  JMP[NE] @mth_inv_fail
+  MOVI r1,@mth_inv_label_bridge
+  CALL @mth_inv_puts
+
   MOVI r1,@mth_inv_label_pass
   CALL @mth_inv_puts
   HALT
@@ -277,6 +342,8 @@ mth_inv_label_improved:
 .str "INV_TEST_PROBABILITY_IMPROVED\\n"
 mth_inv_label_unimproved:
 .str "INV_TEST_PROBABILITY_NOT_IMPROVED\\n"
+mth_inv_label_bridge:
+.str "MTH INVERSE GLOBAL HEAD BRIDGE PASS\\n"
 mth_inv_label_pass:
 .str "MTH INVERSE CORPUS TRAIN PASS\\n"
 mth_inv_label_fail:
@@ -302,6 +369,27 @@ mth_inv_print_stats_ptr:
 mth_inv_digits:
 .word 0,0,0,0,0,0,0,0,0,0
 mth_inv_void255:
+.word 0
+.org 9300
+mth_inv_reverse_scores:
+.word 0
+.org 9400
+mth_inv_focus_out:
+.word 0
+.org 9450
+mth_inv_head:
+.word 0
+.org 9500
+mth_inv_gate:
+.word 0
+.org 9550
+mth_inv_next_head:
+.word 0
+.org 9600
+mth_inv_head_scratch:
+.word 0
+.org 10000
+mth_inv_focus_scratch:
 .word 0
 
 .org {ORG_TRAIN}
