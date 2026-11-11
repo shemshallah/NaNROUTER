@@ -101,7 +101,7 @@ def build(dev: Path, test: Path, output: Path, manifest: Path,
   ADD r12,r12,r11
   ST r12,r0,@mth_dce_accepted_moves
 """)
-    dev_steps = "\\n".join(steps)
+    dev_steps = "\n".join(steps)
     code = f"""; Frozen HW0 decoder logits -> real NaN16 next-byte CE meta gate.
 ; Dev is the only training/admission signal. Test is read-only.
 ; Source traces are read-only, causal; the active 8 MiB model is frozen.
