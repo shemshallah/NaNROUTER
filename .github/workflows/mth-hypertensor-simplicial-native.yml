@@ -23,6 +23,8 @@ on:
       - 'mth/tests/mth_hypertensor_backward_native_test.nas'
       - 'mth/nan16/mth_fiedler16_f32.nas'
       - 'mth/tests/mth_fiedler16_native_test.nas'
+      - 'mth/nan16/mth_global_focus16_backward_f32.nas'
+      - 'mth/tests/mth_global_focus16_backward_native_test.nas'
       - '.github/workflows/mth-hypertensor-simplicial-native.yml'
   workflow_dispatch:
 
@@ -115,6 +117,16 @@ jobs:
           cat build/mth/fiedler.out
           cat build/mth/fiedler.err
           grep -q '^MTH FIEDLER16 NATIVE PASS' build/mth/fiedler.out
+      - name: Assemble masked global attention backward fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_global_focus16_backward_native_test.nas > build/mth/global-backward.nan
+      - name: Execute native global attention backward gradients
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/global-backward.nan --steps 15000000 --serial > build/mth/global-backward.out 2> build/mth/global-backward.err
+          cat build/mth/global-backward.out
+          cat build/mth/global-backward.err
+          grep -q '^MTH GLOBAL FOCUS BACKWARD PASS' build/mth/global-backward.out
       - name: Attach diagnostic output on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -135,4 +147,6 @@ jobs:
             build/mth/tensor-backward.err
             build/mth/fiedler.out
             build/mth/fiedler.err
+            build/mth/global-backward.out
+            build/mth/global-backward.err
           if-no-files-found: ignore
