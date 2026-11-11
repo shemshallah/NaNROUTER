@@ -9,6 +9,10 @@
 ; The source trace builder/decoder must attest that context binding.
 ; The guest tests old vs candidate CE over the exact SAME rows.
 ;
+; Repeated dev proposals compare CURRENT candidate to CURRENT+delta; test
+; compares FROZEN base to selected candidate and never commits. All these
+; score comparisons are exact paired examples scored in native NaN16.
+;
 ; Any authorized proposer 0..254 may request any (h,a,b) coordinate.
 ; Neither proposer nor an external host decides admission: the guest
 ; accepts only if aggregate dev loss decreases by >1e-4 nats; test mode
@@ -212,35 +216,17 @@ mth_dce_preflight_next:
   ST r11,r8,266            ; after sum
 
 mth_dce_record:
+  ; Construct the frozen decoder's logits on an isolated scratch vector.
+  ; During development we must compare against CURRENT candidate state,
+  ; not silently re-score each new proposal against a zero-weight tensor.
+  ; Read-only test mode compares frozen base against the final candidate.
   LD r9,r8,264
   MOVI r11,257
   MUL r11,r9,r11
   LD r12,r8,260
   ADD r12,r12,r11
   LD r14,r12,256
-  ST r14,r8,268            ; teacher label
-  ; CE of ACTUAL frozen decoder logit vector.
-  ADD r1,r12,r0            ; logits (read-only)
-  ADD r2,r14,r0            ; next-byte target
-  ADDI r3,r8,269           ; baseline CE result
-  ADDI r4,r8,271           ; CE scratch
-  CALL @mth_lm_cross_entropy256_f32
-  CMP r1,r13
-  JMP[NE] @mth_dce_invalid_after_call
-  ; CE preserves its output pointer in r2 by its current native ABI.
-  ; Recover our frame after nested-call scratch clobbers.
-  ADDI r8,r2,-269
-  LD r9,r8,269
-  LD r11,r8,265
-  FADD r11,r11,r9
-  ST r11,r8,265
-
-  ; Copy original 256 logits; only the single proposed class changes.
-  LD r9,r8,264
-  MOVI r11,257
-  MUL r11,r9,r11
-  LD r12,r8,260
-  ADD r12,r12,r11
+  ST r14,r8,268            ; exact same causal next-byte target
   MOVI r10,0
 mth_dce_copy:
   ADD r14,r12,r10
@@ -251,17 +237,49 @@ mth_dce_copy:
   MOVI r11,256
   CMP r10,r11
   JMP[LT] @mth_dce_copy
-  LD r10,r8,279            ; predicted class b, not 255
+
+  ; dev baseline = frozen logits + existing candidate tile residual.
+  ; test baseline = frozen logits; read-only candidate = frozen + tile.
+  LD r10,r8,277
+  CMP r10,r0
+  JMP[EQ] @mth_dce_before_ce
+  LD r10,r8,259
+  LD r14,r10,1
+  LD r10,r8,279
   ADD r11,r8,r10
   LD r12,r11,0
-  LD r14,r8,267
   FADD r12,r12,r14
   ST r12,r11,0
 
-  ADD r1,r8,r0             ; candidate logits
-  LD r2,r8,268            ; *same* true next-byte label
-  ADDI r3,r8,270          ; candidate CE output
-  ADDI r4,r8,271          ; subkernel scratch
+mth_dce_before_ce:
+  ADD r1,r8,r0             ; baseline logit scratch
+  LD r2,r8,268            ; next-byte target
+  ADDI r3,r8,269           ; old CE result
+  ADDI r4,r8,271           ; CE subkernel scratch
+  CALL @mth_lm_cross_entropy256_f32
+  CMP r1,r13
+  JMP[NE] @mth_dce_invalid_after_call
+  ; CE returns its out pointer in r2. Recover the outer workspace r8.
+  ADDI r8,r2,-269
+  LD r9,r8,269
+  LD r11,r8,265
+  FADD r11,r11,r9
+  ST r11,r8,265
+
+  ; Only a single mirrored tensor coordinate's CLASS b is perturbed.
+  ; The native NaN16 tensor-mapper verified that coordinate already.
+  LD r10,r8,279
+  ADD r11,r8,r10
+  LD r12,r11,0
+  LD r14,r8,267             ; dev: proposed effective delta
+                             ; test: currently selected tile weight
+  FADD r12,r12,r14
+  ST r12,r11,0
+
+  ADD r1,r8,r0              ; candidate logits
+  LD r2,r8,268             ; *same* true next-byte label
+  ADDI r3,r8,270           ; candidate CE
+  ADDI r4,r8,271           ; CE scratch
   CALL @mth_lm_cross_entropy256_f32
   CMP r1,r13
   JMP[NE] @mth_dce_invalid_after_call
