@@ -471,6 +471,7 @@ mth_inv_test_forward:
 
 def main() -> None:
     p = argparse.ArgumentParser()
+    p.add_argument("--mode", choices=["trigram", "pair_control"], default="trigram")
     p.add_argument("--corpus-root", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--manifest", type=Path, required=True)
@@ -520,6 +521,32 @@ def main() -> None:
     groups["test_inverse"] = [record for record in groups["test"] if record[3] == 1]
     groups["test_forward"] = [record for record in groups["test"] if record[3] == 0]
     text = emit_fixture(groups)
+    if args.mode == "pair_control":
+        # The pair control sees exactly the SAME sampled triplets and targets:
+        # forward P(c|b), inverse P(a|b). No separate corpus selection.
+        text = text.replace(
+            "mth_inverse_trigram26_batch_f32", "mth_inverse_dual_batch26_f32")
+        text = text.replace("MTH INVERSE TRIGRAM26", "MTH INVERSE PAIR26")
+        text = text.replace("INV3_", "INVPAIR_")
+        text = text.replace(
+            "  MOVI r8,676\\n  MUL r8,r7,r8\\n  MOVI r9,@mth_inv_weights",
+            "  MOVI r8,26\\n  MUL r8,r7,r8\\n  MOVI r9,@mth_inv_weights",
+        )
+        def as_pair(m: re.Match[str]) -> str:
+            a,b,c,d = map(int, m.groups())
+            return f".word {b},{c},0" if d == 0 else f".word {a},{b},1"
+        text, count = re.subn(
+            r"^\\.word (\\d+),(\\d+),(\\d+),([01])$",
+            as_pair, text, flags=re.MULTILINE,
+        )
+        if count != sum(len(g) for g in groups.values()):
+            raise AssertionError(f"Paired-control record count mismatch: {count}")
+        manifest["objective"] = "matched forward P(c|b) and inverse P(a|b), 26x26"
+        manifest["parameter_shape"] = [26, 26]
+        manifest.pop("third_order_tensor_shape", None)
+    else:
+        manifest["parameter_shape"] = [26, 26, 26]
+    manifest["control_mode"] = args.mode
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(text, encoding="utf-8")
     manifest["fixture_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
