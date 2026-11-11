@@ -36,13 +36,18 @@
 ;        independent_feedback_target_f32, epoch_u32]
 ;   r5 = required epoch
 ;   r7 = meta_credit[256] f32, native trust state initialized in [0,1]
+;   r11 = optional journal[count][5] guest word buffer, or 0 (disabled)
+;       each [proposer, relative_mirror_offset, accepted_flag,
+;             candidate_value_f32_bits, updated_credit_f32_bits]
+;       For replay, the caller MUST bind this to a trusted native run,
+;       not accept arbitrary unsigned external log text as authority.
 ;   r6 = stats[4], outputs:
 ;       [accepted, feedback_rejected, improvement_sum_f32, attempted]
-;   r12 = scratch[12] caller-owned zero/overwritable
+;   r12 = scratch[13] caller-owned zero/overwritable
 ;   r13 = 1
 ; output r1=1,r9=0 on success; r1=0,r9=1 on invalid batch.
 ; Full preflight before the first tile or stats write. Invalid input leaves
-; tiles, meta-credit state AND stats unchanged. No aliasing between pointers is permitted.
+; tiles, meta-credit state, stats AND optional journal unchanged. No aliasing between pointers is permitted.
 ;
 ; Per-proposal |delta|<=1; old weight and trusted target finite, |x|<=4
 ; at preflight. Only a strict squared-error reduction is accepted. This
@@ -63,6 +68,7 @@ mth_trihead_meta_feedback_f32:
   ST r5,r12,4
   ST r6,r12,5
   ST r15,r12,6
+  ST r11,r12,12           ; decision journal destination (optional)
   ST r7,r12,11            ; recurrent meta-credit vector
 
   CMP r2,r0
@@ -217,6 +223,7 @@ mth_tm_feedback:
   LD r11,r12,8
   ADDI r11,r11,1
   ST r11,r12,8
+  MOVI r4,1                ; accepted integer flag
   MOVI r6,0
   MOVHI r6,0x3F80          ; accepted feedback signal = 1.0f
   JMP @mth_tm_credit
@@ -224,6 +231,7 @@ mth_tm_rejected:
   LD r11,r12,9
   ADDI r11,r11,1
   ST r11,r12,9
+  MOVI r4,0                ; rejected integer flag
   MOVI r6,0                ; rejected feedback signal = 0.0f
 mth_tm_credit:
   ; Native EMA feedback: credit[h] += (signal-credit[h])/8.
@@ -238,6 +246,24 @@ mth_tm_credit:
   FMUL r6,r6,r14
   FADD r11,r11,r6
   ST r11,r7,0
+
+  ; Emit exact native decision journal; transport may apply ACCEPTED values
+  ; to a matching external candidate bank after authenticated admission.
+  ; This output is not a root write and never targets the active bank.
+  LD r14,r12,12
+  CMP r14,r0
+  JMP[EQ] @mth_tm_next
+  MOVI r1,5
+  MUL r1,r8,r1
+  ADD r14,r14,r1
+  LD r1,r9,0
+  ST r1,r14,0             ; proposer ID
+  LD r1,r10,0
+  ST r1,r14,1             ; relative 64 MiB mirror offset
+  ST r4,r14,2             ; native admission bit
+  LD r1,r10,1
+  ST r1,r14,3             ; exact resulting candidate weight f32 bits
+  ST r11,r14,4            ; learned meta-credit bits
 mth_tm_next:
   ADDI r8,r8,1
   LD r11,r12,1
