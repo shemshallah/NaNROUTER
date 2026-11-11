@@ -7,6 +7,10 @@ on:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "scripts/build_native_decoder_ce_fixture.py"
       - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/apply_native_decoder_ce_journal_transport.py"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_native_decoder_ce_journal_transport.py"
       - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
       - "tools/export_unified_decoder_nextbyte_logits.cpp"
       - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
@@ -15,6 +19,10 @@ on:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "scripts/build_native_decoder_ce_fixture.py"
       - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/apply_native_decoder_ce_journal_transport.py"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_native_decoder_ce_journal_transport.py"
       - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
       - "tools/export_unified_decoder_nextbyte_logits.cpp"
       - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
@@ -135,6 +143,39 @@ jobs:
             "root_frozen":True,
           },sort_keys=True))
           PY
+      - name: Replay ONLY native dev-admitted weight to real 128 MiB candidate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_native_decoder_ce_journal_transport.py' -v
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/decoder/full128.f32le \
+            --manifest build/decoder/full128.json
+          python3 scripts/apply_native_decoder_ce_journal_transport.py \
+            --arena build/decoder/full128.f32le \
+            --arena-manifest build/decoder/full128.json \
+            --native-log build/decoder/native-ce.out \
+            --decoder-root build/decoder/frozen-root.bin \
+            --books-manifest build/decoder/disjoint-books.json \
+            > build/decoder/native-ce-128m-replay.json
+          cat build/decoder/native-ce-128m-replay.json
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/decoder/full128.f32le \
+            --manifest build/decoder/full128.json --verify
+          sha256sum -c build/decoder/frozen-root.SHA256
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("build/decoder/native-ce-128m-replay.json").read_text())
+          assert r["native_candidate_write"]=="transported"
+          assert r["target"]==[116,104,101]
+          assert r["head"]==1
+          assert r["dev_books"]==6 and r["test_books"]==6
+          assert not r["active_bank_written"]
+          assert not r["root_8MiB_written"]
+          assert not r["test_used_for_admission"]
+          assert not r["promotion_implemented"]
+          print("MTH REAL DECODER CE FULL128 CANDIDATE TRANSPORT PASS")
+          PY
       - name: Preserve root/prose hashes and NaN16 decoder-loss audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,6 +190,8 @@ jobs:
             build/decoder/disjoint-books.json
             build/decoder/dev-trace.txt
             build/decoder/test-trace.txt
+            build/decoder/full128.json
+            build/decoder/native-ce-128m-replay.json
             build/decoder/native-ce.out
             build/decoder/native-ce.err
           if-no-files-found: ignore
