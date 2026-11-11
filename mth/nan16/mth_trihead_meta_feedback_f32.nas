@@ -6,6 +6,13 @@
 ; proposes, or becomes a trainable coordinate. Head0 remains governed by
 ; the existing NANNET/BSR authority, represented here by permissions[0].
 ;
+; Every authorized proposer has native meta_credit[proposer] in [0,1].
+; Candidate delta is scaled by 0.25 + 0.75*credit, NEVER to zero.
+; After each decision credit <- credit + 0.125*(accepted - credit).
+; This is a recurrent feedback loop: even unsuccessful proposers retain
+; candidate access, but future proposals are downweighted; successful
+; proposers recover influence. The meta objective remains trusted feedback.
+;
 ; An input proposal is NOT authority. The trusted meta slot owns its target
 ; and current weight; neither target nor prior weight is supplied by a head.
 ; Meta evaluates old loss=(weight-target)^2 and candidate loss
@@ -28,13 +35,14 @@
 ;       [mirror_arena_byte_offset, candidate_weight_f32,
 ;        independent_feedback_target_f32, epoch_u32]
 ;   r5 = required epoch
+;   r7 = meta_credit[256] f32, native trust state initialized in [0,1]
 ;   r6 = stats[4], outputs:
 ;       [accepted, feedback_rejected, improvement_sum_f32, attempted]
 ;   r12 = scratch[12] caller-owned zero/overwritable
 ;   r13 = 1
 ; output r1=1,r9=0 on success; r1=0,r9=1 on invalid batch.
 ; Full preflight before the first tile or stats write. Invalid input leaves
-; tiles AND stats unchanged. No aliasing between pointers is permitted.
+; tiles, meta-credit state AND stats unchanged. No aliasing between pointers is permitted.
 ;
 ; Per-proposal |delta|<=1; old weight and trusted target finite, |x|<=4
 ; at preflight. Only a strict squared-error reduction is accepted. This
@@ -55,6 +63,7 @@ mth_trihead_meta_feedback_f32:
   ST r5,r12,4
   ST r6,r12,5
   ST r15,r12,6
+  ST r7,r12,11            ; recurrent meta-credit vector
 
   CMP r2,r0
   JMP[LE] @mth_tm_invalid
@@ -100,6 +109,23 @@ mth_tm_preflight:
   LD r14,r12,4
   CMP r11,r14                 ; epoch freshness
   JMP[NE] @mth_tm_invalid
+
+  ; Meta state may not be spoofed by proposer. It is trusted native memory.
+  LD r11,r9,0                 ; proposer
+  LD r14,r12,11               ; credit table
+  ADD r14,r14,r11
+  LD r11,r14,0
+  MOVI r14,0
+  MOVHI r14,0x7F80
+  BOOL.8 r1,r11,r14
+  CMP r1,r14
+  JMP[EQ] @mth_tm_invalid
+  FCMP r11,r0
+  JMP[LT] @mth_tm_invalid
+  MOVI r14,0
+  MOVHI r14,0x3F80
+  FCMP r11,r14
+  JMP[GT] @mth_tm_invalid
 
   ; Validate delta finite and bounded in absolute value by one.
   LD r11,r9,4
@@ -162,6 +188,18 @@ mth_tm_feedback:
   LD r2,r10,1               ; current candidate weight
   LD r3,r10,2               ; trusted feedback target
   LD r14,r9,4               ; proposed delta
+  ; Influence is learned but nonzero: effective_delta = d*(.25+.75*credit).
+  LD r11,r9,0
+  LD r7,r12,11
+  ADD r7,r7,r11
+  LD r11,r7,0
+  MOVI r7,0
+  MOVHI r7,0x3F40          ; 0.75f
+  FMUL r11,r11,r7
+  MOVI r7,0
+  MOVHI r7,0x3E80          ; 0.25f
+  FADD r11,r11,r7
+  FMUL r14,r14,r11
   FSUB r4,r2,r3
   FMUL r4,r4,r4            ; loss_before
   FADD r5,r2,r14           ; candidate weight
@@ -179,11 +217,27 @@ mth_tm_feedback:
   LD r11,r12,8
   ADDI r11,r11,1
   ST r11,r12,8
-  JMP @mth_tm_next
+  MOVI r6,0
+  MOVHI r6,0x3F80          ; accepted feedback signal = 1.0f
+  JMP @mth_tm_credit
 mth_tm_rejected:
   LD r11,r12,9
   ADDI r11,r11,1
   ST r11,r12,9
+  MOVI r6,0                ; rejected feedback signal = 0.0f
+mth_tm_credit:
+  ; Native EMA feedback: credit[h] += (signal-credit[h])/8.
+  ; No credit value can block proposal submission: min influence is 0.25.
+  LD r11,r9,0
+  LD r7,r12,11
+  ADD r7,r7,r11
+  LD r11,r7,0
+  FSUB r6,r6,r11
+  MOVI r14,0
+  MOVHI r14,0x3E00          ; 0.125f
+  FMUL r6,r6,r14
+  FADD r11,r11,r6
+  ST r11,r7,0
 mth_tm_next:
   ADDI r8,r8,1
   LD r11,r12,1
