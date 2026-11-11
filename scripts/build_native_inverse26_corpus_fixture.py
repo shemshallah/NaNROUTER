@@ -115,7 +115,7 @@ mth_inv_main:
   MOVI r4,0
   MOVI r5,@mth_inv_workspace
   MOVI r6,@mth_inv_stats
-  CALL @mth_inverse_dual_batch16_f32
+  CALL @mth_inverse_dual_batch26_f32
   CMP r1,r13
   JMP[NE] @mth_inv_fail
   LD r7,r0,@mth_inv_stats+1
@@ -152,7 +152,7 @@ mth_inv_epoch:
   MOVHI r4,0x3DCC            ; 0.1f SGD
   MOVI r5,@mth_inv_workspace
   MOVI r6,@mth_inv_stats
-  CALL @mth_inverse_dual_batch16_f32
+  CALL @mth_inverse_dual_batch26_f32
   CMP r1,r13
   JMP[NE] @mth_inv_fail
   LD r14,r0,@mth_inv_epoch_num
@@ -168,7 +168,7 @@ mth_inv_epoch:
   MOVI r4,0
   MOVI r5,@mth_inv_workspace
   MOVI r6,@mth_inv_stats
-  CALL @mth_inverse_dual_batch16_f32
+  CALL @mth_inverse_dual_batch26_f32
   CMP r1,r13
   JMP[NE] @mth_inv_fail
   MOVI r1,@mth_inv_label_dev
@@ -183,7 +183,7 @@ mth_inv_epoch:
   MOVI r4,0
   MOVI r5,@mth_inv_workspace
   MOVI r6,@mth_inv_stats
-  CALL @mth_inverse_dual_batch16_f32
+  CALL @mth_inverse_dual_batch26_f32
   CMP r1,r13
   JMP[NE] @mth_inv_fail
   MOVI r1,@mth_inv_label_after
@@ -236,7 +236,7 @@ mth_inv_not_improved:
   CALL @mth_inv_puts
 mth_inv_void_check:
   ; Semantic head index 255 remains an untouched exact zero/void register,
-  ; separate from 16x16 feature relationship weights.
+  ; separate from 26x26 feature relationship weights.
   LD r10,r0,@mth_inv_void255
   CMP r10,r0
   JMP[NE] @mth_inv_fail
