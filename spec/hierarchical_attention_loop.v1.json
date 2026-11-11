@@ -1,0 +1,93 @@
+{
+  "schema": "nanlm.hierarchical_attention.v1",
+  "status": "superseded_design_contract",
+  "claims": {
+    "trained": false,
+    "transformer_parity_verified": false,
+    "geometry_benefit_verified": false,
+    "overbootstrap_mc0_implemented": false,
+    "native_pr_119_fixtures_verified": true
+  },
+  "physical": {
+    "chart_bytes": 8388608,
+    "heads": 256,
+    "canonical_pairs": 32640,
+    "write_policy": "native_guest_only"
+  },
+  "roles": {
+    "nanlmind_existing": {
+      "triad_count": 85,
+      "triad_members": 3,
+      "field_head": 255
+    },
+    "nanrouter_reserved_local_heads": [
+      0,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "cross_repo_map": "versioned_required"
+  },
+  "feature": {
+    "head_kernel_width": 16,
+    "optional_packed_width": 128,
+    "history_slots_max": 16,
+    "proposed_residual_init_gate": 0.01
+  },
+  "stages": [
+    {
+      "id": "head",
+      "read": "committed_streamed_vectors",
+      "write": "ephemeral_head_features",
+      "causal": true
+    },
+    {
+      "id": "hypertensor",
+      "read": "streamed_vectors_from_three_heads",
+      "write": "rank_three_ephemeral_tensor",
+      "causal": true
+    },
+    {
+      "id": "simplicial",
+      "read": "observed_hot_cold_unknown_triangle_edges",
+      "write": "trihead_motif_channels",
+      "causal": true
+    },
+    {
+      "id": "global_spectral_geometry",
+      "read": "motifs_and_oriented_flows",
+      "write": "hodge_gradient_curl_diffusion_fourier_sheaf_poincare_features",
+      "causal": true
+    },
+    {
+      "id": "global_focus",
+      "read": "current_scored_valid_triad_candidates",
+      "write": "masked_softmax_global_context",
+      "causal": true
+    },
+    {
+      "id": "return",
+      "read": "current_gated_global_context",
+      "write": "next_token_head_policy",
+      "causal": true
+    }
+  ],
+  "acceptance": [
+    "identity_gate",
+    "future_mask",
+    "same_epoch_snapshot",
+    "native_atomic_write",
+    "backward_gradient",
+    "geometry_ablation",
+    "matched_transformer_baseline",
+    "new_locked_test_docs"
+  ],
+  "superseded_by": "docs/MTH_HYPERTENSOR_SIMPLICIAL_NATIVE_V1.md in pull request 119",
+  "meta_policy": {
+    "owner": "Overbootstrap MC0",
+    "deferred": true,
+    "native_kernel_in_this_design": false
+  }
+}
