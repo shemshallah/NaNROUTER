@@ -1,0 +1,78 @@
+name: nan16-native-inverse-gutenberg-training
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_inverse_dual_batch16_f32.nas"
+      - "mth/nan16/mth_global_hodge256_f32.nas"
+      - "scripts/build_native_inverse_corpus_fixture.py"
+      - ".github/workflows/nan16-native-inverse-gutenberg-training.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-corpus-train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout native NaNROUTER branch
+        uses: actions/checkout@v4
+      - name: Checkout canonical NaN0S toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build native NaN16 VM and install archive reader
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile scripts/build_native_inverse_corpus_fixture.py
+      - name: Fetch published public-domain sentence batch and verify SHA256
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/native-inverse/release build/native-inverse/corpus
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER --pattern 'sentences-0001.*' --dir build/native-inverse/release
+          (cd build/native-inverse/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/native-inverse/release/sentences-0001.tar.zst -C build/native-inverse/corpus
+      - name: Build document-disjoint forward and inverse native training fixture
+        run: |
+          set -euo pipefail
+          mkdir -p build/native-inverse mth/tests
+          python3 scripts/build_native_inverse_corpus_fixture.py \
+            --corpus-root build/native-inverse/corpus \
+            --output mth/tests/mth_inverse_corpus_generated_test.nas \
+            --manifest build/native-inverse/manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_inverse_corpus_generated_test.nas > build/native-inverse/native-corpus.nan
+      - name: Train and evaluate inverse adapter entirely in NaN16 VM
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/native-inverse/native-corpus.nan \
+            --steps 250000000 --serial \
+            > build/native-inverse/training.out 2> build/native-inverse/training.err
+          cat build/native-inverse/training.out
+          cat build/native-inverse/training.err
+          grep -q '^MTH INVERSE CORPUS TRAIN PASS' build/native-inverse/training.out
+          grep -q '^INV_TEST_BEFORE_HITS_PERMIL ' build/native-inverse/training.out
+          grep -q '^INV_DEV_AFTER_HITS_PERMIL ' build/native-inverse/training.out
+          grep -q '^INV_TEST_AFTER_HITS_PERMIL ' build/native-inverse/training.out
+      - name: Save provenance and native training evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-gutenberg-inverse-native-training
+          path: |
+            build/native-inverse/manifest.json
+            build/native-inverse/training.out
+            build/native-inverse/training.err
+          if-no-files-found: ignore
+          retention-days: 14
