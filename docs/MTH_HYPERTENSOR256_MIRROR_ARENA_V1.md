@@ -1,11 +1,17 @@
 # 256³ hypertensor over the canonical palindromic mirror topology (v1)
 
-Status: **native address mapper implemented and verified**, but the external
-64 MiB tensor arena, transactional runtime writer, parameter-loading bridge,
-and full 43M decoder training are **not** implemented by this document.
+Status: **native 128 MiB dual-bank address map, full logical external file
+provisioning, and recurrent all-trihead candidate feedback are implemented and
+CI-verified**. The persistent NaN16-to-external-arena writer, transactional
+promotion, checkpoint-loading into head recurrence, and full-language-model
+training are **not yet wired**.
 
 References:
 - Native guest: `mth/nan16/mth_hypertensor256_mirror_arena_map.nas`
+- Full dual-bank resolver: `mth/nan16/mth_hypertensor256_mirror_dual_map.nas`
+- Native recurrent trihead feedback: `mth/nan16/mth_trihead_meta_feedback_f32.nas`
+- Full storage initializer: `scripts/init_full128_mirror_tensor_storage.py`
+- Feedback native regression: `mth/tests/mth_trihead_meta_feedback_native_test.nas`
 - Guest regression: `mth/tests/mth_hypertensor256_mirror_arena_native_test.nas`
 - CI: `.github/workflows/nan16-native-hypertensor256-mirror-arena.yml`
 - Canonical 8 MiB root contract: `docs/MIRROR_MEMORY_LAYOUT.md`
@@ -32,10 +38,14 @@ persistent space in that root; tensor parameters MUST use a separately
 admitted arena or a new versioned storage profile. Do not overwrite,
 reinterpret, or resize the canonical root for this tensor.
 
-The native map uses eight 8 MiB **external storage segments** of 32 head-banks
-each, 256 KiB/bank. This is **logical external tensor storage**, not eight new
-NaN universes or eight roots. The same root remains the only authority for
-admission and writes. An external arena backing controller is still needed.
+A 128 MiB **dual-bank external tensor file** can now be provisioned and
+SHA-256-verified through the included *storage-only* initializer. Each complete
+64 MiB bank has eight 8 MiB logical segments of 32 head-banks each, at
+256 KiB/bank. They are **external tensor banks**, not 16 new NaN universes or
+roots. They may be sparsely allocated by the filesystem without changing the
+independent dense logical address capacity. The same NaN root remains the
+authority for admission and writes. A guest-driven persistent arena writer and
+transactional bank promotion are still required.
 
 Training increases working memory: weight-only online SGD can use one 64 MiB
 tensor plus scratch; dense binary32 gradients add another 64 MiB; Adam with
@@ -132,3 +142,57 @@ trained signals through the existing global attention, and compare the
 **frozen full language decoder** against a zero-gated control on locked,
 fresh held-out books. No published result yet supports a 43M decoder
 perplexity gain from the new 256³ address geometry.
+
+
+## 6. Implemented 128 MiB active/candidate and meta feedback (native)
+
+Both tensor banks are **full**, containing all (256^3 = 16,777,216)
+independent f32 coordinates. Bank 0 (active) is bytes
+`[0,67,108,864)`; bank 1 (candidate) is
+`[67,108,864,134,217,728)`. One mirror pair stores two directed f32
+words, not an imposed negative/equal pair. The canonical *8 MiB root*
+remains unchanged.
+
+Native trihead feedback accepts a proposal
+`[proposer, h, a, b, delta, trusted_tile_slot]`. Every authorized
+proposer **0 through 254** can propose an update to **any** valid tensor
+coordinate; there is no plane ownership restriction. Only the trusted
+meta tile owns the current value, feedback target, relative mirror byte
+offset and epoch. A proposer cannot supply their own favorable feedback.
+
+For proposer (p), persistent native meta-credit (c_p\in[0,1]),
+and proposed delta (d):
+
+```text
+effective_delta = d * (0.25 + 0.75 * credit[p])
+old_loss = (weight - trusted_target)^2
+new_loss = (weight + effective_delta - trusted_target)^2
+accepted = new_loss < old_loss
+if accepted: candidate_tile.weight += effective_delta
+credit[p] += 0.125 * (float(accepted) - credit[p])
+```
+
+This is a real *bounded native feedback loop*. All authorized heads retain
+a minimum update multiplier of 0.25 even if their meta-credit approaches
+zero. Rejection decreases future proposal influence; success increases it.
+Every submitted candidate must also pass permissions, head/coordinate
+range, strict void-255 exclusion, trusted tile-offset matching, epoch
+freshness and finite/bounded-value checks. Malformed batches fail before
+any candidate-tile or trust mutation.
+
+The trusted feedback objective in the current kernel is **scalar squared
+error on a native tile**, not language-model perplexity, and this gate is
+not itself a fully learned autonomous meta-objective. We can replace the
+trusted target with genuinely held-out next-token feedback when the
+full decoder's native evaluation adapter is connected.
+
+CI evidence:
+- [All 255 proposers + meta-credit learning native pass](https://github.com/shemshallah/NaNROUTER/actions/runs/42957115646)
+- [Both full 64 MiB banks, native map, physical file provisioning](https://github.com/shemshallah/NaNROUTER/actions/runs/42956642489)
+
+**Current trust boundary:** the test kernel modifies *guest-owned shadow
+candidate tiles*. It does not yet apply approved sparse deltas to the
+persistent 128 MiB file, and it does not promote candidate bank 1 to
+active bank 0. Those operations require a versioned native journal,
+authoritative root admission and atomic checkpoint promotion, before
+end-to-end persistent self-modification can be claimed.
