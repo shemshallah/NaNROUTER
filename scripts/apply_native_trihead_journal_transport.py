@@ -45,11 +45,11 @@ def parse_native_log(raw: bytes) -> tuple[int, int, int, int, int, int]:
     return numbers
 
 
-def apply(arena: Path, metadata: Path, native_log: Path) -> dict:
+def apply(arena: Path, metadata: Path, native_log: Path, *, parser=parse_native_log) -> dict:
     # CI caller is responsible for supplying a log from a PINNED native VM
     # invocation, not arbitrary user-provided data. Validate data regardless.
     trusted_bytes = native_log.read_bytes()
-    proposer, h, a, b, offset, word = parse_native_log(trusted_bytes)
+    proposer, h, a, b, offset, word = parser(trusted_bytes)
     verify(arena, metadata)  # attest prior committed bytes against metadata
     info = json.loads(metadata.read_text(encoding="utf-8"))
     if info.get("candidate_generation", 0) != 0:
