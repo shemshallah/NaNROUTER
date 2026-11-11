@@ -280,21 +280,36 @@ mth_hs_bad:
 .str "MTH HYPERTENSOR SIMPLICIAL FAIL\n"
 
 .org 8192
-mth_hs_a: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-mth_hs_b: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-mth_hs_c: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-mth_hs_edges: .word 0,0,0
-mth_hs_flow: .word 0,0,0
-mth_hs_hodge_out: .word 0,0,0,0,0,0,0,0,0
-mth_hs_hodge_scratch: .word 0,0,0,0,0,0,0,0,0
-mth_hs_disk_x: .word 0,0
-mth_hs_disk_y: .word 0,0
-mth_hs_disk_out: .word 0,0
-mth_hs_signal: .word 0,0,0
-mth_hs_wave_out: .word 0,0,0,0,0,0
-mth_hs_wave_scratch: .word 0,0,0,0,0,0
+mth_hs_a:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_hs_b:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_hs_c:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_hs_edges:
+.word 0,0,0
+mth_hs_flow:
+.word 0,0,0
+mth_hs_hodge_out:
+.word 0,0,0,0,0,0,0,0,0
+mth_hs_hodge_scratch:
+.word 0,0,0,0,0,0,0,0,0
+mth_hs_disk_x:
+.word 0,0
+mth_hs_disk_y:
+.word 0,0
+mth_hs_disk_out:
+.word 0,0
+mth_hs_signal:
+.word 0,0,0
+mth_hs_wave_out:
+.word 0,0,0,0,0,0
+mth_hs_wave_scratch:
+.word 0,0,0,0,0,0
 
 .org 12000
-mth_hs_tensor_out: .word 0
+mth_hs_tensor_out:
+.word 0
 .org 17000
-mth_hs_tensor_scratch: .word 0
+mth_hs_tensor_scratch:
+.word 0
