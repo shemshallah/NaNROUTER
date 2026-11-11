@@ -61,6 +61,7 @@ jobs:
             > build/native-inverse/training.out 2> build/native-inverse/training.err
           cat build/native-inverse/training.out
           cat build/native-inverse/training.err
+          grep -q '^MTH INVERSE GLOBAL HEAD BRIDGE PASS' build/native-inverse/training.out
           grep -q '^MTH INVERSE CORPUS TRAIN PASS' build/native-inverse/training.out
           grep -q '^INV_TEST_BEFORE_HITS_PERMIL ' build/native-inverse/training.out
           grep -q '^INV_DEV_AFTER_HITS_PERMIL ' build/native-inverse/training.out
