@@ -181,10 +181,19 @@ mth_dce_preflight_record:
   MUL r11,r9,r11
   LD r12,r8,260
   ADD r12,r12,r11
-  LD r14,r12,256
+  LD r14,r12,256         ; real next-character or next-byte target
   MOVI r11,254
   CMP r11,r14
   JMP[LT] @mth_dce_invalid
+  ; An -infinity logit is legal for MASKED classes only. The true target
+  ; MUST be supported: never subtract -infinity to invent finite CE.
+  ADD r11,r12,r14
+  LD r11,r11,0
+  MOVI r14,0
+  MOVHI r14,0x7F80
+  BOOL.8 r1,r11,r14
+  CMP r1,r14
+  JMP[EQ] @mth_dce_invalid
   MOVI r10,0
 mth_dce_preflight_logit:
   ADD r11,r12,r10
