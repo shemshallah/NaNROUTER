@@ -26,8 +26,10 @@ global HW hardware addresses.
 | HW1 | Android hardware endpoint | No |
 | HW2 | HERMES hardware endpoint | No |
 | HW3 | CLOCKED endpoint | No |
-| HW4 | WordNet universe hardware node | **Never** |
-| HW5–HW255 | General registered hardware nodes | Yes (251 slots) |
+| HW4 | WordNet reference universe, `HW4:0` | **Never** |
+| HW5 | Gutenberg corpus endpoint, `HW5:0` | **Never** |
+| HW6–HW8 | Dedicated/bootstrap coordination endpoints | **Never** |
+| HW9–HW255 | General registered hardware nodes | Yes (247 slots) |
 
 The six CPU worker repositories are an implementation of the BS0
 runner ring, not extra HW reservations. Other bootstrap classes
@@ -49,13 +51,19 @@ in *different* namespaces.
 
 ## Allocation and migration
 
-NANNET currently allocates HW node identities. Until the portal is
-fully migrated from NaNLMind to NaNROUTER, the old Koyeb NANNET portal
-remains the allocation authority. Never create parallel issuers or
-lease writers.
+NANNET's production Koyeb portal image is owned by NaNROUTER and retains
+one existing authority database, issuer and writable persistent `/data` volume.
+The canonical intake implementation allocates **only HW9..HW255** to newly
+registered community devices. This policy reserves `HW5:0` for the Gutenberg
+corpus, and must remain stable across migrations and runner handoffs.
+A numeric hardware coordinate by itself never grants access to the corpus;
+leases, scopes, provenance and generation still require validation. Never
+create parallel issuers or lease writers.
 
-Existing mistaken allocations in HW4 must be explicitly migrated
-to HW5+ without silently losing durable evidence, held route
-generations or device credentials. Fail closed on an unmigrated
-reserved-slot bearer. Do not repurpose a live HW4 lease as WordNet
-without safely relocating and reconciling it.
+Any existing mistaken community allocation in HW0..HW8 must be migrated
+through a versioned, durable authority transaction to a suitable free slot in
+HW9..HW255. Preserve evidence, generations, leases and device credentials;
+fail closed on an unmigrated reserved-slot bearer. Do not reuse a live lease
+or silently repurpose an endpoint. The NaN16 admission kernel
+`mth/nan16/mth_hw5_gutenberg_slot_guard.nas` checks the structural BS0 slot
+policy; it does not mint tokens or replace the authenticated portal.
