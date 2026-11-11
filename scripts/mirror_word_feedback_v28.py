@@ -129,3 +129,55 @@ class MirrorWordReadout(r25.PairTrie):
         if not 0<=value<=1+1e-8:
             raise AssertionError("Bad OOV conditional probability")
         return value
+
+
+def read_admitted_candidate_from_128m(arena, manifest, coordinate=(19,7,4), expected_generation=1):
+    """Return ONLY a native-approved candidate f32 word, never an active weight.
+
+    This pure readout does no math on the tensor and cannot select or
+    overwrite a model parameter. The original original-48M decoder remains
+    frozen; the returned scalar drives MirrorWordReadout inference only.
+    """
+    import hashlib
+    import json
+    import struct
+    from pathlib import Path
+    p,meta=Path(arena),Path(manifest)
+    m=json.loads(meta.read_text(encoding="utf8"))
+    if m.get("schema")!="nanrouter-hypertensor256-mirror-dual-f32le/v1":
+        raise ValueError("Unknown tensor storage schema")
+    if m.get("candidate_generation")!=expected_generation or expected_generation<1:
+        raise ValueError("Candidate has not been admitted in native VM")
+    if m.get("promotion_implemented") is not False or m.get("root_8MiB_untouched") is not True:
+        raise ValueError("Expected frozen-root, candidate-only tensor")
+    if p.stat().st_size!=134217728:
+        raise ValueError("Incomplete full 128 MiB tensor arena")
+    if m.get("current_sha256") is None:
+        raise ValueError("Native candidate integrity digest required")
+    digest=hashlib.sha256()
+    with p.open("rb") as f:
+        for block in iter(lambda:f.read(1<<20),b""):
+            digest.update(block)
+    if digest.hexdigest()!=m["current_sha256"]:
+        raise ValueError("Full tensor integrity mismatch")
+    h,a,b=tuple(coordinate)
+    if len(coordinate)!=3 or any(type(i) is not int or not 0<=i<255 for i in (h,a,b)):
+        raise ValueError("Invalid/void tensor coordinate")
+    base=h*262144
+    if a==b:
+        offset=base+4*a
+    else:
+        lo,hi=min(a,b),max(a,b)
+        pair=lo*(511-lo)//2+hi-lo-1
+        offset=base+1024+8*pair+4*(a>b)
+    if m.get("native_coordinate")!=[h,a,b] or m.get("native_candidate_relative_offset")!=offset:
+        raise ValueError("No native journal for requested mirror coordinate")
+    with p.open("rb") as f:
+        f.seek(67108864+offset)
+        raw=f.read(4)
+    if len(raw)!=4:
+        raise ValueError("Truncated native candidate word")
+    result=struct.unpack("<f",raw)[0]
+    if not math.isfinite(result) or abs(result)>1:
+        raise ValueError("Nonfinite/unbounded native model parameter")
+    return result
