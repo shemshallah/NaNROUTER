@@ -1,6 +1,9 @@
 ; Native NaN16 META feedback with actual frozen decoder next-byte logits.
 ; This is the decoder-loss integration path, NOT a scalar target MSE proxy.
 ; Uses established mth_lm_cross_entropy256_f32 (softmax cross entropy).
+; Supports exact -infinity masks for the 28-symbol R25 spelling head, while
+; reserved raw byte/head255 MUST always be negative infinity. The masked
+; target itself must have finite support or the native CE refuses scoring.
 ; The 256th byte is void and must be exactly -inf in all supplied traces.
 ;
 ; A trusted read-only decoder supplies *CAUSAL* logits (before observing
@@ -195,11 +198,19 @@ mth_dce_preflight_logit:
   JMP[NE] @mth_dce_invalid
   JMP @mth_dce_preflight_next
 mth_dce_preflight_finite:
+  ; The frozen 48M hybrid's contextual SPELLING head has just 28 legal
+  ; symbols, while the HW0 decoder has 255. Padding is exactly -infinity
+  ; for unsupported classes, which the original native CE accepts.
+  ; Reject all other exponent-all-ones payloads (NaN and +infinity).
   MOVI r14,0
   MOVHI r14,0x7F80
   BOOL.8 r1,r11,r14
   CMP r1,r14
-  JMP[EQ] @mth_dce_invalid
+  JMP[NE] @mth_dce_preflight_next
+  MOVI r14,0
+  MOVHI r14,0xFF80          ; legal masked -infinity only
+  CMP r11,r14
+  JMP[NE] @mth_dce_invalid
 mth_dce_preflight_next:
   ADDI r10,r10,1
   MOVI r14,256
