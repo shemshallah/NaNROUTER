@@ -1,0 +1,108 @@
+name: nan16-native-original48m-wholeword-feedback
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_trihead_wholeword_nll_feedback_f32.nas"
+      - "scripts/build_native_wholeword_nll_fixture.py"
+      - ".github/workflows/nan16-native-original48m-wholeword-feedback.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/mth_trihead_wholeword_nll_feedback_f32.nas"
+      - "scripts/build_native_wholeword_nll_fixture.py"
+      - ".github/workflows/nan16-native-original48m-wholeword-feedback.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-fullword:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build NaN16 and construct both signed-control fixtures
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          mkdir -p build/wholeword
+          python3 -m py_compile scripts/build_native_wholeword_nll_fixture.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          out=Path('build/wholeword')
+          def bits(v):
+              return f'{struct.unpack("<I",struct.pack("<f",v))[0]:08X}'
+          for name,dev_old,dev_after in [
+              ('positive',0.125,0.14),
+              ('reject',0.125,0.11),
+          ]:
+              for split,a,b in [('dev',dev_old,dev_after),
+                                ('test',.125,.10)]:
+                  count=24
+                  rows=[bits(a)+' '+bits(b)]*count
+                  (out/f'{name}-{split}.trace').write_text(
+                      f'FROZEN_48M_WHOLEWORD_PROB_V1 {count}\n'+
+                      '\n'.join(rows)+'\n')
+          PY
+          for name in positive reject; do
+            python3 scripts/build_native_wholeword_nll_fixture.py \
+              --dev "build/wholeword/${name}-dev.trace" \
+              --test "build/wholeword/${name}-test.trace" \
+              --output "mth/tests/mth_wholeword_${name}_generated.nas" \
+              --manifest "build/wholeword/${name}-manifest.json"
+            awk -f nan0s/tools/nmk.awk -v CMD=emit \
+              "mth/tests/mth_wholeword_${name}_generated.nas" \
+              > "build/wholeword/${name}.nan"
+          done
+      - name: Native 48M exact-word loss acceptance AND rejection
+        run: |
+          set -euo pipefail
+          for name in positive reject; do
+            nan0s/aarch64/android/nan_cli \
+              --img "build/wholeword/${name}.nan" \
+              --steps 240000000 --serial \
+              > "build/wholeword/${name}.out" \
+              2> "build/wholeword/${name}.err"
+            cat "build/wholeword/${name}.out"
+            cat "build/wholeword/${name}.err"
+            grep -qx 'MTH ORIGINAL 48M WHOLEWORD NLL FEEDBACK PASS' \
+              "build/wholeword/${name}.out"
+            grep -q '^WHOLEWORD_DEV_NLL_MILLI ' \
+              "build/wholeword/${name}.out"
+            grep -q '^WHOLEWORD_TEST_NLL_MILLI ' \
+              "build/wholeword/${name}.out"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          def load(name):
+              s=Path('build/wholeword/'+name+'.out').read_text().splitlines()
+              d=[x for x in s if x.startswith('WHOLEWORD_DEV_NLL_MILLI ')]
+              t=[x for x in s if x.startswith('WHOLEWORD_TEST_NLL_MILLI ')]
+              assert len(d)==len(t)==1,(name,d,t)
+              dv=list(map(int,d[0].split()[1:]))
+              ts=list(map(int,t[0].split()[1:]))
+              assert len(dv)==len(ts)==3
+              return dv,ts
+          positive,pt=load('positive')
+          reject,rt=load('reject')
+          assert positive[1]<positive[0] and positive[2]==1,positive
+          assert reject[1]>reject[0] and reject[2]==0,reject
+          # Test may worsen while dev accepts; test NEVER affects admission.
+          assert pt[1]>pt[0] and rt[1]>rt[0],(pt,rt)
+          print('NATIVE_WHOLEWORD_CE_ACCEPT_REJECT_PASS',positive,reject)
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-original48m-wholeword-gate-regression
+          path: build/wholeword/
+          if-no-files-found: ignore
+          retention-days: 14
