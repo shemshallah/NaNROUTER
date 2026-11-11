@@ -8,6 +8,7 @@ on:
       - "mth/nan16/mth_hypertensor256_mirror_arena_map.nas"
       - "mth/tests/mth_trihead_meta_feedback_native_test.nas"
       - "scripts/apply_native_trihead_journal_transport.py"
+      - "tests/test_native_trihead_journal_transport.py"
       - "scripts/init_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-trihead-meta-feedback.yml"
   pull_request:
@@ -16,6 +17,7 @@ on:
       - "mth/nan16/mth_hypertensor256_mirror_arena_map.nas"
       - "mth/tests/mth_trihead_meta_feedback_native_test.nas"
       - "scripts/apply_native_trihead_journal_transport.py"
+      - "tests/test_native_trihead_journal_transport.py"
       - "scripts/init_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-trihead-meta-feedback.yml"
   workflow_dispatch:
@@ -56,6 +58,7 @@ jobs:
           python3 -m py_compile \
             scripts/init_full128_mirror_tensor_storage.py \
             scripts/apply_native_trihead_journal_transport.py
+          python3 -m unittest discover -s tests -p 'test_native_trihead_journal_transport.py' -v
           python3 scripts/init_full128_mirror_tensor_storage.py \
             --output build/mth/trihead-full128.f32le \
             --manifest build/mth/trihead-full128.json
