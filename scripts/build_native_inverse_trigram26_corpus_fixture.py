@@ -529,14 +529,14 @@ def main() -> None:
         text = text.replace("MTH INVERSE TRIGRAM26", "MTH INVERSE PAIR26")
         text = text.replace("INV3_", "INVPAIR_")
         text = text.replace(
-            "  MOVI r8,676\\n  MUL r8,r7,r8\\n  MOVI r9,@mth_inv_weights",
-            "  MOVI r8,26\\n  MUL r8,r7,r8\\n  MOVI r9,@mth_inv_weights",
+            "  MOVI r8,676\n  MUL r8,r7,r8\n  MOVI r9,@mth_inv_weights",
+            "  MOVI r8,26\n  MUL r8,r7,r8\n  MOVI r9,@mth_inv_weights",
         )
         def as_pair(m: re.Match[str]) -> str:
             a,b,c,d = map(int, m.groups())
             return f".word {b},{c},0" if d == 0 else f".word {a},{b},1"
         text, count = re.subn(
-            r"^\\.word (\\d+),(\\d+),(\\d+),([01])$",
+            r"^\.word (\d+),(\d+),(\d+),([01])$",
             as_pair, text, flags=re.MULTILINE,
         )
         if count != sum(len(g) for g in groups.values()):
