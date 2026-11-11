@@ -8,6 +8,8 @@ on:
       - "mth/nan16/mth_hypertensor256_mirror_dual_map.nas"
       - "mth/tests/mth_hypertensor256_mirror_arena_native_test.nas"
       - "mth/tests/mth_hypertensor256_mirror_dual_native_test.nas"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-hypertensor256-mirror-arena.yml"
   pull_request:
     paths:
@@ -15,6 +17,8 @@ on:
       - "mth/nan16/mth_hypertensor256_mirror_dual_map.nas"
       - "mth/tests/mth_hypertensor256_mirror_arena_native_test.nas"
       - "mth/tests/mth_hypertensor256_mirror_dual_native_test.nas"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-hypertensor256-mirror-arena.yml"
   workflow_dispatch:
 
@@ -69,6 +73,17 @@ jobs:
           cat build/mth/hypertensor256-mirror-dual.err
           grep -qx 'MTH FULL 128M MIRROR DUAL BANK PASS' \
             build/mth/hypertensor256-mirror-dual.out
+      - name: Provision and verify the REAL 128 MiB external tensor backing
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_full128_mirror_tensor_storage.py' -v
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/mth/full128-mirror.f32le \
+            --manifest build/mth/full128-mirror.json
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/mth/full128-mirror.f32le \
+            --manifest build/mth/full128-mirror.json --verify
+          test "$(stat -c %s build/mth/full128-mirror.f32le)" = 134217728
       - name: Preserve guest diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -79,5 +94,6 @@ jobs:
             build/mth/hypertensor256-mirror-arena.err
             build/mth/hypertensor256-mirror-dual.out
             build/mth/hypertensor256-mirror-dual.err
+            build/mth/full128-mirror.json
           if-no-files-found: ignore
           retention-days: 14
