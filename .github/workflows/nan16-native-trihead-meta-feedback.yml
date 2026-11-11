@@ -7,12 +7,16 @@ on:
       - "mth/nan16/mth_trihead_meta_feedback_f32.nas"
       - "mth/nan16/mth_hypertensor256_mirror_arena_map.nas"
       - "mth/tests/mth_trihead_meta_feedback_native_test.nas"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-trihead-meta-feedback.yml"
   pull_request:
     paths:
       - "mth/nan16/mth_trihead_meta_feedback_f32.nas"
       - "mth/nan16/mth_hypertensor256_mirror_arena_map.nas"
       - "mth/tests/mth_trihead_meta_feedback_native_test.nas"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
       - ".github/workflows/nan16-native-trihead-meta-feedback.yml"
   workflow_dispatch:
 
@@ -46,6 +50,35 @@ jobs:
           cat build/mth/trihead-meta.out
           cat build/mth/trihead-meta.err
           grep -qx 'MTH TRIHEAD META FEEDBACK PASS' build/mth/trihead-meta.out
+      - name: Replay native accepted journal into FULL candidate tensor backing
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/init_full128_mirror_tensor_storage.py \
+            scripts/apply_native_trihead_journal_transport.py
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/mth/trihead-full128.f32le \
+            --manifest build/mth/trihead-full128.json
+          python3 scripts/apply_native_trihead_journal_transport.py \
+            --arena build/mth/trihead-full128.f32le \
+            --manifest build/mth/trihead-full128.json \
+            --native-log build/mth/trihead-meta.out \
+            > build/mth/native-journal-replay.json
+          cat build/mth/native-journal-replay.json
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/mth/trihead-full128.f32le \
+            --manifest build/mth/trihead-full128.json --verify
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("build/mth/native-journal-replay.json").read_text())
+          assert p["raw_native_f32_bits"] == "0x3F500000"
+          assert p["target"] == [1,3,2] and p["head"] == 0
+          assert p["candidate_generation"] == 1
+          assert p["active_bank_written"] is False
+          assert p["root_8MiB_written"] is False
+          print("MTH TRIHEAD JOURNAL FULL128 CANDIDATE TRANSPORT PASS")
+          PY
       - name: Preserve native trace
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,5 +87,7 @@ jobs:
           path: |
             build/mth/trihead-meta.out
             build/mth/trihead-meta.err
+            build/mth/native-journal-replay.json
+            build/mth/trihead-full128.json
           if-no-files-found: ignore
           retention-days: 14
