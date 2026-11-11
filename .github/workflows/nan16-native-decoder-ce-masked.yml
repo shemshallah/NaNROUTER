@@ -6,11 +6,15 @@ on:
     paths:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "mth/tests/mth_decoder_ce_28mask_native_test.nas"
+      - "tests/test_native_decoder_ce_fixture_masked.py"
+      - "scripts/build_native_decoder_ce_fixture.py"
       - ".github/workflows/nan16-native-decoder-ce-masked.yml"
   pull_request:
     paths:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "mth/tests/mth_decoder_ce_28mask_native_test.nas"
+      - "tests/test_native_decoder_ce_fixture_masked.py"
+      - "scripts/build_native_decoder_ce_fixture.py"
       - ".github/workflows/nan16-native-decoder-ce-masked.yml"
   workflow_dispatch:
 
@@ -44,6 +48,39 @@ jobs:
           cat build/mth/masked28.err
           grep -qx 'MTH MASKED 28-CLASS REAL DECODER CE PASS' \
             build/mth/masked28.out
+      - name: Check real 48M spelling-head trace format and native assembly
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests \
+            -p 'test_native_decoder_ce_fixture_masked.py' -v
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0,"scripts")
+          from build_native_decoder_ce_fixture import build
+          p=Path("build/mth")
+          p.mkdir(parents=True,exist_ok=True)
+          arr=["BF800000"]*28+["FF800000"]*228
+          arr[4]="00000000"
+          line="4 "+" ".join(arr)+"\\n"
+          for split in ("dev","test"):
+            (p/f"{split}.trace").write_text("FROZEN_DECODER_TRACE_V1 19 7 1\\n"+line)
+          build(p/"dev.trace",p/"test.trace",
+                Path("mth/tests/mth_r25_char_generated_test.nas"),
+                p/"r25_char_manifest.json",19,7,4,"r25-48m-char")
+          PY
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_r25_char_generated_test.nas \
+            > build/mth/r25_char_generated.nan
+          nan0s/aarch64/android/nan_cli \
+            --img build/mth/r25_char_generated.nan \
+            --steps 15000000 --serial \
+            > build/mth/r25_char_generated.out \
+            2> build/mth/r25_char_generated.err
+          cat build/mth/r25_char_generated.out
+          cat build/mth/r25_char_generated.err
+          grep -qx 'MTH REAL DECODER CE FEEDBACK PASS' \
+            build/mth/r25_char_generated.out
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -51,5 +88,8 @@ jobs:
           path: |
             build/mth/masked28.out
             build/mth/masked28.err
+            build/mth/r25_char_generated.out
+            build/mth/r25_char_generated.err
+            build/mth/r25_char_manifest.json
           if-no-files-found: ignore
           retention-days: 14
