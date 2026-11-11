@@ -180,6 +180,42 @@ mth_dce_main:
   MOVI r1,10
   PUTC r1
 
+  ; Journal written ONLY when DEV admitted an improvement. The test
+  ; result is explicitly excluded from the admission decision. These
+  ; six raw U32 words are native-authored, not a host optimizer result.
+  LD r11,r0,@mth_dce_dev_stats+2
+  CMP r11,r13
+  JMP[NE] @mth_dce_no_journal
+  LD r11,r0,@mth_dce_accepted_moves
+  CMP r11,r0
+  JMP[EQ] @mth_dce_no_journal
+  MOVI r1,@mth_dce_journal_label
+  CALL @mth_dce_puts
+  LD r1,r0,@mth_dce_proposal
+  CALL @mth_dce_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_dce_proposal+1
+  CALL @mth_dce_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_dce_proposal+2
+  CALL @mth_dce_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_dce_proposal+3
+  CALL @mth_dce_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_dce_tile
+  CALL @mth_dce_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_dce_tile+1
+  CALL @mth_dce_hex32
+  MOVI r1,10
+  PUTC r1
+mth_dce_no_journal:
   MOVI r1,@mth_dce_pass
   CALL @mth_dce_puts
   HALT
@@ -247,6 +283,29 @@ mth_dce_num_out:
   JMP[GT] @mth_dce_num_out
   RET
 
+; Exact eight-hex-digit native U32 printer (no host learner).
+mth_dce_hex32:
+  MOVI r3,0
+mth_dce_hex_nibble:
+  SHR r2,r1,28
+  MOVI r4,15
+  BOOL.8 r2,r2,r4
+  MOVI r4,10
+  CMP r2,r4
+  JMP[LT] @mth_dce_hex_digit
+  ADDI r2,r2,55
+  JMP @mth_dce_hex_emit
+mth_dce_hex_digit:
+  ADDI r2,r2,48
+mth_dce_hex_emit:
+  PUTC r2
+  SHL r1,r1,4
+  ADDI r3,r3,1
+  MOVI r4,8
+  CMP r3,r4
+  JMP[LT] @mth_dce_hex_nibble
+  RET
+
 mth_dce_puts:
   MOVI r4,255
 mth_dce_puts_word:
@@ -296,6 +355,8 @@ mth_dce_test_label:
 .str "DCE_TEST_NAT_MILLI "
 mth_dce_moves_label:
 .str "DCE_DEV_ACCEPTED_MOVES "
+mth_dce_journal_label:
+.str "MTH_DECODER_CE_ACCEPTED_HEX "
 mth_dce_pass:
 .str "MTH REAL DECODER CE FEEDBACK PASS\\n"
 mth_dce_bad:
