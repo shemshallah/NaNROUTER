@@ -10,6 +10,7 @@ JMP @mth_chain_main
 .include "../nan16/mth_simplicial_motif3.nas"
 .include "../nan16/mth_triangle_hodge3_f32.nas"
 .include "../nan16/mth_global_focus16_f32.nas"
+.include "../nan16/mth_memory_condition16_f32.nas"
 mth_chain_main:
   MOVI r0,0
   MOVI r13,1
@@ -123,6 +124,32 @@ mth_chain_init_vec:
   CMP r10,r11
   JMP[NE] @mth_chain_fail
 
+  ; Global focus conditions NEXT-STEP head only, no same-token cycle.
+  ; Head start is zero and gate one, so next head[0] = global output[0].
+  MOVI r7,0
+  MOVI r10,0
+  MOVHI r10,0x3F80
+mth_chain_gate_fill:
+  MOVI r11,@mth_chain_gate
+  ADD r11,r11,r7
+  ST r10,r11,0
+  ADDI r7,r7,1
+  MOVI r11,16
+  CMP r7,r11
+  JMP[LT] @mth_chain_gate_fill
+  MOVI r1,@mth_chain_head
+  MOVI r2,@mth_chain_out
+  MOVI r3,@mth_chain_gate
+  MOVI r4,@mth_chain_nexthead
+  MOVI r5,@mth_chain_feedbackscratch
+  CALL @mth_memory_condition16_f32
+  CMP r1,r13
+  JMP[NE] @mth_chain_fail
+  LD r10,r0,@mth_chain_nexthead
+  LD r11,r0,@mth_chain_out
+  CMP r10,r11
+  JMP[NE] @mth_chain_fail
+
   MOVI r1,@mth_chain_pass
   CALL @mth_chain_puts
   HALT
@@ -180,6 +207,14 @@ mth_chain_hscratch:
 mth_chain_scores:
 .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_chain_out:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_chain_head:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_chain_gate:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_chain_nexthead:
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+mth_chain_feedbackscratch:
 .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 .org 9000
