@@ -97,6 +97,55 @@ mth_gh_zero_div_check:
   CMP r11,r10
   JMP[NE] @mth_gh_test_fail
 
+  ; Void head 255 cannot carry active pair flow.
+  MOVI r10,0
+  MOVI r11,@mth_gh_flows
+  ADDI r11,r11,32639
+  ST r10,r11,0              ; restore poisoned last pair
+  MOVI r10,0
+  MOVHI r10,0x3F80         ; +1.0 on edge(0,255) is forbidden
+  MOVI r11,@mth_gh_flows
+  ADDI r11,r11,254
+  ST r10,r11,0
+  MOVI r1,@mth_gh_flows
+  MOVI r2,@mth_gh_triads
+  MOVI r3,1
+  MOVI r4,@mth_gh_div
+  MOVI r5,@mth_gh_curl
+  MOVI r6,@mth_gh_divscratch
+  MOVI r7,@mth_gh_curlscratch
+  CALL @mth_global_hodge256_f32
+  CMP r1,r0
+  JMP[NE] @mth_gh_test_fail
+  MOVI r10,0
+  MOVHI r10,0xC040
+  LD r11,r0,@mth_gh_curl
+  CMP r11,r10
+  JMP[NE] @mth_gh_test_fail
+  MOVI r10,0
+  MOVI r11,@mth_gh_flows
+  ADDI r11,r11,254
+  ST r10,r11,0
+
+  ; 255 is not a valid simplicial face vertex, even with zero pair flow.
+  MOVI r10,255
+  ST r10,r0,@mth_gh_triads+1
+  MOVI r1,@mth_gh_flows
+  MOVI r2,@mth_gh_triads
+  MOVI r3,1
+  MOVI r4,@mth_gh_div
+  MOVI r5,@mth_gh_curl
+  MOVI r6,@mth_gh_divscratch
+  MOVI r7,@mth_gh_curlscratch
+  CALL @mth_global_hodge256_f32
+  CMP r1,r0
+  JMP[NE] @mth_gh_test_fail
+  MOVI r10,0
+  MOVHI r10,0xC040
+  LD r11,r0,@mth_gh_curl
+  CMP r11,r10
+  JMP[NE] @mth_gh_test_fail
+
   MOVI r1,@mth_gh_test_pass
   CALL @mth_gh_puts
   HALT
