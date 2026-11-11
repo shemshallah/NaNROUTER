@@ -48,6 +48,7 @@ mth_tm_test_build:
   MOVI r5,7
   MOVI r6,@mth_tm_test_stats
   MOVI r7,@mth_tm_test_credit
+  MOVI r11,@mth_tm_test_journal
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   CMP r1,r13
@@ -67,6 +68,30 @@ mth_tm_test_build:
   MOVHI r10,0x3F7F             ; 255/256
   CMP r9,r10
   JMP[NE] @mth_tm_test_fail
+
+  ; Every one of 255 proposer decisions is recorded by the native guest.
+  ; Check final accepted journal entry (head 254, T[1,2,3]).
+  MOVI r9,@mth_tm_test_journal
+  MOVI r10,1270              ; entry 254 x 5 words
+  ADD r9,r9,r10
+  LD r10,r9,0
+  MOVI r11,254
+  CMP r10,r11
+  JMP[NE] @mth_tm_test_fail
+  LD r10,r9,1
+  MOVI r11,0x13E8
+  MOVHI r11,4                ; offset = 267240 = 0x000413E8
+  CMP r10,r11
+  JMP[NE] @mth_tm_test_fail
+  LD r10,r9,2
+  CMP r10,r13               ; accepted
+  JMP[NE] @mth_tm_test_fail
+  LD r10,r9,3
+  MOVI r11,0
+  MOVHI r11,0x3F7F
+  CMP r10,r11
+  JMP[NE] @mth_tm_test_fail
+
 
   ; Malicious proposer 255 rejected before ANY weight or stats mutation.
   MOVI r11,255
@@ -109,6 +134,7 @@ mth_tm_test_build:
   MOVI r5,8
   MOVI r6,@mth_tm_test_stats
   MOVI r7,@mth_tm_test_credit
+  MOVI r11,@mth_tm_test_journal
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   CMP r1,r0
@@ -226,6 +252,7 @@ mth_tm_test_single:
   MOVI r5,7
   MOVI r6,@mth_tm_test_stats
   MOVI r7,@mth_tm_test_credit
+  MOVI r11,@mth_tm_test_journal
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   LD r15,r0,@mth_tm_test_single_link
@@ -261,7 +288,7 @@ mth_tm_test_tiles:
 mth_tm_test_stats:
 .word 0,0,0,0
 mth_tm_test_frame:
-.word 0,0,0,0,0,0,0,0,0,0,0,0
+.word 0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_tm_test_single_link:
 .word 0
 mth_tm_test_pass:
@@ -273,4 +300,7 @@ mth_tm_test_credit:
 .word 0
 .org 42000
 mth_tm_test_proposals:
+.word 0
+.org 45000
+mth_tm_test_journal:
 .word 0
