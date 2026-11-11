@@ -237,6 +237,36 @@ mth_tm_test_build:
   CMP r1,r0
   JMP[NE] @mth_tm_test_fail
 
+  ; Emit one *native-authored* verified admitted journal entry for the
+  ; external storage transport CI. All numbers emitted are raw U32 hex,
+  ; not host-computed model values. The preceding test verified acceptance.
+  MOVI r1,@mth_tm_test_journal_prefix
+  CALL @mth_tm_test_puts
+  LD r1,r0,@mth_tm_test_proposals
+  CALL @mth_tm_test_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_tm_test_proposals+1
+  CALL @mth_tm_test_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_tm_test_proposals+2
+  CALL @mth_tm_test_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_tm_test_proposals+3
+  CALL @mth_tm_test_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_tm_test_journal+1
+  CALL @mth_tm_test_hex32
+  MOVI r1,32
+  PUTC r1
+  LD r1,r0,@mth_tm_test_journal+3
+  CALL @mth_tm_test_hex32
+  MOVI r1,10
+  PUTC r1
+
   MOVI r1,@mth_tm_test_pass
   CALL @mth_tm_test_puts
   HALT
@@ -256,6 +286,27 @@ mth_tm_test_single:
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
   LD r15,r0,@mth_tm_test_single_link
+  RET
+
+; Native U32 -> exact eight capital hex digit printer, no host formatters.
+mth_tm_test_hex32:
+  MOVI r3,28
+mth_tm_test_hex_nibble:
+  SHR r2,r1,r3
+  MOVI r4,15
+  BOOL.8 r2,r2,r4
+  MOVI r4,10
+  CMP r2,r4
+  JMP[LT] @mth_tm_test_hex_decimal
+  ADDI r2,r2,55
+  JMP @mth_tm_test_hex_emit
+mth_tm_test_hex_decimal:
+  ADDI r2,r2,48
+mth_tm_test_hex_emit:
+  PUTC r2
+  ADDI r3,r3,-4
+  CMP r3,r0
+  JMP[GE] @mth_tm_test_hex_nibble
   RET
 
 mth_tm_test_fail:
@@ -291,6 +342,8 @@ mth_tm_test_frame:
 .word 0,0,0,0,0,0,0,0,0,0,0,0,0
 mth_tm_test_single_link:
 .word 0
+mth_tm_test_journal_prefix:
+.str "MTH_META_ACCEPTED_HEX "
 mth_tm_test_pass:
 .str "MTH TRIHEAD META FEEDBACK PASS\n"
 mth_tm_test_bad:
