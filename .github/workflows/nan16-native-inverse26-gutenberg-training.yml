@@ -7,6 +7,7 @@ on:
     paths:
       - "mth/nan16/mth_inverse_dual_batch26_f32.nas"
       - "scripts/build_native_inverse26_corpus_fixture.py"
+      - "scripts/export_native_inverse26_checkpoint.py"
       - ".github/workflows/nan16-native-inverse26-gutenberg-training.yml"
   workflow_dispatch:
 
@@ -31,7 +32,7 @@ jobs:
           make -s -C nan0s/aarch64/android nan_cli
           sudo apt-get update -qq
           sudo apt-get install -y -qq zstd
-          python3 -m py_compile scripts/build_native_inverse26_corpus_fixture.py
+          python3 -m py_compile scripts/build_native_inverse26_corpus_fixture.py scripts/export_native_inverse26_checkpoint.py
       - name: Download and verify Gutenberg sentence corpus batch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,7 +55,7 @@ jobs:
           set -euo pipefail
           nan0s/aarch64/android/nan_cli \
             --img build/inverse26/inverse26.nan \
-            --steps 600000000 --serial \
+            --steps 1100000000 --serial \
             > build/inverse26/training.out 2> build/inverse26/training.err
           cat build/inverse26/training.out
           cat build/inverse26/training.err
@@ -65,6 +66,16 @@ jobs:
           grep -q '^INV26_FORWARD_AFTER_HITS_PERMIL ' build/inverse26/training.out
           grep -q '^MTH INVERSE26 GLOBAL HEAD BRIDGE PASS' build/inverse26/training.out
           grep -q '^MTH INVERSE26 CORPUS TRAIN PASS' build/inverse26/training.out
+          grep -q '^INV26_CHECKPOINT_BEGIN' build/inverse26/training.out
+          grep -q '^INV26_CHECKPOINT_END' build/inverse26/training.out
+      - name: Export exact learned weights emitted by native NaN16 VM
+        run: |
+          set -euo pipefail
+          python3 scripts/export_native_inverse26_checkpoint.py \
+            --log build/inverse26/training.out \
+            --split-manifest build/inverse26/manifest.json \
+            --output-dir build/inverse26/checkpoint
+          (cd build/inverse26/checkpoint && sha256sum -c SHA256SUMS)
       - name: Save compact training evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,5 +85,6 @@ jobs:
             build/inverse26/manifest.json
             build/inverse26/training.out
             build/inverse26/training.err
+            build/inverse26/checkpoint/
           if-no-files-found: ignore
           retention-days: 14
