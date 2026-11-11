@@ -28,7 +28,7 @@
 ; Only source W and metrics touched on success. Source arrays must not alias.
 ; Preflight entire sample batch, 256 W values, and lr before SGD starts.
 ; No model is claimed to learn exact words from 16-bin byte features.
-.include "mth_vector_softmax256_f32.nas"
+.include "mth_global_focus16_f32.nas"
 
 mth_inverse_dual_batch16_f32:
   MOVI r0,0
