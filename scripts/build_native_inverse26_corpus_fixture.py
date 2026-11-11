@@ -141,7 +141,7 @@ mth_inv_main:
   CALL @mth_inv_print_metrics
 
   ; Train with exactly the same relation weights in both directions.
-  ; Two passes only; dev/test never used for updates.
+  ; Eight passes, with shared W; dev/test never used for updates.
   MOVI r14,0
 mth_inv_epoch:
   ST r14,r0,@mth_inv_epoch_num
@@ -157,7 +157,7 @@ mth_inv_epoch:
   JMP[NE] @mth_inv_fail
   LD r14,r0,@mth_inv_epoch_num
   ADDI r14,r14,1
-  MOVI r12,2
+  MOVI r12,8
   CMP r14,r12
   JMP[LT] @mth_inv_epoch
 
@@ -306,6 +306,8 @@ mth_inv_gate_fill:
   MOVI r1,@mth_inv_label_bridge
   CALL @mth_inv_puts
 
+  ; Save a real learned native optimizer state for future continuation.
+  CALL @mth_inv_dump_weights
   MOVI r1,@mth_inv_label_pass
   CALL @mth_inv_puts
   HALT
@@ -363,6 +365,47 @@ mth_inv_emit:
   JMP[GT] @mth_inv_emit
   RET
 
+; Exact reversible learned-weight serialization: 676 f32 bit patterns,
+; each printed as 8 hexadecimal digits in low-nibble-first order.
+; Host only decodes these already-trained bits into a checkpoint artifact.
+mth_inv_dump_weights:
+  ST r15,r0,@mth_inv_ckpt_link
+  MOVI r1,@mth_inv_label_ckpt_begin
+  CALL @mth_inv_puts
+  MOVI r7,0
+mth_inv_ckpt_word:
+  MOVI r8,@mth_inv_weights
+  ADD r8,r8,r7
+  LD r10,r8,0
+  MOVI r9,0
+mth_inv_ckpt_nibble:
+  MOVI r12,15
+  BOOL.8 r11,r10,r12
+  MOVI r12,10
+  CMP r11,r12
+  JMP[LT] @mth_inv_ckpt_decimal
+  ADDI r11,r11,55
+  JMP @mth_inv_ckpt_emit
+mth_inv_ckpt_decimal:
+  ADDI r11,r11,48
+mth_inv_ckpt_emit:
+  PUTC r11
+  SHR r10,r10,4
+  ADDI r9,r9,1
+  MOVI r11,8
+  CMP r9,r11
+  JMP[LT] @mth_inv_ckpt_nibble
+  MOVI r11,10
+  PUTC r11
+  ADDI r7,r7,1
+  MOVI r11,676
+  CMP r7,r11
+  JMP[LT] @mth_inv_ckpt_word
+  MOVI r1,@mth_inv_label_ckpt_end
+  CALL @mth_inv_puts
+  LD r15,r0,@mth_inv_ckpt_link
+  RET
+
 mth_inv_puts:
   MOVI r4,255
 mth_inv_puts_word:
@@ -397,6 +440,10 @@ mth_inv_label_inverse_after:
 .str "INV26_INVERSE_AFTER_HITS_PERMIL "
 mth_inv_label_forward_after:
 .str "INV26_FORWARD_AFTER_HITS_PERMIL "
+mth_inv_label_ckpt_begin:
+.str "INV26_CHECKPOINT_BEGIN\\n"
+mth_inv_label_ckpt_end:
+.str "INV26_CHECKPOINT_END\\n"
 mth_inv_label_pass:
 .str "MTH INVERSE26 CORPUS TRAIN PASS\\n"
 mth_inv_label_fail:
@@ -418,6 +465,8 @@ mth_inv_epoch_num:
 mth_inv_print_link:
 .word 0
 mth_inv_print_stats_ptr:
+.word 0
+mth_inv_ckpt_link:
 .word 0
 mth_inv_digits:
 .word 0,0,0,0,0,0,0,0,0,0
@@ -485,7 +534,7 @@ def main() -> None:
         "derived_feature_bins": 26,
         "objective": "shared forward-and-inverse 26-letter letter adjacency CE",
         "updates": "native NaN16 SGD only; no host model arithmetic",
-        "epochs": 2,
+        "epochs": 8,
         "split": {},
     }
     for label, group in documents.items():
