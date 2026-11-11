@@ -61,6 +61,9 @@ int main(int argc, char** argv) {
         }
         row.logits.push_back(0xFF800000u); // void byte 255 is NEVER a class
         rows.push_back(row);
+        // Stop on the predetermined bound. Continuing to scan megabytes
+        // would add compute but no samples; selection remains causal.
+        if (rows.size() == cap) break;
       }
       model.observe(state,label);
     }
