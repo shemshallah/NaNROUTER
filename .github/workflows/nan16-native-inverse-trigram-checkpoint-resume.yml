@@ -1,0 +1,118 @@
+name: nan16-native-inverse-trigram-checkpoint-resume
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_inverse_trigram26_resume_verify.nas"
+      - "scripts/build_native_inverse_trigram26_resume_fixture.py"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - "scripts/export_native_inverse_trigram26_resumed.py"
+      - ".github/workflows/nan16-native-inverse-trigram-checkpoint-resume.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  resume-native-third-order:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout verified NaN16 VM source
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Compile canonical VM and validate checkpoint intake scripts
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile \
+            scripts/build_native_inverse_trigram26_corpus_fixture.py \
+            scripts/build_native_inverse_trigram26_resume_fixture.py \
+            scripts/export_native_inverse_trigram26_resumed.py
+      - name: Download exact previously trained tensor checkpoint and source split
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/resume/parent
+          gh run download 42950787457 -R shemshallah/NaNROUTER \
+            -n nan16-26cubed-inverse-trigram-results -D build/resume/parent
+          find build/resume/parent -type f | sort
+          PARENT_BIN=$(find build/resume/parent -name inverse_trigram26.tensor.f32le.bin | head -n1)
+          PARENT_META=$(find build/resume/parent -name inverse_trigram26.checkpoint.json | head -n1)
+          PARENT_SPLIT=$(find build/resume/parent -name manifest.json | head -n1)
+          test -n "$PARENT_BIN" && test -s "$PARENT_BIN"
+          test -n "$PARENT_META" && test -s "$PARENT_META"
+          test -n "$PARENT_SPLIT" && test -s "$PARENT_SPLIT"
+          echo "PARENT_BIN=$PARENT_BIN" >> "$GITHUB_ENV"
+          echo "PARENT_META=$PARENT_META" >> "$GITHUB_ENV"
+          echo "PARENT_SPLIT=$PARENT_SPLIT" >> "$GITHUB_ENV"
+          echo "c43ab50b88da8b6fb3d1bb7a060a40a73ebeb95cea3494b1ee53c246e7881afa  $PARENT_BIN" | sha256sum -c -
+      - name: Download verified release corpus and lock previously unused books
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/resume/release build/resume/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER \
+            --pattern 'sentences-0001.*' --dir build/resume/release
+          (cd build/resume/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/resume/release/sentences-0001.tar.zst -C build/resume/books
+      - name: Admit parent snapshot and prepare exact NaN16 native resume image
+        run: |
+          set -euo pipefail
+          python3 scripts/build_native_inverse_trigram26_resume_fixture.py \
+            --parent-checkpoint "$PARENT_BIN" \
+            --parent-checkpoint-meta "$PARENT_META" \
+            --parent-split-manifest "$PARENT_SPLIT" \
+            --corpus-root build/resume/books \
+            --output mth/tests/mth_inverse_trigram26_resume_generated.nas \
+            --manifest build/resume/new_split.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_inverse_trigram26_resume_generated.nas \
+            > build/resume/native_resume.nan
+      - name: Train native resumed tensor on genuinely unused Gutenberg books
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/resume/native_resume.nan --steps 1000000000 --serial \
+            > build/resume/training.out 2> build/resume/training.err
+          grep -E '^(INV3_|MTH INVERSE TRIGRAM26)' build/resume/training.out
+          cat build/resume/training.err
+          grep -q '^INV3_RESUME_PARENT_VERIFIED$' build/resume/training.out
+          grep -q '^INV3_RESUME_DEV_BEFORE_HITS_PERMIL ' build/resume/training.out
+          grep -q '^INV3_DEV_AFTER_HITS_PERMIL ' build/resume/training.out
+          grep -q '^INV3_TEST_AFTER_HITS_PERMIL ' build/resume/training.out
+          grep -q '^INV3_INVERSE_AFTER_HITS_PERMIL ' build/resume/training.out
+          # Same full-test counts: never compare a half-length directional run.
+          grep -q '^INV3_TEST_PROBABILITY_IMPROVED$' build/resume/training.out
+          grep -q '^MTH INVERSE TRIGRAM26 GLOBAL HEAD BRIDGE PASS$' build/resume/training.out
+          grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS$' build/resume/training.out
+      - name: Make dev-only admission decision and SHA-verify resumed tensor
+        run: |
+          set -euo pipefail
+          python3 scripts/export_native_inverse_trigram26_resumed.py \
+            --log build/resume/training.out \
+            --manifest build/resume/new_split.json \
+            --output-dir build/resume/candidate
+          (cd build/resume/candidate && sha256sum -c SHA256SUMS)
+      - name: Preserve the parent and candidate with exact provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-inverse-trigram26-resume-fresh-gutenberg
+          path: |
+            build/resume/new_split.json
+            build/resume/training.out
+            build/resume/training.err
+            build/resume/candidate/
+          if-no-files-found: ignore
+          retention-days: 21

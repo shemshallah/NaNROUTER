@@ -1,0 +1,89 @@
+name: nan16-native-inverse-trigram-gutenberg-training
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_inverse_trigram26_batch_f32.nas"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - "scripts/export_native_inverse_trigram26_checkpoint.py"
+      - ".github/workflows/nan16-native-inverse-trigram-gutenberg-training.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inverse-trigram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned native NaN0S guest toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Compile canonical native VM and intake syntax
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile scripts/build_native_inverse_trigram26_corpus_fixture.py scripts/export_native_inverse_trigram26_checkpoint.py
+      - name: Fetch verified public-domain Gutenberg sentences release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/trigram-inverse/release build/trigram-inverse/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER --pattern 'sentences-0001.*' --dir build/trigram-inverse/release
+          (cd build/trigram-inverse/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/trigram-inverse/release/sentences-0001.tar.zst -C build/trigram-inverse/books
+      - name: Generate held-out guest-language trigram hypertensor experiment
+        run: |
+          set -euo pipefail
+          python3 scripts/build_native_inverse_trigram26_corpus_fixture.py \
+            --corpus-root build/trigram-inverse/books \
+            --output mth/tests/mth_inverse_trigram26_generated_test.nas \
+            --manifest build/trigram-inverse/manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_inverse_trigram26_generated_test.nas > build/trigram-inverse/trigram.nan
+      - name: Train 26-cubed hypertensor forward/inverse inside NaN16
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/trigram-inverse/trigram.nan \
+            --steps 1500000000 --serial \
+            > build/trigram-inverse/training.out 2> build/trigram-inverse/training.err
+          grep -E '^(INV3_|MTH INVERSE TRIGRAM26)' build/trigram-inverse/training.out
+          cat build/trigram-inverse/training.err
+          grep -q '^INV3_TEST_BEFORE_HITS_PERMIL ' build/trigram-inverse/training.out
+          grep -q '^INV3_INVERSE_BEFORE_HITS_PERMIL ' build/trigram-inverse/training.out
+          grep -q '^INV3_TEST_AFTER_HITS_PERMIL ' build/trigram-inverse/training.out
+          grep -q '^INV3_INVERSE_AFTER_HITS_PERMIL ' build/trigram-inverse/training.out
+          grep -q '^INV3_FORWARD_AFTER_HITS_PERMIL ' build/trigram-inverse/training.out
+          grep -q '^MTH INVERSE TRIGRAM26 GLOBAL HEAD BRIDGE PASS' build/trigram-inverse/training.out
+          grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS' build/trigram-inverse/training.out
+          grep -q '^INV3_CHECKPOINT_BEGIN' build/trigram-inverse/training.out
+          grep -q '^INV3_CHECKPOINT_END' build/trigram-inverse/training.out
+      - name: Export native 26-cubed hypertensor checkpoint (exact bits)
+        run: |
+          set -euo pipefail
+          python3 scripts/export_native_inverse_trigram26_checkpoint.py \
+            --log build/trigram-inverse/training.out \
+            --split-manifest build/trigram-inverse/manifest.json \
+            --output-dir build/trigram-inverse/checkpoint
+          (cd build/trigram-inverse/checkpoint && sha256sum -c SHA256SUMS)
+      - name: Upload disjoint-source manifest and measured native guest outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-26cubed-inverse-trigram-results
+          path: |
+            build/trigram-inverse/manifest.json
+            build/trigram-inverse/training.out
+            build/trigram-inverse/training.err
+            build/trigram-inverse/checkpoint/
+          if-no-files-found: ignore
+          retention-days: 14

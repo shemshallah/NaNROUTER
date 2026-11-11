@@ -1,0 +1,99 @@
+name: nan16-native-inverse-trigram-resume-checkpoint
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "scripts/admit_native_inverse_trigram_checkpoint.py"
+      - ".github/workflows/nan16-native-inverse-trigram-resume.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned canonical native VM
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build VM and verify intake syntax
+        run: |
+          set -euo pipefail
+          make -s -C nan0s/aarch64/android nan_cli
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          python3 -m py_compile scripts/admit_native_inverse_trigram_checkpoint.py scripts/build_native_inverse_trigram26_corpus_fixture.py scripts/export_native_inverse_trigram26_checkpoint.py
+      - name: Fetch pinned learned tensor and corpus release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/resume/old build/resume/release build/resume/books
+          gh run download 42950787457 -R shemshallah/NaNROUTER -n nan16-26cubed-inverse-trigram-results -D build/resume/old
+          (cd build/resume/old/checkpoint && sha256sum -c SHA256SUMS)
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER --pattern 'sentences-0001.*' --dir build/resume/release
+          (cd build/resume/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/resume/release/sentences-0001.tar.zst -C build/resume/books
+      - name: Generate identical disjoint-document native continuation fixture
+        run: |
+          set -euo pipefail
+          python3 scripts/build_native_inverse_trigram26_corpus_fixture.py \
+            --corpus-root build/resume/books \
+            --output mth/tests/mth_inverse_trigram26_resume_generated_test.nas \
+            --manifest build/resume/manifest.json
+          python3 scripts/admit_native_inverse_trigram_checkpoint.py \
+            --fixture mth/tests/mth_inverse_trigram26_resume_generated_test.nas \
+            --weights build/resume/old/checkpoint/inverse_trigram26.tensor.f32le.bin \
+            --checkpoint build/resume/old/checkpoint/inverse_trigram26.checkpoint.json \
+            --manifest build/resume/manifest.json \
+            --output mth/tests/mth_inverse_trigram26_resume_admitted_test.nas \
+            --admission build/resume/admission.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_inverse_trigram26_resume_admitted_test.nas > build/resume/resume.nan
+      - name: Resume eight more epochs entirely in native NaN16
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli --img build/resume/resume.nan --steps 1500000000 --serial \
+            > build/resume/training.out 2> build/resume/training.err
+          grep -E '^(INV3_|MTH INVERSE TRIGRAM26)' build/resume/training.out
+          cat build/resume/training.err
+          grep -q '^INV3_TEST_BEFORE_HITS_PERMIL ' build/resume/training.out
+          grep -q '^INV3_TEST_AFTER_HITS_PERMIL ' build/resume/training.out
+          grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS' build/resume/training.out
+      - name: Export exact resumed native tensor
+        run: |
+          set -euo pipefail
+          python3 scripts/export_native_inverse_trigram26_checkpoint.py \
+            --log build/resume/training.out \
+            --split-manifest build/resume/manifest.json \
+            --output-dir build/resume/checkpoint
+          (cd build/resume/checkpoint && sha256sum -c SHA256SUMS)
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("build/resume/admission.json").read_text())
+          b=json.loads(Path("build/resume/checkpoint/inverse_trigram26.checkpoint.json").read_text())
+          assert a["weights_sha256"] != b["weights_sha256"], "No trained tensor update after resumption"
+          assert a["head255_void"] and b["void_head"] == 255
+          print("NATIVE_INVERSE_TRIGRAM_RESUME_CHECKPOINT_PASS",a["weights_sha256"],b["weights_sha256"])
+          PY
+      - name: Archive resumed model and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nan16-inverse-trigram-resumed-16epochs
+          path: |
+            build/resume/admission.json
+            build/resume/manifest.json
+            build/resume/training.out
+            build/resume/training.err
+            build/resume/checkpoint/
+          if-no-files-found: ignore
+          retention-days: 14

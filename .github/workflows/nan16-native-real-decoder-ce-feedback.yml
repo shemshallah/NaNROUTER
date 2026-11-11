@@ -1,0 +1,198 @@
+name: nan16-native-real-decoder-ce-feedback
+
+on:
+  push:
+    branches: [mth-hypertensor-simplicial-native-20261110]
+    paths:
+      - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
+      - "scripts/build_native_decoder_ce_fixture.py"
+      - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/apply_native_decoder_ce_journal_transport.py"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_native_decoder_ce_journal_transport.py"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - "tools/export_unified_decoder_nextbyte_logits.cpp"
+      - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
+  pull_request:
+    paths:
+      - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
+      - "scripts/build_native_decoder_ce_fixture.py"
+      - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/apply_native_decoder_ce_journal_transport.py"
+      - "scripts/apply_native_trihead_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
+      - "tests/test_native_decoder_ce_journal_transport.py"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - "tools/export_unified_decoder_nextbyte_logits.cpp"
+      - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-decoder-native-meta-ce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout pinned real unified HW0 decoder (NOT 43M hybrid)
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/nanlm-test
+          ref: 14edacd03be735610d26edd7643034b3b15cd727
+          path: nanlm-test
+      - name: Checkout pinned native NaN16 toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: fe636177027a1ede3f19939f7627e660e7bef5f3
+          path: nan0s
+      - name: Build frozen-decoder trace exporter and native NaN16
+        run: |
+          set -euo pipefail
+          mkdir -p build/decoder
+          make -s -C nanlm-test nanlm CXX=clang++
+          clang++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
+            -Inanlm-test/include tools/export_unified_decoder_nextbyte_logits.cpp \
+            -o build/decoder/export_frozen_logits
+          make -s -C nan0s/aarch64/android nan_cli
+          python3 -m py_compile scripts/build_native_decoder_ce_fixture.py \
+            scripts/export_disjoint_gutenberg_decoder_traces.py \
+            scripts/build_native_inverse_trigram26_corpus_fixture.py
+      - name: Train REAL unified decoder once, then freeze its exact root
+        run: |
+          set -euo pipefail
+          nanlm-test/nanlm build/decoder/frozen-root.bin train \
+            nanlm-test/tests/fixtures/unified_quality_train.txt 1 0 \
+            > build/decoder/train.log
+          test "$(stat -c %s build/decoder/frozen-root.bin)" = 8388608
+          sha256sum build/decoder/frozen-root.bin > build/decoder/frozen-root.SHA256
+          nanlm-test/nanlm build/decoder/frozen-root.bin eval \
+            nanlm-test/tests/fixtures/unified_quality_dev.txt \
+            > build/decoder/decoder-dev.log
+          nanlm-test/nanlm build/decoder/frozen-root.bin eval \
+            nanlm-test/tests/fixtures/unified_quality_heldout.txt \
+            > build/decoder/decoder-test.log
+          sha256sum -c build/decoder/frozen-root.SHA256
+      - name: Recover SHA-verified public-domain Gutenberg book archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          mkdir -p build/decoder/release build/decoder/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER \
+            --pattern 'sentences-0001.*' --dir build/decoder/release
+          (cd build/decoder/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/decoder/release/sentences-0001.tar.zst \
+            -C build/decoder/books
+      - name: Export CAUSAL decoder traces from 6 dev and 6 held-out books
+        run: |
+          set -euo pipefail
+          python3 scripts/export_disjoint_gutenberg_decoder_traces.py \
+            --root build/decoder/frozen-root.bin \
+            --exporter build/decoder/export_frozen_logits \
+            --corpus build/decoder/books \
+            --output-dir build/decoder/traces \
+            --manifest build/decoder/disjoint-books.json \
+            --rows-per-book 4
+          cp build/decoder/traces/dev.trace build/decoder/dev-trace.txt
+          cp build/decoder/traces/test.trace build/decoder/test-trace.txt
+          sha256sum -c build/decoder/frozen-root.SHA256
+          python3 scripts/build_native_decoder_ce_fixture.py \
+            --dev build/decoder/dev-trace.txt \
+            --test build/decoder/test-trace.txt \
+            --output mth/tests/mth_real_decoder_ce_generated_test.nas \
+            --manifest build/decoder/trace-manifest.json
+          awk -f nan0s/tools/nmk.awk -v CMD=emit \
+            mth/tests/mth_real_decoder_ce_generated_test.nas \
+            > build/decoder/real-decoder-meta.nan
+      - name: Perform ONLY native cross-entropy acceptance, then readonly test
+        run: |
+          set -euo pipefail
+          nan0s/aarch64/android/nan_cli \
+            --img build/decoder/real-decoder-meta.nan \
+            --steps 400000000 --serial \
+            > build/decoder/native-ce.out 2> build/decoder/native-ce.err
+          cat build/decoder/native-ce.out
+          cat build/decoder/native-ce.err
+          grep -q '^DCE_DEV_NAT_MILLI ' build/decoder/native-ce.out
+          grep -q '^DCE_TEST_NAT_MILLI ' build/decoder/native-ce.out
+          grep -qx 'MTH REAL DECODER CE FEEDBACK PASS' build/decoder/native-ce.out
+          sha256sum -c build/decoder/frozen-root.SHA256
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("build/decoder/native-ce.out").read_text().splitlines()
+          rows=[x for x in p if x.startswith(("DCE_DEV_NAT_MILLI ", "DCE_TEST_NAT_MILLI "))]
+          accepted=[x for x in p if x.startswith("DCE_DEV_ACCEPTED_MOVES ")]
+          assert len(rows)==2 and len(accepted)==1, (rows,accepted)
+          d,t=[tuple(map(int,x.split()[1:])) for x in rows]
+          moves=int(accepted[0].split()[1])
+          assert len(d)==3 and len(t)==3 and 0 <= moves <= 6
+          assert d[2]==int(d[1]+0.001<d[0]), "native dev gate mismatch"
+          print("REAL_DECODER_CE_DEV_TEST_META",json.dumps({
+            "dev_before_milli":d[0],"dev_after_milli":d[1],
+            "dev_admitted":bool(d[2]),"dev_accepted_moves":moves,"test_before_milli":t[0],
+            "test_after_milli":t[1],
+            "test_delta_milli":t[1]-t[0],
+            "model":"real HW0 unified decoder, NOT 43M hybrid",
+            "root_frozen":True,
+          },sort_keys=True))
+          PY
+      - name: Replay ONLY native dev-admitted weight to real 128 MiB candidate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_native_decoder_ce_journal_transport.py' -v
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/decoder/full128.f32le \
+            --manifest build/decoder/full128.json
+          python3 scripts/apply_native_decoder_ce_journal_transport.py \
+            --arena build/decoder/full128.f32le \
+            --arena-manifest build/decoder/full128.json \
+            --native-log build/decoder/native-ce.out \
+            --decoder-root build/decoder/frozen-root.bin \
+            --books-manifest build/decoder/disjoint-books.json \
+            > build/decoder/native-ce-128m-replay.json
+          cat build/decoder/native-ce-128m-replay.json
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/decoder/full128.f32le \
+            --manifest build/decoder/full128.json --verify
+          sha256sum -c build/decoder/frozen-root.SHA256
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("build/decoder/native-ce-128m-replay.json").read_text())
+          assert r["native_candidate_write"]=="transported"
+          assert r["target"]==[116,104,101]
+          assert r["head"]==1
+          assert r["dev_books"]==6 and r["test_books"]==6
+          assert not r["active_bank_written"]
+          assert not r["root_8MiB_written"]
+          assert not r["test_used_for_admission"]
+          assert not r["promotion_implemented"]
+          print("MTH REAL DECODER CE FULL128 CANDIDATE TRANSPORT PASS")
+          PY
+      - name: Preserve root/prose hashes and NaN16 decoder-loss audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-unified-decoder-native-ce-feedback
+          path: |
+            build/decoder/train.log
+            build/decoder/decoder-dev.log
+            build/decoder/decoder-test.log
+            build/decoder/frozen-root.SHA256
+            build/decoder/trace-manifest.json
+            build/decoder/disjoint-books.json
+            build/decoder/dev-trace.txt
+            build/decoder/test-trace.txt
+            build/decoder/full128.json
+            build/decoder/native-ce-128m-replay.json
+            build/decoder/native-ce.out
+            build/decoder/native-ce.err
+          if-no-files-found: ignore
+          retention-days: 21
