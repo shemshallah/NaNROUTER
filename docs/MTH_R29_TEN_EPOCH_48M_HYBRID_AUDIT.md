@@ -47,3 +47,28 @@ At each epoch, DEV whole-word NLL became worse than the original. The positive h
 The user's cumulative Round 29 Library ZIP includes scripts train_r29_10epochs.py and audit_r29_epoch_curve.py, the verified Round28 model, original NaNROUTER short-story split, raw logs, two candidate-only R22 count snapshots, per-epoch CSV, JSON report, manifest and SHA-256 checksums. Extract ZIP with its directory layout and run the scripts under Python + NumPy. No source weights were committed to GitHub.
 
 This does **not** train the 48M base model, 128 MiB mirror tensor, or the native NaN16 whole-word gate. No independent held-out generalization or live promotion is claimed.
+
+
+## Full 260-book corpus extension (after the 40,000-token pilot)
+
+A second and larger experiment scanned **the entire** archived NaNROUTER corpora-short-stories TRAIN split of 260 books (source SHA-256 above). It contained **10,793,992 valid word positions** and **10,302,349 unprotected eligible training word occurrences**. Applying all forward/reverse characters plus EOS yielded **105,552,266 character targets and 211,104,532 two-head count increments per epoch**, or **1,055,522,660 targets and 2,111,045,320 head increments across ten epochs**.
+
+**Timing contract:** R22 heads are additive counts. Training data were read once to accumulate exact sufficient statistics (125.371006 seconds), then those counts were sequentially added to a copied original head table ten times (0.189104 seconds combined). This is mathematically identical to ten corpus passes for these count heads, **not ten literal filesystem rereads**. The entire local experiment including model loading, evaluation and candidate state serialization was 150.332686 seconds.
+
+| Full-corpus epoch | Exact count update seconds | DEV exact whole-word NLL | DEV PPL |
+|---:|---:|---:|---:|
+| 0 | — | 6.988146387 | 1083.711 |
+| 1 | 0.011519 | 6.967179354 | 1061.225 |
+| 2 | 0.037391 | 6.967252757 | 1061.303 |
+| 3 | 0.011309 | 6.967209222 | 1061.257 |
+| 4 | 0.010947 | 6.967163254 | 1061.208 |
+| 5 | 0.012638 | 6.967125330 | 1061.168 |
+| 6 | 0.033839 | 6.967094942 | 1061.136 |
+| 7 | 0.037259 | 6.967070438 | 1061.110 |
+| 8 | 0.012218 | 6.967050403 | 1061.088 |
+| 9 | 0.011501 | 6.967033777 | 1061.071 |
+| 10 | 0.010483 | **6.967019787** | **1061.056** |
+
+With the **same original exact R25 full-word known-vocabulary normalization**, 128 sampled word positions (17 OOV) on DEV improved in mean NLL from 6.988146388 to 6.967019787. However the 128-position historically exposed TEST worsened from 6.059459185 to 6.061260008 (PPL from 428.14 to 428.92). Thus **no candidate promotion**, no independent generalization claim, and no claim of native NaN16 training.
+
+The user's **updated cumulative Round 29 ZIP** in ChatGPT Library includes both local experiments, authentic R28 base/overlay and corpus, the full-corpus script train_r29_full_corpus.py, result report.json, epochs.csv, raw training log, candidate-only NPZs, manifest, and SHA-256 checksums. Source weights/tensor remain frozen.
