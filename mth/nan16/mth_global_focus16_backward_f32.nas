@@ -104,6 +104,12 @@ mth_gfb_ds:
   ADD r10,r1,r7
   LD r10,r10,0
   FMUL r9,r9,r10
+  ; For a masked weight=+0.0, canonicalize -0.0 score gradient
+  ; to +0.0 so exact transport / deterministic mask tests agree.
+  FCMP r10,r0
+  JMP[NE] @mth_gfb_ds_store
+  MOVI r9,0
+mth_gfb_ds_store:
   ADDI r10,r6,272
   ADD r10,r10,r7
   ST r9,r10,0
