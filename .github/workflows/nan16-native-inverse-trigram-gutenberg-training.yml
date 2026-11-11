@@ -6,6 +6,7 @@ on:
     paths:
       - "mth/nan16/mth_inverse_trigram26_batch_f32.nas"
       - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
+      - "scripts/export_native_inverse_trigram26_checkpoint.py"
       - ".github/workflows/nan16-native-inverse-trigram-gutenberg-training.yml"
   workflow_dispatch:
 
@@ -30,7 +31,7 @@ jobs:
           make -s -C nan0s/aarch64/android nan_cli
           sudo apt-get update -qq
           sudo apt-get install -y -qq zstd
-          python3 -m py_compile scripts/build_native_inverse_trigram26_corpus_fixture.py
+          python3 -m py_compile scripts/build_native_inverse_trigram26_corpus_fixture.py scripts/export_native_inverse_trigram26_checkpoint.py
       - name: Fetch verified public-domain Gutenberg sentences release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -55,7 +56,7 @@ jobs:
             --img build/trigram-inverse/trigram.nan \
             --steps 1500000000 --serial \
             > build/trigram-inverse/training.out 2> build/trigram-inverse/training.err
-          cat build/trigram-inverse/training.out
+          grep -E '^(INV3_|MTH INVERSE TRIGRAM26)' build/trigram-inverse/training.out
           cat build/trigram-inverse/training.err
           grep -q '^INV3_TEST_BEFORE_HITS_PERMIL ' build/trigram-inverse/training.out
           grep -q '^INV3_INVERSE_BEFORE_HITS_PERMIL ' build/trigram-inverse/training.out
@@ -64,6 +65,16 @@ jobs:
           grep -q '^INV3_FORWARD_AFTER_HITS_PERMIL ' build/trigram-inverse/training.out
           grep -q '^MTH INVERSE TRIGRAM26 GLOBAL HEAD BRIDGE PASS' build/trigram-inverse/training.out
           grep -q '^MTH INVERSE TRIGRAM26 CORPUS TRAIN PASS' build/trigram-inverse/training.out
+          grep -q '^INV3_CHECKPOINT_BEGIN' build/trigram-inverse/training.out
+          grep -q '^INV3_CHECKPOINT_END' build/trigram-inverse/training.out
+      - name: Export native 26-cubed hypertensor checkpoint (exact bits)
+        run: |
+          set -euo pipefail
+          python3 scripts/export_native_inverse_trigram26_checkpoint.py \
+            --log build/trigram-inverse/training.out \
+            --split-manifest build/trigram-inverse/manifest.json \
+            --output-dir build/trigram-inverse/checkpoint
+          (cd build/trigram-inverse/checkpoint && sha256sum -c SHA256SUMS)
       - name: Upload disjoint-source manifest and measured native guest outcome
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,5 +84,6 @@ jobs:
             build/trigram-inverse/manifest.json
             build/trigram-inverse/training.out
             build/trigram-inverse/training.err
+            build/trigram-inverse/checkpoint/
           if-no-files-found: ignore
           retention-days: 14
