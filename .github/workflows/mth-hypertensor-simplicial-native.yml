@@ -18,6 +18,7 @@ on:
       - 'mth/nan16/mth_global_motif_reduce16.nas'
       - 'mth/nan16/mth_spectral_cut16_f32.nas'
       - 'mth/tests/mth_global_motif_spectral_native_test.nas'
+      - 'mth/tests/mth_connected_hypertensor_focus_native_test.nas'
       - '.github/workflows/mth-hypertensor-simplicial-native.yml'
   workflow_dispatch:
 
@@ -80,6 +81,16 @@ jobs:
           cat build/mth/motif-spectral.out
           cat build/mth/motif-spectral.err
           grep -q '^MTH GLOBAL HOT COLD SPECTRAL PASS' build/mth/motif-spectral.out
+      - name: Assemble connected hyperbolic hypertensor native fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_connected_hypertensor_focus_native_test.nas > build/mth/connected-focus.nan
+      - name: Execute connected hyperbolic-to-global NaN16 path
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/connected-focus.nan --steps 15000000 --serial > build/mth/connected-focus.out 2> build/mth/connected-focus.err
+          cat build/mth/connected-focus.out
+          cat build/mth/connected-focus.err
+          grep -q '^MTH CONNECTED HYPERTENSOR FOCUS PASS' build/mth/connected-focus.out
       - name: Attach diagnostic output on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -94,4 +105,6 @@ jobs:
             build/mth/sheaf-fourier.err
             build/mth/motif-spectral.out
             build/mth/motif-spectral.err
+            build/mth/connected-focus.out
+            build/mth/connected-focus.err
           if-no-files-found: ignore
