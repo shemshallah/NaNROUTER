@@ -97,14 +97,16 @@ jobs:
           import json
           from pathlib import Path
           p=Path("build/decoder/native-ce.out").read_text().splitlines()
-          rows=[x for x in p if x.startswith("DCE_")]
-          assert len(rows)==2, rows
+          rows=[x for x in p if x.startswith(("DCE_DEV_NAT_MILLI ", "DCE_TEST_NAT_MILLI "))]
+          accepted=[x for x in p if x.startswith("DCE_DEV_ACCEPTED_MOVES ")]
+          assert len(rows)==2 and len(accepted)==1, (rows,accepted)
           d,t=[tuple(map(int,x.split()[1:])) for x in rows]
-          assert len(d)==3 and len(t)==3
-          assert d[2] in (0,1)
+          moves=int(accepted[0].split()[1])
+          assert len(d)==3 and len(t)==3 and 0 <= moves <= 6
+          assert d[2]==int(d[1]+0.001<d[0]), "native dev gate mismatch"
           print("REAL_DECODER_CE_DEV_TEST_META",json.dumps({
             "dev_before_milli":d[0],"dev_after_milli":d[1],
-            "dev_admitted":bool(d[2]),"test_before_milli":t[0],
+            "dev_admitted":bool(d[2]),"dev_accepted_moves":moves,"test_before_milli":t[0],
             "test_after_milli":t[1],
             "test_delta_milli":t[1]-t[0],
             "model":"real HW0 unified decoder, NOT 43M hybrid",
