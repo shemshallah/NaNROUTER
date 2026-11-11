@@ -1,0 +1,33 @@
+name: Native NaN16 HW5 Gutenberg slot guard
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mth/nan16/mth_hw5_gutenberg_slot_guard.nas'
+      - 'mth/tests/mth_hw5_gutenberg_slot_guard_test.nas'
+      - 'docs/BS0_HARDWARE_SLOT_CONTRACT.md'
+      - '.github/workflows/native-hw5-gutenberg-slot-guard.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exhaustive-bs0-allocation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout canonical native NaN0S toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shemshallah/NaN0S
+          ref: main
+          path: nan0s
+      - name: Build native NaN16 guest runner
+        run: make -s -C nan0s/aarch64/android nan_cli
+      - name: Assemble and test all 256 hardware slots in real NaN16
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_hw5_gutenberg_slot_guard_test.nas > /tmp/hw5-slot-guard.nan
+          nan0s/aarch64/android/nan_cli --img /tmp/hw5-slot-guard.nan --steps 1000000 --serial > /tmp/hw5-slot-guard.log 2>&1
+          cat /tmp/hw5-slot-guard.log
+          grep -q '^MTH HW5 GUTENBERG SLOT GUARD PASS' /tmp/hw5-slot-guard.log
