@@ -1,6 +1,6 @@
 # Native hypertensor → simplicial → geometric global primitives, stage 1
 
-Status: **NaN16 source + canonical CI fixture submitted**, not claimed to have executed or trained until that CI run succeeds.
+Status: **native NaN16 mathematics verified by canonical guest CI**, not yet trained with or integrated into the 43M language decoder.
 
 This is a deliberate replacement of the earlier provisional attention flow:
   streamed head vectors → third-order hypertensor → tri-state 2-simplex
@@ -40,3 +40,27 @@ A hot or cold motif is a property of three valid observed pair states, not of a 
 ## Acceptance tests
 
 The included NaN16 guest fixture checks exact stream tensor entries and failure atomicity, 2/3 hot and cold/unknown classes, triangle Hodge identities, hyperbolic zero and nonzero distance affinities with unit-boundary rejection, and one-scale diffusion/wavelet outputs. The GitHub Actions workflow builds the pinned canonical NaN0S CLI, runs the assembled guest, and requires a unique PASS marker. This is a *unit-level mathematical package*, not an end-to-end trained model or measured Transformer parity.
+
+## Verification update — 2026-11-10 (native PR #119)
+
+All six current fixtures were **assembled and executed** with pinned canonical NaN0S toolchain in [GitHub Actions run #42943352111](https://github.com/shemshallah/NaNROUTER/actions/runs/42943352111):
+
+| Fixture | NaN16 guest steps | Result |
+|---|---:|---|
+| Native hypertensor, motif, local Hodge, Poincaré and simplex wavelet | 109701 | PASS |
+| Masked global focus plus symmetric 16-node graph wavelet | 46103 | PASS |
+| Directed hyperbolic sheaf plus supplied-basis graph Fourier | 28925 | PASS |
+| 16-triad hot/cold global counts plus spectral-cut readout | 2886 | PASS |
+| Connected Poincaré → sheaf → hypertensor → hot motif/Hodge → focal softmax | 136226 | PASS |
+| Reverse-mode gradient from 4096 tensor components into all three source vectors | 302523 | PASS |
+| **Total** | **626364** | **6/6 PASS** |
+
+No new Python or C++ mathematical opcode handler is involved. The current routines operate in the NaN16 guest with caller-owned scratch and make no modifications to the canonical 8 MiB root. The tensor is a full rank-3 16×16×16 outer product; its reverse-mode gradient is now implemented, but there is not yet a native trainable global softmax backward pass or a measured decrease in held-out text loss from this architecture.
+
+Additional kernels introduced after the initial stage: `mth_global_focus16_f32`, `mth_graph_wavelet16_f32`, `mth_hyperbolic_sheaf16_f32`, `mth_graph_fourier16_f32`, `mth_global_motif_reduce16`, `mth_spectral_cut16_f32`, and `mth_hypertensor16_backward_f32`. Together with the initial five these make **12 new native NaN16 kernels**.
+
+Spectral semantics: `mth_graph_fourier16_f32` projects using a caller-provided graph eigenbasis (eigenbasis generation/validation is not done in that kernel); `mth_spectral_cut16_f32` partitions from a supplied Fiedler mode (not an eigen-solver). The 3-node and 16-node heat-detail operators are single-scale wavelets, not yet a multiscale spectral bank. The Poincaré pair kernel computes `cosh(d)` and its inverse as an affinity; it is not an exact geodesic or tangent log map. The directed sheaf operator is linear restriction-map discrepancy, not Riemannian parallel transport. The local Hodge triangle has no harmonic 1-form; full-root Hodge remains a distinct existing kernel.
+
+The genuine meta layer is **Overbootstrap MC0**, which is deliberately deferred. The native global attention readout is not labeled a trained meta layer.
+
+Before claiming an end-to-end language-model improvement: build a native graph Laplacian eigenbasis for the actual learned graph (rather than injecting one), train global masked Q/K/V and the hypertensor projection with a causal next-token objective, connect to the frozen 43M decoder through a rollback-gated residual, and evaluate with independent document-level held-out bits per byte and exact-word metrics against a matched small Transformer. No improvement is asserted until those measurements exist.
