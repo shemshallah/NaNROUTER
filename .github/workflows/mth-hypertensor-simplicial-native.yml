@@ -12,6 +12,9 @@ on:
       - 'mth/tests/mth_global_simplicial_focus_native_test.nas'
       - 'mth/nan16/mth_global_focus16_f32.nas'
       - 'mth/nan16/mth_graph_wavelet16_f32.nas'
+      - 'mth/nan16/mth_hyperbolic_sheaf16_f32.nas'
+      - 'mth/nan16/mth_graph_fourier16_f32.nas'
+      - 'mth/tests/mth_hyperbolic_sheaf_fourier_native_test.nas'
       - '.github/workflows/mth-hypertensor-simplicial-native.yml'
   workflow_dispatch:
 
@@ -54,6 +57,16 @@ jobs:
           cat build/mth/global-focus.out
           cat build/mth/global-focus.err
           grep -q '^MTH GLOBAL SIMPLICIAL FOCUS PASS' build/mth/global-focus.out
+      - name: Assemble sheaf and graph Fourier native fixture
+        run: |
+          awk -f nan0s/tools/nmk.awk -v CMD=emit mth/tests/mth_hyperbolic_sheaf_fourier_native_test.nas > build/mth/sheaf-fourier.nan
+      - name: Execute sheaf and graph Fourier in NaN16
+        run: |
+          set -o pipefail
+          nan0s/aarch64/android/nan_cli --img build/mth/sheaf-fourier.nan --steps 15000000 --serial > build/mth/sheaf-fourier.out 2> build/mth/sheaf-fourier.err
+          cat build/mth/sheaf-fourier.out
+          cat build/mth/sheaf-fourier.err
+          grep -q '^MTH HYPERBOLIC SHEAF FOURIER PASS' build/mth/sheaf-fourier.out
       - name: Attach diagnostic output on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -64,4 +77,6 @@ jobs:
             build/mth/hypertriad.err
             build/mth/global-focus.out
             build/mth/global-focus.err
+            build/mth/sheaf-fourier.out
+            build/mth/sheaf-fourier.err
           if-no-files-found: ignore
