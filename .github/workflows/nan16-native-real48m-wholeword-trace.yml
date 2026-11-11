@@ -6,6 +6,8 @@ on:
     paths:
       - "tests/fixtures/r28_frozen48m_wholeword_pairs.b64"
       - "scripts/build_native_wholeword_nll_fixture.py"
+      - "scripts/apply_native_wholeword_journal_transport.py"
+      - "scripts/init_full128_mirror_tensor_storage.py"
       - "mth/nan16/mth_trihead_wholeword_nll_feedback_f32.nas"
       - ".github/workflows/nan16-native-real48m-wholeword-trace.yml"
   pull_request:
@@ -101,6 +103,42 @@ jobs:
           print("NATIVE_REAL48M_FULLWORD_LOSS",json.dumps(result,sort_keys=True))
           Path("build/real-48m/audit.json").write_text(json.dumps(result,indent=2)+"\n")
           PY
+      - name: Native-approved original 48M candidate -> 128 MiB mirror bank1 ONLY
+        run: |
+          set -euo pipefail
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/real-48m/tensor128.bin \
+            --manifest build/real-48m/tensor128.manifest.json
+          python3 scripts/apply_native_wholeword_journal_transport.py \
+            --arena build/real-48m/tensor128.bin \
+            --arena-manifest build/real-48m/tensor128.manifest.json \
+            --native-log build/real-48m/native.out \
+            --dev-trace build/real-48m/dev.trace \
+            --test-trace build/real-48m/test.trace \
+            --fixture-manifest build/real-48m/manifest.json \
+            | tee build/real-48m/candidate-transport.json
+          python3 scripts/init_full128_mirror_tensor_storage.py \
+            --output build/real-48m/tensor128.bin \
+            --manifest build/real-48m/tensor128.manifest.json --verify
+          python3 - <<'PY'
+          import struct,sys,json
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from init_full128_mirror_tensor_storage import BANK_BYTES, TOTAL_BYTES, physical_offset
+          p=Path('build/real-48m/tensor128.bin')
+          m=json.loads(Path('build/real-48m/tensor128.manifest.json').read_text())
+          offset=physical_offset(0,19,7,4)[0]
+          assert offset==0x004C23C4
+          assert p.stat().st_size==TOTAL_BYTES==134217728
+          with p.open('rb') as f:
+            f.seek(offset)
+            assert f.read(4)==b'\x00'*4
+            f.seek(BANK_BYTES+offset)
+            assert f.read(4)==struct.pack('<I',0xBE000000)
+          assert m['candidate_generation']==1
+          assert m['promotion_implemented'] is False
+          print('ORIGINAL48M_FULLWORD_NATIVE_CANDIDATE_128M_ONLY_PASS')
+          PY
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -110,5 +148,7 @@ jobs:
             build/real-48m/native.err
             build/real-48m/manifest.json
             build/real-48m/audit.json
+            build/real-48m/candidate-transport.json
+            build/real-48m/tensor128.manifest.json
           if-no-files-found: ignore
           retention-days: 21
