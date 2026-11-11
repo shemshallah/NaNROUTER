@@ -61,7 +61,7 @@ jobs:
           nanlm-test/nanlm build/decoder/frozen-root.bin eval \
             nanlm-test/tests/fixtures/unified_quality_heldout.txt \
             > build/decoder/decoder-test.log
-          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+          sha256sum -c build/decoder/frozen-root.SHA256
       - name: Export CAUSAL decoder next-byte logits on disjoint dev and test
         run: |
           set -euo pipefail
@@ -71,7 +71,7 @@ jobs:
           build/decoder/export_frozen_logits build/decoder/frozen-root.bin \
             nanlm-test/tests/fixtures/unified_quality_heldout.txt 116 104 24 \
             > build/decoder/test-trace.txt
-          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+          sha256sum -c build/decoder/frozen-root.SHA256
           python3 scripts/build_native_decoder_ce_fixture.py \
             --dev build/decoder/dev-trace.txt \
             --test build/decoder/test-trace.txt \
@@ -92,7 +92,7 @@ jobs:
           grep -q '^DCE_DEV_NAT_MILLI ' build/decoder/native-ce.out
           grep -q '^DCE_TEST_NAT_MILLI ' build/decoder/native-ce.out
           grep -qx 'MTH REAL DECODER CE FEEDBACK PASS' build/decoder/native-ce.out
-          (cd build/decoder && sha256sum -c frozen-root.SHA256)
+          sha256sum -c build/decoder/frozen-root.SHA256
           python3 - <<'PY'
           import json
           from pathlib import Path
