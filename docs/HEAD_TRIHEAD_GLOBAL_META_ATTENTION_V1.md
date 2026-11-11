@@ -1,5 +1,8 @@
 # Head → Trihead → Global → Meta: causal hierarchical attention v1
 
+> **Architecture revision (2026-11-10, native implementation PR #119):** The approved data path now begins **head streaming vectors → 16x16x16 hypertensor → hot/cold simplicial triheads → Hodge, graph wavelets/Fourier and hyperbolic sheaf geometry → global masked attention**. The historical four-level sequence described below predates this change. **True META is reserved for Overbootstrap MC0 and is explicitly deferred**; per-token attention feedback is a global-layer operation, not an MC0 implementation. The discrete C(256,2) physical root and head-role reservations remain unchanged. See [the working native code](https://github.com/shemshallah/NaNROUTER/pull/119).
+
+
 **Status: design contract only. Not implemented, trained, deployed, or Transformer-comparable yet.**
 
 Objective: add hierarchical attention as a trainable residual to the **existing 43M hybrid** rather than create a second language model. Freeze the original 43M checkpoint, retain its forward/reverse character and known-word paths, and prove causal credit assignment before unfreezing shared state.
