@@ -88,6 +88,8 @@ mth_tm_test_build:
   CALL @mth_tm_test_single
   CMP r1,r0
   JMP[NE] @mth_tm_test_fail
+  MOVI r9,@mth_tm_test_permissions
+  ADDI r9,r9,17
   ST r13,r9,0                 ; restore permission
   MOVI r11,0
   ST r11,r0,@mth_tm_test_proposals
@@ -176,8 +178,9 @@ mth_tm_test_build:
   HALT
 
 mth_tm_test_single:
-  ; Restore return link via r14; kernel's frame handles its own nested call.
-  ADD r14,r15,r0
+  ; Store caller return link in non-aliasing static test-only slot.
+  ; Meta kernel deliberately clobbers r14 during preflight.
+  ST r15,r0,@mth_tm_test_single_link
   MOVI r1,@mth_tm_test_proposals
   MOVI r2,1
   MOVI r3,@mth_tm_test_permissions
@@ -186,7 +189,7 @@ mth_tm_test_single:
   MOVI r6,@mth_tm_test_stats
   MOVI r12,@mth_tm_test_frame
   CALL @mth_trihead_meta_feedback_f32
-  ADD r15,r14,r0
+  LD r15,r0,@mth_tm_test_single_link
   RET
 
 mth_tm_test_fail:
@@ -220,6 +223,8 @@ mth_tm_test_stats:
 .word 0,0,0,0
 mth_tm_test_frame:
 .word 0,0,0,0,0,0,0,0,0,0,0,0
+mth_tm_test_single_link:
+.word 0
 mth_tm_test_pass:
 .str "MTH TRIHEAD META FEEDBACK PASS\n"
 mth_tm_test_bad:
