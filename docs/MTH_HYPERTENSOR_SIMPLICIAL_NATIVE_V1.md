@@ -43,7 +43,7 @@ The included NaN16 guest fixture checks exact stream tensor entries and failure 
 
 ## Verification update — November 10, 2026 (native PR #119)
 
-All eight current fixtures assembled and executed in the pinned canonical NaN0S toolchain, with real guest arithmetic, in [GitHub Actions run #42944705145](https://github.com/shemshallah/NaNROUTER/actions/runs/42944705145).
+All nine current fixtures assembled and executed in the pinned canonical NaN0S toolchain, with real guest arithmetic, in [GitHub Actions run #42945427159](https://github.com/shemshallah/NaNROUTER/actions/runs/42945427159).
 
 | NaN16 fixture | Guest steps | Outcome |
 |---|---:|---|
@@ -55,9 +55,10 @@ All eight current fixtures assembled and executed in the pinned canonical NaN0S 
 | Rank-3 tensor reverse-mode backward into A/B/C streams | 302,523 | PASS |
 | Native diffusion-derived approximate Fiedler mode and two-cluster spectral partition | 211,773 | PASS |
 | Native masked global softmax backward into candidate scores and value features | 13,710 | PASS |
-| **Total** | **852,914** | **8/8 PASS** |
+| Global all-256-head B1 divergence plus oriented selected B2 face curl, canonical 32,640 pair flow input | 1,945,232 | PASS |
+| **Total** | **2,798,146** | **9/9 PASS** |
 
-### The 14 added NaN16 kernels
+### The 15 added NaN16 kernels
 
 1. `mth_hypertensor16_f32.nas`: full rank-3 streamed tensor construction.
 2. `mth_simplicial_motif3.nas`: tri-state complete/2-of-3 hot/cold masks.
@@ -73,19 +74,20 @@ All eight current fixtures assembled and executed in the pinned canonical NaN0S 
 12. `mth_hypertensor16_backward_f32.nas`: gradients into all streamed inputs from rank-3 upstream gradient.
 13. `mth_fiedler16_f32.nas`: approximate Fiedler mode extracted **in the guest** from a real weighted graph using centered normalized diffusion (not a complete eigensolver or certified convergence).
 14. `mth_global_focus16_backward_f32.nas`: gradients through 16-candidate softmax and values; canonical masked score zeros.
+15. `mth_global_hodge256_f32.nas`: compute genuine B1 divergence on all 256 head vertices and B2^T oriented curl on up to 16 admitted triangle faces, directly from 32,640 canonical pair flows.
 
 ### What this does and does not prove
 
-- Verified: native `.nas` mathematical execution, basic numeric oracles, reject atomicity, local gradient/curl and hotspot operations, graph spectral scale, graph-based spectral cluster on a planted connected two-community graph, gradient availability at the **rank-3 tensor and global softmax seams**, and a **forward** global-to-next-head residual connection.
+- Verified: native `.nas` mathematical execution, basic numeric oracles, reject atomicity, local and global 256-head gradient/curl incidence and hotspot operations, graph spectral scale, graph-based spectral cluster on a planted connected two-community graph, gradient availability at the **rank-3 tensor and global softmax seams**, and a **forward** global-to-next-head residual connection.
 - Not yet verified: multi-chart NANNET deployment, canonical 8 MiB root writes/epoch transactions for these new kernels, an entire compiled trained head→trihead→global model, backpropagation through the Poincaré embedding and sheaf maps or the complete temporal attention loop, a global graph/simplicial multiscale Fourier/Hodge decomposition, a learned hyperbolic embedding of all 256 heads, and measurable language loss gain over the frozen 43M hybrid.
-- The 16×16 relationship graph, directed 16×16 restriction maps and Laplacian eigenbasis are separate **mathematical operator descriptors**, NOT a matrix made from streamed vectors. The streamed head input is transformed directly into a 16×16×16 hypertensor; it does not become a vector-covariance matrix first.
+- The 256-head global Hodge kernel takes *canonical pair flows*, not a head-vector matrix; only explicitly admitted faces are treated as triangles. A 2-of-3 hot/cold candidate is not silently promoted to a filled simplex. The 16×16 relationship graph, directed 16×16 restriction maps and Laplacian eigenbasis are separate **mathematical operator descriptors**, NOT a matrix made from streamed vectors. The streamed head input is transformed directly into a 16×16×16 hypertensor; it does not become a vector-covariance matrix first.
 - The Poincaré kernel returns a monotone reciprocal cosh-distance affinity, not exact geodesic coordinates or Riemannian parallel transport. The sheaf restriction operator is not a full geodesic sheet connection. The 3- and 16-node heat detail are single-scale rather than multiscale wavelet banks. Graph Fourier analysis accepts a supplied eigenbasis; the separate native Fiedler estimator computes an approximate *single* mode for a weighted graph.
 - Real **META** is reserved to **Overbootstrap MC0** for a later release. The global attention feedback into the next head is not an implementation of MC0 meta or a claim of consciousness/understanding.
 
 ### Remaining integration priorities
 
 1. Produce versioned canonical 256-head/tensor/simplicial mapping and enforce native admitted root write permissions and temporal snapshots, with true directed lanes and explicit unknown evidence.
-2. Implement genuine sparse B1/B2 incidence operators, global Hodge divergence/curl/cycle separation, and multiscale graph/simplicial spectral transforms on the learned graph.
+2. Extend the now-verified 256-vertex B1 divergence plus selected 16-face B2^T curl into fully admitted weighted/sparse simplicial complexes, full edge Hodge gradient/curl/harmonic separation, and multiscale graph/simplicial spectral transforms on a learned graph.
 3. Train Poincaré embeddings and hyperedge-to-hypertensor sheet connection, including hyperbolic gradient/parallel transport if tests show benefit.
 4. Join tensor and global-attention backward with native Q/K/V, sheaf, spectral and head projections; plug resulting gated residual into the **existing** 43M model without retraining a separate model. Verify gradients from next-word cross-entropy and exact zero-gate identity regression.
 5. Benchmark an entirely new document-held-out split against an equally trained small causal Transformer with comparable byte-level evaluation (bits per byte, exact word/OOV, context recall and generation). No transformer superiority claim until shown.
