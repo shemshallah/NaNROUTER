@@ -89,6 +89,7 @@ def create(path: Path, manifest_path: Path) -> dict:
         "root_8MiB_untouched": True,
         "initialized_zeros_sha256": sha256_file(path),
         "state": "untrained-full-capacity-zero-initialized",
+        "candidate_generation": 0,
         "native_update_required": True,
         "promotion_implemented": False,
     }
@@ -113,7 +114,7 @@ def verify(path: Path, manifest_path: Path) -> dict:
     if info["void_semantic_head"] != 255 or info["root_8MiB_untouched"] is not True:
         raise ValueError("Invalid native root/head contract")
     digest = sha256_file(path)
-    if digest != info["initialized_zeros_sha256"]:
+    if digest != info.get("current_sha256", info["initialized_zeros_sha256"]):
         raise ValueError("Unadmitted arena mutation or corruption")
     return {"verified": True, "bytes": TOTAL_BYTES, "sha256": digest}
 
