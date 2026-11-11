@@ -3,6 +3,10 @@
 ; Pair_flow[p] = directed scalar flow low_head -> high_head, for
 ; canonical unordered pair p=i*(511-i)/2 + (j-i-1), 0<=i<j<256.
 ; Selected triangles T[t] = oriented triple (a,b,c), distinct U8 heads.
+; Index 255 is reserved zero/VOID: all (a,255) flows must equal signed
+; float32 zero and no admitted triangle may reference vertex 255.
+; The active mathematical head domain is 0..254. Physical 256-point
+; chart and existing head-0 NANNET root authority remain unchanged.
 ; Computes divergence[a]+=flow(a,b), divergence[b]-=flow(a,b).
 ; Computes curl[t]=flow(a,b)+flow(b,c)+flow(c,a), with signs depending
 ; on orientation. Caller admits actual simplicial faces from hot/cold
@@ -56,6 +60,13 @@ mth_gh256_gate_triangles:
   SHR r14,r11,8
   CMP r14,r0
   JMP[NE] @mth_gh256_reject
+  MOVI r14,255
+  CMP r9,r14
+  JMP[EQ] @mth_gh256_reject
+  CMP r10,r14
+  JMP[EQ] @mth_gh256_reject
+  CMP r11,r14
+  JMP[EQ] @mth_gh256_reject
   CMP r9,r10
   JMP[EQ] @mth_gh256_reject
   CMP r9,r11
@@ -93,6 +104,17 @@ mth_gh256_div_b:
   JMP[GE] @mth_gh256_div_next_a
   ADD r12,r1,r11
   LD r10,r12,0              ; directed f[a,b]
+  ; The physical pair with void head 255 exists, but is not a live
+  ; computational lane. Reject nonzero evidence instead of silently using it.
+  MOVI r12,255
+  CMP r9,r12
+  JMP[NE] @mth_gh256_active_pair
+  FCMP r10,r0
+  JMP[NE] @mth_gh256_reject
+  ADDI r11,r11,1
+  ADDI r9,r9,1
+  JMP @mth_gh256_div_b
+mth_gh256_active_pair:
   ADD r12,r6,r8
   LD r14,r12,0
   FADD r14,r14,r10
