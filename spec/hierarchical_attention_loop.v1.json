@@ -1,0 +1,79 @@
+{
+  "schema": "nanlm.hierarchical_attention.v1",
+  "status": "design_only",
+  "claims": {
+    "trained": false,
+    "transformer_parity_verified": false,
+    "geometry_benefit_verified": false
+  },
+  "physical": {
+    "chart_bytes": 8388608,
+    "heads": 256,
+    "canonical_pairs": 32640,
+    "write_policy": "native_guest_only"
+  },
+  "roles": {
+    "nanlmind_existing": {
+      "triad_count": 85,
+      "triad_members": 3,
+      "field_head": 255
+    },
+    "nanrouter_reserved_local_heads": [
+      0,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "cross_repo_map": "versioned_required"
+  },
+  "feature": {
+    "head_kernel_width": 16,
+    "optional_packed_width": 128,
+    "history_slots_max": 16,
+    "proposed_residual_init_gate": 0.01
+  },
+  "stages": [
+    {
+      "id": "head",
+      "read": "committed_token_and_head_memory",
+      "write": "ephemeral_head_context",
+      "causal": true
+    },
+    {
+      "id": "trihead",
+      "read": "same_epoch_head_context_and_pair_evidence",
+      "write": "ephemeral_triad_context",
+      "causal": true
+    },
+    {
+      "id": "global",
+      "read": "same_epoch_triad_context",
+      "write": "ephemeral_global_context",
+      "causal": true
+    },
+    {
+      "id": "meta",
+      "read": "prior_committed_global_summaries_and_remote_context",
+      "write": "ephemeral_meta_context",
+      "causal": true
+    },
+    {
+      "id": "return",
+      "read": "current_gated_context",
+      "write": "next_epoch_head_policy",
+      "causal": true
+    }
+  ],
+  "acceptance": [
+    "identity_gate",
+    "future_mask",
+    "same_epoch_snapshot",
+    "native_atomic_write",
+    "backward_gradient",
+    "geometry_ablation",
+    "matched_transformer_baseline",
+    "new_locked_test_docs"
+  ]
+}
