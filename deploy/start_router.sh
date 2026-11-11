@@ -14,6 +14,17 @@ if [ "${RIDDLE_HW4_RELEASE_BOOTSTRAP:-0}" = "1" ]; then
     python -m runner_riddle.hw4_release_bootstrap "$RIDDLE_HW4_STORE"
 fi
 
+# Pin the separately published HW5 Gutenberg release to the MC0 volume.
+# Not automatic: operator explicitly sets RIDDLE_HW5_RELEASE_BOOTSTRAP=1.
+# The route is read-only and never joins or writes the BS0 learning ring.
+if [ "${RIDDLE_HW5_RELEASE_BOOTSTRAP:-0}" = "1" ]; then
+    : "${RIDDLE_HW5_STORE:?Set dedicated HW5 persistent MC0 storage path}"
+    case "$RIDDLE_HW5_STORE" in
+        /bs0db|/bs0db/*) echo "HW5 cannot live on the BS0 main ring volume" >&2; exit 1 ;;
+    esac
+    python -m runner_riddle.hw5_release_bootstrap "$RIDDLE_HW5_STORE"
+fi
+
 # Optional persistent HW4 WordNet reference. The source ZIP is supplied by
 # the operator on the NaNROUTER/MC0 volume, never by the BS0 learning ring.
 # install() is digest-idempotent; a corrupt generation fails startup closed.

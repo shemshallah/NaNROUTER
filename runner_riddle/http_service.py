@@ -19,6 +19,7 @@ from .cache import MasterRouteCache, RouteError
 from .volume_registry import VolumeRegistry, VolumeRegistryError
 from .ring import RunnerRing, RunnerRingError
 from .hw4_full_dict import MountedHW4, RING_OWNER as HW4_RING_OWNER
+from .hw5_gutenberg import MountedHW5, OWNER as HW5_RING_OWNER
 from .hermes_leases import HermesLeaseRegistry, HermesLeaseError
 from .hermes_native import HermesNativeLeaseRuntime, HermesNativeError
 from .hermes_dispatch import HermesDispatchJournal, HermesDispatchError, HermesDispatchConflict
@@ -75,6 +76,17 @@ class RiddleService:
                 self.hw4 = MountedHW4(hw4_store)
             except (OSError, ValueError, KeyError) as exc:
                 raise ServiceConfigError("HW4 reference failed closed: missing or corrupt generation") from exc
+        # HW5:0 is a second read-only NaNROUTER-owned reference attachment,
+        # never a fork of HW0 or a writable BS0 ring participant.
+        hw5_store = os.environ.get("RIDDLE_HW5_STORE", "")
+        self.hw5 = None
+        if hw5_store:
+            if os.environ.get("RIDDLE_HW5_RING", HW5_RING_OWNER) != HW5_RING_OWNER:
+                raise ServiceConfigError("HW5 reference cannot attach to the BS0 main runner ring")
+            try:
+                self.hw5 = MountedHW5(hw5_store)
+            except (OSError, ValueError, KeyError) as exc:
+                raise ServiceConfigError("HW5 Gutenberg reference failed closed") from exc
         self.intake_token = os.environ.get("RIDDLE_INTAKE_TOKEN", "")
         self.worker_token = os.environ.get("RIDDLE_WORKER_TOKEN", "")
         self.range_key = os.environ.get("RIDDLE_RANGE_HMAC_KEY", "").encode()
@@ -157,8 +169,13 @@ class RiddleService:
                 # HW4 fixed role was reserved until the complete generation
                 # verified. Register it on this existing NaNROUTER fabric.
                 self.point_fabric.register(4, status="active")
+            if self.hw5 is not None:
+                self.point_fabric.register(5, status="active")
 
     def close(self) -> None:
+        if self.hw5 is not None:
+            self.hw5.close()
+            self.hw5 = None
         if self.hw4 is not None:
             self.hw4.close()
             self.hw4 = None
@@ -413,6 +430,29 @@ def make_handler(service: RiddleService):
                     self._json(200, result)
                 except (ValueError, KeyError, IndexError) as exc:
                     self._json(400, {"error": str(exc)[:200]})
+                return
+            # Authenticated HW5:0 read-only text hypermatrix attachment.
+            hw5_path=urlsplit(self.path).path
+            if hw5_path in ("/v1/riddle/hw5/status","/v1/riddle/hw5/pair",
+                            "/v1/riddle/hw5/triple"):
+                if not self._authorized(service.worker_token):
+                    self._json(401, {"error":"worker authorization required"})
+                    return
+                if service.hw5 is None:
+                    self._json(503, {"error":"HW5 Gutenberg reference is not mounted"})
+                    return
+                try:
+                    query=parse_qs(urlsplit(self.path).query)
+                    if hw5_path.endswith("/status"):
+                        result=service.hw5.status()
+                    elif hw5_path.endswith("/pair"):
+                        result=service.hw5.pair(int(query["a"][0]),int(query["b"][0]))
+                    else:
+                        result=service.hw5.triple(int(query["a"][0]),int(query["b"][0]),
+                                                  int(query["c"][0]))
+                    self._json(200,result)
+                except (ValueError,KeyError,IndexError) as exc:
+                    self._json(400, {"error":str(exc)[:200]})
                 return
             if urlsplit(self.path).path == "/v1/riddle/ring":
                 if not self._authorized(service.worker_token):
