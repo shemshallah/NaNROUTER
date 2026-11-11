@@ -47,12 +47,11 @@ mth_gf16_value_gate:
   JMP[LT] @mth_gf16_value_gate
 
   MOVI r7,0
+  MOVI r12,1            ; rolling permitted-position bit
   MOVI r14,0
   MOVHI r14,0xFF80        ; -inf
 mth_gf16_mask_scores:
-  MOVI r9,1
-  SHL r9,r9,r7
-  BOOL.8 r9,r9,r2
+  BOOL.8 r9,r12,r2
   CMP r9,r0
   JMP[EQ] @mth_gf16_masked
   ADD r8,r1,r7
@@ -63,6 +62,7 @@ mth_gf16_masked:
 mth_gf16_store_score:
   ADD r9,r6,r7
   ST r8,r9,0
+  SHL r12,r12,1
   ADDI r7,r7,1
   MOVI r9,16
   CMP r7,r9
