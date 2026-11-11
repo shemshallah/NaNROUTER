@@ -6,12 +6,16 @@ on:
     paths:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "scripts/build_native_decoder_ce_fixture.py"
+      - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
       - "tools/export_unified_decoder_nextbyte_logits.cpp"
       - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
   pull_request:
     paths:
       - "mth/nan16/mth_trihead_decoder_ce_feedback_f32.nas"
       - "scripts/build_native_decoder_ce_fixture.py"
+      - "scripts/export_disjoint_gutenberg_decoder_traces.py"
+      - "scripts/build_native_inverse_trigram26_corpus_fixture.py"
       - "tools/export_unified_decoder_nextbyte_logits.cpp"
       - ".github/workflows/nan16-native-real-decoder-ce-feedback.yml"
   workflow_dispatch:
@@ -22,7 +26,7 @@ permissions:
 jobs:
   frozen-decoder-native-meta-ce:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Checkout pinned real unified HW0 decoder (NOT 43M hybrid)
@@ -46,7 +50,9 @@ jobs:
             -Inanlm-test/include tools/export_unified_decoder_nextbyte_logits.cpp \
             -o build/decoder/export_frozen_logits
           make -s -C nan0s/aarch64/android nan_cli
-          python3 -m py_compile scripts/build_native_decoder_ce_fixture.py
+          python3 -m py_compile scripts/build_native_decoder_ce_fixture.py \
+            scripts/export_disjoint_gutenberg_decoder_traces.py \
+            scripts/build_native_inverse_trigram26_corpus_fixture.py
       - name: Train REAL unified decoder once, then freeze its exact root
         run: |
           set -euo pipefail
@@ -62,15 +68,31 @@ jobs:
             nanlm-test/tests/fixtures/unified_quality_heldout.txt \
             > build/decoder/decoder-test.log
           sha256sum -c build/decoder/frozen-root.SHA256
-      - name: Export CAUSAL decoder next-byte logits on disjoint dev and test
+      - name: Recover SHA-verified public-domain Gutenberg book archive
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          build/decoder/export_frozen_logits build/decoder/frozen-root.bin \
-            nanlm-test/tests/fixtures/unified_quality_dev.txt 116 104 24 \
-            > build/decoder/dev-trace.txt
-          build/decoder/export_frozen_logits build/decoder/frozen-root.bin \
-            nanlm-test/tests/fixtures/unified_quality_heldout.txt 116 104 24 \
-            > build/decoder/test-trace.txt
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+          mkdir -p build/decoder/release build/decoder/books
+          gh release download corpora-sentences-0001 -R shemshallah/NaNROUTER \
+            --pattern 'sentences-0001.*' --dir build/decoder/release
+          (cd build/decoder/release && sha256sum -c sentences-0001.SHA256SUMS)
+          tar --zstd -xf build/decoder/release/sentences-0001.tar.zst \
+            -C build/decoder/books
+      - name: Export CAUSAL decoder traces from 6 dev and 6 held-out books
+        run: |
+          set -euo pipefail
+          python3 scripts/export_disjoint_gutenberg_decoder_traces.py \
+            --root build/decoder/frozen-root.bin \
+            --exporter build/decoder/export_frozen_logits \
+            --corpus build/decoder/books \
+            --output-dir build/decoder/traces \
+            --manifest build/decoder/disjoint-books.json \
+            --rows-per-book 4
+          cp build/decoder/traces/dev.trace build/decoder/dev-trace.txt
+          cp build/decoder/traces/test.trace build/decoder/test-trace.txt
           sha256sum -c build/decoder/frozen-root.SHA256
           python3 scripts/build_native_decoder_ce_fixture.py \
             --dev build/decoder/dev-trace.txt \
@@ -124,6 +146,9 @@ jobs:
             build/decoder/decoder-test.log
             build/decoder/frozen-root.SHA256
             build/decoder/trace-manifest.json
+            build/decoder/disjoint-books.json
+            build/decoder/dev-trace.txt
+            build/decoder/test-trace.txt
             build/decoder/native-ce.out
             build/decoder/native-ce.err
           if-no-files-found: ignore
