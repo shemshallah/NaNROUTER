@@ -239,8 +239,28 @@ jobs:
           from pathlib import Path
 
           root = Path("build/manifests")
-          manifests = []
-          sources = []
+          manifests_by_collection = {}
+          sources_by_collection = {}
+
+          # A partial rerun must not erase collections that were not selected.
+          # Merge the checked-in index with the artifacts from this run.
+          existing = Path("corpora/domains/MANIFEST.json")
+          if existing.exists():
+              try:
+                  for item in json.loads(existing.read_text(encoding="utf-8")).get("collections", []):
+                      if "collection" in item:
+                          manifests_by_collection[item["collection"]] = item
+              except Exception as exc:
+                  print(f"skip existing manifest: {exc}")
+          existing_sources = Path("corpora/domains/SOURCES.json")
+          if existing_sources.exists():
+              try:
+                  for item in json.loads(existing_sources.read_text(encoding="utf-8")).get("collections", []):
+                      if "collection" in item:
+                          sources_by_collection[item["collection"]] = item
+              except Exception as exc:
+                  print(f"skip existing sources: {exc}")
+
           for path in sorted(root.glob("*.json")):
               if path.name.endswith(".SOURCES.json"):
                   continue
@@ -251,14 +271,17 @@ jobs:
                   continue
               if "collection" not in data or "sha256" not in data:
                   continue
-              manifests.append(data)
+              manifests_by_collection[data["collection"]] = data
               source_path = root / f"{data['collection']}.SOURCES.json"
               if source_path.exists():
                   try:
                       source_data = json.loads(source_path.read_text(encoding="utf-8"))
-                      sources.append(source_data)
+                      sources_by_collection[data["collection"]] = source_data
                   except Exception as exc:
                       print(f"skip sources {source_path}: {exc}")
+
+          manifests = [manifests_by_collection[name] for name in sorted(manifests_by_collection)]
+          sources = [sources_by_collection[name] for name in sorted(sources_by_collection)]
           if not manifests:
               print("no successful collection manifests; nothing to aggregate")
               raise SystemExit(0)
@@ -304,7 +327,14 @@ jobs:
             echo "manifests unchanged"
           else
             git commit -m "Update diverse corpus manifests [skip ci]"
-            git push || echo "::warning::manifest push skipped"
+            for attempt in 1 2 3 4 5; do
+              git pull --rebase origin main || true
+              if git push; then
+                break
+              fi
+              echo "manifest push attempt ${attempt} lost a race; retrying"
+              sleep $((attempt * 2))
+            done
           fi
       - name: Publish manifest index release
         if: ${{ hashFiles('corpora/domains/MANIFEST.json') != '' }}

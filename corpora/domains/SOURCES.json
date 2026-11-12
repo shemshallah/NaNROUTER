@@ -1,9 +1,47 @@
 {
   "collections": [
     {
+      "collection": "arxiv",
+      "errors": [],
+      "generated_at": "2026-11-12T17:08:40+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-arxiv",
+      "sources": [
+        {
+          "bytes": 1199999945,
+          "documents": 1098257,
+          "downloads": [
+            {
+              "bytes": 1878831586,
+              "kind": "kaggle",
+              "ref": "Cornell-University/arxiv"
+            }
+          ],
+          "elapsed_seconds": 794.8,
+          "fields": [
+            "title",
+            "authors",
+            "categories",
+            "abstract"
+          ],
+          "files": [
+            "arxiv-metadata-oai-snapshot.json"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/Cornell-University/arxiv",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "arXiv metadata snapshot maintained by Cornell University.",
+          "ref": "Cornell-University/arxiv",
+          "required": true
+        }
+      ]
+    },
+    {
       "collection": "chemistry",
       "errors": [],
-      "generated_at": "2026-11-12T16:16:24+00:00",
+      "generated_at": "2026-11-12T16:45:03+00:00",
       "layout": "UTF-8 text; documents separated by one blank line",
       "release_tag": "corpora-chemistry",
       "sources": [
@@ -17,7 +55,7 @@
               "ref": "thedevastator/chemistry-problem-solution-dataset"
             }
           ],
-          "elapsed_seconds": 6.9,
+          "elapsed_seconds": 11.7,
           "fields": [
             "topic",
             "sub_topic",
@@ -39,15 +77,618 @@
       ]
     },
     {
+      "collection": "code",
+      "errors": [],
+      "generated_at": "2026-11-12T16:36:21+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-code",
+      "sources": [
+        {
+          "bytes": 760000230,
+          "documents": 656784,
+          "downloads": [
+            {
+              "bytes": 141219443,
+              "kind": "hf",
+              "path": "data/train-00000-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 137681163,
+              "kind": "hf",
+              "path": "data/train-00001-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 139552334,
+              "kind": "hf",
+              "path": "data/train-00002-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 143716339,
+              "kind": "hf",
+              "path": "data/train-00003-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 149996680,
+              "kind": "hf",
+              "path": "data/train-00004-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 146204952,
+              "kind": "hf",
+              "path": "data/train-00005-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            }
+          ],
+          "elapsed_seconds": 258.2,
+          "fields": [
+            "problem_id",
+            "source"
+          ],
+          "files": [
+            "data/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/open-r1/codeforces-submissions",
+          "kind": "hf",
+          "license": "CC BY 4.0",
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "notes": "Human Codeforces submissions, filtered to accepted solutions upstream.",
+          "ref": "open-r1/codeforces-submissions",
+          "required": true
+        },
+        {
+          "bytes": 116907292,
+          "documents": 76794,
+          "downloads": [
+            {
+              "bytes": 32193107,
+              "kind": "kaggle",
+              "ref": "thedevastator/evol-instruct-code-80k-v1-dataset"
+            }
+          ],
+          "elapsed_seconds": 30.2,
+          "fields": [
+            "instruction",
+            "input",
+            "output"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/evol-instruct-code-80k-v1-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Evol-Instruct code tasks.",
+          "ref": "thedevastator/evol-instruct-code-80k-v1-dataset",
+          "required": false
+        }
+      ]
+    },
+    {
+      "collection": "finance",
+      "errors": [],
+      "generated_at": "2026-11-12T17:02:31+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-finance",
+      "sources": [
+        {
+          "bytes": 58756421,
+          "documents": 191,
+          "downloads": [
+            {
+              "bytes": 65823210,
+              "kind": "kaggle",
+              "ref": "pranjalverma08/sec-edgar-annual-financial-filings-2021"
+            }
+          ],
+          "elapsed_seconds": 12.3,
+          "fields": [],
+          "files": [
+            "extracted/*.json"
+          ],
+          "format": "json",
+          "homepage": "https://www.kaggle.com/datasets/pranjalverma08/sec-edgar-annual-financial-filings-2021",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "SEC EDGAR 10-K filings; U.S. government works.",
+          "ref": "pranjalverma08/sec-edgar-annual-financial-filings-2021",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "humanities",
+      "errors": [],
+      "generated_at": "2026-11-12T17:04:22+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-humanities",
+      "sources": [
+        {
+          "bytes": 92612878,
+          "documents": 1188,
+          "downloads": [
+            {
+              "bytes": 91142247,
+              "kind": "hf",
+              "path": "data/train-00000-of-00001-fa9fb9e1f16eed7e.parquet",
+              "ref": "biglam/gutenberg-poetry-corpus"
+            }
+          ],
+          "elapsed_seconds": 37.7,
+          "fields": [
+            "text"
+          ],
+          "files": [
+            "data/train-*.parquet"
+          ],
+          "format": "poetry",
+          "homepage": "https://huggingface.co/datasets/biglam/gutenberg-poetry-corpus",
+          "kind": "hf",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Poetry lines from Project Gutenberg, grouped by book.",
+          "ref": "biglam/gutenberg-poetry-corpus",
+          "required": true
+        },
+        {
+          "bytes": 14664066,
+          "documents": 70,
+          "downloads": [
+            {
+              "bytes": 17907632,
+              "kind": "kaggle",
+              "ref": "metron/public-files-of-religious-and-spiritual-texts"
+            }
+          ],
+          "elapsed_seconds": 9.8,
+          "fields": [],
+          "files": [
+            "*.txt"
+          ],
+          "format": "text",
+          "homepage": "https://www.kaggle.com/datasets/metron/public-files-of-religious-and-spiritual-texts",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Public-domain religious and spiritual texts.",
+          "ref": "metron/public-files-of-religious-and-spiritual-texts",
+          "required": false
+        }
+      ]
+    },
+    {
+      "collection": "law",
+      "errors": [],
+      "generated_at": "2026-11-12T16:58:31+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-law",
+      "sources": [
+        {
+          "bytes": 706284030,
+          "documents": 63944,
+          "downloads": [
+            {
+              "bytes": 1185590942,
+              "kind": "kaggle",
+              "ref": "jboysen/scotus-corpus"
+            }
+          ],
+          "elapsed_seconds": 211.5,
+          "fields": [
+            "plain_text|html_with_citations|html|html_columbia|html_lawbox"
+          ],
+          "files": [
+            "scotus_file.gz"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/jboysen/scotus-corpus",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CourtListener/Free Law Project Supreme Court opinions.",
+          "ref": "jboysen/scotus-corpus",
+          "required": true
+        },
+        {
+          "bytes": 24340702,
+          "documents": 19545,
+          "downloads": [
+            {
+              "bytes": 12431064,
+              "kind": "kaggle",
+              "ref": "jscotthorn/kentucky-revised-statutes-parsed-csv"
+            }
+          ],
+          "elapsed_seconds": 9.0,
+          "fields": [],
+          "files": [
+            "*.statutes.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/jscotthorn/kentucky-revised-statutes-parsed-csv",
+          "kind": "kaggle",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "notes": "Kentucky Revised Statutes, parsed edition.",
+          "ref": "jscotthorn/kentucky-revised-statutes-parsed-csv",
+          "required": false
+        }
+      ]
+    },
+    {
+      "collection": "math",
+      "errors": [],
+      "generated_at": "2026-11-12T16:37:38+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-math",
+      "sources": [
+        {
+          "bytes": 900000000,
+          "documents": 1107107,
+          "downloads": [
+            {
+              "bytes": 987072306,
+              "kind": "kaggle",
+              "ref": "botcanlearn/math-stackexchange-llama-factory-jsonl"
+            }
+          ],
+          "elapsed_seconds": 325.8,
+          "fields": [
+            "text"
+          ],
+          "files": [
+            "data.jsonl"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/botcanlearn/math-stackexchange-llama-factory-jsonl",
+          "kind": "kaggle",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Mathematics Stack Exchange pretraining text; attribution/share-alike.",
+          "ref": "botcanlearn/math-stackexchange-llama-factory-jsonl",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "multilingual",
+      "errors": [],
+      "generated_at": "2026-11-12T17:06:05+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-multilingual",
+      "sources": [
+        {
+          "bytes": 699999999,
+          "documents": 163115,
+          "downloads": [
+            {
+              "bytes": 1130133924,
+              "kind": "kaggle",
+              "ref": "thedevastator/xnli-multilingual-nli-dataset"
+            }
+          ],
+          "elapsed_seconds": 261.3,
+          "fields": [
+            "language",
+            "premise",
+            "hypothesis"
+          ],
+          "files": [
+            "all_languages_train.csv"
+          ],
+          "format": "xnli",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/xnli-multilingual-nli-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "XNLI multilingual NLI corpus.",
+          "ref": "thedevastator/xnli-multilingual-nli-dataset",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "news",
+      "errors": [],
+      "generated_at": "2026-11-12T16:35:59+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-news",
+      "sources": [
+        {
+          "bytes": 700005733,
+          "documents": 160363,
+          "downloads": [
+            {
+              "bytes": 527738644,
+              "kind": "kaggle",
+              "ref": "gowrishankarp/newspaper-text-summarization-cnn-dailymail"
+            }
+          ],
+          "elapsed_seconds": 136.6,
+          "fields": [
+            "article",
+            "highlights"
+          ],
+          "files": [
+            "cnn_dailymail/train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/gowrishankarp/newspaper-text-summarization-cnn-dailymail",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CNN and Daily Mail news articles.",
+          "ref": "gowrishankarp/newspaper-text-summarization-cnn-dailymail",
+          "required": true
+        },
+        {
+          "bytes": 40833885,
+          "documents": 182045,
+          "downloads": [
+            {
+              "bytes": 27829769,
+              "kind": "kaggle",
+              "ref": "rmisra/news-category-dataset"
+            }
+          ],
+          "elapsed_seconds": 12.2,
+          "fields": [
+            "headline",
+            "short_description",
+            "category"
+          ],
+          "files": [
+            "News_Category_Dataset_v3.json"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/rmisra/news-category-dataset",
+          "kind": "kaggle",
+          "license": "CC BY 4.0",
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "notes": "HuffPost news headlines and short descriptions.",
+          "ref": "rmisra/news-category-dataset",
+          "required": false
+        }
+      ]
+    },
+    {
+      "collection": "patents",
+      "errors": [],
+      "generated_at": "2026-11-12T16:33:18+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-patents",
+      "sources": [
+        {
+          "bytes": 832754285,
+          "documents": 1208753,
+          "downloads": [
+            {
+              "bytes": 272654451,
+              "kind": "kaggle",
+              "ref": "dheerajmpai/us-patent-abstracts-vector-indexed"
+            }
+          ],
+          "elapsed_seconds": 235.2,
+          "fields": [
+            "publication_number",
+            "abstract"
+          ],
+          "files": [
+            "train_mini.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/dheerajmpai/us-patent-abstracts-vector-indexed",
+          "kind": "kaggle",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "notes": "US patent abstracts with publication and application numbers.",
+          "ref": "dheerajmpai/us-patent-abstracts-vector-indexed",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "pubmed",
+      "errors": [],
+      "generated_at": "2026-11-12T16:27:39+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-pubmed",
+      "sources": [
+        {
+          "bytes": 1000000000,
+          "documents": 53521,
+          "downloads": [
+            {
+              "bytes": 686033678,
+              "kind": "kaggle",
+              "ref": "thedevastator/pubmed-article-summarization-dataset"
+            }
+          ],
+          "elapsed_seconds": 230.2,
+          "fields": [
+            "article",
+            "abstract"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/pubmed-article-summarization-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Derived from PubMed/PMC open-access material.",
+          "ref": "thedevastator/pubmed-article-summarization-dataset",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "qa",
+      "errors": [],
+      "generated_at": "2026-11-12T16:40:59+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-qa",
+      "sources": [
+        {
+          "bytes": 563755802,
+          "documents": 293412,
+          "downloads": [
+            {
+              "bytes": 327369132,
+              "kind": "kaggle",
+              "ref": "xhlulu/stackexchange-qa-pairs"
+            }
+          ],
+          "elapsed_seconds": 79.8,
+          "fields": [
+            "question",
+            "answer"
+          ],
+          "files": [
+            "pre_covid/expert.csv",
+            "pre_covid/general.csv",
+            "pre_covid/biomedical.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/xhlulu/stackexchange-qa-pairs",
+          "kind": "kaggle",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Stack Exchange Q&A pairs; attribution/share-alike.",
+          "ref": "xhlulu/stackexchange-qa-pairs",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "recipes",
+      "errors": [],
+      "generated_at": "2026-11-12T16:57:41+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-recipes",
+      "sources": [
+        {
+          "bytes": 481769669,
+          "documents": 522324,
+          "downloads": [
+            {
+              "bytes": 758217627,
+              "kind": "kaggle",
+              "ref": "irkaal/foodcom-recipes-and-reviews"
+            }
+          ],
+          "elapsed_seconds": 180.8,
+          "fields": [
+            "Name",
+            "Description",
+            "RecipeIngredientParts",
+            "RecipeInstructions"
+          ],
+          "files": [
+            "recipes.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/irkaal/foodcom-recipes-and-reviews",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Food.com recipe corpus.",
+          "ref": "irkaal/foodcom-recipes-and-reviews",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "security",
+      "errors": [],
+      "generated_at": "2026-11-12T16:57:23+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-security",
+      "sources": [
+        {
+          "bytes": 81414957,
+          "documents": 187934,
+          "downloads": [
+            {
+              "bytes": 124209139,
+              "kind": "kaggle",
+              "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026"
+            }
+          ],
+          "elapsed_seconds": 68.9,
+          "fields": [
+            "cve_id",
+            "description",
+            "cvss_vector",
+            "cwe",
+            "vendor_project",
+            "product"
+          ],
+          "files": [
+            "nvd_cve_records.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "NVD CVE records joined with CVSS, CWE, and EPSS fields.",
+          "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "required": true
+        },
+        {
+          "bytes": 594593,
+          "documents": 1408,
+          "downloads": [
+            {
+              "bytes": 124209139,
+              "kind": "kaggle",
+              "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026"
+            }
+          ],
+          "elapsed_seconds": 0.2,
+          "fields": [
+            "cveID",
+            "vendorProject",
+            "product",
+            "vulnerabilityName",
+            "shortDescription",
+            "requiredAction",
+            "notes"
+          ],
+          "files": [
+            "cisa_kev_catalog.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CISA Known Exploited Vulnerabilities catalog.",
+          "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "required": false
+        }
+      ]
+    },
+    {
       "collection": "standards",
       "errors": [],
-      "generated_at": "2026-11-12T16:19:57+00:00",
+      "generated_at": "2026-11-12T16:45:28+00:00",
       "layout": "UTF-8 text; documents separated by one blank line",
       "release_tag": "corpora-standards",
       "sources": [
         {
           "bytes": 350000000,
-          "documents": 6828,
+          "documents": 6832,
           "downloads": [
             {
               "bytes": 13750138,
@@ -55,7 +696,7 @@
               "url": "https://www.rfc-editor.org/rfc-index.xml"
             }
           ],
-          "elapsed_seconds": 130.5,
+          "elapsed_seconds": 105.5,
           "fields": [
             "title",
             "abstract",
@@ -72,8 +713,57 @@
           "required": true
         }
       ]
+    },
+    {
+      "collection": "wikipedia-en",
+      "errors": [],
+      "generated_at": "2026-11-12T16:28:53+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-wikipedia-en",
+      "sources": [
+        {
+          "bytes": 1500000000,
+          "documents": 371199,
+          "downloads": [
+            {
+              "bytes": 420296449,
+              "kind": "hf",
+              "path": "20231101.en/train-00000-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            },
+            {
+              "bytes": 351448367,
+              "kind": "hf",
+              "path": "20231101.en/train-00001-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            },
+            {
+              "bytes": 329024669,
+              "kind": "hf",
+              "path": "20231101.en/train-00002-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 227.2,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.en/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikimedia dump 20231101.en; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        }
+      ]
     }
   ],
-  "generated_at": "2026-11-12T16:20:24+00:00",
+  "generated_at": "2026-11-12T17:09:22+00:00",
   "repo": "shemshallah/NaNROUTER"
 }

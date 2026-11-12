@@ -123,6 +123,16 @@ class RecordTests(unittest.TestCase):
                 "second record with enough text",
             ])
 
+    def test_xnli_parses_translation_variable_languages(self) -> None:
+        value = (
+            '{"language": ["en", "fr"], '
+            '"translation": ["A hypothesis", "Une hypothese"]}'
+        )
+        self.assertEqual(
+            corpus.parse_language_map(value),
+            {"en": "A hypothesis", "fr": "Une hypothese"},
+        )
+
     def test_xnli_expands_language_dicts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "xnli.csv"

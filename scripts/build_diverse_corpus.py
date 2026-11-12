@@ -1430,12 +1430,39 @@ def parse_dict_string(value: Any) -> dict[str, Any] | None:
         stripped = value.strip()
         if stripped.startswith("{") and stripped.endswith("}"):
             try:
-                parsed = ast.literal_eval(stripped)
-            except (ValueError, SyntaxError):
-                return None
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                parsed = None
+            if parsed is None:
+                try:
+                    parsed = ast.literal_eval(stripped)
+                except (ValueError, SyntaxError):
+                    parsed = None
             if isinstance(parsed, dict):
                 return parsed
     return None
+
+
+def parse_language_map(value: Any) -> dict[str, str] | None:
+    parsed = parse_dict_string(value)
+    if not isinstance(parsed, dict):
+        return None
+    # XNLI's hypothesis is stored as
+    # {"language": ["ar", ...], "translation": ["...", ...]}.
+    languages = parsed.get("language")
+    translations = parsed.get("translation")
+    if isinstance(languages, list) and isinstance(translations, list):
+        return {
+            str(language): str(text)
+            for language, text in zip(languages, translations)
+            if language and text
+        }
+    result = {
+        str(key): str(text)
+        for key, text in parsed.items()
+        if isinstance(text, str) and re.fullmatch(r"[a-z]{2,3}", str(key))
+    }
+    return result or None
 
 
 def iter_xnli_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, str]]:
@@ -1450,16 +1477,16 @@ def iter_xnli_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, st
         if reader.fieldnames:
             reader.fieldnames = [name.lstrip("\ufeff") for name in reader.fieldnames]
         for row in reader:
-            premise = parse_dict_string(row.get("premise"))
-            hypothesis = parse_dict_string(row.get("hypothesis"))
-            if isinstance(premise, dict) and isinstance(hypothesis, dict):
+            premise = parse_language_map(row.get("premise"))
+            hypothesis = parse_language_map(row.get("hypothesis"))
+            if premise and hypothesis:
                 for language, premise_text in premise.items():
                     hypothesis_text = hypothesis.get(language)
                     if premise_text and hypothesis_text:
                         yield {
-                            "language": str(language),
-                            "premise": str(premise_text),
-                            "hypothesis": str(hypothesis_text),
+                            "language": language,
+                            "premise": premise_text,
+                            "hypothesis": hypothesis_text,
                         }
             else:
                 yield row

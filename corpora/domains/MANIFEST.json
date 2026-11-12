@@ -2,6 +2,56 @@
   "collections": [
     {
       "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 1199999946,
+      "collection": "arxiv",
+      "description": "Title, authors, categories, and abstract for arXiv papers across physics, mathematics, computer science, statistics, and biology.",
+      "documents": 1098257,
+      "domain": "science, technology, engineering, mathematics",
+      "errors": [],
+      "file": "arxiv.txt",
+      "generated_at": "2026-11-12T17:08:40+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 1200000000,
+      "release_tag": "corpora-arxiv",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "4b0617d1351b7d72adc74aeef5398249f68a76b8e25d0fa03b0db251ce52bc61",
+      "sources": [
+        {
+          "bytes": 1199999945,
+          "documents": 1098257,
+          "downloads": [
+            {
+              "bytes": 1878831586,
+              "kind": "kaggle",
+              "ref": "Cornell-University/arxiv"
+            }
+          ],
+          "elapsed_seconds": 794.8,
+          "fields": [
+            "title",
+            "authors",
+            "categories",
+            "abstract"
+          ],
+          "files": [
+            "arxiv-metadata-oai-snapshot.json"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/Cornell-University/arxiv",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "arXiv metadata snapshot maintained by Cornell University.",
+          "ref": "Cornell-University/arxiv",
+          "required": true
+        }
+      ],
+      "title": "arXiv metadata and abstracts"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
       "bytes": 46382710,
       "collection": "chemistry",
       "description": "Chemistry problems with worked solutions, supplementing the physics/mathematics coverage in the arXiv and math collections.",
@@ -9,7 +59,7 @@
       "domain": "chemistry",
       "errors": [],
       "file": "chemistry.txt",
-      "generated_at": "2026-11-12T16:16:24+00:00",
+      "generated_at": "2026-11-12T16:45:03+00:00",
       "license_summary": [
         "CC0 1.0"
       ],
@@ -28,7 +78,7 @@
               "ref": "thedevastator/chemistry-problem-solution-dataset"
             }
           ],
-          "elapsed_seconds": 6.9,
+          "elapsed_seconds": 11.7,
           "fields": [
             "topic",
             "sub_topic",
@@ -52,25 +102,775 @@
     },
     {
       "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 876907523,
+      "collection": "code",
+      "description": "Accepted Codeforces submissions plus general code-instruction examples, giving both raw source code and natural-language coding tasks.",
+      "documents": 733578,
+      "domain": "computer programming and software",
+      "errors": [],
+      "file": "code.txt",
+      "generated_at": "2026-11-12T16:36:21+00:00",
+      "license_summary": [
+        "CC BY 4.0",
+        "CC0 1.0"
+      ],
+      "max_bytes": 900000000,
+      "release_tag": "corpora-code",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "61ef1bec585a5c38ce1851d5d322f5d99a481395e16c38b95798e411fd027a7e",
+      "sources": [
+        {
+          "bytes": 760000230,
+          "documents": 656784,
+          "downloads": [
+            {
+              "bytes": 141219443,
+              "kind": "hf",
+              "path": "data/train-00000-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 137681163,
+              "kind": "hf",
+              "path": "data/train-00001-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 139552334,
+              "kind": "hf",
+              "path": "data/train-00002-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 143716339,
+              "kind": "hf",
+              "path": "data/train-00003-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 149996680,
+              "kind": "hf",
+              "path": "data/train-00004-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            },
+            {
+              "bytes": 146204952,
+              "kind": "hf",
+              "path": "data/train-00005-of-00036.parquet",
+              "ref": "open-r1/codeforces-submissions"
+            }
+          ],
+          "elapsed_seconds": 258.2,
+          "fields": [
+            "problem_id",
+            "source"
+          ],
+          "files": [
+            "data/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/open-r1/codeforces-submissions",
+          "kind": "hf",
+          "license": "CC BY 4.0",
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "notes": "Human Codeforces submissions, filtered to accepted solutions upstream.",
+          "ref": "open-r1/codeforces-submissions",
+          "required": true
+        },
+        {
+          "bytes": 116907292,
+          "documents": 76794,
+          "downloads": [
+            {
+              "bytes": 32193107,
+              "kind": "kaggle",
+              "ref": "thedevastator/evol-instruct-code-80k-v1-dataset"
+            }
+          ],
+          "elapsed_seconds": 30.2,
+          "fields": [
+            "instruction",
+            "input",
+            "output"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/evol-instruct-code-80k-v1-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Evol-Instruct code tasks.",
+          "ref": "thedevastator/evol-instruct-code-80k-v1-dataset",
+          "required": false
+        }
+      ],
+      "title": "Competitive programming and code instructions"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 58756422,
+      "collection": "finance",
+      "description": "Business descriptions, risk factors, management discussion, and other narrative sections from SEC Form 10-K annual filings.",
+      "documents": 191,
+      "domain": "finance, accounting, and corporate governance",
+      "errors": [],
+      "file": "finance.txt",
+      "generated_at": "2026-11-12T17:02:31+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 700000000,
+      "release_tag": "corpora-finance",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "fb710a970a8bda4c35eddf0821e1badeb649f78360dd120239ff53b5d54e7d7a",
+      "sources": [
+        {
+          "bytes": 58756421,
+          "documents": 191,
+          "downloads": [
+            {
+              "bytes": 65823210,
+              "kind": "kaggle",
+              "ref": "pranjalverma08/sec-edgar-annual-financial-filings-2021"
+            }
+          ],
+          "elapsed_seconds": 12.3,
+          "fields": [],
+          "files": [
+            "extracted/*.json"
+          ],
+          "format": "json",
+          "homepage": "https://www.kaggle.com/datasets/pranjalverma08/sec-edgar-annual-financial-filings-2021",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "SEC EDGAR 10-K filings; U.S. government works.",
+          "ref": "pranjalverma08/sec-edgar-annual-financial-filings-2021",
+          "required": true
+        }
+      ],
+      "title": "SEC 10-K annual filings"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 107276945,
+      "collection": "humanities",
+      "description": "Public-domain religious and spiritual texts paired with a Project Gutenberg-derived poetry corpus.",
+      "documents": 1258,
+      "domain": "religion, philosophy, and poetry",
+      "errors": [],
+      "file": "humanities.txt",
+      "generated_at": "2026-11-12T17:04:22+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 500000000,
+      "release_tag": "corpora-humanities",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "2f9a84a53805684343e6e731ebeb8ddcaaec071f34be30f8527b7494b1813aa6",
+      "sources": [
+        {
+          "bytes": 92612878,
+          "documents": 1188,
+          "downloads": [
+            {
+              "bytes": 91142247,
+              "kind": "hf",
+              "path": "data/train-00000-of-00001-fa9fb9e1f16eed7e.parquet",
+              "ref": "biglam/gutenberg-poetry-corpus"
+            }
+          ],
+          "elapsed_seconds": 37.7,
+          "fields": [
+            "text"
+          ],
+          "files": [
+            "data/train-*.parquet"
+          ],
+          "format": "poetry",
+          "homepage": "https://huggingface.co/datasets/biglam/gutenberg-poetry-corpus",
+          "kind": "hf",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Poetry lines from Project Gutenberg, grouped by book.",
+          "ref": "biglam/gutenberg-poetry-corpus",
+          "required": true
+        },
+        {
+          "bytes": 14664066,
+          "documents": 70,
+          "downloads": [
+            {
+              "bytes": 17907632,
+              "kind": "kaggle",
+              "ref": "metron/public-files-of-religious-and-spiritual-texts"
+            }
+          ],
+          "elapsed_seconds": 9.8,
+          "fields": [],
+          "files": [
+            "*.txt"
+          ],
+          "format": "text",
+          "homepage": "https://www.kaggle.com/datasets/metron/public-files-of-religious-and-spiritual-texts",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Public-domain religious and spiritual texts.",
+          "ref": "metron/public-files-of-religious-and-spiritual-texts",
+          "required": false
+        }
+      ],
+      "title": "Religious, spiritual, and poetic texts"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 730624733,
+      "collection": "law",
+      "description": "Full text of U.S. Supreme Court opinions, plus Kentucky Revised Statutes sections as a second, statute-oriented legal register.",
+      "documents": 83489,
+      "domain": "law and government",
+      "errors": [],
+      "file": "law.txt",
+      "generated_at": "2026-11-12T16:58:31+00:00",
+      "license_summary": [
+        "Apache 2.0",
+        "CC0 1.0"
+      ],
+      "max_bytes": 850000000,
+      "release_tag": "corpora-law",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "7d8beafe41da1055a2ebd3abbbb135920bd3b8b79090c47b7b6f0ec63d9a7f75",
+      "sources": [
+        {
+          "bytes": 706284030,
+          "documents": 63944,
+          "downloads": [
+            {
+              "bytes": 1185590942,
+              "kind": "kaggle",
+              "ref": "jboysen/scotus-corpus"
+            }
+          ],
+          "elapsed_seconds": 211.5,
+          "fields": [
+            "plain_text|html_with_citations|html|html_columbia|html_lawbox"
+          ],
+          "files": [
+            "scotus_file.gz"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/jboysen/scotus-corpus",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CourtListener/Free Law Project Supreme Court opinions.",
+          "ref": "jboysen/scotus-corpus",
+          "required": true
+        },
+        {
+          "bytes": 24340702,
+          "documents": 19545,
+          "downloads": [
+            {
+              "bytes": 12431064,
+              "kind": "kaggle",
+              "ref": "jscotthorn/kentucky-revised-statutes-parsed-csv"
+            }
+          ],
+          "elapsed_seconds": 9.0,
+          "fields": [],
+          "files": [
+            "*.statutes.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/jscotthorn/kentucky-revised-statutes-parsed-csv",
+          "kind": "kaggle",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "notes": "Kentucky Revised Statutes, parsed edition.",
+          "ref": "jscotthorn/kentucky-revised-statutes-parsed-csv",
+          "required": false
+        }
+      ],
+      "title": "Supreme Court opinions and statutes"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 900000001,
+      "collection": "math",
+      "description": "Questions, answers, proofs, and worked reasoning from Mathematics Stack Exchange.",
+      "documents": 1107107,
+      "domain": "mathematics",
+      "errors": [],
+      "file": "math.txt",
+      "generated_at": "2026-11-12T16:37:38+00:00",
+      "license_summary": [
+        "CC BY-SA 4.0"
+      ],
+      "max_bytes": 900000000,
+      "release_tag": "corpora-math",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "cb99cf8dcc52859c41adee6d3e3f4ff19970d0bae79dd183a0a236258e5cf56c",
+      "sources": [
+        {
+          "bytes": 900000000,
+          "documents": 1107107,
+          "downloads": [
+            {
+              "bytes": 987072306,
+              "kind": "kaggle",
+              "ref": "botcanlearn/math-stackexchange-llama-factory-jsonl"
+            }
+          ],
+          "elapsed_seconds": 325.8,
+          "fields": [
+            "text"
+          ],
+          "files": [
+            "data.jsonl"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/botcanlearn/math-stackexchange-llama-factory-jsonl",
+          "kind": "kaggle",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Mathematics Stack Exchange pretraining text; attribution/share-alike.",
+          "ref": "botcanlearn/math-stackexchange-llama-factory-jsonl",
+          "required": true
+        }
+      ],
+      "title": "Mathematics Stack Exchange"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 700000000,
+      "collection": "multilingual",
+      "description": "Parallel premise/hypothesis pairs across many languages from XNLI, providing non-English grammar, vocabulary, and reasoning material.",
+      "documents": 163115,
+      "domain": "multilingual language and reasoning",
+      "errors": [],
+      "file": "multilingual.txt",
+      "generated_at": "2026-11-12T17:06:05+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 700000000,
+      "release_tag": "corpora-multilingual",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "11adf2173281b2aefdbce6bbad313eef64b6b37d3c7471f0a394f376eec1ad92",
+      "sources": [
+        {
+          "bytes": 699999999,
+          "documents": 163115,
+          "downloads": [
+            {
+              "bytes": 1130133924,
+              "kind": "kaggle",
+              "ref": "thedevastator/xnli-multilingual-nli-dataset"
+            }
+          ],
+          "elapsed_seconds": 261.3,
+          "fields": [
+            "language",
+            "premise",
+            "hypothesis"
+          ],
+          "files": [
+            "all_languages_train.csv"
+          ],
+          "format": "xnli",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/xnli-multilingual-nli-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "XNLI multilingual NLI corpus.",
+          "ref": "thedevastator/xnli-multilingual-nli-dataset",
+          "required": true
+        }
+      ],
+      "title": "Multilingual natural-language inference"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 740839619,
+      "collection": "news",
+      "description": "CNN/Daily Mail news articles with highlights, plus a broad set of HuffPost news headlines and short descriptions.",
+      "documents": 342408,
+      "domain": "journalism, politics, business, and current events",
+      "errors": [],
+      "file": "news.txt",
+      "generated_at": "2026-11-12T16:35:59+00:00",
+      "license_summary": [
+        "CC BY 4.0",
+        "CC0 1.0"
+      ],
+      "max_bytes": 800000000,
+      "release_tag": "corpora-news",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "7ee2a3fcb62f316271de95cb764b62af144961564fcb455378d0e28ed8db7a43",
+      "sources": [
+        {
+          "bytes": 700005733,
+          "documents": 160363,
+          "downloads": [
+            {
+              "bytes": 527738644,
+              "kind": "kaggle",
+              "ref": "gowrishankarp/newspaper-text-summarization-cnn-dailymail"
+            }
+          ],
+          "elapsed_seconds": 136.6,
+          "fields": [
+            "article",
+            "highlights"
+          ],
+          "files": [
+            "cnn_dailymail/train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/gowrishankarp/newspaper-text-summarization-cnn-dailymail",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CNN and Daily Mail news articles.",
+          "ref": "gowrishankarp/newspaper-text-summarization-cnn-dailymail",
+          "required": true
+        },
+        {
+          "bytes": 40833885,
+          "documents": 182045,
+          "downloads": [
+            {
+              "bytes": 27829769,
+              "kind": "kaggle",
+              "ref": "rmisra/news-category-dataset"
+            }
+          ],
+          "elapsed_seconds": 12.2,
+          "fields": [
+            "headline",
+            "short_description",
+            "category"
+          ],
+          "files": [
+            "News_Category_Dataset_v3.json"
+          ],
+          "format": "jsonl",
+          "homepage": "https://www.kaggle.com/datasets/rmisra/news-category-dataset",
+          "kind": "kaggle",
+          "license": "CC BY 4.0",
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "notes": "HuffPost news headlines and short descriptions.",
+          "ref": "rmisra/news-category-dataset",
+          "required": false
+        }
+      ],
+      "title": "News articles and headlines"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 832754286,
+      "collection": "patents",
+      "description": "US patent publication numbers and abstracts covering mechanical, chemical, electrical, medical, and software inventions.",
+      "documents": 1208753,
+      "domain": "patents and invention",
+      "errors": [],
+      "file": "patents.txt",
+      "generated_at": "2026-11-12T16:33:18+00:00",
+      "license_summary": [
+        "Apache 2.0"
+      ],
+      "max_bytes": 900000000,
+      "release_tag": "corpora-patents",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "cd62a1f4ff3af5fe903f2bf95a1d23ae936b0db3bd97eb60bef35341832cc9a1",
+      "sources": [
+        {
+          "bytes": 832754285,
+          "documents": 1208753,
+          "downloads": [
+            {
+              "bytes": 272654451,
+              "kind": "kaggle",
+              "ref": "dheerajmpai/us-patent-abstracts-vector-indexed"
+            }
+          ],
+          "elapsed_seconds": 235.2,
+          "fields": [
+            "publication_number",
+            "abstract"
+          ],
+          "files": [
+            "train_mini.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/dheerajmpai/us-patent-abstracts-vector-indexed",
+          "kind": "kaggle",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "notes": "US patent abstracts with publication and application numbers.",
+          "ref": "dheerajmpai/us-patent-abstracts-vector-indexed",
+          "required": true
+        }
+      ],
+      "title": "US patent abstracts"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 1000000001,
+      "collection": "pubmed",
+      "description": "Biomedical full-text articles paired with their author abstracts from the PubMed summarization dataset.",
+      "documents": 53521,
+      "domain": "biomedicine and life sciences",
+      "errors": [],
+      "file": "pubmed.txt",
+      "generated_at": "2026-11-12T16:27:39+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 1000000000,
+      "release_tag": "corpora-pubmed",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "6a156e457f5786d113fa4a1fd10f32a2627ca45c2e46b4b8eeaa0242143fd9bd",
+      "sources": [
+        {
+          "bytes": 1000000000,
+          "documents": 53521,
+          "downloads": [
+            {
+              "bytes": 686033678,
+              "kind": "kaggle",
+              "ref": "thedevastator/pubmed-article-summarization-dataset"
+            }
+          ],
+          "elapsed_seconds": 230.2,
+          "fields": [
+            "article",
+            "abstract"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/pubmed-article-summarization-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Derived from PubMed/PMC open-access material.",
+          "ref": "thedevastator/pubmed-article-summarization-dataset",
+          "required": true
+        }
+      ],
+      "title": "PubMed article and abstract corpus"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 563755803,
+      "collection": "qa",
+      "description": "Question and answer pairs from Stack Exchange sites, including general, expert, and biomedical collections.",
+      "documents": 293412,
+      "domain": "question answering, explanation, and technical discussion",
+      "errors": [],
+      "file": "qa.txt",
+      "generated_at": "2026-11-12T16:40:59+00:00",
+      "license_summary": [
+        "CC BY-SA 4.0"
+      ],
+      "max_bytes": 850000000,
+      "release_tag": "corpora-qa",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "52ef94c8a60c1e5ad6bd118169e871eac5ec20902b472a970f1b4a1558be5ca6",
+      "sources": [
+        {
+          "bytes": 563755802,
+          "documents": 293412,
+          "downloads": [
+            {
+              "bytes": 327369132,
+              "kind": "kaggle",
+              "ref": "xhlulu/stackexchange-qa-pairs"
+            }
+          ],
+          "elapsed_seconds": 79.8,
+          "fields": [
+            "question",
+            "answer"
+          ],
+          "files": [
+            "pre_covid/expert.csv",
+            "pre_covid/general.csv",
+            "pre_covid/biomedical.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/xhlulu/stackexchange-qa-pairs",
+          "kind": "kaggle",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Stack Exchange Q&A pairs; attribution/share-alike.",
+          "ref": "xhlulu/stackexchange-qa-pairs",
+          "required": true
+        }
+      ],
+      "title": "Stack Exchange question-answer pairs"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 481769670,
+      "collection": "recipes",
+      "description": "Recipe names, descriptions, ingredient lists, and step-by-step directions from Food.com.",
+      "documents": 522324,
+      "domain": "cooking, food, and everyday procedures",
+      "errors": [],
+      "file": "recipes.txt",
+      "generated_at": "2026-11-12T16:57:41+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 650000000,
+      "release_tag": "corpora-recipes",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "c1455c4f68c5d9f87d1fb15e08d9799b6d18651134bd60a82544341a231721e5",
+      "sources": [
+        {
+          "bytes": 481769669,
+          "documents": 522324,
+          "downloads": [
+            {
+              "bytes": 758217627,
+              "kind": "kaggle",
+              "ref": "irkaal/foodcom-recipes-and-reviews"
+            }
+          ],
+          "elapsed_seconds": 180.8,
+          "fields": [
+            "Name",
+            "Description",
+            "RecipeIngredientParts",
+            "RecipeInstructions"
+          ],
+          "files": [
+            "recipes.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/irkaal/foodcom-recipes-and-reviews",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Food.com recipe corpus.",
+          "ref": "irkaal/foodcom-recipes-and-reviews",
+          "required": true
+        }
+      ],
+      "title": "Food.com recipes"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 82009551,
+      "collection": "security",
+      "description": "NVD CVE records joined with CVSS, CWE, CISA KEV, and EPSS data: vulnerability descriptions, affected products, and exploit status.",
+      "documents": 189342,
+      "domain": "cybersecurity",
+      "errors": [],
+      "file": "security.txt",
+      "generated_at": "2026-11-12T16:57:23+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 450000000,
+      "release_tag": "corpora-security",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "17eae5de182f53d92a69cd3223a00ee7323b560c606f023a0d55a285190fecec",
+      "sources": [
+        {
+          "bytes": 81414957,
+          "documents": 187934,
+          "downloads": [
+            {
+              "bytes": 124209139,
+              "kind": "kaggle",
+              "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026"
+            }
+          ],
+          "elapsed_seconds": 68.9,
+          "fields": [
+            "cve_id",
+            "description",
+            "cvss_vector",
+            "cwe",
+            "vendor_project",
+            "product"
+          ],
+          "files": [
+            "nvd_cve_records.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "NVD CVE records joined with CVSS, CWE, and EPSS fields.",
+          "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "required": true
+        },
+        {
+          "bytes": 594593,
+          "documents": 1408,
+          "downloads": [
+            {
+              "bytes": 124209139,
+              "kind": "kaggle",
+              "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026"
+            }
+          ],
+          "elapsed_seconds": 0.2,
+          "fields": [
+            "cveID",
+            "vendorProject",
+            "product",
+            "vulnerabilityName",
+            "shortDescription",
+            "requiredAction",
+            "notes"
+          ],
+          "files": [
+            "cisa_kev_catalog.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "CISA Known Exploited Vulnerabilities catalog.",
+          "ref": "afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+          "required": false
+        }
+      ],
+      "title": "CVE vulnerability records"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
       "bytes": 350000001,
       "collection": "standards",
       "description": "The IETF RFC series: protocol specifications, architecture, security guidance, and operational standards.",
-      "documents": 6828,
+      "documents": 6832,
       "domain": "networking, protocols, and technical standards",
       "errors": [],
       "file": "standards.txt",
-      "generated_at": "2026-11-12T16:19:57+00:00",
+      "generated_at": "2026-11-12T16:45:28+00:00",
       "license_summary": [
         "IETF Trust Legal Provisions"
       ],
       "max_bytes": 350000000,
       "release_tag": "corpora-standards",
       "repo": "shemshallah/NaNROUTER",
-      "sha256": "d2e615f833d49e730276a9af546ddbccc7cd6da850ae10780338b0e9783f3112",
+      "sha256": "307637c61f963a5579dc47718f4a0d388fabb91d04cbcbcb5a1675c905e7dea6",
       "sources": [
         {
           "bytes": 350000000,
-          "documents": 6828,
+          "documents": 6832,
           "downloads": [
             {
               "bytes": 13750138,
@@ -78,7 +878,7 @@
               "url": "https://www.rfc-editor.org/rfc-index.xml"
             }
           ],
-          "elapsed_seconds": 130.5,
+          "elapsed_seconds": 105.5,
           "fields": [
             "title",
             "abstract",
@@ -96,11 +896,72 @@
         }
       ],
       "title": "IETF Request for Comments"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 1500000001,
+      "collection": "wikipedia-en",
+      "description": "Plain-text English Wikipedia articles from the 2023-11-01 Wikimedia dump, sampled from the start of the corpus.",
+      "documents": 371199,
+      "domain": "encyclopedia",
+      "errors": [],
+      "file": "wikipedia-en.txt",
+      "generated_at": "2026-11-12T16:28:53+00:00",
+      "license_summary": [
+        "CC BY-SA 4.0"
+      ],
+      "max_bytes": 1500000000,
+      "release_tag": "corpora-wikipedia-en",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "f7b198f7435c5dcf49990681cd6f1d0557b4561e55ea438e125234d4fea054f6",
+      "sources": [
+        {
+          "bytes": 1500000000,
+          "documents": 371199,
+          "downloads": [
+            {
+              "bytes": 420296449,
+              "kind": "hf",
+              "path": "20231101.en/train-00000-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            },
+            {
+              "bytes": 351448367,
+              "kind": "hf",
+              "path": "20231101.en/train-00001-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            },
+            {
+              "bytes": 329024669,
+              "kind": "hf",
+              "path": "20231101.en/train-00002-of-00041.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 227.2,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.en/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikimedia dump 20231101.en; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        }
+      ],
+      "title": "English Wikipedia"
     }
   ],
-  "generated_at": "2026-11-12T16:20:24+00:00",
+  "generated_at": "2026-11-12T17:09:22+00:00",
   "layout": "one public release per collection; one UTF-8 .txt per release",
   "repo": "shemshallah/NaNROUTER",
-  "total_bytes": 396382711,
-  "total_documents": 26828
+  "total_bytes": 10171077212,
+  "total_documents": 6194786
 }
