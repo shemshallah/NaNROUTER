@@ -446,52 +446,248 @@
     },
     {
       "builder": "scripts/build_diverse_corpus.py",
-      "bytes": 700000000,
+      "bytes": 661621609,
       "collection": "multilingual",
-      "description": "Parallel premise/hypothesis pairs across many languages from XNLI, providing non-English grammar, vocabulary, and reasoning material.",
-      "documents": 163115,
-      "domain": "multilingual language and reasoning",
+      "description": "Plain-text Wikipedia samples in French, German, Spanish, Russian, Arabic, Chinese, Hindi, and Swahili, covering several scripts and language families.",
+      "documents": 111159,
+      "domain": "multilingual language and knowledge",
       "errors": [],
       "file": "multilingual.txt",
-      "generated_at": "2026-11-12T17:23:40+00:00",
+      "generated_at": "2026-11-12T18:13:06+00:00",
       "license_summary": [
-        "CC0 1.0"
+        "CC BY-SA 4.0"
       ],
       "max_bytes": 700000000,
       "release_tag": "corpora-multilingual",
       "repo": "shemshallah/NaNROUTER",
-      "sha256": "11adf2173281b2aefdbce6bbad313eef64b6b37d3c7471f0a394f376eec1ad92",
+      "sha256": "465ab3d569563289e92dd3f3b8111fbbda8ea27a51633855afb29951e2bd21c4",
       "sources": [
         {
-          "bytes": 699999999,
-          "documents": 163115,
+          "bytes": 85010981,
+          "documents": 3831,
           "downloads": [
             {
-              "bytes": 1130133924,
-              "kind": "kaggle",
-              "ref": "thedevastator/xnli-multilingual-nli-dataset"
+              "bytes": 769165548,
+              "kind": "hf",
+              "path": "20231101.fr/train-00000-of-00017.parquet",
+              "ref": "wikimedia/wikipedia"
             }
           ],
-          "elapsed_seconds": 458.0,
+          "elapsed_seconds": 29.9,
           "fields": [
-            "language",
-            "premise",
-            "hypothesis"
+            "title",
+            "text"
           ],
           "files": [
-            "all_languages_train.csv"
+            "20231101.fr/train-*.parquet"
           ],
-          "format": "xnli",
-          "homepage": "https://www.kaggle.com/datasets/thedevastator/xnli-multilingual-nli-dataset",
-          "kind": "kaggle",
-          "license": "CC0 1.0",
-          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-          "notes": "XNLI multilingual NLI corpus.",
-          "ref": "thedevastator/xnli-multilingual-nli-dataset",
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia French (fr) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85003896,
+          "documents": 3524,
+          "downloads": [
+            {
+              "bytes": 781271996,
+              "kind": "hf",
+              "path": "20231101.de/train-00000-of-00020.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 31.0,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.de/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia German (de) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85017583,
+          "documents": 4238,
+          "downloads": [
+            {
+              "bytes": 688430059,
+              "kind": "hf",
+              "path": "20231101.es/train-00000-of-00013.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 33.4,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.es/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Spanish (es) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85073085,
+          "documents": 3223,
+          "downloads": [
+            {
+              "bytes": 581024230,
+              "kind": "hf",
+              "path": "20231101.ru/train-00000-of-00021.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 42.1,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.ru/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Russian (ru) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85001686,
+          "documents": 4180,
+          "downloads": [
+            {
+              "bytes": 408241089,
+              "kind": "hf",
+              "path": "20231101.ar/train-00000-of-00007.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 27.3,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.ar/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Arabic (ar) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85030923,
+          "documents": 8442,
+          "downloads": [
+            {
+              "bytes": 587109027,
+              "kind": "hf",
+              "path": "20231101.zh/train-00000-of-00006.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 44.4,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.zh/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Chinese (zh) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 85047706,
+          "documents": 12064,
+          "downloads": [
+            {
+              "bytes": 134883945,
+              "kind": "hf",
+              "path": "20231101.hi/train-00000-of-00002.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 15.5,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.hi/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Hindi (hi) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
+          "required": true
+        },
+        {
+          "bytes": 66435748,
+          "documents": 71657,
+          "downloads": [
+            {
+              "bytes": 35936177,
+              "kind": "hf",
+              "path": "20231101.sw/train-00000-of-00001.parquet",
+              "ref": "wikimedia/wikipedia"
+            }
+          ],
+          "elapsed_seconds": 20.7,
+          "fields": [
+            "title",
+            "text"
+          ],
+          "files": [
+            "20231101.sw/train-*.parquet"
+          ],
+          "format": "parquet",
+          "homepage": "https://huggingface.co/datasets/wikimedia/wikipedia",
+          "kind": "hf",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "notes": "Wikipedia Swahili (sw) dump 20231101; attribution required.",
+          "ref": "wikimedia/wikipedia",
           "required": true
         }
       ],
-      "title": "Multilingual natural-language inference"
+      "title": "Multilingual Wikipedia"
     },
     {
       "builder": "scripts/build_diverse_corpus.py",
@@ -959,9 +1155,9 @@
       "title": "English Wikipedia"
     }
   ],
-  "generated_at": "2026-11-12T17:24:29+00:00",
+  "generated_at": "2026-11-12T18:13:44+00:00",
   "layout": "one public release per collection; one UTF-8 .txt per release",
   "repo": "shemshallah/NaNROUTER",
-  "total_bytes": 10171077212,
-  "total_documents": 6194786
+  "total_bytes": 10132698821,
+  "total_documents": 6142830
 }
