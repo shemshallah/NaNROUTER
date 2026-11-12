@@ -474,9 +474,12 @@ COLLECTIONS: dict[str, Collection] = {
             Source(
                 kind="kaggle",
                 ref="thedevastator/xnli-multilingual-nli-dataset",
-                files=("all_languages_train.csv",),
-                fmt="xnli",
-                fields=("language", "premise", "hypothesis"),
+                # Use the per-language CSVs rather than the all_languages file:
+                # they contain plain premise/hypothesis strings and avoid the
+                # pandas repr/numpy-array serialization in the combined file.
+                files=("??_train.csv",),
+                fmt="csv",
+                fields=("premise", "hypothesis"),
                 max_bytes=_mb(700),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
