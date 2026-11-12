@@ -53,11 +53,18 @@ MIDS = ["midone", "midtwo", "midthree", "midfour", "midfive"]
 CHAINS = [CHAIN_A, CHAIN_B, CHAIN_C, CHAIN_D]
 
 
-def build_sentences(n_sents: int, seed: int) -> list[str]:
+def build_sentences(n_sents: int, seed: int, branches: int = 4) -> list[str]:
     rng = random.Random(seed)
+    if branches <= 4:
+        chains = CHAINS[: max(1, branches)]
+    else:
+        chains = [
+            [f"b{b}w{i}" for i in range(15)]
+            for b in range(branches)
+        ]
     out: list[str] = []
     for i in range(n_sents):
-        chain = CHAINS[i % 4] if i < 4 else rng.choice(CHAINS)
+        chain = chains[i % len(chains)] if i < len(chains) else rng.choice(chains)
         toks = [chain[0]]
         mid_idx = 0
         chain_idx = 1
@@ -127,21 +134,23 @@ class PairMoE(nn.Module):
 
 class HybridPoincareLM(nn.Module):
     def __init__(self, vocab: int, ctx: int, d_model: int = 64, d_hidden: int = 64,
-                 n_pairs: int = 128, topk: int = 8, dropout: float = 0.1):
+                 n_pairs: int = 128, topk: int = 8, dropout: float = 0.1,
+                 n_branches: int = 4):
         super().__init__()
         self.ctx = ctx
+        self.n_branches = n_branches
         self.tok = nn.Embedding(vocab, d_model)
         self.pos = nn.Embedding(ctx, d_model)
         self.attn_score = nn.Linear(d_model, 1)
         self.ctx_proj = nn.Linear(2 * d_model, d_model)
         self.branch_proj = nn.Linear(d_model, 8)
-        self.centroids = nn.Parameter(torch.zeros(4, 8))
+        self.centroids = nn.Parameter(torch.zeros(n_branches, 8))
         with torch.no_grad():
-            self.centroids[0, 0] = 0.5
-            self.centroids[1, 1] = 0.5
-            self.centroids[2, 0] = -0.5
-            self.centroids[3, 1] = -0.5
-        self.router = nn.Linear(d_model + 4, d_model)
+            for i in range(n_branches):
+                angle = 2.0 * math.pi * i / max(1, n_branches)
+                self.centroids[i, 0] = 0.5 * math.cos(angle)
+                self.centroids[i, 1] = 0.5 * math.sin(angle)
+        self.router = nn.Linear(d_model + n_branches, d_model)
 
         # Geometry stack.
         self.head_proj = nn.Linear(d_model, 255)
@@ -227,6 +236,7 @@ class HybridPoincareLM(nn.Module):
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--sentences", type=int, default=1000)
+    p.add_argument("--branches", type=int, default=4)
     p.add_argument("--ctx", type=int, default=16)
     p.add_argument("--epochs", type=int, default=50)
     p.add_argument("--batch-size", type=int, default=128)
@@ -252,7 +262,7 @@ def main() -> int:
     amp = bool(args.amp and device.type == "cuda")
     scaler = torch.amp.GradScaler("cuda") if amp else None
 
-    sentences = build_sentences(args.sentences, seed=99)
+    sentences = build_sentences(args.sentences, seed=99, branches=args.branches)
     rng = random.Random(42)
     rng.shuffle(sentences)
     n_test = max(20, int(len(sentences) * 0.2))
@@ -265,7 +275,7 @@ def main() -> int:
 
     model = HybridPoincareLM(
         len(vocab), args.ctx, args.d_model, args.d_hidden,
-        args.pairs, args.topk, args.dropout,
+        args.pairs, args.topk, args.dropout, args.branches,
     ).to(device)
     print(f"[model] params={sum(p.numel() for p in model.parameters()):,}")
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -345,6 +355,7 @@ def main() -> int:
         "best_metrics": best_metrics,
         "config": {
             "sentences": args.sentences,
+            "branches": args.branches,
             "ctx": args.ctx,
             "epochs": args.epochs,
             "batch_size": args.batch_size,
