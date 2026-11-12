@@ -1,0 +1,327 @@
+name: Fetch diverse corpus
+
+# One runner per collection, one public GitHub Release per collection.
+# Each release contains exactly one plain-text corpus file plus provenance and
+# checksums.  The repository is public, so these releases are public too.
+
+on:
+  workflow_dispatch:
+    inputs:
+      collections:
+        description: "Comma-separated collection names, or 'all'"
+        required: true
+        default: "all"
+        type: string
+      max_mb:
+        description: "Override per-collection cap in MB (0 = registry default)"
+        required: true
+        default: "0"
+        type: string
+      publish:
+        description: "Publish public GitHub Releases"
+        required: true
+        default: true
+        type: boolean
+  push:
+    paths:
+      - ".github/workflows/fetch-diverse-corpus.yml"
+      - "scripts/build_diverse_corpus.py"
+      - "tests/test_build_diverse_corpus.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-diverse-corpus
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate registry
+        run: python scripts/build_diverse_corpus.py --check
+      - name: Unit tests
+        run: python -m unittest tests.test_build_diverse_corpus -v
+
+  prepare:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate registry
+        run: python scripts/build_diverse_corpus.py --check
+      - name: Resolve collection matrix
+        id: matrix
+        env:
+          COLLECTIONS: ${{ inputs.collections }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          MATRIX="$(python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          sys.path.insert(0, "scripts")
+          from build_diverse_corpus import COLLECTIONS
+
+          raw = (os.environ.get("COLLECTIONS") or "all").strip()
+          if raw.lower() in {"", "all", "*"}:
+              names = list(COLLECTIONS)
+          else:
+              names = [part.strip() for part in raw.split(",") if part.strip()]
+          unknown = sorted(set(names) - set(COLLECTIONS))
+          if unknown:
+              raise SystemExit("unknown collections: " + ", ".join(unknown))
+          print(json.dumps({"collection": names}))
+          PY
+          )"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "collections: ${MATRIX}"
+
+  build:
+    needs: prepare
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      COLLECTION: ${{ matrix.collection }}
+      MAX_MB: ${{ inputs.max_mb || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install streaming readers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ijson pyarrow
+
+      - name: Build ${{ matrix.collection }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="build/corpora/${COLLECTION}"
+          rm -rf "$OUT"
+          ARGS=(--collection "$COLLECTION" --output-dir "$OUT" --work-dir "/tmp/nanrouter-corpus/${COLLECTION}")
+          if [ "${MAX_MB:-0}" != "0" ]; then
+            ARGS+=(--max-mb "$MAX_MB")
+          fi
+          python3 scripts/build_diverse_corpus.py "${ARGS[@]}"
+
+      - name: Verify the release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="build/corpora/${COLLECTION}"
+          test -s "$OUT/${COLLECTION}.txt"
+          test -s "$OUT/MANIFEST.json"
+          test -s "$OUT/SOURCES.json"
+          test -s "$OUT/SHA256SUMS"
+          (cd "$OUT" && sha256sum -c SHA256SUMS)
+          wc -c "$OUT/${COLLECTION}.txt"
+          head -c 400 "$OUT/${COLLECTION}.txt" | tr '\n' ' ' | cut -c1-400
+          echo
+
+      - name: Publish public release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="build/corpora/${COLLECTION}"
+          python3 - "$OUT/RELEASE.json" "$OUT/NOTES.md" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          release = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          Path(sys.argv[2]).write_text(release["notes"].rstrip() + "\n", encoding="utf-8")
+          Path(sys.argv[1] + ".tag").write_text(release["tag"] + "\n", encoding="utf-8")
+          Path(sys.argv[1] + ".title").write_text(release["title"] + "\n", encoding="utf-8")
+          PY
+          TAG="$(cat "$OUT/RELEASE.json.tag")"
+          TITLE="$(cat "$OUT/RELEASE.json.title")"
+          cp "$OUT/SOURCES.json" "$OUT/${COLLECTION}.SOURCES.json"
+          cp "$OUT/MANIFEST.json" "$OUT/${COLLECTION}.MANIFEST.json"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file "$OUT/NOTES.md"
+          else
+            gh release create "$TAG" --title "$TITLE" --notes-file "$OUT/NOTES.md"
+          fi
+          gh release upload "$TAG" \
+            "$OUT/${COLLECTION}.txt" \
+            "$OUT/${COLLECTION}.SOURCES.json" \
+            "$OUT/${COLLECTION}.MANIFEST.json" \
+            "$OUT/SHA256SUMS" \
+            --clobber
+          gh release view "$TAG" --json url,isDraft,isPrerelease \
+            --jq '"release " + .url + " draft=" + (.isDraft|tostring) + " prerelease=" + (.isPrerelease|tostring)'
+
+      - name: Stage manifest artifact
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="build/corpora/${COLLECTION}"
+          mkdir -p artifact
+          if [ -s "$OUT/MANIFEST.json" ]; then
+            cp "$OUT/MANIFEST.json" "artifact/${COLLECTION}.json"
+          fi
+          if [ -s "$OUT/SOURCES.json" ]; then
+            cp "$OUT/SOURCES.json" "artifact/${COLLECTION}.SOURCES.json"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: corpus-manifest-${{ matrix.collection }}
+          path: artifact/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  finalize:
+    needs: [prepare, build]
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: corpus-manifest-*
+          path: build/manifests
+          merge-multiple: true
+      - name: Aggregate manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p corpora/domains
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path("build/manifests")
+          manifests = []
+          sources = []
+          for path in sorted(root.glob("*.json")):
+              if path.name.endswith(".SOURCES.json"):
+                  continue
+              try:
+                  data = json.loads(path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  print(f"skip {path}: {exc}")
+                  continue
+              if "collection" not in data or "sha256" not in data:
+                  continue
+              manifests.append(data)
+              source_path = root / f"{data['collection']}.SOURCES.json"
+              if source_path.exists():
+                  try:
+                      source_data = json.loads(source_path.read_text(encoding="utf-8"))
+                      sources.append(source_data)
+                  except Exception as exc:
+                      print(f"skip sources {source_path}: {exc}")
+          if not manifests:
+              print("no successful collection manifests; nothing to aggregate")
+              raise SystemExit(0)
+          combined = {
+              "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+              "repo": "shemshallah/NaNROUTER",
+              "layout": "one public release per collection; one UTF-8 .txt per release",
+              "collections": manifests,
+              "total_bytes": sum(item.get("bytes", 0) for item in manifests),
+              "total_documents": sum(item.get("documents", 0) for item in manifests),
+          }
+          Path("corpora/domains/MANIFEST.json").write_text(
+              json.dumps(combined, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          Path("corpora/domains/SOURCES.json").write_text(
+              json.dumps(
+                  {
+                      "generated_at": combined["generated_at"],
+                      "repo": combined["repo"],
+                      "collections": sources,
+                  },
+                  indent=2,
+                  sort_keys=True,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          print(f"{len(manifests)} collections, {combined['total_documents']:,} documents, {combined['total_bytes']:,} bytes")
+          PY
+      - name: Commit aggregate manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s corpora/domains/MANIFEST.json ]; then
+            echo "no aggregate manifest"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add corpora/domains/MANIFEST.json corpora/domains/SOURCES.json
+          if git diff --cached --quiet; then
+            echo "manifests unchanged"
+          else
+            git commit -m "Update diverse corpus manifests [skip ci]"
+            git push || echo "::warning::manifest push skipped"
+          fi
+      - name: Publish manifest index release
+        if: ${{ hashFiles('corpora/domains/MANIFEST.json') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd corpora/domains && sha256sum MANIFEST.json SOURCES.json > SHA256SUMS)
+          NOTES="Index of the domain-diverse NaNROUTER corpus releases. Each collection is published separately with exactly one plain-text file. See MANIFEST.json for sizes, document counts, checksums, and release tags."
+          if gh release view corpora-domains-latest >/dev/null 2>&1; then
+            gh release edit corpora-domains-latest --title "NaNROUTER diverse corpus index" --notes "$NOTES"
+          else
+            gh release create corpora-domains-latest --title "NaNROUTER diverse corpus index" --notes "$NOTES"
+          fi
+          gh release upload corpora-domains-latest \
+            corpora/domains/MANIFEST.json \
+            corpora/domains/SOURCES.json \
+            corpora/domains/SHA256SUMS \
+            --clobber

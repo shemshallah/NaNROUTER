@@ -1,0 +1,18 @@
+# Large corpus payloads are published as GitHub Releases, not committed.
+*.txt
+*.jsonl
+*.ndjson
+*.csv
+*.tsv
+*.parquet
+*.zip
+*.gz
+*.zst
+*.tar
+build/
+SHA256SUMS
+
+# Keep the aggregate provenance files tracked.
+!MANIFEST.json
+!SOURCES.json
+!README.md

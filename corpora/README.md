@@ -9,6 +9,7 @@ category has a stable release tag and a manifest in this tree.
 | [`sentences/`](sentences/README.md) | `corpora-sentences` + `corpora-sentences-*` | One sentence per line, one file per Gutenberg book, in choosable batches |
 | [`paragraphs/`](paragraphs/README.md) | `corpora-paragraphs` + `corpora-paragraphs-*` | One paragraph per line, one file per Gutenberg book, in choosable batches |
 | [`short_stories/`](short_stories/README.md) | `corpora-short-stories` + `corpora-short-stories-*` | Project Gutenberg short-story books and collections, in choosable batches |
+| [`domains/`](domains/README.md) | `corpora-<domain>` + `corpora-domains-latest` | Domain-diverse text: enwiki, arXiv, PubMed, law, patents, code, math, news, recipes, security, Q&A, multilingual, finance, standards, humanities, chemistry. One `.txt` per collection |
 
 ## Public-domain pipeline
 
