@@ -356,6 +356,7 @@ def main():
     p.add_argument("--topk", type=int, default=8)
     p.add_argument("--branches", type=int, default=32)
     p.add_argument("--steps", type=int, default=50000)
+    p.add_argument("--max-seconds", type=float, default=0.0)
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=0.05)
@@ -467,6 +468,9 @@ def main():
         }
 
     for step in range(args.steps):
+        if args.max_seconds > 0 and (time.time() - t0) >= args.max_seconds:
+            print(f"[stop] max-seconds reached at step {step}", flush=True)
+            break
         xb, yb, ypb, pmb = batch_at(ids, split, args.ctx, args.batch_size, rng, True)
         xb, yb, ypb, pmb = xb.to(device), yb.to(device), ypb.to(device), pmb.to(device)
         lr = args.lr * min(1.0, (step + 1) / 200)
