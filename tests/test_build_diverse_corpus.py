@@ -133,6 +133,16 @@ class RecordTests(unittest.TestCase):
             {"en": "A hypothesis", "fr": "Une hypothese"},
         )
 
+    def test_xnli_parses_pandas_array_repr(self) -> None:
+        value = (
+            "{'language': array(['en', 'fr'], dtype=object), "
+            "'translation': array(['A hypothesis', \"L' hypothese\"], dtype=object)}"
+        )
+        self.assertEqual(
+            corpus.parse_language_map(value),
+            {"en": "A hypothesis", "fr": "L' hypothese"},
+        )
+
     def test_parse_dict_string_handles_escaped_quotes(self) -> None:
         value = '{\\"en\\": \\"A premise\\", \\"fr\\": \\"Une premisse\\"}'
         self.assertEqual(

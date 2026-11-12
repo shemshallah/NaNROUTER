@@ -1461,9 +1461,57 @@ def parse_dict_string(value: Any) -> dict[str, Any] | None:
     return None
 
 
+def extract_array_field(text: str, key: str) -> list[Any] | None:
+    """Extract ``key: array([...], dtype=object)`` from a pandas repr."""
+    match = re.search(rf"""["']{re.escape(key)}["']\s*:\s*array\(\[""", text)
+    if not match:
+        return None
+    start = match.end()
+    depth = 1
+    index = start
+    quote: str | None = None
+    escaped = False
+    while index < len(text):
+        char = text[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        else:
+            if char in {"'", '"'}:
+                quote = char
+            elif char == "[":
+                depth += 1
+            elif char == "]":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        value = ast.literal_eval("[" + text[start:index] + "]")
+                    except (ValueError, SyntaxError):
+                        return None
+                    return value if isinstance(value, list) else None
+        index += 1
+    return None
+
+
 def parse_language_map(value: Any) -> dict[str, str] | None:
     parsed = parse_dict_string(value)
     if not isinstance(parsed, dict):
+        # XNLI's hypothesis column is a pandas repr containing numpy arrays:
+        # {'language': array([...], dtype=object), 'translation': array([...],
+        # dtype=object)}
+        if isinstance(value, str):
+            languages = extract_array_field(value, "language")
+            translations = extract_array_field(value, "translation")
+            if isinstance(languages, list) and isinstance(translations, list):
+                return {
+                    str(language): str(text)
+                    for language, text in zip(languages, translations)
+                    if language and text
+                }
         return None
     # XNLI's hypothesis is stored as
     # {"language": ["ar", ...], "translation": ["...", ...]}.
