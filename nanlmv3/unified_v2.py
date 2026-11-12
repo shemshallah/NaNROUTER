@@ -503,6 +503,8 @@ def main():
             f"top5={baseline['top5']*100:.2f}%",
             flush=True,
         )
+        best = baseline["loss"]
+        best_rec = {"step": 0, "source": "init", **baseline}
 
     for step in range(args.steps):
         if args.max_seconds > 0 and (time.time() - t0) >= args.max_seconds:
