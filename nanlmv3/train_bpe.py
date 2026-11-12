@@ -24,7 +24,7 @@ import json
 import sys
 from pathlib import Path
 
-from frontier_model import DEFAULT_SUPPLIED, extract_supplied_text
+from supplied_text import DEFAULT_SUPPLIED, extract_supplied_text
 
 
 def main() -> int:

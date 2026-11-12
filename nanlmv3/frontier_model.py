@@ -39,7 +39,6 @@ import json
 import math
 import os
 import random
-import re
 import sys
 import time
 from dataclasses import dataclass
@@ -57,38 +56,7 @@ from head_geometry import (
     geometry_param_count,
 )
 from poincare_geometry import PoincareTriheadLayer, POINCARE_OUT_DIM
-
-# ---------------------------------------------------------------------------
-# Supplied-file text extraction
-# ---------------------------------------------------------------------------
-
-DEFAULT_SUPPLIED = [
-    Path.home() / "meta" / "transformer_baseline_lm.py",
-    Path("/storage/emulated/0/download/Meta Ai/c256_x5f_2_x5f_gutenberg_x5f_specialization_x5f_6gram_x5f_final.py.txt"),
-    Path("/storage/emulated/0/download/Meta Ai/mirror.py.txt"),
-]
-
-EMBEDDED_RE = re.compile(
-    r"(?:EMBEDDED_BIG|EMBEDDED_GUTENBERG|REAL_TEXT)\s*=\s*(?:'''|\"\"\")(.*?)(?:'''|\"\"\")",
-    re.DOTALL,
-)
-
-
-def extract_supplied_text(paths: list[Path]) -> str:
-    parts: list[str] = []
-    for path in paths:
-        if not path.exists():
-            continue
-        raw = path.read_text(encoding="utf-8", errors="ignore")
-        for match in EMBEDDED_RE.finditer(raw):
-            text = match.group(1).strip()
-            if len(text) > 1000:
-                parts.append(text)
-    if not parts:
-        raise SystemExit(
-            "No embedded text found in the supplied Python files. Pass --corpus."
-        )
-    return "\n\n".join(parts)
+from supplied_text import DEFAULT_SUPPLIED, extract_supplied_text
 
 
 # ---------------------------------------------------------------------------
