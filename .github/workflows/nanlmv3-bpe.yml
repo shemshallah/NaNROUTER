@@ -1,0 +1,105 @@
+name: nanlmv3-bpe
+
+# Trains the nanlmv3 32k byte-level BPE on a published NaNROUTER corpus release.
+# This is a tokenizer-training job, not a model-quality claim.
+
+on:
+  workflow_dispatch:
+    inputs:
+      vocab_size:
+        description: "BPE vocabulary size"
+        required: true
+        default: "32000"
+      corpus_mb:
+        description: "Corpus sample size in MB"
+        required: true
+        default: "50"
+      release_tag:
+        description: "Corpus release tag"
+        required: true
+        default: "corpora-sentences-0001"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  train-bpe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tokenizers and zstd
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tokenizers
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+
+      - name: Fetch and verify the published corpus batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/release build/corpus
+          gh release download "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
+            --pattern '*.tar.zst' --pattern '*.SHA256SUMS' --dir build/release
+          (cd build/release && sha256sum -c ./*.SHA256SUMS)
+          tar --zstd -xf build/release/*.tar.zst -C build/corpus
+          find build/corpus -type f -name '*.txt' | wc -l
+          du -sh build/corpus
+
+      - name: Build a bounded BPE training sample
+        env:
+          CORPUS_MB: ${{ inputs.corpus_mb }}
+        run: |
+          set -euo pipefail
+          find build/corpus -type f -name '*.txt' -print0 \
+            | sort -z \
+            | xargs -0 cat \
+            | head -c $((CORPUS_MB * 1000000)) \
+            > build/corpus_sample.txt || true
+          test -s build/corpus_sample.txt
+          wc -c build/corpus_sample.txt
+          head -c 200 build/corpus_sample.txt
+
+      - name: Train nanlmv3 32k BPE
+        env:
+          VOCAB_SIZE: ${{ inputs.vocab_size }}
+        run: |
+          set -euo pipefail
+          python nanlmv3/train_bpe.py \
+            --corpus build/corpus_sample.txt \
+            --vocab-size "$VOCAB_SIZE" \
+            --output build/bpe32k.json \
+            --meta build/bpe32k_meta.json
+          python - <<'PY'
+          import json
+          from tokenizers import Tokenizer
+          tok = Tokenizer.from_file("build/bpe32k.json")
+          meta = json.load(open("build/bpe32k_meta.json"))
+          print("vocab_size", tok.get_vocab_size())
+          print("meta", json.dumps(meta, sort_keys=True))
+          enc = tok.encode("the quick brown fox jumps over the lazy dog.")
+          print("sample_tokens", enc.tokens[:24])
+          assert tok.get_vocab_size() >= 32000
+          assert meta["vocab_size"] == tok.get_vocab_size()
+          PY
+
+      - name: Upload tokenizer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanlmv3-bpe-${{ inputs.vocab_size }}
+          path: |
+            build/bpe32k.json
+            build/bpe32k_meta.json
+          if-no-files-found: error
+          retention-days: 30
