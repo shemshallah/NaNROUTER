@@ -39,3 +39,14 @@ R11 tests check raw-byte roundtrip, SHA-256 corpus integrity, distinct book IDs/
 ## Next gate
 
 Scale to all 38 exported books and the remaining NaNROUTER release batches; widen held-out windows substantially; train until a steady improvement curve emerges, then compare with a compute-matched strong streaming Transformer/SSM on the same book-disjoint corpus. Avoid promoting on space loss alone.
+
+## Same-window R10→R11 comparison
+
+For stronger evidence beyond within-stage improvements, the untouched R10 parent and R11@130 were evaluated on exactly the **same** frozen 64 development windows from 4 NaNROUTER books (8,564 raw UTF-8 bytes, 4,686 subword tokens). R10 → R11:
+
+* Raw bits/byte **3.850489 → 3.692748** (4.10% lower)
+* Nonspace token NLL **7.023601 → 6.626670** (5.65% lower)
+* Nonspace top-1 **5.124% → 5.721%**
+* Space top-1 **96.61% → 95.02%** (decreased; not a space-only improvement)
+
+These are matched *development* observations, not a blind generalization claim. The full source/checkpoint bundle also includes `reports/r11_matched_r10_r11.json` and SHA-256 inventories.
