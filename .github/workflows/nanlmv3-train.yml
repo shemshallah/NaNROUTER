@@ -1,0 +1,142 @@
+name: nanlmv3-train-bpe-10m
+
+# Trains the nanlmv3 32k BPE, then the ~10M mixer on a bounded corpus sample.
+# This is a Stage 0/1 training run on a published NaNROUTER corpus release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: "Optimizer steps"
+        required: true
+        default: "500"
+      corpus_mb:
+        description: "Model-training corpus sample (MB)"
+        required: true
+        default: "5"
+      bpe_mb:
+        description: "BPE-training corpus sample (MB)"
+        required: true
+        default: "50"
+      release_tag:
+        description: "Corpus release tag"
+        required: true
+        default: "corpora-sentences-0001"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CPU PyTorch, tokenizers, zstd
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install tokenizers numpy
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+
+      - name: Fetch and verify the published corpus batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/release build/corpus
+          gh release download "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
+            --pattern '*.tar.zst' --pattern '*.SHA256SUMS' --dir build/release
+          (cd build/release && sha256sum -c ./*.SHA256SUMS)
+          tar --zstd -xf build/release/*.tar.zst -C build/corpus
+          find build/corpus -type f -name '*.txt' | wc -l
+          du -sh build/corpus
+
+      - name: Build BPE and model samples
+        env:
+          BPE_MB: ${{ inputs.bpe_mb }}
+          CORPUS_MB: ${{ inputs.corpus_mb }}
+        run: |
+          set -euo pipefail
+          find build/corpus -type f -name '*.txt' -print0 \
+            | sort -z \
+            | xargs -0 cat \
+            | head -c $((BPE_MB * 1000000)) \
+            > build/bpe_sample.txt || true
+          test -s build/bpe_sample.txt
+          head -c $((CORPUS_MB * 1000000)) build/bpe_sample.txt > build/model_sample.txt
+          test -s build/model_sample.txt
+          wc -c build/bpe_sample.txt build/model_sample.txt
+
+      - name: Train 32k BPE
+        run: |
+          set -euo pipefail
+          python nanlmv3/train_bpe.py \
+            --corpus build/bpe_sample.txt \
+            --vocab-size 32000 \
+            --output build/bpe32k.json \
+            --meta build/bpe32k_meta.json
+          python - <<'PY'
+          import json
+          from tokenizers import Tokenizer
+          tok = Tokenizer.from_file("build/bpe32k.json")
+          meta = json.load(open("build/bpe32k_meta.json"))
+          print("vocab_size", tok.get_vocab_size())
+          print("meta", json.dumps(meta, sort_keys=True))
+          print("sample", tok.encode("the quick brown fox jumps over the lazy dog.").tokens[:20])
+          assert tok.get_vocab_size() >= 32000
+          PY
+
+      - name: Train ~10M mixer on the BPE corpus
+        env:
+          STEPS: ${{ inputs.steps }}
+        run: |
+          set -euo pipefail
+          python nanlmv3/frontier_model.py \
+            --mode hybrid \
+            --corpus build/model_sample.txt \
+            --tokenizer bpe \
+            --bpe-model build/bpe32k.json \
+            --params 10m \
+            --steps "$STEPS" \
+            --batch-size 8 \
+            --ctx 64 \
+            --orders 4 \
+            --train-fraction 0.9 \
+            --eval-every 250 \
+            --eval-batches 4 \
+            --threads 4 \
+            --summary build/train_summary.json \
+            --checkpoint build/train.pt \
+            --log build/train.jsonl
+          python - <<'PY'
+          import json
+          d = json.load(open("build/train_summary.json"))
+          print(json.dumps(d, indent=2, sort_keys=True))
+          assert d["params"] >= 9_000_000
+          assert d["vocab_size"] == 32000
+          assert d["tokenizer"] == "bpe"
+          PY
+
+      - name: Upload BPE and training evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanlmv3-bpe-10m
+          path: |
+            build/bpe32k.json
+            build/bpe32k_meta.json
+            build/train_summary.json
+            build/train.jsonl
+            build/train.pt
+          if-no-files-found: error
+          retention-days: 30
