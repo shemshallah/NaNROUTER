@@ -1,0 +1,79 @@
+{
+  "collections": [
+    {
+      "collection": "chemistry",
+      "errors": [],
+      "generated_at": "2026-11-12T16:16:24+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-chemistry",
+      "sources": [
+        {
+          "bytes": 46382709,
+          "documents": 20000,
+          "downloads": [
+            {
+              "bytes": 9075076,
+              "kind": "kaggle",
+              "ref": "thedevastator/chemistry-problem-solution-dataset"
+            }
+          ],
+          "elapsed_seconds": 6.9,
+          "fields": [
+            "topic",
+            "sub_topic",
+            "message_1",
+            "message_2"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/chemistry-problem-solution-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Chemistry problem/solution pairs.",
+          "ref": "thedevastator/chemistry-problem-solution-dataset",
+          "required": true
+        }
+      ]
+    },
+    {
+      "collection": "standards",
+      "errors": [],
+      "generated_at": "2026-11-12T16:19:57+00:00",
+      "layout": "UTF-8 text; documents separated by one blank line",
+      "release_tag": "corpora-standards",
+      "sources": [
+        {
+          "bytes": 350000000,
+          "documents": 6828,
+          "downloads": [
+            {
+              "bytes": 13750138,
+              "kind": "rfc-index",
+              "url": "https://www.rfc-editor.org/rfc-index.xml"
+            }
+          ],
+          "elapsed_seconds": 130.5,
+          "fields": [
+            "title",
+            "abstract",
+            "text"
+          ],
+          "files": [],
+          "format": "rfc",
+          "homepage": "https://www.rfc-editor.org/",
+          "kind": "rfc",
+          "license": "IETF Trust Legal Provisions",
+          "license_url": "https://trustee.ietf.org/license-info/",
+          "notes": "RFC text is reproduced under the IETF Trust legal provisions.",
+          "ref": "ietf-rfc",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-11-12T16:20:24+00:00",
+  "repo": "shemshallah/NaNROUTER"
+}

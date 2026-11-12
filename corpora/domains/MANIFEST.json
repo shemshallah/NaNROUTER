@@ -1,0 +1,106 @@
+{
+  "collections": [
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 46382710,
+      "collection": "chemistry",
+      "description": "Chemistry problems with worked solutions, supplementing the physics/mathematics coverage in the arXiv and math collections.",
+      "documents": 20000,
+      "domain": "chemistry",
+      "errors": [],
+      "file": "chemistry.txt",
+      "generated_at": "2026-11-12T16:16:24+00:00",
+      "license_summary": [
+        "CC0 1.0"
+      ],
+      "max_bytes": 120000000,
+      "release_tag": "corpora-chemistry",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "71588183c44a33c812d8a88d5b1c7a3a32caf73af6ba99e4a89b5de1ca53f431",
+      "sources": [
+        {
+          "bytes": 46382709,
+          "documents": 20000,
+          "downloads": [
+            {
+              "bytes": 9075076,
+              "kind": "kaggle",
+              "ref": "thedevastator/chemistry-problem-solution-dataset"
+            }
+          ],
+          "elapsed_seconds": 6.9,
+          "fields": [
+            "topic",
+            "sub_topic",
+            "message_1",
+            "message_2"
+          ],
+          "files": [
+            "train.csv"
+          ],
+          "format": "csv",
+          "homepage": "https://www.kaggle.com/datasets/thedevastator/chemistry-problem-solution-dataset",
+          "kind": "kaggle",
+          "license": "CC0 1.0",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "notes": "Chemistry problem/solution pairs.",
+          "ref": "thedevastator/chemistry-problem-solution-dataset",
+          "required": true
+        }
+      ],
+      "title": "Chemistry problems and solutions"
+    },
+    {
+      "builder": "scripts/build_diverse_corpus.py",
+      "bytes": 350000001,
+      "collection": "standards",
+      "description": "The IETF RFC series: protocol specifications, architecture, security guidance, and operational standards.",
+      "documents": 6828,
+      "domain": "networking, protocols, and technical standards",
+      "errors": [],
+      "file": "standards.txt",
+      "generated_at": "2026-11-12T16:19:57+00:00",
+      "license_summary": [
+        "IETF Trust Legal Provisions"
+      ],
+      "max_bytes": 350000000,
+      "release_tag": "corpora-standards",
+      "repo": "shemshallah/NaNROUTER",
+      "sha256": "d2e615f833d49e730276a9af546ddbccc7cd6da850ae10780338b0e9783f3112",
+      "sources": [
+        {
+          "bytes": 350000000,
+          "documents": 6828,
+          "downloads": [
+            {
+              "bytes": 13750138,
+              "kind": "rfc-index",
+              "url": "https://www.rfc-editor.org/rfc-index.xml"
+            }
+          ],
+          "elapsed_seconds": 130.5,
+          "fields": [
+            "title",
+            "abstract",
+            "text"
+          ],
+          "files": [],
+          "format": "rfc",
+          "homepage": "https://www.rfc-editor.org/",
+          "kind": "rfc",
+          "license": "IETF Trust Legal Provisions",
+          "license_url": "https://trustee.ietf.org/license-info/",
+          "notes": "RFC text is reproduced under the IETF Trust legal provisions.",
+          "ref": "ietf-rfc",
+          "required": true
+        }
+      ],
+      "title": "IETF Request for Comments"
+    }
+  ],
+  "generated_at": "2026-11-12T16:20:24+00:00",
+  "layout": "one public release per collection; one UTF-8 .txt per release",
+  "repo": "shemshallah/NaNROUTER",
+  "total_bytes": 396382711,
+  "total_documents": 26828
+}
