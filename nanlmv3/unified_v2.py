@@ -528,8 +528,19 @@ def main():
             if ev["loss"] < best:
                 best = ev["loss"]
                 best_rec = {"step": step + 1, **ev}
-                torch.save({"model": model.state_dict(), "args": vars(args)}, out / "best.pt")
+                torch.save(
+                    {"model": model.state_dict(), "args": vars(args),
+                     "step": step + 1, "metrics": ev},
+                    out / "best.pt",
+                )
     final = eval_text()
+    torch.save(
+        {"model": model.state_dict(), "args": vars(args),
+         "final": final, "best": best_rec},
+        out / "final.pt",
+    )
+    (out / "history.json").write_text(json.dumps(history, indent=2, sort_keys=True) + "\n")
+    (out / "config.json").write_text(json.dumps(vars(args), indent=2, sort_keys=True) + "\n")
     centroid_delta = float((model.centroids.detach() - init_centroids).norm())
     result = {
         "params": sum(p.numel() for p in model.parameters()),
@@ -545,6 +556,13 @@ def main():
         "branch_temp": float(model.branch_temp.detach()),
         "memory_alpha": float(model.memory_alpha.detach()),
         "memory_enabled": memory is not None,
+        "artifacts": {
+            "best_weights": str(out / "best.pt"),
+            "final_weights": str(out / "final.pt"),
+            "result": str(out / "result.json"),
+            "history": str(out / "history.json"),
+            "config": str(out / "config.json"),
+        },
         "config": vars(args),
     }
     (out / "result.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
