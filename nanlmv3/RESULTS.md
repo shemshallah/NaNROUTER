@@ -74,6 +74,36 @@ out-of-distribution artifact (8.57 → 7.29 bits), but the train/validation gap
 is still huge. More CPU steps will not fix it; the next run needs a GPU and a
 larger token budget.
 
+## GPU hybrid scaling — controlled 90% gate
+
+Kaggle T4, `nanlmv3/hybrid_poincare.py`.
+
+| Branches | Sentences | Centroids | Params | Test acc | Target | Time |
+|---:|---:|---:|---:|---:|---|---:|
+| 4 | 1000 | 4 | 2,587,022 | **100.00%** | met | 50 s |
+| 16 | 2000 | 16 | 2,603,366 | **100.00%** | met | 90 s |
+| 32 | 4000 | 32 | 2,625,158 | **100.00%** | met | 179 s |
+
+Each run is a separate Kaggle kernel:
+- https://www.kaggle.com/code/shem42/nanlmv3-hybrid-poincare
+- https://www.kaggle.com/code/shem42/nanlmv3-hybrid-b32
+
+The 90% gate is a controlled branching-curriculum gate. It is not a natural
+text claim. The point is that the hybrid keeps the gate as branch factor grows.
+
+## 100M hybrid backbone — real text metrics
+
+A separate Kaggle GPU kernel is running:
+
+- BPE 32k trained on 50M chars from the 100M corpus
+- 100M-character corpus, 95/5 split
+- causal trunk 2×4, geometry stack, next + S− heads
+- no exact n-gram memory (pure trunk + geometry at this scale)
+- 20,000 steps, batch 16, context 128, AMP
+- metrics: validation bits/token, top-1, previous-token accuracy, train loss
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-hybrid-100m
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
