@@ -463,29 +463,39 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "multilingual": Collection(
         name="multilingual",
-        title="Multilingual natural-language inference",
-        domain="multilingual language and reasoning",
+        title="Multilingual Wikipedia",
+        domain="multilingual language and knowledge",
         description=(
-            "Parallel premise/hypothesis pairs across many languages from XNLI, "
-            "providing non-English grammar, vocabulary, and reasoning material."
+            "Plain-text Wikipedia samples in French, German, Spanish, Russian, "
+            "Arabic, Chinese, Hindi, and Swahili, covering several scripts and "
+            "language families."
         ),
         max_mb=700,
-        sources=(
+        sources=tuple(
             Source(
-                kind="kaggle",
-                ref="thedevastator/xnli-multilingual-nli-dataset",
-                # Use the per-language CSVs rather than the all_languages file:
-                # they contain plain premise/hypothesis strings and avoid the
-                # pandas repr/numpy-array serialization in the combined file.
-                files=("??_train.csv",),
-                fmt="csv",
-                fields=("premise", "hypothesis"),
-                max_bytes=_mb(700),
-                license="CC0 1.0",
-                license_url="https://creativecommons.org/publicdomain/zero/1.0/",
-                homepage="https://www.kaggle.com/datasets/thedevastator/xnli-multilingual-nli-dataset",
-                notes="XNLI multilingual NLI corpus.",
-            ),
+                kind="hf",
+                ref="wikimedia/wikipedia",
+                revision="main",
+                files=(f"20231101.{code}/train-*.parquet",),
+                fmt="parquet",
+                fields=("title", "text"),
+                max_files=1,
+                max_bytes=_mb(85),
+                license="CC BY-SA 4.0",
+                license_url="https://creativecommons.org/licenses/by-sa/4.0/",
+                homepage="https://huggingface.co/datasets/wikimedia/wikipedia",
+                notes=f"Wikipedia {language_name} ({code}) dump 20231101; attribution required.",
+            )
+            for code, language_name in (
+                ("fr", "French"),
+                ("de", "German"),
+                ("es", "Spanish"),
+                ("ru", "Russian"),
+                ("ar", "Arabic"),
+                ("zh", "Chinese"),
+                ("hi", "Hindi"),
+                ("sw", "Swahili"),
+            )
         ),
     ),
     "finance": Collection(

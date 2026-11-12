@@ -36,7 +36,7 @@ The repository is public, so the releases and their assets are public. Use
 | `corpora-recipes` | Cooking | Food.com recipes | CC0 1.0 |
 | `corpora-security` | Cybersecurity | NVD CVE records, CISA KEV, EPSS | CC0 1.0 |
 | `corpora-qa` | Q&A | Stack Exchange question/answer pairs | CC BY-SA 4.0 |
-| `corpora-multilingual` | Multilingual | XNLI parallel premise/hypothesis pairs | CC0 1.0 |
+| `corpora-multilingual` | Multilingual | Wikipedia in French, German, Spanish, Russian, Arabic, Chinese, Hindi, and Swahili | CC BY-SA 4.0 |
 | `corpora-finance` | Finance | SEC EDGAR 10-K narrative sections | CC0 1.0 |
 | `corpora-standards` | Technical standards | IETF RFC series | IETF Trust |
 | `corpora-humanities` | Religion and poetry | Public-domain spiritual texts, Gutenberg poetry | CC0 1.0 |
