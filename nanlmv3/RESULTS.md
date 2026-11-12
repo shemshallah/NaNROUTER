@@ -139,16 +139,35 @@ Kernel: https://www.kaggle.com/code/shem42/nanlmv3-unified-branches
 
 2000 sentences, 50 epochs, one `UnifiedHybridLM`, ~411 s total on T4.
 
-### Unified 100M — version 2
+### Unified 100M — measured
 
 Kernel: https://www.kaggle.com/code/shem42/nanlmv3-unified-100m
 
-- 100M chars, BPE 32k, 23.34M tokens
-- 12,810,304 params
-- 128-pair MoE, geometry bias, causal trunk, S− head
+- 100M chars, BPE 32k, 23,341,783 tokens (22,174,693 train / 1,167,090 val)
+- 12,795,744 params
 - 20,000 steps, batch 16, context 128, AMP
-- Version 1 failed on `out_proj` shape (`16x224` vs `64x224`); fixed in `66b36c7`
-- Version 2 is running; measured metrics will be appended when it completes.
+- Training time: **606.8 s = 10.1 min**
+- End-to-end: **~12.4 min** (including corpus download, BPE, encode)
+- Throughput: **~67,500 tokens/s**
+
+| Checkpoint | Step | Val loss | Bits/token | Top-1 | Top-5 | Prev |
+|---|---:|---:|---:|---:|---:|---:|
+| Best | 9,000 | 6.6324 | 9.569 | 14.84% | 26.37% | 4.69% |
+| Final | 20,000 | 6.7377 | 9.720 | 12.50% | 26.76% | 6.25% |
+
+Version 1 failed on `out_proj` shape (`16x224` vs `64x224`); fixed in
+`66b36c7`. Version 2 is the measured run above. The best checkpoint is at
+step 9,000, not the final step.
+
+Planning extrapolation at ~67,500 tokens/s:
+
+| Steps | Tokens | Training time |
+|---:|---:|---:|
+| 20k | 41M | 10.1 min |
+| 100k | 205M | 50.6 min |
+| 1M | 2.05B | 8.4 h |
+| — | 1B | 4.1 h |
+| — | 10B | 41.2 h (multi-session) |
 
 ## Honest reading
 
