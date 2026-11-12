@@ -527,6 +527,21 @@ class MemoryBank:
         return cached
 
 
+class NullMemoryBank:
+    """Zero memory prior for the pure trunk + geometry text run."""
+
+    def __init__(self, orders: int, vocab_size: int):
+        self.orders = orders
+        self.vocab_size = vocab_size
+        self.feature_dim = orders * 4 + 3
+
+    def at(self, pos: int) -> tuple[np.ndarray, np.ndarray]:
+        return (
+            np.zeros(self.feature_dim, dtype=np.float32),
+            np.zeros((self.orders, 1), dtype=np.float32),
+        )
+
+
 def make_batch(
     data: PreparedData,
     bank: MemoryBank,
@@ -625,6 +640,7 @@ def evaluate(
     device: torch.device,
 ) -> dict:
     model.eval()
+    use_mem = bool(getattr(model.cfg, "use_memory", True))
     total_loss = 0.0
     total_mem_loss = 0.0
     total_correct = 0
@@ -646,9 +662,10 @@ def evaluate(
             logits, prev_logits, aux = model(x, mf, mb)
             loss = F.cross_entropy(logits, y, reduction="sum")
             total_loss += float(loss)
-            total_mem_loss += float(F.cross_entropy(mb[:, -1, :], y, reduction="sum"))
+            if use_mem:
+                total_mem_loss += float(F.cross_entropy(mb[:, -1, :], y, reduction="sum"))
             total_correct += int((logits.argmax(dim=-1) == y).sum())
-            mem_correct += int((mb[:, -1, :].argmax(dim=-1) == y).sum())
+            mem_correct += int((mb[:, -1, :].argmax(dim=-1) == y).sum()) if use_mem else 0
             total += y.numel()
             if prev_logits is not None and pm.sum() > 0:
                 mask = pm.bool()
@@ -670,10 +687,10 @@ def evaluate(
     return {
         "loss": total_loss / max(1, total),
         "bits_per_token": bits_per_token(total_loss / max(1, total)),
-        "memory_bits_per_token": bits_per_token(total_mem_loss / max(1, total)),
+        "memory_bits_per_token": bits_per_token(total_mem_loss / max(1, total)) if use_mem else None,
         "accuracy": total_correct / max(1, total),
         "prev_accuracy": total_prev_correct / max(1, total_prev) if total_prev else None,
-        "memory_accuracy": mem_correct / max(1, total),
+        "memory_accuracy": (mem_correct / max(1, total)) if use_mem else None,
         "field_quorum": float(np.mean(quorum)) if quorum else None,
         "curvature_mean": float(np.mean(curvature)) if curvature else None,
         "mirror_loss": float(np.mean(mirror)) if mirror else None,
@@ -751,14 +768,21 @@ def main() -> int:
     data = prepare_data(text, tokenizer, args.ctx, args.max_bytes, args.train_fraction)
     print(f"[data] {data.tokenizer_kind} tokens={len(data.ids)} train_end={data.train_end} val_start={data.val_start} vocab={tokenizer.vocab_size}")
 
-    memory = NgramMemory(args.orders, tokenizer.vocab_size, args.discount)
-    train_ids = data.ids[: data.train_end]
-    print(f"[memory] fitting orders 1..{args.orders} on {len(train_ids)} train tokens")
-    t0 = time.time()
-    memory.fit(train_ids)
-    print(f"[memory] fit in {time.time() - t0:.1f}s; total contexts="
-          f"{sum(len(memory.counts[o]) for o in range(1, args.orders + 1))}")
-    bank = MemoryBank(memory, data, args.mode)
+    if args.no_memory:
+        if args.mode == "ngram":
+            raise SystemExit("--no-memory cannot be used with --mode ngram")
+        bank = NullMemoryBank(args.orders, tokenizer.vocab_size)
+        mem_dim = 0
+        print("[memory] disabled (pure trunk + geometry run)")
+    else:
+        memory = NgramMemory(args.orders, tokenizer.vocab_size, args.discount)
+        print(f"[memory] fitting orders 1..{args.orders} on {len(train_ids)} train tokens")
+        t0 = time.time()
+        memory.fit(train_ids)
+        print(f"[memory] fit in {time.time() - t0:.1f}s; total contexts="
+              f"{sum(len(memory.counts[o]) for o in range(1, args.orders + 1))}")
+        bank = MemoryBank(memory, data, args.mode)
+        mem_dim = memory.feature_dim
 
     if args.mode == "ngram":
         # Direct memory-only evaluation; no model and no ctx_embed.
@@ -816,7 +840,7 @@ def main() -> int:
         layers=layers,
         dropout=args.dropout,
         geom_dim=geom_dim,
-        mem_dim=memory.feature_dim if not args.no_memory else 0,
+        mem_dim=mem_dim,
         orders=args.orders,
         use_geometry=not args.no_geometry,
         use_poincare=use_poincare,
@@ -914,11 +938,17 @@ def main() -> int:
             record = {"event": "eval", "step": step + 1, **metrics, "elapsed": time.time() - t0}
             with log_path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(record) + "\n")
+            mem_bits = metrics["memory_bits_per_token"]
+            mem_acc = metrics["memory_accuracy"]
+            mem_txt = (
+                f"mem_bits={mem_bits:.3f} mem_acc={mem_acc * 100:.2f}%"
+                if mem_bits is not None and mem_acc is not None
+                else "mem=off"
+            )
             print(f"  EVAL step {step + 1}: loss={metrics['loss']:.4f} "
                   f"bits={metrics['bits_per_token']:.3f} "
-                  f"mem_bits={metrics['memory_bits_per_token']:.3f} "
                   f"acc={metrics['accuracy']*100:.2f}% "
-                  f"prev={metrics['prev_accuracy']} mem_acc={metrics['memory_accuracy']*100:.2f}% "
+                  f"prev={metrics['prev_accuracy']} {mem_txt} "
                   f"quorum={metrics['field_quorum']} curv={metrics['curvature_mean']} "
                   f"mirror={metrics['mirror_loss']} order_w={metrics['order_weights']}")
             torch.save(
