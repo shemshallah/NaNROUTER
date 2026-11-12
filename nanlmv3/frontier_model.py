@@ -358,6 +358,7 @@ def build_mixer(input_dim: int, hidden: int, layers: int, out_dim: int) -> nn.Se
                 nn.Linear(dim, hidden),
                 nn.GELU(),
                 nn.LayerNorm(hidden),
+                nn.Dropout(0.1),
             ]
         )
         dim = hidden
@@ -632,6 +633,7 @@ def evaluate(
     curvature = []
     mirror = []
     hyp = []
+    order_weights = []
     with torch.no_grad():
         for x, y, yp, pm, mf, mb in eval_batches(data, bank, batch_size, max_batches):
             x, y, yp, pm, mf, mb = (
@@ -658,6 +660,8 @@ def evaluate(
                 mirror.append(float(aux["mirror_loss"]))
             if "hyp_mean" in aux:
                 hyp.append(float(aux["hyp_mean"]))
+            if "order_weights" in aux:
+                order_weights.append(aux["order_weights"].detach().cpu().numpy())
     model.train()
     return {
         "loss": total_loss / max(1, total),
@@ -669,6 +673,7 @@ def evaluate(
         "curvature_mean": float(np.mean(curvature)) if curvature else None,
         "mirror_loss": float(np.mean(mirror)) if mirror else None,
         "hyp_mean": float(np.mean(hyp)) if hyp else None,
+        "order_weights": np.mean(order_weights, axis=0).tolist() if order_weights else None,
         "tokens": total,
     }
 

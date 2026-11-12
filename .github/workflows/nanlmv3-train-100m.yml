@@ -74,17 +74,26 @@ jobs:
           test -s build/corpus_100m.txt
           wc -c build/corpus_100m.txt
 
-      - name: Build BPE and model samples
+      - name: Build chunk-sampled BPE and model corpora
         env:
           BPE_MB: ${{ inputs.bpe_mb }}
           MODEL_MB: ${{ inputs.model_mb }}
         run: |
           set -euo pipefail
-          head -c $((BPE_MB * 1000000)) build/corpus_100m.txt > build/bpe_sample.txt
-          head -c $((MODEL_MB * 1000000)) build/corpus_100m.txt > build/model_sample.txt
+          python nanlmv3/sample_corpus.py \
+            --source build/corpus_100m.txt \
+            --output build/bpe_sample.txt \
+            --bytes $((BPE_MB * 1000000)) \
+            --chunks 50 --val-chunks 0
+          python nanlmv3/sample_corpus.py \
+            --source build/corpus_100m.txt \
+            --output build/model_sample.txt \
+            --bytes $((MODEL_MB * 1000000)) \
+            --chunks 20 --val-chunks 2 \
+            --manifest build/model_sample.json
           test -s build/bpe_sample.txt
           test -s build/model_sample.txt
-          wc -c build/bpe_sample.txt build/model_sample.txt
+          wc -c build/bpe_sample.txt build/model_sample.txt build/model_sample.json
 
       - name: Train 32k BPE
         run: |
@@ -147,6 +156,7 @@ jobs:
           name: nanlmv3-100m-bpe-10m
           path: |
             build/corpus_100m.json
+            build/model_sample.json
             build/bpe32k.json
             build/bpe32k_meta.json
             build/train_summary.json
