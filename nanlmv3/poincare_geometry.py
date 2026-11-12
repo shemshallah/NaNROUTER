@@ -55,7 +55,7 @@ def hyperbolic_distance_torch(u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     v2 = (v * v).sum(dim=-1)
     diff2 = ((u - v) ** 2).sum(dim=-1)
     denom = torch.clamp((1.0 - u2) * (1.0 - v2), min=1e-9)
-    arg = torch.clamp(1.0 + 2.0 * diff2 / denom, min=1.0, max=1e12)
+    arg = torch.clamp(1.0 + 2.0 * diff2 / denom, min=1.0 + 1e-7, max=1e12)
     return torch.acosh(arg)
 
 

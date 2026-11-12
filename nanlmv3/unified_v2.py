@@ -246,7 +246,7 @@ class UnifiedV2LM(nn.Module):
         c2 = (c * c).sum(-1)
         diff2 = ((u[:, None, :] - c[None, :, :]) ** 2).sum(-1)
         denom = torch.clamp((1 - u2) * (1 - c2)[None, :], min=1e-6)
-        dist = torch.acosh(torch.clamp(1 + 2 * diff2 / denom, min=1.0))
+        dist = torch.acosh(torch.clamp(1 + 2 * diff2 / denom, min=1.0 + 1e-6, max=1e12))
         curv = -torch.exp(self.log_curvature)
         dist = dist * torch.sqrt(-curv)
         return F.softmax(-dist * self.branch_temp, dim=-1)
@@ -504,11 +504,14 @@ def main():
             loss = loss + 0.001 * aux["geom_load"]
             loss = loss + 1e-4 * aux["curv_reg"]
         if scaler is not None:
+            scale_before = scaler.get_scale()
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             scaler.step(opt)
             scaler.update()
+            if scaler.get_scale() < scale_before:
+                print(f"[amp-skip] step {step} scale {scale_before:.1f}->{scaler.get_scale():.1f}", flush=True)
         else:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
