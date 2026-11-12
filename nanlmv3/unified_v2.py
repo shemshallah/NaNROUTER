@@ -362,6 +362,8 @@ def main():
     p.add_argument("--branches", type=int, default=32)
     p.add_argument("--steps", type=int, default=50000)
     p.add_argument("--max-seconds", type=float, default=0.0)
+    p.add_argument("--lr-horizon", choices=["auto", "steps", "time"], default="auto")
+    p.add_argument("--min-lr-frac", type=float, default=0.1)
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=0.05)
@@ -484,10 +486,16 @@ def main():
             break
         xb, yb, ypb, pmb = batch_at(ids, split, args.ctx, args.batch_size, rng, True)
         xb, yb, ypb, pmb = xb.to(device), yb.to(device), ypb.to(device), pmb.to(device)
-        lr = args.lr * min(1.0, (step + 1) / 200)
-        if step > 200:
-            prog = (step - 200) / max(1, args.steps - 200)
-            lr = args.lr * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * min(1.0, prog))))
+        if step < 200:
+            lr = args.lr * min(1.0, (step + 1) / 200)
+        else:
+            use_time = args.lr_horizon == "time" or (args.lr_horizon == "auto" and args.max_seconds > 0)
+            if use_time:
+                prog = min(1.0, (time.time() - t0) / max(1.0, args.max_seconds))
+            else:
+                prog = (step - 200) / max(1, args.steps - 200)
+            frac = args.min_lr_frac + (1.0 - args.min_lr_frac) * 0.5 * (1.0 + math.cos(math.pi * min(1.0, prog)))
+            lr = args.lr * frac
         for g in opt.param_groups:
             g["lr"] = lr
         opt.zero_grad(set_to_none=True)
