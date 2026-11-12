@@ -330,11 +330,16 @@ def batch_at(ids, split, ctx, batch, rng, train):
     if not train:
         lo = max(split, ctx)
     pos = rng.integers(lo, hi, size=batch)
+    return batch_positions(ids, pos, ctx)
+
+
+def batch_positions(ids, positions, ctx):
+    pos = np.asarray(positions, dtype=np.int64)
     xs = np.stack([ids[p - ctx : p] for p in pos]).astype(np.int64)
     ys = np.array([ids[p] for p in pos], dtype=np.int64)
     prev_pos = pos - ctx - 1
     valid = prev_pos >= 0
-    yp = np.zeros(batch, dtype=np.int64)
+    yp = np.zeros(len(pos), dtype=np.int64)
     yp[valid] = ids[prev_pos[valid]]
     pm = valid.astype(np.float32)
     return torch.from_numpy(xs), torch.from_numpy(ys), torch.from_numpy(yp), torch.from_numpy(pm)
@@ -419,6 +424,10 @@ def main():
     print(f"[model] params={sum(p.numel() for p in model.parameters()):,}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     rng = np.random.default_rng(args.seed)
+    eval_rng = np.random.default_rng(12345)
+    val_lo = max(split, args.ctx)
+    val_hi = len(ids) - 1
+    val_positions = eval_rng.integers(val_lo, val_hi, size=args.eval_batches * args.batch_size)
     init_centroids = model.centroids.detach().clone()
     t0 = time.time()
     best = float("inf")
@@ -446,13 +455,14 @@ def main():
         prev_c = prev_t = 0
         loss_sum = 0.0
         with torch.no_grad():
-            for _ in range(args.eval_batches):
-                xb, yb, ypb, pmb = batch_at(ids, split, args.ctx, args.batch_size, rng, False)
+            for i in range(0, len(val_positions), args.batch_size):
+                pos = val_positions[i : i + args.batch_size]
+                xb, yb, ypb, pmb = batch_positions(ids, pos, args.ctx)
                 xb, yb = xb.to(device), yb.to(device)
                 logits, plogits, aux = model(xb)
                 mbt = memory_tensor(xb)
                 if mbt is not None:
-                    logits = logits + model.memory_alpha * mbt
+                    logits = logits + torch.clamp(model.memory_alpha, 0.0, 0.5) * mbt
                 loss_sum += float(F.cross_entropy(logits, yb, reduction="sum"))
                 correct += int((logits.argmax(-1) == yb).sum())
                 t5 = logits.topk(5, dim=-1).indices
