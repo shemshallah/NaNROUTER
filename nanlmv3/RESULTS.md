@@ -354,6 +354,40 @@ which is within sampling noise.
 
 AMP skipped 4 updates early; scale fell 1,024 → 64, then training continued.
 
+## v2 10k-step run — measured
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-10k
+
+- 900M-char corpus, BPE 32k
+- 84,859,523 params
+- 10,000 steps, batch 8, ctx 512 = 40.96M tokens
+- 1,142.6 s training = **19.0 min**
+- LR 1e-4 cosine over 10k steps to 5% floor
+- 512-token fixed validation
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 500 | 10.930 | 3.91% | 15.62% |
+| 2,500 | 10.236 | 9.18% | 20.31% |
+| 5,000 | 9.876 | 10.35% | 20.90% |
+| 7,500 | 9.749 | 10.35% | 22.27% |
+| 9,500 | 9.646 | 10.35% | 22.66% |
+| 10,000 final | **9.646** | **9.96%** | **22.27%** |
+
+**Best and final are identical:** 9.6456 bits/token. No final regression.
+
+AMP skipped 5 updates early; scale fell 1,024 → 128, then training continued.
+
+Artifacts:
+
+```text
+build/v2_10k/best.pt
+build/v2_10k/final.pt
+build/v2_10k/result.json
+build/v2_10k/history.json
+build/v2_10k/config.json
+```
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
