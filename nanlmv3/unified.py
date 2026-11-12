@@ -103,7 +103,6 @@ class UnifiedHybridLM(nn.Module):
         self.moe = PairMoE(d_model, d_hidden, n_pairs, topk)
         self.res = nn.Linear(d_hidden, d_model)
         self.ln = nn.LayerNorm(d_model)
-        self.out_proj = nn.Linear(d_hidden, d_model)
         self.prev_proj = nn.Linear(d_model, d_model) if use_prev else None
         self.drop = nn.Dropout(dropout)
         self.apply(self._init)
@@ -156,7 +155,7 @@ class UnifiedHybridLM(nn.Module):
 
         h, lb = self.moe(routed, gb)
         z = self.ln(routed + self.res(self.drop(h)))
-        logits = self.out_proj(z) @ self.tok.weight.T
+        logits = z @ self.tok.weight.T
         prev_logits = (self.prev_proj(z) @ self.tok.weight.T) if self.prev_proj is not None else None
         aux["load_balance"] = lb
         return logits, prev_logits, aux
