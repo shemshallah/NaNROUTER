@@ -404,6 +404,11 @@ class FrontierLM(nn.Module):
         if self.order_gate is not None:
             nn.init.zeros_(self.order_gate.weight)
             nn.init.zeros_(self.order_gate.bias)
+            self.order_bias = nn.Parameter(torch.zeros(cfg.orders))
+            with torch.no_grad():
+                self.order_bias[-1] = 2.0
+        else:
+            self.order_bias = None
 
     @staticmethod
     def _init(module: nn.Module) -> None:
@@ -440,7 +445,8 @@ class FrontierLM(nn.Module):
             parts.append(self.mem_proj(mem_feat))
         if self.order_gate is not None:
             gate_input = torch.cat(geom_parts, dim=1) if geom_parts else h
-            order_w = F.softmax(self.order_gate(gate_input), dim=-1)  # (B,orders)
+            order_logits = self.order_gate(gate_input) + self.order_bias
+            order_w = F.softmax(order_logits, dim=-1)  # (B,orders)
             mem_bias = torch.einsum("bo,bov->bv", order_w, mem_bias)
             aux["order_weights"] = order_w.mean(dim=0)
         else:

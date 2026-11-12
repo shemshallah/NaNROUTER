@@ -10,11 +10,11 @@ on:
       steps:
         description: "Optimizer steps"
         required: true
-        default: "2000"
+        default: "5000"
       model_mb:
         description: "Model-training sample (MB)"
         required: true
-        default: "10"
+        default: "20"
       bpe_mb:
         description: "BPE-training sample (MB)"
         required: true
@@ -122,8 +122,9 @@ jobs:
             --ctx 64 \
             --orders 4 \
             --train-fraction 0.9 \
-            --eval-every 500 \
+            --eval-every 1000 \
             --eval-batches 4 \
+            --prev-weight 0.1 \
             --recluster-every 1000 \
             --threads 4 \
             --summary build/train_summary.json \
