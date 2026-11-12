@@ -419,6 +419,30 @@ build/v2_ema10/history.json
 build/v2_ema10/config.json
 ```
 
+## v2 new-corpus 10-minute run — measured
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-newcorpus10
+
+Sources: **paragraphs-0010** + **short_stories-0004** (Nov 10 releases).
+100MB combined corpus, BPE 32k, 84,859,523 params, ctx 512, batch 8.
+
+- 4,414 steps in 612 s
+- 1,024-token fixed validation
+- LR 1e-4 time-cosine to zero, EMA from 30%
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 500 | 11.120 | 4.79% | 17.87% |
+| 1,500 | 10.636 | 5.18% | 17.48% |
+| 2,500 | 10.549 | 5.96% | 19.24% |
+| 3,500 | 10.482 | 6.93% | 18.75% |
+| 4,000 | 10.464 | 6.84% | 19.34% |
+| 4,414 final | **10.448** | **7.03%** | **19.14%** |
+
+Final beats best again (10.4484 vs 10.4644). The new corpus is harder and the
+curve is still shallowly descending at the cutoff — it is learning, but 10
+minutes is not enough on this distribution.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
