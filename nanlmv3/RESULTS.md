@@ -298,6 +298,38 @@ Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-medium
 Purpose: confirm validation keeps moving past the 5k-step region before any
 long 100M rerun.
 
+## v2 10-minute run — gate passed
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-10min
+
+- 100MB-char corpus, BPE 32k, ctx 512, batch 8
+- 84,859,523 params
+- 5,500 steps in 600 s
+- Fixed 256-token validation
+- LR 1e-4, AMP init scale 1,024
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 500 | 10.873 | 6.25% | 17.19% |
+| 1,500 | 10.266 | 6.25% | 18.75% |
+| 2,500 | 10.042 | 10.94% | 19.92% |
+| 3,500 | 9.703 | 12.11% | 23.44% |
+| 4,500 | **9.682** | **13.28%** | **24.22%** |
+| 5,500 final | 9.712 | 13.67% | 22.66% |
+
+The curve is smooth and still improving. No freeze. AMP skipped 5 updates
+early; scale fell 1,024 → 64, then training continued normally.
+
+Artifacts saved in Kaggle output:
+
+```text
+build/v2_medium10/best.pt
+build/v2_medium10/final.pt
+build/v2_medium10/result.json
+build/v2_medium10/history.json
+build/v2_medium10/config.json
+```
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
