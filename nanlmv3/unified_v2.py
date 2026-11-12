@@ -368,6 +368,8 @@ def main():
     p.add_argument("--ema-decay", type=float, default=0.999)
     p.add_argument("--ema-start-frac", type=float, default=0.5)
     p.add_argument("--no-ema", action="store_true")
+    p.add_argument("--init-from", default="")
+    p.add_argument("--eval-before", action="store_true")
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=0.05)
@@ -428,6 +430,10 @@ def main():
         vocab, args.ctx, args.d_model, args.layers, args.heads, args.swiglu,
         args.d_hidden, args.pairs, args.topk, args.branches, args.dropout,
     ).to(device)
+    if args.init_from:
+        ckpt = torch.load(args.init_from, map_location="cpu", weights_only=False)
+        model.load_state_dict(ckpt["model"])
+        print(f"[init] loaded weights from {args.init_from}", flush=True)
     print(f"[model] params={sum(p.numel() for p in model.parameters()):,}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     ema_model = copy.deepcopy(model) if not args.no_ema else None
@@ -489,6 +495,14 @@ def main():
             "top5": top5 / max(1, total),
             "tokens": total,
         }
+
+    baseline = eval_text(model) if args.eval_before else None
+    if baseline is not None:
+        print(
+            f"[baseline] bits={baseline['bits_per_token']:.3f} top1={baseline['accuracy']*100:.2f}% "
+            f"top5={baseline['top5']*100:.2f}%",
+            flush=True,
+        )
 
     for step in range(args.steps):
         if args.max_seconds > 0 and (time.time() - t0) >= args.max_seconds:
@@ -600,6 +614,7 @@ def main():
         "best": best_rec,
         "final": final,
         "final_ema": final_ema,
+        "baseline": baseline,
         "elapsed": time.time() - t0,
         "centroid_delta": centroid_delta,
         "curvature": float((-torch.exp(model.log_curvature)).detach()),
