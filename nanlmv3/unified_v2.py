@@ -8,6 +8,7 @@ Text mode only.  The 1-4 branch gate remains a separate canary run.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import os
@@ -363,7 +364,10 @@ def main():
     p.add_argument("--steps", type=int, default=50000)
     p.add_argument("--max-seconds", type=float, default=0.0)
     p.add_argument("--lr-horizon", choices=["auto", "steps", "time"], default="auto")
-    p.add_argument("--min-lr-frac", type=float, default=0.1)
+    p.add_argument("--min-lr-frac", type=float, default=0.0)
+    p.add_argument("--ema-decay", type=float, default=0.999)
+    p.add_argument("--ema-start-frac", type=float, default=0.5)
+    p.add_argument("--no-ema", action="store_true")
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=0.05)
@@ -426,6 +430,12 @@ def main():
     ).to(device)
     print(f"[model] params={sum(p.numel() for p in model.parameters()):,}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    ema_model = copy.deepcopy(model) if not args.no_ema else None
+    if ema_model is not None:
+        for p_ in ema_model.parameters():
+            p_.requires_grad_(False)
+        ema_model.eval()
+    ema_start = int(args.steps * args.ema_start_frac) if args.steps > 0 else 0
     rng = np.random.default_rng(args.seed)
     eval_rng = np.random.default_rng(12345)
     val_lo = max(split, args.ctx)
@@ -452,8 +462,8 @@ def main():
                 mb[j] = b
         return torch.from_numpy(mb).to(xb.device)
 
-    def eval_text():
-        model.eval()
+    def eval_text(net):
+        net.eval()
         total = correct = top5 = 0
         prev_c = prev_t = 0
         loss_sum = 0.0
@@ -462,10 +472,10 @@ def main():
                 pos = val_positions[i : i + args.batch_size]
                 xb, yb, ypb, pmb = batch_positions(ids, pos, args.ctx)
                 xb, yb = xb.to(device), yb.to(device)
-                logits, plogits, aux = model(xb)
+                logits, plogits, aux = net(xb)
                 mbt = memory_tensor(xb)
                 if mbt is not None:
-                    logits = logits + torch.clamp(model.memory_alpha, 0.0, 0.5) * mbt
+                    logits = logits + torch.clamp(net.memory_alpha, 0.0, 0.5) * mbt
                 loss_sum += float(F.cross_entropy(logits, yb, reduction="sum"))
                 correct += int((logits.argmax(-1) == yb).sum())
                 t5 = logits.topk(5, dim=-1).indices
@@ -525,32 +535,59 @@ def main():
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
+        if ema_model is not None and (step + 1) >= ema_start:
+            with torch.no_grad():
+                d = args.ema_decay
+                for e, p_ in zip(ema_model.parameters(), model.parameters()):
+                    e.mul_(d).add_(p_, alpha=1.0 - d)
         if (step + 1) % args.recluster_every == 0:
             model.pgeom.recluster()
+            if ema_model is not None:
+                with torch.no_grad():
+                    for eb, mb in zip(ema_model.buffers(), model.buffers()):
+                        if eb.shape == mb.shape and eb.dtype == mb.dtype:
+                            eb.copy_(mb)
         if (step + 1) % 50 == 0:
             print(f"step {step + 1:6d}/{args.steps} loss={float(loss):.4f} lr={lr:.2e}", flush=True)
         if (step + 1) % args.eval_every == 0 or step + 1 == args.steps:
-            ev = eval_text()
-            history.append({"step": step + 1, **ev})
+            ev = eval_text(model)
+            ev_ema = eval_text(ema_model) if ema_model is not None else None
+            history.append({"step": step + 1, "model": ev, "ema": ev_ema})
             print(
-                f"  EVAL {step + 1}: loss={ev['loss']:.4f} bits={ev['bits_per_token']:.3f} "
+                f"  EVAL {step + 1}: model loss={ev['loss']:.4f} bits={ev['bits_per_token']:.3f} "
                 f"top1={ev['accuracy'] * 100:.2f}% top5={ev['top5'] * 100:.2f}%",
                 flush=True,
             )
-            if ev["loss"] < best:
-                best = ev["loss"]
-                best_rec = {"step": step + 1, **ev}
+            if ev_ema is not None:
+                print(
+                    f"        ema   loss={ev_ema['loss']:.4f} bits={ev_ema['bits_per_token']:.3f} "
+                    f"top1={ev_ema['accuracy'] * 100:.2f}% top5={ev_ema['top5'] * 100:.2f}%",
+                    flush=True,
+                )
+            choose = ev_ema if (ev_ema is not None and ev_ema["loss"] < ev["loss"]) else ev
+            source = "ema" if choose is ev_ema else "model"
+            if choose["loss"] < best:
+                best = choose["loss"]
+                best_rec = {"step": step + 1, "source": source, **choose}
                 torch.save(
-                    {"model": model.state_dict(), "args": vars(args),
-                     "step": step + 1, "metrics": ev},
+                    {"model": (ema_model if source == "ema" else model).state_dict(),
+                     "args": vars(args), "step": step + 1, "metrics": choose,
+                     "source": source},
                     out / "best.pt",
                 )
-    final = eval_text()
+    final = eval_text(model)
+    final_ema = eval_text(ema_model) if ema_model is not None else None
     torch.save(
         {"model": model.state_dict(), "args": vars(args),
          "final": final, "best": best_rec},
         out / "final.pt",
     )
+    if ema_model is not None:
+        torch.save(
+            {"model": ema_model.state_dict(), "args": vars(args),
+             "final": final_ema, "best": best_rec},
+            out / "ema.pt",
+        )
     (out / "history.json").write_text(json.dumps(history, indent=2, sort_keys=True) + "\n")
     (out / "config.json").write_text(json.dumps(vars(args), indent=2, sort_keys=True) + "\n")
     centroid_delta = float((model.centroids.detach() - init_centroids).norm())
@@ -562,6 +599,7 @@ def main():
         "val_tokens": int(len(ids) - split),
         "best": best_rec,
         "final": final,
+        "final_ema": final_ema,
         "elapsed": time.time() - t0,
         "centroid_delta": centroid_delta,
         "curvature": float((-torch.exp(model.log_curvature)).detach()),
