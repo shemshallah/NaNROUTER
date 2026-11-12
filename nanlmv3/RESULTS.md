@@ -271,6 +271,33 @@ Fix applied in `85b384a`:
 
 Smoke3: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke3
 
+## v2 smoke3 — acosh/AMP fix confirmed
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke3
+
+- 84,859,523 params
+- 20M chars, ctx 256, batch 8, LR 1e-4
+- 5,061 steps in 540 s
+- Best: step 5,000, **9.926 bits/token, top-1 12.89%, top-5 21.09%**
+- Final: **9.909 bits/token, top-1 13.67%, top-5 21.88%**
+- AMP skips: 10, all early; scale fell 65,536 → 128, then training continued
+
+The curve is smooth and still improving. The acosh clamp fixed the frozen-update
+failure. No long run until the medium run confirms continued improvement.
+
+## v2 medium — 20-minute gate
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-medium
+
+- 100MB-char corpus, 100M corpus source
+- BPE 32k, ctx 512, batch 8, 84.86M params
+- LR 1e-4, max 1,200 s
+- fixed 256-token validation
+- AMP init scale 1,024
+
+Purpose: confirm validation keeps moving past the 5k-step region before any
+long 100M rerun.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
