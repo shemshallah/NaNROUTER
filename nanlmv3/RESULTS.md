@@ -91,18 +91,33 @@ Each run is a separate Kaggle kernel:
 The 90% gate is a controlled branching-curriculum gate. It is not a natural
 text claim. The point is that the hybrid keeps the gate as branch factor grows.
 
-## 100M hybrid backbone — real text metrics
+## 100M hybrid backbone — measured real-text metrics
 
-A separate Kaggle GPU kernel is running:
+Kaggle T4 kernel: https://www.kaggle.com/code/shem42/nanlmv3-hybrid-100m
 
-- BPE 32k trained on 50M chars from the 100M corpus
-- 100M-character corpus, 95/5 split
-- causal trunk 2×4, geometry stack, next + S− heads
-- no exact n-gram memory (pure trunk + geometry at this scale)
-- 20,000 steps, batch 16, context 128, AMP
-- metrics: validation bits/token, top-1, previous-token accuracy, train loss
+| Metric | Value |
+|---|---:|
+| Corpus | 100M chars |
+| BPE vocab | 32,000 |
+| BPE tokens | 23,341,783 |
+| Train / val tokens | 22,174,693 / 1,167,090 |
+| Parameters | 9,479,127 |
+| Steps | 20,000 |
+| Batch / context | 16 / 128 |
+| Final val loss | 6.3821 |
+| Final bits/token | **9.207** |
+| Top-1 | **14.65%** |
+| S− previous-token | 5.66% |
+| Train time | 602 s |
 
-Kernel: https://www.kaggle.com/code/shem42/nanlmv3-hybrid-100m
+Validation loss improved from 10.20 bits/token at step 1,000 to 9.21 at step
+20,000. The run is a real baseline, not a finished model: 22M train tokens for
+a 9.5M model is far below a compute-optimal token budget, and this run
+deliberately used no exact n-gram memory.
+
+This backbone includes the causal trunk, 255-head / 85-trihead / field / rail /
+curvature stack, the Poincaré trihead branch, and the S− head. It does **not**
+include the 128-pair MoE from the branch-gate job or the n-gram memory.
 
 ## Honest reading
 
