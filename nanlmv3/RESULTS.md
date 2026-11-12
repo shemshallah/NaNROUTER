@@ -443,6 +443,24 @@ Final beats best again (10.4484 vs 10.4644). The new corpus is harder and the
 curve is still shallowly descending at the cutoff — it is learning, but 10
 minutes is not enough on this distribution.
 
+## v2 continuation on new corpus — measured
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-continue10
+
+Loaded the z1 `best.pt` checkpoint, evaluated it on a new held-out slice
+(`paragraphs-0009` + `short_stories-0003`), then trained 600 s at LR 5e-5.
+
+| Checkpoint | Bits/token | Top-1 | Top-5 |
+|---|---:|---:|---:|
+| Baseline (z1 on new val) | 10.3721 | 8.59% | 20.70% |
+| Best after continuation | **10.0394** | 10.64% | 22.46% |
+| Final after continuation | 10.0442 | **10.94%** | **22.66%** |
+| Final EMA | 10.0467 | 10.64% | 22.17% |
+
+**Improvement: -0.333 bits/token, +2.35 pp top-1.** Final is effectively tied
+with best (0.005 bits), so no end regression. The model continues to improve
+with more training on new data.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
