@@ -1,0 +1,48 @@
+name: PAL R11 verified NaNROUTER corpus smoke
+on:
+  push:
+    paths:
+      - '.github/workflows/pal-r11-nanrouter-corpus.yml'
+      - 'experiments/pal_r11/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zstd
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+      - name: Fetch verified short-story release batch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p download
+          TAG=corpora-short-stories-0001
+          FILE=short_stories-0001.tar.zst
+          gh release download "$TAG" -R shemshallah/NaNROUTER --pattern "$FILE" --dir download
+          DIGEST="$(gh api "repos/shemshallah/NaNROUTER/releases/tags/$TAG" --jq '.assets[] | select(.name == "short_stories-0001.tar.zst") | .digest')"
+          case "$DIGEST" in sha256:????????????????????????????????????????????????????????????????) ;; *) echo 'Missing SHA-256 digest' >&2; exit 1;; esac
+          echo "${DIGEST#sha256:}  download/$FILE" | sha256sum -c -
+      - name: Export raw-prose book-disjoint training smoke sample
+        run: |
+          set -euo pipefail
+          python3 experiments/pal_r11/import_nanrouter_corpora.py \
+            --archive download/short_stories-0001.tar.zst \
+            --out export --max-bytes-per-split 2000000
+          (cd export && sha256sum -c SHA256SUMS)
+          python3 - <<'PY'
+          import json, pathlib
+          j=json.loads(pathlib.Path('export/MANIFEST.json').read_text())
+          print('Book split counts:', {k:j['counts'].get('accepted_'+k,0) for k in ('train','dev','test')})
+          print('Bytes by split:',j['bytes_by_split'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pal-r11-nanrouter-raw-prose-books
+          path: export/
+          retention-days: 14
