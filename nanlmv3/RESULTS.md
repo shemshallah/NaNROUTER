@@ -201,6 +201,23 @@ Geometry movement:
 At smoke throughput, the 204.8M-token long run is roughly 2.1 hours of
 training before context-512 attention overhead; expect 2.5–4 hours.
 
+## Why the first smoke showed a peak
+
+The peak at step 5,700 was not a clean real optimum:
+
+- **Changing validation set:** every eval sampled 64 new random tokens from
+  the shared training RNG. Top-1 resolution was 1/64 = 1.56%.
+- **Constant LR:** cosine was scheduled over 100,000 steps, but the smoke
+  stopped at 7,010. LR stayed ~3e-4, so late training was still noisy.
+- **Batch noise:** batch 8 = 2,048 tokens per step; step losses ranged 5.6–11.3.
+- **Memory alpha growth:** 0.1 → 0.204 while the memory bias was still being
+  applied to held-out contexts.
+- **Contiguous validation:** the last 5% of a 20MB slice, not chunk-disjoint.
+
+Smoke2 fixes all five: fixed 256-token validation set, LR 1.5e-4 cosine over
+7,000 steps, chunk-disjoint 20MB sample, and alpha clamped to [0, 0.5].
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke2
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
