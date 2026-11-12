@@ -169,6 +169,38 @@ Planning extrapolation at ~67,500 tokens/s:
 | — | 1B | 4.1 h |
 | — | 10B | 41.2 h (multi-session) |
 
+## v2 10-minute learning smoke — measured
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke
+
+- 20M-char corpus, BPE 32k, ctx 256, batch 8
+- 84,859,523 params
+- 7,010 steps in 540 s = 14.36M tokens
+- Throughput: ~26,600 tokens/s
+- Hard stop at 540 s
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 100 | 13.457 | 3.12% | 23.44% |
+| 500 | 10.486 | 7.81% | 25.00% |
+| 3,000 | 9.988 | 7.81% | 29.69% |
+| 5,700 | **9.111** | **10.94%** | **29.69%** |
+| 7,010 | 10.802 | 9.38% | 28.13% |
+
+The loss curve falls from 13.46 to 9.11 bits/token at the best checkpoint, so
+v2 is learning. It is noisy and the final step is worse than the best step;
+the best checkpoint is retained.
+
+Geometry movement:
+
+- centroid delta: **0.3099**
+- curvature: **-1.0129**
+- branch temperature: **0.9815**
+- memory alpha: **0.204** (initialized 0.1)
+
+At smoke throughput, the 204.8M-token long run is roughly 2.1 hours of
+training before context-512 attention overhead; expect 2.5–4 hours.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
