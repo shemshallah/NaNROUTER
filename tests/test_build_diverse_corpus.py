@@ -101,6 +101,13 @@ class RecordTests(unittest.TestCase):
         self.assertIn("Business:", text)
         self.assertIn("Risk Factors:", text)
 
+    def test_r_vector_parsing(self) -> None:
+        value = 'c("blueberries", "sugar", NA, "lemon juice")'
+        self.assertEqual(
+            corpus.stringify(value, "RecipeIngredientParts"),
+            "blueberries\nsugar\nlemon juice",
+        )
+
     def test_jsonl_records(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "data.jsonl"
@@ -115,6 +122,21 @@ class RecordTests(unittest.TestCase):
                 "first record with enough text",
                 "second record with enough text",
             ])
+
+    def test_xnli_expands_language_dicts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "xnli.csv"
+            path.write_text(
+                "premise,hypothesis,label\n"
+                "\"{'en': 'A premise', 'fr': 'Une premisse'}\","
+                "\"{'en': 'A hypothesis', 'fr': 'Une hypothese'}\",0\n",
+                encoding="utf-8",
+            )
+            with path.open("rb") as handle:
+                rows = list(corpus.iter_xnli_records(handle, self._source()))
+            self.assertEqual(len(rows), 2)
+            self.assertEqual({row["language"] for row in rows}, {"en", "fr"})
+            self.assertEqual(rows[0]["premise"], "A premise")
 
     def test_csv_records_strip_bom_and_preserve_commas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

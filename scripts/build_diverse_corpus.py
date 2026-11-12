@@ -26,6 +26,7 @@ of ``kaggle.json``).  Hugging Face and direct HTTP sources need no token.
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import bz2
 import csv
@@ -89,6 +90,7 @@ class Source:
     fields: tuple[str, ...] = ()
     labels: bool = True
     auto_fallback: bool = True
+    join_all: bool = False
     required: bool = True
     max_bytes: int = 0
     max_files: int = 0
@@ -379,8 +381,8 @@ COLLECTIONS: dict[str, Collection] = {
             Source(
                 kind="kaggle",
                 ref="irkaal/foodcom-recipes-and-reviews",
-                files=("recipes.parquet",),
-                fmt="parquet",
+                files=("recipes.csv",),
+                fmt="csv",
                 fields=("Name", "Description", "RecipeIngredientParts", "RecipeInstructions"),
                 max_bytes=_mb(650),
                 license="CC0 1.0",
@@ -403,14 +405,35 @@ COLLECTIONS: dict[str, Collection] = {
             Source(
                 kind="kaggle",
                 ref="afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
-                files=("nvd_cve_records.csv", "cisa_kev_catalog.csv"),
+                files=("nvd_cve_records.csv",),
                 fmt="csv",
                 fields=("cve_id", "description", "cvss_vector", "cwe", "vendor_project", "product"),
-                max_bytes=_mb(450),
+                max_bytes=_mb(400),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
                 homepage="https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
-                notes="NVD, CISA KEV, and FIRST EPSS derived records.",
+                notes="NVD CVE records joined with CVSS, CWE, and EPSS fields.",
+            ),
+            Source(
+                kind="kaggle",
+                ref="afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+                files=("cisa_kev_catalog.csv",),
+                fmt="csv",
+                fields=(
+                    "cveID",
+                    "vendorProject",
+                    "product",
+                    "vulnerabilityName",
+                    "shortDescription",
+                    "requiredAction",
+                    "notes",
+                ),
+                max_bytes=_mb(50),
+                required=False,
+                license="CC0 1.0",
+                license_url="https://creativecommons.org/publicdomain/zero/1.0/",
+                homepage="https://www.kaggle.com/datasets/afr1ste/nvd-cve-cvss-kev-vulnerabilities-2020-2026",
+                notes="CISA Known Exploited Vulnerabilities catalog.",
             ),
         ),
     ),
@@ -452,8 +475,8 @@ COLLECTIONS: dict[str, Collection] = {
                 kind="kaggle",
                 ref="thedevastator/xnli-multilingual-nli-dataset",
                 files=("all_languages_train.csv",),
-                fmt="csv",
-                fields=("premise", "hypothesis", "language"),
+                fmt="xnli",
+                fields=("language", "premise", "hypothesis"),
                 max_bytes=_mb(700),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
@@ -471,22 +494,16 @@ COLLECTIONS: dict[str, Collection] = {
             "other narrative sections from SEC Form 10-K annual filings."
         ),
         max_mb=700,
+        max_doc_chars=500_000,
         sources=(
             Source(
                 kind="kaggle",
                 ref="pranjalverma08/sec-edgar-annual-financial-filings-2021",
                 files=("extracted/*.json",),
                 fmt="json",
-                fields=(
-                    "business",
-                    "risk_factors",
-                    "mdna",
-                    "legal_proceedings",
-                    "properties",
-                    "item_1_business",
-                    "item_1a_risk_factors",
-                    "item_7_mdna",
-                ),
+                fields=(),
+                join_all=True,
+                auto_fallback=False,
                 max_bytes=_mb(700),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
@@ -530,30 +547,30 @@ COLLECTIONS: dict[str, Collection] = {
         max_mb=500,
         sources=(
             Source(
-                kind="kaggle",
-                ref="metron/public-files-of-religious-and-spiritual-texts",
-                files=("*.txt",),
-                fmt="text",
-                fields=(),
-                max_bytes=_mb(180),
-                license="CC0 1.0",
-                license_url="https://creativecommons.org/publicdomain/zero/1.0/",
-                homepage="https://www.kaggle.com/datasets/metron/public-files-of-religious-and-spiritual-texts",
-                notes="Public-domain religious and spiritual texts.",
-            ),
-            Source(
                 kind="hf",
                 ref="biglam/gutenberg-poetry-corpus",
                 revision="main",
                 files=("data/train-*.parquet",),
                 fmt="poetry",
                 fields=("text",),
-                max_bytes=_mb(300),
-                required=False,
+                max_bytes=_mb(320),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
                 homepage="https://huggingface.co/datasets/biglam/gutenberg-poetry-corpus",
                 notes="Poetry lines from Project Gutenberg, grouped by book.",
+            ),
+            Source(
+                kind="kaggle",
+                ref="metron/public-files-of-religious-and-spiritual-texts",
+                files=("*.txt",),
+                fmt="text",
+                fields=(),
+                max_bytes=_mb(180),
+                required=False,
+                license="CC0 1.0",
+                license_url="https://creativecommons.org/publicdomain/zero/1.0/",
+                homepage="https://www.kaggle.com/datasets/metron/public-files-of-religious-and-spiritual-texts",
+                notes="Public-domain religious and spiritual texts.",
             ),
         ),
     ),
@@ -732,6 +749,12 @@ FIELD_LABELS = {
     "message_2": "Answer",
     "topic": "Topic",
     "sub_topic": "Subtopic",
+    "shortDescription": "Description",
+    "vulnerabilityName": "Vulnerability",
+    "requiredAction": "Required Action",
+    "vendorProject": "Vendor",
+    "cveID": "CVE",
+    "notes": "Notes",
 }
 
 HIGH_VALUE_KEYS = {
@@ -834,6 +857,21 @@ def get_path(record: dict[str, Any], path: str) -> Any:
     return current
 
 
+def parse_r_vector(text: str) -> str | None:
+    """Convert R's c("a", "b", NA) serialization into plain lines."""
+    if not (text.startswith("c(") and text.endswith(")")):
+        return None
+    inner = text[2:-1]
+    inner = re.sub(r"\bNA\b", "None", inner)
+    try:
+        value = ast.literal_eval("(" + inner + ",)")
+    except (ValueError, SyntaxError):
+        return None
+    if not isinstance(value, tuple):
+        return None
+    return "\n".join(str(item) for item in value if item is not None)
+
+
 def stringify(value: Any, field_name: str = "", depth: int = 0) -> str:
     if value is None:
         return ""
@@ -842,6 +880,10 @@ def stringify(value: Any, field_name: str = "", depth: int = 0) -> str:
         key = field_name.lower()
         if "html" in key and "<" in text:
             text = strip_html(text)
+        if any(token in key for token in ("ingredient", "instruction", "direction")):
+            parsed = parse_r_vector(text)
+            if parsed is not None:
+                text = parsed
         return text.strip()
     if isinstance(value, (int, float)):
         return str(value)
@@ -918,6 +960,54 @@ def auto_fields(record: dict[str, Any], min_chars: int = 40) -> list[tuple[str, 
     return result
 
 
+def all_text_fields(record: dict[str, Any], min_chars: int = 200) -> list[tuple[str, str]]:
+    """Return long text fields in document order, including every SEC item.
+
+    SEC 10-K JSON files are section dictionaries (item_1, item_1a, item_7, ...)
+    rather than a single body column.  Taking the eight highest-ranked fields
+    loses most of the filing, so this mode intentionally keeps all substantial
+    sections and only filters obvious metadata.
+    """
+    skip_tokens = {
+        "filename",
+        "file_name",
+        "path",
+        "url",
+        "uri",
+        "link",
+        "cik",
+        "ticker",
+        "company",
+        "company_name",
+        "form",
+        "form_type",
+        "filing",
+        "filing_date",
+        "accession",
+        "accession_number",
+        "period",
+        "date",
+        "type",
+        "document",
+        "document_type",
+    }
+    result: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for path, value in flatten_strings(record):
+        key = path.rsplit(".", 1)[-1]
+        lowered = key.lower().replace("-", "_")
+        if lowered in skip_tokens or FIELD_BLACKLIST_RE.search(lowered):
+            continue
+        text = stringify(value, path)
+        if len(text) < min_chars or text in seen:
+            continue
+        seen.add(text)
+        result.append((path, text))
+        if len(result) >= 48:
+            break
+    return result
+
+
 def record_to_text(
     record: Any,
     source: Source,
@@ -929,17 +1019,20 @@ def record_to_text(
         return ""
 
     pairs: list[tuple[str, str]] = []
-    for field_name in source.fields:
-        # A field can list fallbacks, e.g. plain_text|html_with_citations.
-        # Use the first non-empty variant for that document.
-        for alternative in field_name.split("|"):
-            value = get_path(record, alternative)
-            if value is None:
-                continue
-            text = stringify(value, field_name)
-            if text:
-                pairs.append((alternative, text))
-                break
+    if source.join_all:
+        pairs = all_text_fields(record)
+    else:
+        for field_name in source.fields:
+            # A field can list fallbacks, e.g. plain_text|html_with_citations.
+            # Use the first non-empty variant for that document.
+            for alternative in field_name.split("|"):
+                value = get_path(record, alternative)
+                if value is None:
+                    continue
+                text = stringify(value, field_name)
+                if text:
+                    pairs.append((alternative, text))
+                    break
 
     if not pairs:
         pairs = auto_fields(record)
@@ -1330,6 +1423,53 @@ def iter_json_records(stream: BinaryIO) -> Iterator[Any]:
         yield data
 
 
+def parse_dict_string(value: Any) -> dict[str, Any] | None:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = ast.literal_eval(stripped)
+            except (ValueError, SyntaxError):
+                return None
+            if isinstance(parsed, dict):
+                return parsed
+    return None
+
+
+def iter_xnli_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, str]]:
+    """Expand XNLI's per-row language dictionaries into one document each.
+
+    The all_languages CSV stores a dict-like string in ``premise`` and
+    ``hypothesis`` rather than one row per language translation.
+    """
+    text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace", newline="")
+    try:
+        reader = csv.DictReader(text)
+        if reader.fieldnames:
+            reader.fieldnames = [name.lstrip("\ufeff") for name in reader.fieldnames]
+        for row in reader:
+            premise = parse_dict_string(row.get("premise"))
+            hypothesis = parse_dict_string(row.get("hypothesis"))
+            if isinstance(premise, dict) and isinstance(hypothesis, dict):
+                for language, premise_text in premise.items():
+                    hypothesis_text = hypothesis.get(language)
+                    if premise_text and hypothesis_text:
+                        yield {
+                            "language": str(language),
+                            "premise": str(premise_text),
+                            "hypothesis": str(hypothesis_text),
+                        }
+            else:
+                yield row
+    finally:
+        try:
+            text.detach()
+        except Exception:
+            pass
+
+
 def iter_csv_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, str]]:
     text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace", newline="")
     try:
@@ -1371,6 +1511,10 @@ def iter_stream_records(
 
     if source.fmt == "rfc":
         yield from iter_rfc_records(stream, source)
+        return
+
+    if source.fmt == "xnli":
+        yield from iter_xnli_records(stream, source)
         return
 
     if lowered.endswith((".tar", ".tar_1", ".tgz", ".tar.gz")):
