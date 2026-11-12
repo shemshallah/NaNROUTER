@@ -246,6 +246,31 @@ Geometry in smoke2:
 - branch temperature: 0.9812
 - memory alpha: 0.1849
 
+## v2 100M fixed run — measured, and a real bug
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-100m-fixed
+
+- 900M-char corpus, BPE 32k, 213.2M tokens
+- 84,859,523 params
+- 50,000 steps, batch 8, ctx 512, AMP
+- Elapsed: **4,059 s = 67.7 min**
+- Best: step 1,000, **10.482 bits/token, top-1 7.03%, top-5 14.84%**
+- Final: **10.625 bits/token, top-1 3.12%, top-5 15.62%**
+
+Validation loss was **identical** from step 5,000 through 50,000
+(7.3644 / 10.625 bits), while training loss kept moving. That is not a model
+peak; the optimizer stopped applying updates. The likely cause is
+`acosh(1)` in the hyperbolic branch producing infinite gradients, causing AMP
+to skip steps and halve the scale until updates freeze.
+
+Fix applied in `85b384a`:
+
+- `acosh` argument clamped to `1 + 1e-6` in v2 and `poincare_geometry`
+- AMP step-skip logging added
+- Smoke3 re-test with LR 1e-4
+
+Smoke3: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke3
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
