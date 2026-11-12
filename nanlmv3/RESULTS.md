@@ -60,15 +60,26 @@ crash.
 
 ### 43133825859 — chunk-disjoint 20 MB, 5000 steps
 
-- In progress at the time of writing.
-- 20 chunks across the 100M corpus; 18 train + 2 interleaved held-out chunks.
-- Same trunk/routed-memory architecture.
-- Purpose: measure the same model with an in-distribution validation split.
+- 4,668,494 BPE tokens; 4,201,644 train tokens
+- 20 chunks across the 100M corpus; 18 train + 2 interleaved held-out chunks
+- 9,584,555 params; trunk 2×4; routed-order memory
+- Validation: **7.29 bits/token**, 18.75% top-1
+- Memory-only: 21.88% top-1
+- Train loss: **~1.5–2.3 bits**
+- Order gate settled at `[~0, ~0, ~0, 1.0]` (full backoff)
+
+This is the real limiter: a 9.6M model memorizes the 4.2M-token training sample
+and does not generalize. The chunk-disjoint split fixed the earlier
+out-of-distribution artifact (8.57 → 7.29 bits), but the train/validation gap
+is still huge. More CPU steps will not fix it; the next run needs a GPU and a
+larger token budget.
 
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
 - The geometry features are not yet beating the memory; they need to *route*
   memory/experts, not only decorate the mixer.
+- The order gate stayed at full backoff because the geometry features are too
+  weak/constant to move it; the hidden-state path should also feed the gate.
 - 10M params on 4M BPE tokens for 5k CPU steps is a pipeline/ablation run, not
   a quality result. A real Stage 2 needs 100M–1B tokens and a GPU.

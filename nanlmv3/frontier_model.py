@@ -289,6 +289,7 @@ class ModelConfig:
     d_model: int = 256
     hidden: int = 1024
     layers: int = 2
+    dropout: float = 0.1
     geom_dim: int = 147
     mem_dim: int = 35
     orders: int = 8
@@ -349,7 +350,7 @@ class CausalTrunk(nn.Module):
         return self.ln_f(x)
 
 
-def build_mixer(input_dim: int, hidden: int, layers: int, out_dim: int) -> nn.Sequential:
+def build_mixer(input_dim: int, hidden: int, layers: int, out_dim: int, dropout: float = 0.1) -> nn.Sequential:
     blocks: list[nn.Module] = []
     dim = input_dim
     for _ in range(layers):
@@ -358,7 +359,7 @@ def build_mixer(input_dim: int, hidden: int, layers: int, out_dim: int) -> nn.Se
                 nn.Linear(dim, hidden),
                 nn.GELU(),
                 nn.LayerNorm(hidden),
-                nn.Dropout(0.1),
+                nn.Dropout(dropout),
             ]
         )
         dim = hidden
@@ -380,7 +381,7 @@ class FrontierLM(nn.Module):
         self.trunk = (
             CausalTrunk(
                 cfg.d_model, cfg.trunk_layers, cfg.trunk_heads,
-                cfg.trunk_ff, 0.1, cfg.ctx,
+                cfg.trunk_ff, cfg.dropout, cfg.ctx,
             )
             if cfg.trunk_layers > 0
             else None
@@ -398,6 +399,7 @@ class FrontierLM(nn.Module):
             cfg.hidden,
             cfg.layers,
             cfg.d_model,
+            cfg.dropout,
         )
         self.apply(self._init)
         nn.init.normal_(self.tok.weight, mean=0.0, std=0.02)
@@ -624,6 +626,7 @@ def evaluate(
 ) -> dict:
     model.eval()
     total_loss = 0.0
+    total_mem_loss = 0.0
     total_correct = 0
     total_prev = 0
     total_prev_correct = 0
@@ -643,6 +646,7 @@ def evaluate(
             logits, prev_logits, aux = model(x, mf, mb)
             loss = F.cross_entropy(logits, y, reduction="sum")
             total_loss += float(loss)
+            total_mem_loss += float(F.cross_entropy(mb[:, -1, :], y, reduction="sum"))
             total_correct += int((logits.argmax(dim=-1) == y).sum())
             mem_correct += int((mb[:, -1, :].argmax(dim=-1) == y).sum())
             total += y.numel()
@@ -666,6 +670,7 @@ def evaluate(
     return {
         "loss": total_loss / max(1, total),
         "bits_per_token": bits_per_token(total_loss / max(1, total)),
+        "memory_bits_per_token": bits_per_token(total_mem_loss / max(1, total)),
         "accuracy": total_correct / max(1, total),
         "prev_accuracy": total_prev_correct / max(1, total_prev) if total_prev else None,
         "memory_accuracy": mem_correct / max(1, total),
@@ -698,6 +703,7 @@ def main() -> int:
     p.add_argument("--eval-batches", type=int, default=8)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--weight-decay", type=float, default=0.01)
+    p.add_argument("--dropout", type=float, default=0.1)
     p.add_argument("--warmup", type=int, default=100)
     p.add_argument("--grad-clip", type=float, default=1.0)
     p.add_argument("--params", choices=["small", "10m"], default="10m")
@@ -718,7 +724,9 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=3)
     p.add_argument("--threads", type=int, default=0)
     p.add_argument("--device", default="cpu")
+    p.add_argument("--amp", action="store_true", help="CUDA mixed precision")
     p.add_argument("--checkpoint", default=str(Path.home() / "meta" / "frontier_ckpt.pt"))
+    p.add_argument("--best-checkpoint", default=str(Path.home() / "meta" / "frontier_best.pt"))
     p.add_argument("--summary", default=str(Path.home() / "meta" / "frontier_summary.json"))
     p.add_argument("--log", default=str(Path.home() / "meta" / "frontier_metrics.jsonl"))
     p.add_argument("--resume", default="none", help="none | path")
@@ -731,6 +739,8 @@ def main() -> int:
     np.random.seed(args.seed)
     random.seed(args.seed)
     device = torch.device(args.device)
+    amp = bool(args.amp and device.type == "cuda")
+    scaler = torch.amp.GradScaler("cuda") if amp else None
 
     if args.corpus:
         text = "\n\n".join(Path(f).expanduser().read_text(encoding="utf-8", errors="ignore") for f in args.corpus)
@@ -804,6 +814,7 @@ def main() -> int:
         d_model=d_model,
         hidden=hidden,
         layers=layers,
+        dropout=args.dropout,
         geom_dim=geom_dim,
         mem_dim=memory.feature_dim if not args.no_memory else 0,
         orders=args.orders,
@@ -838,6 +849,8 @@ def main() -> int:
     rng = np.random.default_rng(args.seed + start_step)
     t0 = time.time()
     ema = None
+    best_val = float("inf")
+    best_path = Path(args.best_checkpoint).expanduser()
     model.train()
     for step in range(start_step, args.steps):
         x, y, yp, pm, mf, mb = make_batch(data, bank, args.batch_size, rng, train=True)
@@ -852,19 +865,28 @@ def main() -> int:
         for g in optimizer.param_groups:
             g["lr"] = lr
         optimizer.zero_grad(set_to_none=True)
-        logits, prev_logits, aux = model(x, mf, mb)
-        loss = F.cross_entropy(logits, y)
-        if prev_logits is not None and pm.sum() > 0:
-            mask = pm.bool()
-            loss = loss + args.prev_weight * F.cross_entropy(prev_logits[mask], yp[mask])
-        zero = torch.zeros((), device=device)
-        loss = loss + args.aux_mirror * aux.get("mirror_loss", zero)
-        loss = loss + args.aux_load * aux.get("load_balance", zero)
-        loss = loss + args.aux_curv * aux.get("curv_reg", zero)
-        loss.backward()
-        if args.grad_clip > 0:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-        optimizer.step()
+        with torch.amp.autocast("cuda", enabled=amp):
+            logits, prev_logits, aux = model(x, mf, mb)
+            loss = F.cross_entropy(logits, y)
+            if prev_logits is not None and pm.sum() > 0:
+                mask = pm.bool()
+                loss = loss + args.prev_weight * F.cross_entropy(prev_logits[mask], yp[mask])
+            zero = torch.zeros((), device=device)
+            loss = loss + args.aux_mirror * aux.get("mirror_loss", zero)
+            loss = loss + args.aux_load * aux.get("load_balance", zero)
+            loss = loss + args.aux_curv * aux.get("curv_reg", zero)
+        if scaler is not None:
+            scaler.scale(loss).backward()
+            if args.grad_clip > 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            if args.grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            optimizer.step()
         if (
             model.poincare is not None
             and args.recluster_every > 0
@@ -893,15 +915,25 @@ def main() -> int:
             with log_path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(record) + "\n")
             print(f"  EVAL step {step + 1}: loss={metrics['loss']:.4f} "
-                  f"bits={metrics['bits_per_token']:.3f} acc={metrics['accuracy']*100:.2f}% "
+                  f"bits={metrics['bits_per_token']:.3f} "
+                  f"mem_bits={metrics['memory_bits_per_token']:.3f} "
+                  f"acc={metrics['accuracy']*100:.2f}% "
                   f"prev={metrics['prev_accuracy']} mem_acc={metrics['memory_accuracy']*100:.2f}% "
                   f"quorum={metrics['field_quorum']} curv={metrics['curvature_mean']} "
-                  f"mirror={metrics['mirror_loss']}")
+                  f"mirror={metrics['mirror_loss']} order_w={metrics['order_weights']}")
             torch.save(
                 {"model": model.state_dict(), "optimizer": optimizer.state_dict(),
                  "step": step + 1, "config": cfg.__dict__},
                 Path(args.checkpoint).expanduser(),
             )
+            if metrics["loss"] < best_val:
+                best_val = metrics["loss"]
+                torch.save(
+                    {"model": model.state_dict(), "step": step + 1,
+                     "metrics": metrics, "config": cfg.__dict__},
+                    best_path,
+                )
+                print(f"  [best] step {step + 1} val_loss={best_val:.4f} -> {best_path}")
 
     final = evaluate(model, data, bank, args.batch_size, args.eval_batches, device)
     summary = {
@@ -911,6 +943,8 @@ def main() -> int:
         "poincare_params": sum(p.numel() for p in model.poincare.parameters()) if model.poincare is not None else 0,
         "config": cfg.__dict__,
         "final": final,
+        "best_val": best_val,
+        "best_checkpoint": str(best_path),
         "steps": args.steps,
         "elapsed_seconds": time.time() - t0,
         "tokenizer": tokenizer.kind,
