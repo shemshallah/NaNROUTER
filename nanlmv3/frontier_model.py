@@ -191,28 +191,40 @@ class NgramMemory:
                 self.totals[order][ctx] = total
                 self.singletons[order][ctx] = sum(1 for c in row.values() if c == 1)
 
-    def distribution(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
-        """Dense interpolated next-token distribution for one context."""
+    def order_distributions(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
+        """Per-order smoothed distributions, shape (orders, vocab).
+
+        Row o is the distribution after interpolating unigram through order o.
+        Row -1 is the full interpolation used by the plain n-gram baseline.
+        These rows are the candidate experts for geometry-routed memory.
+        """
         v = self.vocab_size
         if self.unigram_total <= 0:
-            return np.full(v, 1.0 / v, dtype=np.float64)
-        p = (self.unigram + self.alpha) / (self.unigram_total + self.alpha * v)
+            base = np.full(v, 1.0 / v, dtype=np.float64)
+        else:
+            base = (self.unigram + self.alpha) / (self.unigram_total + self.alpha * v)
         context = tuple(int(x) for x in context)
-        max_order = min(self.orders, len(context))
-        for order in range(1, max_order + 1):
-            ctx = context[-order:]
-            row = self.counts[order].get(ctx)
-            if not row:
-                continue
-            total = self.totals[order][ctx]
-            n1 = self.singletons[order][ctx]
-            d = self.discount
-            seen = np.zeros(v, dtype=np.float64)
-            for tok, count in row.items():
-                seen[tok] = max(count - d, 0.0) / total
-            p = seen + (d * n1 / total) * p
-        p = np.maximum(p, 1e-12)
-        return p / p.sum()
+        rows: list[np.ndarray] = []
+        p = base
+        for order in range(1, self.orders + 1):
+            if len(context) >= order:
+                ctx = context[-order:]
+                row = self.counts[order].get(ctx)
+                if row:
+                    total = self.totals[order][ctx]
+                    n1 = self.singletons[order][ctx]
+                    d = self.discount
+                    seen = np.zeros(v, dtype=np.float64)
+                    for tok, count in row.items():
+                        seen[tok] = max(count - d, 0.0) / total
+                    p = seen + (d * n1 / total) * p
+            rows.append(np.maximum(p, 1e-12))
+        out = np.stack(rows, axis=0)
+        return out / out.sum(axis=1, keepdims=True)
+
+    def distribution(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
+        """Dense interpolated next-token distribution for one context."""
+        return self.order_distributions(context)[-1]
 
     def features(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
         """Compact scalar features for the mixer."""
@@ -246,7 +258,13 @@ class NgramMemory:
         return self.orders * 4 + 3
 
     def dense_bias(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
+        """Full interpolation log-probs (kept for the non-routed baseline)."""
         p = self.distribution(context)
+        return np.log(p + 1e-9).astype(np.float32)
+
+    def order_bias(self, context: list[int] | tuple[int, ...]) -> np.ndarray:
+        """Per-order log-probs, shape (orders, vocab)."""
+        p = self.order_distributions(context)
         return np.log(p + 1e-9).astype(np.float32)
 
     def hard_predict(self, context: list[int] | tuple[int, ...]) -> tuple[int, int]:
@@ -273,10 +291,62 @@ class ModelConfig:
     layers: int = 2
     geom_dim: int = 147
     mem_dim: int = 35
+    orders: int = 8
     use_geometry: bool = True
     use_poincare: bool = True
     use_memory: bool = True
     use_prev: bool = True
+    use_order_gate: bool = True
+    trunk_layers: int = 0
+    trunk_heads: int = 4
+    trunk_ff: int = 1024
+
+
+class CausalBlock(nn.Module):
+    """Pre-LN causal self-attention + MLP block."""
+
+    def __init__(self, d_model: int, n_heads: int, ff_dim: int, dropout: float, ctx: int):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(d_model)
+        self.attn = nn.MultiheadAttention(
+            d_model, n_heads, dropout=dropout, batch_first=True
+        )
+        self.ln2 = nn.LayerNorm(d_model)
+        self.ff1 = nn.Linear(d_model, ff_dim)
+        self.ff2 = nn.Linear(ff_dim, d_model)
+        self.drop = nn.Dropout(dropout)
+        mask = torch.triu(torch.ones(ctx, ctx, dtype=torch.bool), diagonal=1)
+        self.register_buffer("causal_mask", mask, persistent=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = self.ln1(x)
+        a, _ = self.attn(
+            h, h, h, attn_mask=self.causal_mask, need_weights=False
+        )
+        x = x + self.drop(a)
+        h = self.ln2(x)
+        h = self.ff2(self.drop(F.gelu(self.ff1(h))))
+        return x + h
+
+
+class CausalTrunk(nn.Module):
+    def __init__(
+        self, d_model: int, n_layers: int, n_heads: int, ff_dim: int,
+        dropout: float, ctx: int,
+    ):
+        super().__init__()
+        self.blocks = nn.ModuleList(
+            [
+                CausalBlock(d_model, n_heads, ff_dim, dropout, ctx)
+                for _ in range(n_layers)
+            ]
+        )
+        self.ln_f = nn.LayerNorm(d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for block in self.blocks:
+            x = block(x)
+        return self.ln_f(x)
 
 
 def build_mixer(input_dim: int, hidden: int, layers: int, out_dim: int) -> nn.Sequential:
@@ -306,8 +376,22 @@ class FrontierLM(nn.Module):
         self.poincare = PoincareTriheadLayer() if cfg.use_poincare else None
         self.mem_proj = nn.Linear(cfg.mem_dim, cfg.d_model) if cfg.use_memory else None
         self.prev_proj = nn.Linear(cfg.d_model, cfg.d_model) if cfg.use_prev else None
+        self.trunk = (
+            CausalTrunk(
+                cfg.d_model, cfg.trunk_layers, cfg.trunk_heads,
+                cfg.trunk_ff, 0.1, cfg.ctx,
+            )
+            if cfg.trunk_layers > 0
+            else None
+        )
         geom_dim = (129 if cfg.use_geometry else 0) + (POINCARE_OUT_DIM if cfg.use_poincare else 0)
         mem_dim = cfg.d_model if cfg.use_memory else 0
+        gate_dim = geom_dim if geom_dim > 0 else cfg.d_model
+        self.order_gate = (
+            nn.Linear(gate_dim, cfg.orders)
+            if cfg.use_memory and cfg.use_order_gate
+            else None
+        )
         self.mixer = build_mixer(
             cfg.d_model + geom_dim + mem_dim,
             cfg.hidden,
@@ -317,6 +401,9 @@ class FrontierLM(nn.Module):
         self.apply(self._init)
         nn.init.normal_(self.tok.weight, mean=0.0, std=0.02)
         nn.init.normal_(self.pos.weight, mean=0.0, std=0.02)
+        if self.order_gate is not None:
+            nn.init.zeros_(self.order_gate.weight)
+            nn.init.zeros_(self.order_gate.bias)
 
     @staticmethod
     def _init(module: nn.Module) -> None:
@@ -329,8 +416,11 @@ class FrontierLM(nn.Module):
         b, t = tokens.shape
         pos = torch.arange(t, device=tokens.device).unsqueeze(0)
         x = self.tok(tokens) + self.pos(pos)
+        if self.trunk is not None:
+            x = self.trunk(x)
         h = x[:, -1, :]
         parts = [h]
+        geom_parts: list[torch.Tensor] = []
         aux: dict[str, torch.Tensor] = {}
         credits = None
         if self.head_proj is not None:
@@ -338,14 +428,23 @@ class FrontierLM(nn.Module):
         if self.geometry is not None:
             geom = self.geometry(credits)
             parts.append(geom)
+            geom_parts.append(geom)
             aux["field_quorum"] = geom[:, 15].mean()
             aux["head_curvature_mean"] = geom[:, 20].mean()
         if self.poincare is not None:
             pgeom, paux = self.poincare(credits)
             parts.append(pgeom)
+            geom_parts.append(pgeom)
             aux.update(paux)
         if self.mem_proj is not None:
             parts.append(self.mem_proj(mem_feat))
+        if self.order_gate is not None:
+            gate_input = torch.cat(geom_parts, dim=1) if geom_parts else h
+            order_w = F.softmax(self.order_gate(gate_input), dim=-1)  # (B,orders)
+            mem_bias = torch.einsum("bo,bov->bv", order_w, mem_bias)
+            aux["order_weights"] = order_w.mean(dim=0)
+        else:
+            mem_bias = mem_bias[:, -1, :]
         z = torch.cat(parts, dim=1)
         z = self.mixer(z)
         logits = z @ self.tok.weight.T
@@ -361,13 +460,14 @@ def parameter_count(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
 
 
-def choose_profile(vocab_size: int, requested: str) -> tuple[int, int, int]:
+def choose_profile(vocab_size: int, requested: str) -> tuple[int, int, int, int, int, int]:
+    """Return d_model, mixer_hidden, mixer_layers, trunk_layers, heads, ff."""
     if requested == "small":
-        return 128, 512, 2
+        return 128, 512, 2, 1, 4, 512
     # ~10M total with tied embeddings (vocab * d_model is the dominant term).
     if vocab_size >= 4096:
-        return 256, 1024, 2
-    return 256, 2048, 3
+        return 224, 512, 2, 2, 4, 896
+    return 256, 2048, 3, 2, 4, 1024
 
 
 # ---------------------------------------------------------------------------
@@ -403,7 +503,7 @@ class MemoryBank:
         self.data = data
         self.mode = mode
         self.cache: dict[tuple[int, ...], tuple[np.ndarray, np.ndarray]] = {}
-        self.max_cache = 200_000 if memory.vocab_size <= 256 else 2_000
+        self.max_cache = 200_000 if memory.vocab_size <= 256 else 256
 
     def at(self, pos: int) -> tuple[np.ndarray, np.ndarray]:
         ctx = tuple(int(x) for x in self.data.ids[max(0, pos - self.memory.orders) : pos])
@@ -411,7 +511,7 @@ class MemoryBank:
         cached = self.cache.get(key)
         if cached is None:
             feats = self.memory.features(ctx)
-            bias = self.memory.dense_bias(ctx)
+            bias = self.memory.order_bias(ctx)
             cached = (feats, bias)
             if len(self.cache) < self.max_cache:
                 self.cache[key] = cached
@@ -536,7 +636,7 @@ def evaluate(
             loss = F.cross_entropy(logits, y, reduction="sum")
             total_loss += float(loss)
             total_correct += int((logits.argmax(dim=-1) == y).sum())
-            mem_correct += int((mb.argmax(dim=-1) == y).sum())
+            mem_correct += int((mb[:, -1, :].argmax(dim=-1) == y).sum())
             total += y.numel()
             if prev_logits is not None and pm.sum() > 0:
                 mask = pm.bool()
@@ -590,6 +690,11 @@ def main() -> int:
     p.add_argument("--warmup", type=int, default=100)
     p.add_argument("--grad-clip", type=float, default=1.0)
     p.add_argument("--params", choices=["small", "10m"], default="10m")
+    p.add_argument("--trunk-layers", type=int, default=-1,
+                   help="-1 uses the profile default; 0 disables the attention trunk")
+    p.add_argument("--trunk-heads", type=int, default=4)
+    p.add_argument("--trunk-ff", type=int, default=-1)
+    p.add_argument("--no-routed-memory", action="store_true")
     p.add_argument("--no-geometry", action="store_true")
     p.add_argument("--no-poincare", action="store_true")
     p.add_argument("--no-prev", action="store_true")
@@ -648,7 +753,7 @@ def main() -> int:
             for p in positions:
                 p = int(p)
                 context = tuple(int(x) for x in data.ids[max(0, p - memory.orders) : p])
-                bias = bank.at(p)[1]
+                bias = bank.at(p)[1][-1]
                 target = int(data.ids[p])
                 correct += int(np.argmax(bias) == target)
                 pred, used = memory.hard_predict(context)
@@ -673,7 +778,12 @@ def main() -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0
 
-    d_model, hidden, layers = choose_profile(tokenizer.vocab_size, args.params)
+    d_model, hidden, layers, prof_trunk_layers, prof_trunk_heads, prof_trunk_ff = choose_profile(
+        tokenizer.vocab_size, args.params
+    )
+    trunk_layers = prof_trunk_layers if args.trunk_layers < 0 else args.trunk_layers
+    trunk_heads = prof_trunk_heads if args.trunk_heads <= 0 else args.trunk_heads
+    trunk_ff = prof_trunk_ff if args.trunk_ff <= 0 else args.trunk_ff
     use_poincare = (not args.no_geometry) and (not args.no_poincare)
     use_prev = not args.no_prev
     geom_dim = (129 if not args.no_geometry else 0) + (POINCARE_OUT_DIM if use_poincare else 0)
@@ -685,15 +795,21 @@ def main() -> int:
         layers=layers,
         geom_dim=geom_dim,
         mem_dim=memory.feature_dim if not args.no_memory else 0,
+        orders=args.orders,
         use_geometry=not args.no_geometry,
         use_poincare=use_poincare,
         use_memory=not args.no_memory,
         use_prev=use_prev,
+        use_order_gate=not args.no_routed_memory,
+        trunk_layers=trunk_layers,
+        trunk_heads=trunk_heads,
+        trunk_ff=trunk_ff,
     )
     model = FrontierLM(cfg).to(device)
     print(f"[model] params={parameter_count(model):,} d_model={d_model} hidden={hidden} "
-          f"layers={layers} geom={cfg.use_geometry} poincare={cfg.use_poincare} "
-          f"prev={cfg.use_prev} memory={cfg.use_memory}")
+          f"layers={layers} trunk={trunk_layers}x{trunk_heads} ff={trunk_ff} "
+          f"geom={cfg.use_geometry} poincare={cfg.use_poincare} "
+          f"prev={cfg.use_prev} routed_memory={cfg.use_order_gate} memory={cfg.use_memory}")
     if cfg.use_geometry:
         print(f"[model] geometry params={geometry_param_count():,}")
 
