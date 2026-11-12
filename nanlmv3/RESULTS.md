@@ -388,6 +388,37 @@ build/v2_10k/history.json
 build/v2_10k/config.json
 ```
 
+## v2 EMA 10-minute run — end regression fixed
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-ema10
+
+- 5,000-step target, stopped at 4,495 due to 600 s cap
+- 84,859,523 params, 100MB corpus, ctx 512, batch 8
+- Zero LR floor, EMA decay 0.999 from 30%, 1,024-token fixed validation
+
+| Checkpoint | Bits/token | Top-1 | Top-5 |
+|---|---:|---:|---:|
+| Best model (step 4,000) | 9.8855 | 12.30% | 22.56% |
+| **Final model (4,495)** | **9.8827** | **12.40%** | **22.95%** |
+| Final EMA | 9.9086 | 11.91% | 22.27% |
+
+**Final model beats the best checkpoint** on all three metrics. The EMA was
+slightly behind because the model was still improving, so `best.pt` selected
+the model, not EMA. The end-of-run dip is gone.
+
+AMP skipped 4 updates early; scale fell 1,024 → 128, then training continued.
+
+Artifacts:
+
+```text
+build/v2_ema10/best.pt
+build/v2_ema10/final.pt
+build/v2_ema10/ema.pt
+build/v2_ema10/result.json
+build/v2_ema10/history.json
+build/v2_ema10/config.json
+```
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
