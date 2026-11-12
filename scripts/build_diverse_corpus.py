@@ -88,6 +88,7 @@ class Source:
     fmt: str = ""
     fields: tuple[str, ...] = ()
     labels: bool = True
+    auto_fallback: bool = True
     required: bool = True
     max_bytes: int = 0
     max_files: int = 0
@@ -168,7 +169,7 @@ COLLECTIONS: dict[str, Collection] = {
                 kind="kaggle",
                 ref="Cornell-University/arxiv",
                 files=("arxiv-metadata-oai-snapshot.json",),
-                fmt="json",
+                fmt="jsonl",
                 fields=("title", "authors", "categories", "abstract"),
                 max_bytes=_mb(1200),
                 license="CC0 1.0",
@@ -217,7 +218,8 @@ COLLECTIONS: dict[str, Collection] = {
                 ref="jboysen/scotus-corpus",
                 files=("scotus_file.gz",),
                 fmt="csv",
-                fields=("plain_text", "author_str", "date_created"),
+                fields=("plain_text|html_with_citations|html|html_columbia|html_lawbox",),
+                auto_fallback=False,
                 max_bytes=_mb(760),
                 license="CC0 1.0",
                 license_url="https://creativecommons.org/publicdomain/zero/1.0/",
@@ -681,6 +683,10 @@ def strip_html(value: str) -> str:
 FIELD_LABELS = {
     "plain_text": "",
     "text": "",
+    "html": "",
+    "html_with_citations": "",
+    "html_columbia": "",
+    "html_lawbox": "",
     "article": "Article",
     "abstract": "Abstract",
     "summary": "Summary",
@@ -924,12 +930,16 @@ def record_to_text(
 
     pairs: list[tuple[str, str]] = []
     for field_name in source.fields:
-        value = get_path(record, field_name)
-        if value is None:
-            continue
-        text = stringify(value, field_name)
-        if text:
-            pairs.append((field_name, text))
+        # A field can list fallbacks, e.g. plain_text|html_with_citations.
+        # Use the first non-empty variant for that document.
+        for alternative in field_name.split("|"):
+            value = get_path(record, alternative)
+            if value is None:
+                continue
+            text = stringify(value, field_name)
+            if text:
+                pairs.append((alternative, text))
+                break
 
     if not pairs:
         pairs = auto_fields(record)
@@ -950,7 +960,7 @@ def record_to_text(
         if len(blocks) >= 10:
             break
 
-    if len(blocks) < 2 and not any(len(block) > 4000 for block in blocks):
+    if source.auto_fallback and len(blocks) < 2 and not any(len(block) > 4000 for block in blocks):
         # Configured names can be missing, too short, or only capture part of
         # a heterogeneous record (for example a question without its answer).
         # Add generic text fields until the document has useful structure.
@@ -1203,6 +1213,10 @@ def should_extract(name: str, size: int) -> bool:
     lowered = name.lower()
     if lowered.endswith((".parquet", ".tar", ".tar.gz", ".tgz", ".tar_1", ".zip", ".zst")):
         return True
+    # JSONL/CSV/plain-text readers stream directly; extracting a multi-GB
+    # member only wastes disk and time.
+    if lowered.endswith((".json", ".jsonl", ".ndjson", ".csv", ".tsv", ".txt", ".md")):
+        return False
     # A very large unknown member is easier to inspect from disk.
     return size > 2_000_000_000 and not lowered.endswith((".gz", ".bz2"))
 
