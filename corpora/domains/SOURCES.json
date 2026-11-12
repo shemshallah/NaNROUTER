@@ -361,7 +361,7 @@
     {
       "collection": "multilingual",
       "errors": [],
-      "generated_at": "2026-11-12T17:06:05+00:00",
+      "generated_at": "2026-11-12T17:23:40+00:00",
       "layout": "UTF-8 text; documents separated by one blank line",
       "release_tag": "corpora-multilingual",
       "sources": [
@@ -375,7 +375,7 @@
               "ref": "thedevastator/xnli-multilingual-nli-dataset"
             }
           ],
-          "elapsed_seconds": 261.3,
+          "elapsed_seconds": 458.0,
           "fields": [
             "language",
             "premise",
@@ -764,6 +764,6 @@
       ]
     }
   ],
-  "generated_at": "2026-11-12T17:09:22+00:00",
+  "generated_at": "2026-11-12T17:24:29+00:00",
   "repo": "shemshallah/NaNROUTER"
 }
