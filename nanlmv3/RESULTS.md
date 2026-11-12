@@ -330,6 +330,30 @@ build/v2_medium10/history.json
 build/v2_medium10/config.json
 ```
 
+## v2 10-minute regression test — final regression fixed
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-reg10
+
+- Time-based LR cosine to 5% floor
+- 512-token fixed validation
+- 84,859,523 params, 5,121 steps in 603.5 s
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 500 | 10.853 | 5.08% | 18.36% |
+| 1,500 | 10.323 | 5.47% | 18.36% |
+| 2,500 | 10.254 | 8.79% | 22.07% |
+| 3,500 | 9.939 | 11.72% | 22.27% |
+| 4,500 | 9.861 | 11.72% | 24.61% |
+| 5,000 | 9.849 | 11.72% | 23.63% |
+| 5,121 final | **9.846** | 11.33% | 23.63% |
+
+Final bits/token is slightly **better** than the best checkpoint (9.8457 vs
+9.8490). The final regression is gone. Top-1 moved by two tokens out of 512,
+which is within sampling noise.
+
+AMP skipped 4 updates early; scale fell 1,024 → 64, then training continued.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
