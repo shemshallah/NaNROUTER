@@ -376,6 +376,7 @@ def main():
     p.add_argument("--memory-tokens", type=int, default=20_000_000)
     p.add_argument("--no-memory", action="store_true")
     p.add_argument("--amp", action="store_true", default=True)
+    p.add_argument("--amp-init-scale", type=float, default=1024.0)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--threads", type=int, default=4)
     p.add_argument("--seed", type=int, default=3)
@@ -388,7 +389,7 @@ def main():
     torch.set_num_threads(args.threads)
     device = torch.device(args.device)
     amp = bool(args.amp and device.type == "cuda")
-    scaler = torch.amp.GradScaler("cuda") if amp else None
+    scaler = torch.amp.GradScaler("cuda", init_scale=args.amp_init_scale) if amp else None
     out = Path(args.out).expanduser()
     out.mkdir(parents=True, exist_ok=True)
 
