@@ -44,8 +44,40 @@ python nanlmv3/sample_corpus.py \
 This gives 18 training chunks and 2 held-out chunks, with the held-out chunks
 at roughly 31.3 MB and 67.7 MB in the source.
 
-## Kaggle
+## Multi-domain corpus
 
-The current run uses Gutenberg only. A multi-domain 100M mix (Wikipedia,
-books, code, etc.) can be added later; that requires the Kaggle API token and
-dataset slugs, and should remain a separate corpus provenance file.
+The Gutenberg-only 100M corpus is still a useful staged baseline, but it is no
+longer the only option. The `corpora-domains-latest` release indexes 16 public
+domain collections published as one plain-text file per release:
+
+| Domain | Release |
+|---|---|
+| Encyclopedia | `corpora-wikipedia-en` |
+| STEM papers | `corpora-arxiv` |
+| Biomedicine | `corpora-pubmed` |
+| Law | `corpora-law` |
+| Patents | `corpora-patents` |
+| Code | `corpora-code` |
+| Mathematics | `corpora-math` |
+| News | `corpora-news` |
+| Cooking | `corpora-recipes` |
+| Cybersecurity | `corpora-security` |
+| Q&A | `corpora-qa` |
+| Multilingual | `corpora-multilingual` |
+| Finance | `corpora-finance` |
+| Technical standards | `corpora-standards` |
+| Humanities | `corpora-humanities` |
+| Chemistry | `corpora-chemistry` |
+
+```sh
+gh release download corpora-domains-latest -R shemshallah/NaNROUTER
+gh release download corpora-wikipedia-en -R shemshallah/NaNROUTER
+gh release download corpora-arxiv -R shemshallah/NaNROUTER
+```
+
+Each release contains `<collection>.txt`, `<collection>.SOURCES.json`, and
+`SHA256SUMS`. The source/license manifest is in
+[`corpora/domains/README.md`](../corpora/domains/README.md). A domain mix should
+be assembled from these releases with an explicit provenance file rather than
+silently concatenating every collection; the current builder caps each
+collection well below the 2 GiB release-asset limit.
