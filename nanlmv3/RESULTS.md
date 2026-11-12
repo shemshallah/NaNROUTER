@@ -218,6 +218,34 @@ Smoke2 fixes all five: fixed 256-token validation set, LR 1.5e-4 cosine over
 7,000 steps, chunk-disjoint 20MB sample, and alpha clamped to [0, 0.5].
 Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke2
 
+## v2 controlled re-test (smoke2) — the peak was evaluation noise
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-v2-smoke2
+
+Fixes: fixed 256-token validation set, LR 1.5e-4 cosine over 7,000 steps,
+chunk-disjoint corpus, memory alpha clamped to [0, 0.5].
+
+| Step | Bits/token | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 200 | 12.493 | 5.86% | 18.75% |
+| 1,000 | 10.615 | 3.91% | 19.14% |
+| 2,000 | 10.498 | 10.94% | 22.27% |
+| 3,000 | 10.236 | 12.11% | 21.09% |
+| 4,000 | 10.071 | 12.50% | 22.27% |
+| 4,800 | 9.944 | 13.28% | 22.66% |
+| 5,371 (final) | **9.899** | **13.28%** | **23.83%** |
+
+The fixed-validation curve is smooth and monotonic after the first 1,000
+steps. The previous “peak” at 5,700 was a different 64-token sample, not a
+model peak.
+
+Geometry in smoke2:
+
+- centroid delta: 0.1642
+- curvature: -1.0079
+- branch temperature: 0.9812
+- memory alpha: 0.1849
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
