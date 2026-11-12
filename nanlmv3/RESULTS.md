@@ -119,6 +119,37 @@ This backbone includes the causal trunk, 255-head / 85-trihead / field / rail /
 curvature stack, the Poincaré trihead branch, and the S− head. It does **not**
 include the 128-pair MoE from the branch-gate job or the n-gram memory.
 
+## Unified model — one code path
+
+`nanlmv3/unified.py` is the single model for both modes:
+
+- `--mode synthetic`: branches 1–4, word tokens, 90% gate
+- `--mode text`: BPE 32k, 100M corpus, real bits/token / top-1 / top-5
+
+### Unified branch gate — measured
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-unified-branches
+
+| Branches | Test accuracy | Params | Target |
+|---:|---:|---:|---|
+| 1 | 100.00% | 1,560,200 | met |
+| 2 | 100.00% | 1,560,912 | met |
+| 3 | 100.00% | 1,561,624 | met |
+| 4 | 100.00% | 1,562,336 | met |
+
+2000 sentences, 50 epochs, one `UnifiedHybridLM`, ~411 s total on T4.
+
+### Unified 100M — version 2
+
+Kernel: https://www.kaggle.com/code/shem42/nanlmv3-unified-100m
+
+- 100M chars, BPE 32k, 23.34M tokens
+- 12,810,304 params
+- 128-pair MoE, geometry bias, causal trunk, S− head
+- 20,000 steps, batch 16, context 128, AMP
+- Version 1 failed on `out_proj` shape (`16x224` vs `64x224`); fixed in `66b36c7`
+- Version 2 is running; measured metrics will be appended when it completes.
+
 ## Honest reading
 
 - The memory prior is the main driver at this scale.
