@@ -294,10 +294,29 @@ class UnifiedV2LM(nn.Module):
 
 
 def text_data(corpus, tokenizer, ctx, train_fraction, max_bytes):
-    text = Path(corpus).read_text(encoding="utf-8", errors="ignore")
-    if max_bytes > 0:
-        text = text[:max_bytes]
-    ids = tokenizer.encode(text)
+    """Encode in bounded chunks to avoid a huge Python-int list."""
+    parts: list[np.ndarray] = []
+    total = 0
+    with open(corpus, "rb") as f:
+        while True:
+            chunk = f.read(8_000_000)
+            if not chunk:
+                break
+            if max_bytes > 0:
+                remaining = max_bytes - total
+                if remaining <= 0:
+                    break
+                chunk = chunk[:remaining]
+            text = chunk.decode("utf-8", errors="ignore")
+            arr = tokenizer.encode(text)
+            if len(arr):
+                parts.append(np.asarray(arr, dtype=np.int32))
+            total += len(chunk)
+            if max_bytes > 0 and total >= max_bytes:
+                break
+    if not parts:
+        raise SystemExit("corpus produced no tokens")
+    ids = np.concatenate(parts)
     if len(ids) < ctx + 64:
         raise SystemExit("corpus too small")
     split = int(len(ids) * train_fraction)
