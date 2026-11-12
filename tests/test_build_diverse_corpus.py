@@ -133,6 +133,13 @@ class RecordTests(unittest.TestCase):
             {"en": "A hypothesis", "fr": "Une hypothese"},
         )
 
+    def test_parse_dict_string_handles_escaped_quotes(self) -> None:
+        value = '{\\"en\\": \\"A premise\\", \\"fr\\": \\"Une premisse\\"}'
+        self.assertEqual(
+            corpus.parse_dict_string(value),
+            {"en": "A premise", "fr": "Une premisse"},
+        )
+
     def test_xnli_expands_language_dicts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "xnli.csv"

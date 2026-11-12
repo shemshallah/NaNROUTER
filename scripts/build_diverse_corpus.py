@@ -1429,17 +1429,35 @@ def parse_dict_string(value: Any) -> dict[str, Any] | None:
     if isinstance(value, str):
         stripped = value.strip()
         if stripped.startswith("{") and stripped.endswith("}"):
-            try:
-                parsed = json.loads(stripped)
-            except json.JSONDecodeError:
-                parsed = None
-            if parsed is None:
-                try:
-                    parsed = ast.literal_eval(stripped)
-                except (ValueError, SyntaxError):
-                    parsed = None
-            if isinstance(parsed, dict):
-                return parsed
+            candidates = [stripped]
+            # CSV serializers sometimes preserve escaped quotes or Python
+            # repr backslashes; accept those variants too.
+            if '\\"' in stripped:
+                candidates.append(stripped.replace('\\"', '"'))
+            if "\\'" in stripped:
+                candidates.append(stripped.replace("\\'", "'"))
+            for candidate in candidates:
+                for parser in (json.loads, ast.literal_eval):
+                    try:
+                        parsed = parser(candidate)
+                    except (ValueError, SyntaxError, json.JSONDecodeError):
+                        continue
+                    if isinstance(parsed, dict):
+                        return parsed
+
+            # Last resort: pull out simple "xx": "..." pairs.  This keeps the
+            # language structure even if a few escaped quotes make literal
+            # parsing fail.
+            pairs: dict[str, str] = {}
+            for match in re.finditer(
+                r"""["']([a-z]{2,3})["']\s*:\s*(["'])(.*?)\2""",
+                stripped,
+                flags=re.DOTALL,
+            ):
+                text = match.group(3).replace('\\"', '"').replace("\\'", "'")
+                pairs[match.group(1)] = text
+            if pairs:
+                return pairs
     return None
 
 
@@ -1477,8 +1495,11 @@ def iter_xnli_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, st
         if reader.fieldnames:
             reader.fieldnames = [name.lstrip("\ufeff") for name in reader.fieldnames]
         for row in reader:
-            premise = parse_language_map(row.get("premise"))
-            hypothesis = parse_language_map(row.get("hypothesis"))
+            raw_premise = row.get("premise") or ""
+            raw_hypothesis = row.get("hypothesis") or ""
+            premise = parse_language_map(raw_premise)
+            hypothesis = parse_language_map(raw_hypothesis)
+
             if premise and hypothesis:
                 for language, premise_text in premise.items():
                     hypothesis_text = hypothesis.get(language)
@@ -1488,6 +1509,22 @@ def iter_xnli_records(stream: BinaryIO, source: Source) -> Iterator[dict[str, st
                             "premise": premise_text,
                             "hypothesis": hypothesis_text,
                         }
+            elif premise and isinstance(raw_hypothesis, str) and not raw_hypothesis.lstrip().startswith("{"):
+                # Some exports keep the premise multilingual but the
+                # hypothesis in a single language.
+                for language, premise_text in premise.items():
+                    yield {
+                        "language": language,
+                        "premise": premise_text,
+                        "hypothesis": raw_hypothesis,
+                    }
+            elif hypothesis and isinstance(raw_premise, str) and not raw_premise.lstrip().startswith("{"):
+                for language, hypothesis_text in hypothesis.items():
+                    yield {
+                        "language": language,
+                        "premise": raw_premise,
+                        "hypothesis": hypothesis_text,
+                    }
             else:
                 yield row
     finally:
