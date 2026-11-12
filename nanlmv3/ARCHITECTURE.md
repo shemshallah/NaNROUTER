@@ -140,7 +140,42 @@ A pure count model has an n-gram ceiling. Frontier performance requires a
 learned backbone; the geometry is the memory/router that differentiates the
 hybrid.
 
-## 7. Next concrete changes
+## 7. Unified implementation (single code path)
+
+`nanlmv3/unified.py` replaces the separate branch-curriculum and text models
+with one `UnifiedHybridLM`:
+
+```text
+tokens -> embedding + positional
+       -> causal trunk (optional)
+       -> last token + attended context
+       -> hyperbolic branch gate (N centroids)
+       -> router
+       -> 128 mirror-pair MoE, top-8, load balanced
+          (geometry features bias the MoE gate)
+       -> residual + LayerNorm
+       -> tied token logits
+       -> optional S- previous-token head
+```
+
+Modes:
+
+- `--mode synthetic`: branches 1–4, word tokens, 90% gate.
+- `--mode text`: BPE 32k, 100M corpus, bits/token / top-1 / top-5.
+
+Measured unified branch gate (T4):
+
+| Branches | Accuracy | Params |
+|---:|---:|---:|
+| 1 | 100.00% | 1,560,200 |
+| 2 | 100.00% | 1,560,912 |
+| 3 | 100.00% | 1,561,624 |
+| 4 | 100.00% | 1,562,336 |
+
+The 12.8M-parameter text configuration uses the same model path with
+`d_model=224`, `d_hidden=64`, a 2-layer causal trunk, and BPE 32k.
+
+## 8. Next concrete changes
 
 1. **Trihead-routed experts.** Partition the n-gram memory into 8–85 shards;
    route with top-K triads. Measure bits/token against the global memory.
