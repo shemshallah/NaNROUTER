@@ -95,7 +95,7 @@ jobs:
               tag=wikitext103-tokenized
               title="WikiText-103 (tokenized)"
               suffix=tokens
-              notes="WikiText-103 tokenized text (v1). Official train/validation/test splits with out-of-vocabulary tokens replaced by `<unk>`. Source: https://wikitext.smerity.com/wikitext-103-v1.zip License: CC BY-SA 3.0 and GFDL. Verify with: sha256sum -c SHA256SUMS"
+              notes="WikiText-103 tokenized text (v1). Official train/validation/test splits with out-of-vocabulary tokens replaced by the unknown-token marker. Source: https://wikitext.smerity.com/wikitext-103-v1.zip License: CC BY-SA 3.0 and GFDL. Verify with: sha256sum -c SHA256SUMS"
             fi
             echo "::group::publish $tag"
             if gh release view "$tag" >/dev/null 2>&1; then
