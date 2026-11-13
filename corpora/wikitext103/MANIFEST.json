@@ -1,0 +1,115 @@
+{
+  "dataset": "WikiText-103",
+  "generated_at": "2026-11-13T02:16:10+00:00",
+  "homepage": "https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/",
+  "license": "CC-BY-SA-3.0 AND GFDL",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "paper": "https://arxiv.org/abs/1609.07843",
+  "path": "corpora/wikitext103",
+  "release_tags": [
+    "wikitext103",
+    "wikitext103-tokenized",
+    "wikitext103-latest"
+  ],
+  "repo": "shemshallah/NaNROUTER",
+  "total_bytes": 1084638170,
+  "total_lines": 3618936,
+  "total_words": 203761536,
+  "variants": [
+    {
+      "archive": {
+        "bytes": 191984949,
+        "name": "wikitext-103-raw-v1.zip",
+        "sha1": "86f2375181b9247049d9c9205fad2b71b274b568",
+        "sha256": "91c00ae287f0d699e18605c84afc9e45c192bc6b7797ff8837e5474655a33794",
+        "urls": [
+          "https://wikitext.smerity.com/wikitext-103-raw-v1.zip",
+          "https://huggingface.co/datasets/segyges/wikitext-103/resolve/main/wikitext-103-raw-v1.zip"
+        ]
+      },
+      "dataset": "WikiText-103",
+      "dataset_variant": "wikitext-103-raw-v1",
+      "release_tag": "wikitext103",
+      "splits": [
+        {
+          "bytes": 540568191,
+          "file": "wiki.train.raw",
+          "lines": 1801350,
+          "sha1": "3d06627c15e834408cfee91293f862c11c1cc9ef",
+          "sha256": "654bc80019123bc43d7438bf067061cefb6c9f5136d0aa4d74a72dee5198ee41",
+          "split": "train",
+          "words": 101425671
+        },
+        {
+          "bytes": 1146846,
+          "file": "wiki.valid.raw",
+          "lines": 3760,
+          "sha1": "db78d4db83700cba1b1bf4a9381087043db2876d",
+          "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+          "split": "validation",
+          "words": 213886
+        },
+        {
+          "bytes": 1290590,
+          "file": "wiki.test.raw",
+          "lines": 4358,
+          "sha1": "6f1fe2054a940eebfc76b284b09680763b37f5ea",
+          "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "split": "test",
+          "words": 241211
+        }
+      ],
+      "total_bytes": 543005627,
+      "total_lines": 1809468,
+      "total_words": 101880768,
+      "variant": "raw"
+    },
+    {
+      "archive": {
+        "bytes": 190229076,
+        "name": "wikitext-103-v1.zip",
+        "sha1": "0aec09a7537b58d4bb65362fee27650eeaba625a",
+        "sha256": "242ba0f20b329cfdf1ccc61e9e9e5b59becf189db7f7a81cd2a0e2fc31539590",
+        "urls": [
+          "https://wikitext.smerity.com/wikitext-103-v1.zip"
+        ]
+      },
+      "dataset": "WikiText-103",
+      "dataset_variant": "wikitext-103-v1",
+      "release_tag": "wikitext103-tokenized",
+      "splits": [
+        {
+          "bytes": 539209157,
+          "file": "wiki.train.tokens",
+          "lines": 1801350,
+          "sha1": "b7497e2dfe77e72cfef5e3dbc61b7b53712ac211",
+          "sha256": "2082f99929dee10a3b96da7d6ef7ca4dbb4d7df9d51db264f14173a36989f826",
+          "split": "train",
+          "words": 101425671
+        },
+        {
+          "bytes": 1142309,
+          "file": "wiki.valid.tokens",
+          "lines": 3760,
+          "sha1": "c326ac59dc587676d58c422eb8a03e119582f92b",
+          "sha256": "9aee9f52d6e77de6c7751fc5e7c44287db3ec0eaf15477098acc6b93c1c4250b",
+          "split": "validation",
+          "words": 213886
+        },
+        {
+          "bytes": 1281077,
+          "file": "wiki.test.tokens",
+          "lines": 4358,
+          "sha1": "8a5befc548865cec54ed4273cf87dbbad60d1e47",
+          "sha256": "56db52eb157b1ab5c89646eef70510c1eca6e12a3bfdb99f0d6b05b4eacb75b9",
+          "split": "test",
+          "words": 241211
+        }
+      ],
+      "total_bytes": 541632543,
+      "total_lines": 1809468,
+      "total_words": 101880768,
+      "variant": "tokenized"
+    }
+  ]
+}
