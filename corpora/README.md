@@ -50,8 +50,12 @@ gh run watch -R shemshallah/NaNROUTER
 
 ## Source and license
 
-Project Gutenberg: <https://www.gutenberg.org>
-
-The source eBooks are public domain in the United States. Some works may still
-be copyrighted outside the United States. Project Gutenberg License:
-<https://www.gutenberg.org/policy/license.html>.
+- Project Gutenberg: <https://www.gutenberg.org>
+  - The source eBooks are public domain in the United States. Some works may
+    still be copyrighted outside the United States.
+  - Project Gutenberg License: <https://www.gutenberg.org/policy/license.html>
+- WikiText-103: <https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/>
+  - Derived from Wikipedia; distributed under
+    [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and the
+    GNU Free Documentation License.
+  - See [`wikitext103/LICENSE.txt`](wikitext103/LICENSE.txt) for the notice.
