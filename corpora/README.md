@@ -10,6 +10,7 @@ category has a stable release tag and a manifest in this tree.
 | [`paragraphs/`](paragraphs/README.md) | `corpora-paragraphs` + `corpora-paragraphs-*` | One paragraph per line, one file per Gutenberg book, in choosable batches |
 | [`short_stories/`](short_stories/README.md) | `corpora-short-stories` + `corpora-short-stories-*` | Project Gutenberg short-story books and collections, in choosable batches |
 | [`domains/`](domains/README.md) | `corpora-<domain>` + `corpora-domains-latest` | Domain-diverse text: enwiki, arXiv, PubMed, law, patents, code, math, news, recipes, security, Q&A, multilingual, finance, standards, humanities, chemistry. One `.txt` per collection |
+| [`wikitext103/`](wikitext103/README.md) | `wikitext103` + `wikitext103-tokenized` + `wikitext103-latest` | WikiText-103 raw and tokenized splits (train, validation, test) from verified Good and Featured Wikipedia articles |
 
 ## Public-domain pipeline
 
@@ -32,6 +33,20 @@ choosable batch releases of up to **1,000 books** each (for example
 `corpora-sentences-0001`). Every batch contains individual per-book `.txt`
 files, so you can download only the slice you need. The batch mapping is in
 `BATCHES.json` inside each category.
+
+## WikiText-103 pipeline
+
+[`wikitext103/`](wikitext103/README.md) is built by
+[`Fetch WikiText-103`](../.github/workflows/fetch-wikitext103.yml) using
+[`scripts/build_wikitext103.py`](../scripts/build_wikitext103.py). The runner
+downloads the official raw and tokenized v1 archives, verifies their published
+checksums and every extracted split, then publishes `wikitext103`,
+`wikitext103-tokenized`, and `wikitext103-latest`.
+
+```sh
+gh workflow run fetch-wikitext103.yml -R shemshallah/NaNROUTER
+gh run watch -R shemshallah/NaNROUTER
+```
 
 ## Source and license
 

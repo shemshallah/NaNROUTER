@@ -1,0 +1,177 @@
+name: Fetch WikiText-103
+
+# One runner builds both official variants and publishes:
+#   wikitext103            raw train/validation/test splits
+#   wikitext103-tokenized  tokenized train/validation/test splits
+#   wikitext103-latest     combined metadata index
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the WikiText-103 releases
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-wikitext103
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate registry
+        run: python3 scripts/build_wikitext103.py --check
+
+      - name: Download and verify WikiText-103
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build/corpora/wikitext103
+          python3 scripts/build_wikitext103.py \
+            --output-dir build/corpora/wikitext103 \
+            --work-dir "$RUNNER_TEMP/nanrouter-wikitext103"
+
+      - name: Verify release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=build/corpora/wikitext103
+          (cd "$OUT" && sha256sum -c SHA256SUMS)
+          (cd "$OUT/raw" && sha256sum -c SHA256SUMS)
+          (cd "$OUT/tokenized" && sha256sum -c SHA256SUMS)
+          test -s "$OUT/MANIFEST.json"
+          test -s "$OUT/SOURCES.json"
+          python3 - "$OUT/MANIFEST.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          names = [variant["variant"] for variant in manifest["variants"]]
+          assert names == ["raw", "tokenized"], names
+          assert manifest["total_bytes"] == 1_084_638_170, manifest["total_bytes"]
+          print(f"{manifest['total_bytes']:,} bytes across {len(names)} variants")
+          PY
+
+      - name: Publish variant releases
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=build/corpora/wikitext103
+          for variant in raw tokenized; do
+            if [ "$variant" = raw ]; then
+              tag=wikitext103
+              title="WikiText-103 (raw)"
+              suffix=raw
+              notes="WikiText-103 raw text (v1). Official train/validation/test splits, before unknown-token replacement. Source: https://wikitext.smerity.com/wikitext-103-raw-v1.zip License: CC BY-SA 3.0 and GFDL. Verify with: sha256sum -c SHA256SUMS"
+            else
+              tag=wikitext103-tokenized
+              title="WikiText-103 (tokenized)"
+              suffix=tokens
+              notes="WikiText-103 tokenized text (v1). Official train/validation/test splits with out-of-vocabulary tokens replaced by `<unk>`. Source: https://wikitext.smerity.com/wikitext-103-v1.zip License: CC BY-SA 3.0 and GFDL. Verify with: sha256sum -c SHA256SUMS"
+            fi
+            echo "::group::publish $tag"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release edit "$tag" --title "$title" --notes "$notes"
+            else
+              gh release create "$tag" --title "$title" --notes "$notes"
+            fi
+            gh release upload "$tag" \
+              "$OUT/$variant"/wiki.*."$suffix" \
+              "$OUT/$variant/MANIFEST.json" \
+              "$OUT/$variant/SOURCES.json" \
+              "$OUT/$variant/SHA256SUMS" \
+              corpora/wikitext103/LICENSE.txt \
+              --clobber
+            echo "::endgroup::"
+          done
+
+      - name: Publish index release
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=build/corpora/wikitext103
+          notes="Index for the WikiText-103 corpus releases. Raw splits are in wikitext103; tokenized splits are in wikitext103-tokenized. MANIFEST.json lists sizes, line/word counts, checksums, and release tags."
+          if gh release view wikitext103-latest >/dev/null 2>&1; then
+            gh release edit wikitext103-latest --title "NaNROUTER WikiText-103 index" --notes "$notes"
+          else
+            gh release create wikitext103-latest --title "NaNROUTER WikiText-103 index" --notes "$notes"
+          fi
+          gh release upload wikitext103-latest \
+            "$OUT/MANIFEST.json" \
+            "$OUT/SOURCES.json" \
+            "$OUT/SHA256SUMS" \
+            corpora/wikitext103/LICENSE.txt \
+            --clobber
+
+      - name: Commit metadata
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=build/corpora/wikitext103
+          cp "$OUT/MANIFEST.json" corpora/wikitext103/MANIFEST.json
+          cp "$OUT/SOURCES.json" corpora/wikitext103/SOURCES.json
+          cp "$OUT/SHA256SUMS" corpora/wikitext103/SHA256SUMS
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add corpora/wikitext103/MANIFEST.json \
+                  corpora/wikitext103/SOURCES.json \
+                  corpora/wikitext103/SHA256SUMS
+          if git diff --cached --quiet; then
+            echo "metadata unchanged"
+            exit 0
+          fi
+          git commit -m "Publish WikiText-103 releases [skip ci]"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main || true
+            if git push; then
+              exit 0
+            fi
+            echo "metadata push attempt ${attempt} lost a race; retrying"
+            sleep $((attempt * 2))
+          done
+          echo "::error::could not push WikiText-103 metadata"
+          exit 1
+
+      - name: Upload metadata artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wikitext103-metadata
+          path: |
+            build/corpora/wikitext103/MANIFEST.json
+            build/corpora/wikitext103/SOURCES.json
+            build/corpora/wikitext103/SHA256SUMS
+          if-no-files-found: ignore
+          retention-days: 30

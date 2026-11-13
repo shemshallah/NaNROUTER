@@ -1,0 +1,43 @@
+{
+  "dataset": "WikiText-103",
+  "homepage": "https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/",
+  "paper": "https://arxiv.org/abs/1609.07843",
+  "license": [
+    "CC-BY-SA-3.0",
+    "GFDL"
+  ],
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "path": "corpora/wikitext103",
+  "repo": "shemshallah/NaNROUTER",
+  "runner": ".github/workflows/fetch-wikitext103.yml",
+  "release_tags": {
+    "raw": "wikitext103",
+    "tokenized": "wikitext103-tokenized",
+    "index": "wikitext103-latest"
+  },
+  "sources": [
+    {
+      "variant": "raw",
+      "dataset_variant": "wikitext-103-raw-v1",
+      "archive": "wikitext-103-raw-v1.zip",
+      "archive_bytes": 191984949,
+      "archive_sha1": "86f2375181b9247049d9c9205fad2b71b274b568",
+      "archive_sha256": "91c00ae287f0d699e18605c84afc9e45c192bc6b7797ff8837e5474655a33794",
+      "urls": [
+        "https://wikitext.smerity.com/wikitext-103-raw-v1.zip",
+        "https://huggingface.co/datasets/segyges/wikitext-103/resolve/main/wikitext-103-raw-v1.zip"
+      ]
+    },
+    {
+      "variant": "tokenized",
+      "dataset_variant": "wikitext-103-v1",
+      "archive": "wikitext-103-v1.zip",
+      "archive_bytes": 190229076,
+      "archive_sha1": "0aec09a7537b58d4bb65362fee27650eeaba625a",
+      "archive_sha256": "242ba0f20b329cfdf1ccc61e9e9e5b59becf189db7f7a81cd2a0e2fc31539590",
+      "urls": [
+        "https://wikitext.smerity.com/wikitext-103-v1.zip"
+      ]
+    }
+  ]
+}

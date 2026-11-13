@@ -1,0 +1,8 @@
+# The corpus payload is published as release assets, not committed.
+*
+!.gitignore
+!README.md
+!SOURCES.json
+!MANIFEST.json
+!SHA256SUMS
+!LICENSE.txt

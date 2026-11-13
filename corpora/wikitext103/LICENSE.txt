@@ -1,0 +1,18 @@
+WikiText-103
+
+Source: Salesforce AI Research
+Homepage: https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/
+Paper: https://arxiv.org/abs/1609.07843
+Archives:
+  https://wikitext.smerity.com/wikitext-103-raw-v1.zip
+  https://wikitext.smerity.com/wikitext-103-v1.zip
+
+The dataset is derived from Wikipedia and is distributed under the Creative
+Commons Attribution-ShareAlike 3.0 Unported License (CC BY-SA 3.0) and the GNU
+Free Documentation License (GFDL).
+
+License: https://creativecommons.org/licenses/by-sa/3.0/
+
+Retain this notice and the WikiText-103 attribution when redistributing the
+corpus or works derived from it. Wikipedia text is contributed by its editors;
+see https://www.wikipedia.org/ for attribution guidance.
